@@ -1491,6 +1491,12 @@ function init(){
   updateLogoutButtons();
   updateShareLink();
   renderAll();
+  // Capitalizzazione automatica nome/cognome al blur
+  ['setting-nome-prof','setting-cognome-prof','ex-nome','ex-cognome',
+   'bk-nome','bk-cognome','appt-nome','appt-cognome'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('blur',()=>{ el.value=capitalizeName(el.value); });
+  });
   // aggiornamento cross-tab: quando un paziente prenota da un'altra finestra
   window.addEventListener('storage', e=>{
     if(e.key==='medidesk_v2'){ load(); renderAll(); }
@@ -2133,8 +2139,8 @@ function apptSelectSlot(ora){
 
 function saveAppuntamento(){
   try {
-    const nome=document.getElementById('appt-nome').value.trim();
-    const cognome=document.getElementById('appt-cognome').value.trim();
+    const nome=capitalizeName(document.getElementById('appt-nome').value.trim());
+    const cognome=capitalizeName(document.getElementById('appt-cognome').value.trim());
     if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
     if(!A.centroId||!A.dateStr||!A.ora){ showToast('Completa la selezione'); return; }
     const tipoEl=document.getElementById('appt-tipo');
@@ -2873,8 +2879,8 @@ async function saveVisita(){
     const visita = { id:Date.now(), data:dataVisita, luogo, clinica };
 
     if(V.isNewPaziente){
-      const nome = document.getElementById('ex-nome').value.trim();
-      const cognome = document.getElementById('ex-cognome').value.trim();
+      const nome = capitalizeName(document.getElementById('ex-nome').value.trim());
+      const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return; }
       const cf = document.getElementById('ex-nascita') && document.getElementById('ex-cf').value.trim();
       const nascita = document.getElementById('ex-nascita').value.trim();
@@ -2961,6 +2967,12 @@ function updateStats(){
 }
 
 // ── SETTINGS ──
+function capitalizeName(str){
+  if(!str) return str;
+  return str.trim().replace(/\s+/g,' ').toLowerCase()
+    .replace(/(^|[\s\-’'''])(\S)/g,(_,sep,c)=>sep+c.toUpperCase());
+}
+
 function slugify(str){
   return (str||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
     .replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-');
@@ -3052,8 +3064,8 @@ function loadSettings(){
 async function saveSettings(){
   const val=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
   S.settings.titolo      = val('setting-titolo');
-  S.settings.nomeProf    = val('setting-nome-prof');
-  S.settings.cognomeProf = val('setting-cognome-prof');
+  S.settings.nomeProf    = capitalizeName(val('setting-nome-prof'));
+  S.settings.cognomeProf = capitalizeName(val('setting-cognome-prof'));
   S.settings.nome        = getFullName();
   S.settings.spec        = val('setting-spec');
   const newSlug          = slugify(val('setting-slug'));
@@ -3295,8 +3307,8 @@ function bkSelectSlot(ora){
 }
 
 function confirmBooking(){
-  const nome=document.getElementById('bk-nome').value.trim();
-  const cognome=document.getElementById('bk-cognome').value.trim();
+  const nome=capitalizeName(document.getElementById('bk-nome').value.trim());
+  const cognome=capitalizeName(document.getElementById('bk-cognome').value.trim());
   if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
   const appt={
     id:Date.now(), nome, cognome,
