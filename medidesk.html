@@ -1151,7 +1151,7 @@ async function signIn(){
   const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   setAuthLoading(false);
   if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
-  // onAuthStateChange gestirà il cambio di vista
+  showAppView();
 }
 
 async function signOut(){
@@ -1194,8 +1194,6 @@ function showAuthView(){
   document.getElementById('view-auth').style.display = 'flex';
   document.getElementById('view-app').style.display  = 'none';
   document.getElementById('view-booking').style.display = 'none';
-  const logoutBtns = document.querySelectorAll('#sidebar-logout-btn, #mobile-logout-btn');
-  logoutBtns.forEach(b => b.style.display = 'none');
 }
 
 let _appInitialized = false;
@@ -1207,7 +1205,13 @@ function showAppView(){
   else renderAll();
 }
 
-function updateLogoutButtons(){ /* pulsanti sempre visibili nell'app */ }
+function updateLogoutButtons(){
+  const show = isOnline();
+  const s = document.getElementById('sidebar-logout-btn');
+  const m = document.getElementById('mobile-logout-btn');
+  if(s) s.style.display = show ? 'flex'  : 'none';
+  if(m) m.style.display = show ? 'block' : 'none';
+}
 
 // ── AUTH UI HELPERS ──
 function switchAuthTab(tab){
