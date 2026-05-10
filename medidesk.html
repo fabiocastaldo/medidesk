@@ -1202,10 +1202,17 @@ let _appInitialized = false;
 function showAppView(){
   document.getElementById('view-auth').style.display = 'none';
   document.getElementById('view-app').style.display  = 'flex';
-  const logoutBtns = document.querySelectorAll('#sidebar-logout-btn, #mobile-logout-btn');
-  if(isOnline()) logoutBtns.forEach(b => b.style.display = '');
+  updateLogoutButtons();
   if(!_appInitialized){ _appInitialized = true; init(); }
   else renderAll();
+}
+
+function updateLogoutButtons(){
+  const sideBtn   = document.getElementById('sidebar-logout-btn');
+  const mobileBtn = document.getElementById('mobile-logout-btn');
+  const show = isOnline();
+  if(sideBtn)   sideBtn.style.display   = show ? 'flex'  : 'none';
+  if(mobileBtn) mobileBtn.style.display = show ? 'block' : 'none';
 }
 
 // ── AUTH UI HELPERS ──
