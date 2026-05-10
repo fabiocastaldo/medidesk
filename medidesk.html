@@ -1152,13 +1152,13 @@ async function signIn(){
   try {
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     setAuthLoading(false);
-    console.log('[signIn] data:', data, 'error:', error);
     if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
-    if(!data?.session){ showAuthMsg('Sessione non ricevuta — controlla email di conferma', 'error'); return; }
+    if(!data?.session){ showAuthMsg('Conferma prima la tua email, poi riprova.', 'error'); return; }
+    // onAuthStateChange (SIGNED_IN) gestirà il cambio di vista
+    // ma lo forziamo anche qui come sicurezza immediata
     showAppView();
   } catch(e) {
     setAuthLoading(false);
-    console.error('[signIn] eccezione:', e);
     showAuthMsg('Errore di rete: ' + e.message, 'error');
   }
 }
@@ -1166,7 +1166,7 @@ async function signIn(){
 async function signOut(){
   if(!isOnline()){ showToast('Modalità offline — nessun account attivo'); return; }
   await supabaseClient.auth.signOut();
-  showAuthView();
+  // onAuthStateChange (SIGNED_OUT) gestirà il cambio di vista
 }
 
 async function resetPassword(){
@@ -1177,23 +1177,23 @@ async function resetPassword(){
   showAuthMsg('Link di reset inviato! Controlla la tua email.', 'success');
 }
 
-async function checkSession(){
+function checkSession(){
   if(!isOnline()){
-    // Modalità offline: salta login, avvia app normalmente
     showAppView();
     return;
   }
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if(session){
-    showAppView();
-  } else {
-    showAuthView();
-  }
-  // Ascolta futuri cambi di sessione (login/logout/scadenza token)
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
-    if(session){
+  // Pattern ufficiale Supabase v2: onAuthStateChange è la fonte di verità.
+  // INITIAL_SESSION si attiva subito con la sessione corrente (o null).
+  // SIGNED_IN si attiva dopo un login riuscito.
+  // SIGNED_OUT si attiva dopo il logout.
+  // Gli altri eventi (TOKEN_REFRESHED, USER_UPDATED) vengono ignorati.
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if(event === 'INITIAL_SESSION'){
+      if(session){ showAppView(); } else { showAuthView(); }
+    } else if(event === 'SIGNED_IN'){
       showAppView();
-    } else {
+    } else if(event === 'SIGNED_OUT'){
+      _appInitialized = false;
       showAuthView();
     }
   });
