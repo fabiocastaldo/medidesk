@@ -137,6 +137,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .visita-header{padding:12px 16px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
 .visita-date{font-weight:600;font-size:13px}
 .visita-body{padding:16px;background:var(--surface);border-top:1px solid var(--border);white-space:pre-wrap;font-size:13px;line-height:1.6;color:var(--ink2)}
+.storia-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-top:16px}
+.storia-testo{font-size:13px;line-height:1.7;color:var(--ink2);white-space:pre-wrap}
 .extracted-fields{display:flex;flex-direction:column;gap:8px}
 .field-row{display:flex;gap:8px;align-items:flex-start}
 .field-key{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);min-width:110px;padding-top:3px}
@@ -1759,6 +1761,11 @@ function showPazienteDetail(id){
         <div class="visita-body" id="vv-${id}-${i}" style="display:none">${v.clinica||'—'}</div>
       </div>
     `).join('')}
+    ${visite.length>=2?`
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn btn-secondary" onclick="sintetizzaStoria(${id})" id="btn-storia-${id}">✦ Sintetizza storia clinica</button>
+    </div>
+    <div id="storia-container-${id}"></div>`:''}
     <div style="margin-top:16px"><button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deletePaziente(${id})">🗑 Elimina paziente</button></div>`;
   openModal('modal-paziente');
 }
@@ -1767,6 +1774,66 @@ function deletePaziente(id){
   if(!confirm('Eliminare questo paziente?')) return;
   S.pazienti=S.pazienti.filter(p=>p.id!==id);
   save(); renderPazienti(); updateStats(); closeModal('modal-paziente'); showToast('Paziente eliminato');
+}
+
+function parseVisitDate(s){
+  if(!s) return new Date(0);
+  const it=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(it) return new Date(+it[3],+it[2]-1,+it[1]);
+  return new Date(s+'T12:00:00');
+}
+
+async function sintetizzaStoria(pazId){
+  const p=S.pazienti.find(x=>x.id===pazId); if(!p) return;
+  const container=document.getElementById('storia-container-'+pazId); if(!container) return;
+  const btn=document.getElementById('btn-storia-'+pazId); if(btn) btn.disabled=true;
+
+  container.innerHTML='<div class="ai-processing" style="margin-top:12px"><div class="spinner"></div><span>Elaborazione storia clinica…</span></div>';
+
+  const sorted=[...p.visite].sort((a,b)=>parseVisitDate(a.data)-parseVisitDate(b.data));
+
+  const visiteTesto=sorted.map((v,i)=>{
+    const header=`VISITA ${i+1}${v.data?' — '+v.data:''}${v.luogo?' ('+v.luogo+')':''}`;
+    return header+'\n'+(v.clinica||'(nessuna sintesi disponibile)');
+  }).join('\n\n---\n\n');
+
+  const prompt=`Sei un medico specialista. Di seguito trovi le sintesi di ${sorted.length} visite di ${p.cognome} ${p.nome}${p.nascita?', nato il '+p.nascita:''}, in ordine cronologico.
+
+Produci una STORIA CLINICA UNIFICATA che:
+- Descrive l'evoluzione clinica in ordine cronologico
+- Riporta diagnosi, terapie rilevanti e loro andamento nel tempo
+- Include esami strumentali/laboratorio significativi con i risultati principali
+- Segnala eventuali cambiamenti terapeutici e il motivo
+- OMETTE informazioni ripetitive, amministrative, di routine o di scarso valore clinico
+- Usa linguaggio medico appropriato, sezioni chiare ed elenchi puntati dove utile
+
+VISITE:
+${visiteTesto}
+
+Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
+
+  const apiKey=getApiKey();
+  if(!apiKey){
+    container.innerHTML='<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px">⚠ API key mancante — inseriscila nelle Impostazioni</div>';
+    if(btn) btn.disabled=false;
+    return;
+  }
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5-20250929',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?.message?' — '+e.error.message:''));}
+    const data=await res.json();
+    const testo=data.content.map(i=>i.text||'').join('').trim();
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${testo}</div></div>`;
+  } catch(err){
+    container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px">⚠ ${err.message}</div>`;
+  } finally{
+    if(btn) btn.disabled=false;
+  }
 }
 
 // ── VISITA / FASCICOLO (flusso a step) ──
