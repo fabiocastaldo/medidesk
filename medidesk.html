@@ -1,0 +1,2344 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediDesk</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F5F2ED; --surface: #FFFEFB; --surface2: #F0EDE8;
+  --ink: #1A1814; --ink2: #6B6560; --ink3: #A09890;
+  --accent: #2D5F4E; --accent2: #4A8C76; --accent-light: #E8F2EE;
+  --warm: #C4622D; --warm-light: #FAF0EA;
+  --border: #E2DDD8; --shadow: 0 2px 16px rgba(26,24,20,.08); --shadow-lg: 0 8px 40px rgba(26,24,20,.14);
+  --r: 12px; --r-sm: 8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px}
+
+/* ── APP SHELL ── */
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--ink);color:#fff;display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .25s}
+.sidebar-logo{padding:0 20px 28px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-logo h1{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;letter-spacing:-.5px}
+.sidebar-logo p{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
+.nav{padding:16px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .15s}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.06)}
+.nav-item.active{color:#fff;border-left-color:#4A8C76;background:rgba(74,140,118,.12)}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
+.doctor-name strong{display:block;color:#fff;font-size:13px;margin-bottom:2px}
+.doctor-name span{font-size:11px;color:rgba(255,255,255,.45)}
+.main{margin-left:220px;flex:1;padding:32px;min-height:100vh}
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.page-title{font-family:'DM Serif Display',serif;font-size:28px;letter-spacing:-.5px}
+.page-subtitle{font-size:13px;color:var(--ink3);margin-top:2px}
+
+/* ── BUTTONS ── */
+.btn{padding:9px 18px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--border)}.btn-secondary:hover{background:var(--surface2)}
+.btn-warm{background:var(--warm);color:#fff}.btn-warm:hover{opacity:.88}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{padding:8px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:16px;line-height:1}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-body{padding:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+
+/* ── STATS ── */
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+.stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);font-weight:600}
+.stat-value{font-family:'DM Serif Display',serif;font-size:36px;color:var(--ink);margin:4px 0}
+.stat-sub{font-size:12px;color:var(--ink2)}
+
+/* ── AGENDA ── */
+.week-nav{display:flex;align-items:center;gap:12px}
+.week-label{font-size:15px;font-weight:500;min-width:200px;text-align:center}
+.day-tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.day-tab{padding:8px 14px;border-radius:var(--r-sm);cursor:pointer;font-size:13px;font-weight:500;background:var(--surface);border:1px solid var(--border);color:var(--ink2);transition:all .15s}
+.day-tab:hover{border-color:var(--accent);color:var(--accent)}
+.day-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.day-tab .count{font-size:11px;opacity:.8;margin-left:4px}
+.appt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;transition:box-shadow .15s;cursor:pointer;margin-bottom:8px}
+.appt-card:hover{box-shadow:var(--shadow)}
+.appt-time{font-weight:600;font-size:15px;color:var(--accent);min-width:50px}
+.appt-info{flex:1}
+.appt-patient{font-weight:600;font-size:14px}
+.appt-detail{font-size:12px;color:var(--ink3);margin-top:2px}
+.appt-centro{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:20px}
+.badge-pending{background:#FFF3E0;color:#E65100;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+
+/* ── FORM ── */
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block}
+.form-input,.form-select,.form-textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:14px;background:var(--surface);color:var(--ink);transition:border-color .15s;outline:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,24,20,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:var(--r);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:translateY(16px);transition:transform .2s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:'DM Serif Display',serif;font-size:20px}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3);padding:4px}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+/* ── PAZIENTI ── */
+.search-bar{display:flex;gap:10px;margin-bottom:20px}
+.search-input-wrap{position:relative;flex:1}
+.search-input-wrap .sicon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink3);font-size:16px}
+.search-input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:14px;background:var(--surface);outline:none}
+.search-input:focus{border-color:var(--accent)}
+.paziente-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;margin-bottom:8px}
+.paziente-card:hover{box-shadow:var(--shadow);border-color:var(--accent)}
+.paziente-avatar{width:42px;height:42px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+.paziente-info{flex:1}
+.paziente-name{font-weight:600;font-size:14px}
+.paziente-meta{font-size:12px;color:var(--ink3);margin-top:2px}
+
+/* ── CENTRI & TURNI ── */
+.centro-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:10px;transition:opacity .2s}
+.centro-card.centro-disabled{opacity:.6;background:var(--surface2)}
+.badge-inactive{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--ink3);color:#fff;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.5px}
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.status-dot.active{background:var(--accent)}
+.status-dot.inactive{background:var(--ink3)}
+.centro-header{display:flex;align-items:center;gap:12px}
+.centro-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.centro-info{flex:1}
+.centro-nome{font-weight:600}
+.centro-email{font-size:12px;color:var(--ink3)}
+.turni-list{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.turno-row{display:flex;align-items:center;gap:8px;font-size:13px;background:var(--surface2);border-radius:var(--r-sm);padding:8px 12px}
+.turno-row span{flex:1;color:var(--ink2)}
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:600;margin-bottom:12px}
+
+/* ── TAG EDITOR ── */
+.tag-editor{display:flex;flex-wrap:wrap;gap:8px;min-height:32px}
+.tag-editor:empty::before{content:'Nessuno ancora aggiunto';font-size:13px;color:var(--ink3);font-style:italic}
+.tag-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 8px 6px 12px;background:var(--accent-light);color:var(--accent);border-radius:20px;font-size:13px;font-weight:500;border:1px solid #c0ddd5}
+.tag-chip.tag-default{background:var(--surface2);color:var(--ink2);border-color:var(--border)}
+.tag-chip-x{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:14px;line-height:1;padding:2px 6px;border-radius:50%;transition:all .15s}
+.tag-chip-x:hover{opacity:1;background:rgba(0,0,0,.08)}
+
+/* ── VISITA ── */
+.visita-item{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
+.visita-header{padding:12px 16px;background:var(--surface2);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.visita-date{font-weight:600;font-size:13px}
+.visita-body{padding:16px;background:var(--surface);border-top:1px solid var(--border);white-space:pre-wrap;font-size:13px;line-height:1.6;color:var(--ink2)}
+.extracted-fields{display:flex;flex-direction:column;gap:8px}
+.field-row{display:flex;gap:8px;align-items:flex-start}
+.field-key{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);min-width:110px;padding-top:3px}
+.field-val{font-size:13px;color:var(--ink)}
+
+/* ── UPLOAD ── */
+.upload-area{border:2px dashed var(--border);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all .15s;background:var(--surface2)}
+.upload-area:hover{border-color:var(--accent);background:var(--accent-light)}
+.upload-area .uicon{font-size:36px;margin-bottom:10px}
+.upload-area p{font-size:13px;color:var(--ink3)}
+.upload-area strong{display:block;font-size:14px;color:var(--ink);margin-bottom:4px}
+.ai-processing{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--accent-light);border-radius:var(--r-sm);margin-top:12px;font-size:13px;color:var(--accent)}
+.spinner{width:16px;height:16px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
+
+/* ── MAIL ── */
+.mail-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:16px;font-size:12px;line-height:1.6;color:var(--ink2);white-space:pre-wrap;margin-top:12px;font-family:monospace}
+
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:inline-flex;background:var(--surface2);border-radius:var(--r-sm);padding:3px;border:1px solid var(--border)}
+.vt-btn{padding:6px 14px;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer;border-radius:6px;transition:all .15s}
+.vt-btn.active{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+
+/* ── MONTH CALENDAR ── */
+.month-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;box-shadow:var(--shadow)}
+.mc-hdr{text-align:center;font-size:11px;font-weight:600;color:var(--ink3);padding:6px 0;text-transform:uppercase;letter-spacing:.5px}
+.mc-day{aspect-ratio:1/1;border-radius:var(--r-sm);padding:4px 6px;cursor:pointer;display:flex;flex-direction:column;gap:2px;background:var(--surface2);border:2px solid transparent;transition:all .15s;min-height:60px;overflow:hidden}
+.mc-day.empty{background:transparent;cursor:default}
+.mc-day.past{opacity:.5}
+.mc-day.today{border-color:var(--accent)}
+.mc-day.selected{background:var(--accent);color:#fff}
+.mc-day.selected .mc-num{color:#fff}
+.mc-day:not(.empty):not(.selected):hover{background:var(--accent-light)}
+.mc-num{font-size:13px;font-weight:600;color:var(--ink)}
+.mc-dots{display:flex;flex-wrap:wrap;gap:2px;margin-top:auto}
+.mc-dot{width:6px;height:6px;border-radius:50%}
+.mc-count{font-size:9px;color:var(--ink3);font-weight:600;line-height:1}
+.mc-day.selected .mc-count{color:rgba(255,255,255,.85)}
+
+/* Legenda colori centri */
+.month-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);font-size:12px}
+.month-legend-item{display:inline-flex;align-items:center;gap:5px;color:var(--ink2)}
+.month-legend-dot{width:10px;height:10px;border-radius:50%}
+
+@media(max-width:768px){
+  .mc-day{min-height:48px;padding:3px}
+  .mc-num{font-size:12px}
+  .mc-dot{width:5px;height:5px}
+}
+
+/* ── WIZARD APPUNTAMENTO MEDICO ── */
+.appt-step{display:none}
+.appt-step.active{display:block}
+.path-choice{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.path-btn{display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px solid var(--border);border-radius:var(--r);background:var(--surface);cursor:pointer;text-align:left;transition:all .15s;font-family:'DM Sans',sans-serif}
+.path-btn:hover{border-color:var(--accent);background:var(--accent-light)}
+.path-icon{font-size:28px;flex-shrink:0}
+.path-text{flex:1}
+.path-text strong{display:block;font-size:15px;color:var(--ink);margin-bottom:2px}
+.path-text span{font-size:12px;color:var(--ink3)}
+
+/* ── VISITA STEPS ── */
+.visita-step{display:none}
+.visita-step.active{display:block}
+.paziente-pick{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s;margin-bottom:6px}
+.paziente-pick:hover,.paziente-pick.selected{border-color:var(--accent);background:var(--accent-light)}
+.paziente-pick .avatar-sm{width:32px;height:32px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
+.paziente-pick .info{flex:1}
+.paziente-pick .info strong{display:block;font-size:13px;color:var(--ink)}
+.paziente-pick .info span{font-size:11px;color:var(--ink3)}
+.paziente-pick .ora{font-size:12px;color:var(--accent);font-weight:600}
+
+/* ── PRENOTAZIONE PUBBLICA ── */
+#view-booking{display:none;min-height:100vh;background:linear-gradient(135deg,#1A1814 0%,#2D3B35 100%)}
+.booking-wrap{max-width:560px;margin:0 auto;padding:40px 20px}
+.booking-logo{font-family:'DM Serif Display',serif;font-size:28px;color:#fff;margin-bottom:6px}
+.booking-sub{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:32px}
+.booking-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.booking-card-header{padding:24px 28px;background:var(--accent);color:#fff}
+.booking-card-header h2{font-family:'DM Serif Display',serif;font-size:22px}
+.booking-card-header p{font-size:13px;opacity:.8;margin-top:4px}
+.booking-body{padding:28px}
+.booking-step{display:none}.booking-step.active{display:block}
+.step-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:16px}
+.centro-btn{width:100%;padding:14px 18px;border:2px solid var(--border);border-radius:var(--r);background:#fff;cursor:pointer;text-align:left;margin-bottom:8px;transition:all .15s;font-family:'DM Sans',sans-serif}
+.centro-btn:hover,.centro-btn.selected{border-color:var(--accent);background:var(--accent-light)}
+.centro-btn strong{display:block;font-size:14px;color:var(--ink)}
+.centro-btn span{font-size:12px;color:var(--ink3)}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-title{font-weight:600;font-size:15px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:20px}
+.cal-day-hdr{text-align:center;font-size:11px;font-weight:600;color:var(--ink3);padding:4px 0;text-transform:uppercase}
+.cal-day{text-align:center;padding:8px 4px;border-radius:var(--r-sm);font-size:13px;cursor:pointer;transition:all .15s;border:2px solid transparent}
+.cal-day.empty{cursor:default}
+.cal-day.available{background:var(--accent-light);color:var(--accent);font-weight:600}
+.cal-day.available:hover{background:var(--accent);color:#fff}
+.cal-day.selected{background:var(--accent);color:#fff}
+.cal-day.past,.cal-day.noavail{color:var(--ink3);cursor:default}
+.slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+.slot-btn{padding:10px;border:2px solid var(--border);border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:var(--accent);transition:all .15s;font-family:'DM Sans',sans-serif}
+.slot-btn:hover,.slot-btn.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+.slot-btn.slot-occupied{background:var(--warm-light);border-color:#e8c8b0;color:var(--warm);display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px;cursor:pointer}
+.slot-btn.slot-occupied:hover{background:var(--warm);color:#fff;border-color:var(--warm)}
+.slot-btn.slot-occupied .slot-time{font-size:13px;font-weight:600}
+.slot-btn.slot-occupied .slot-name{font-size:10px;font-weight:500;opacity:.85;text-overflow:ellipsis;overflow:hidden;max-width:100%;white-space:nowrap}
+.booking-back{background:none;border:none;color:var(--ink3);font-size:13px;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;margin-bottom:20px;display:flex;align-items:center;gap:4px}
+.booking-back:hover{color:var(--ink)}
+.confirm-box{background:var(--accent-light);border-radius:var(--r);padding:16px;margin-bottom:20px}
+.confirm-row{display:flex;gap:8px;font-size:13px;margin-bottom:6px}
+.confirm-row:last-child{margin-bottom:0}
+.confirm-key{font-weight:600;min-width:80px;color:var(--accent)}
+.booking-success{text-align:center;padding:20px 0}
+.booking-success .big-icon{font-size:56px;margin-bottom:16px}
+.booking-success h3{font-family:'DM Serif Display',serif;font-size:24px;margin-bottom:8px}
+.booking-success p{font-size:14px;color:var(--ink2);line-height:1.6}
+
+/* ── LINK SHARE BOX ── */
+.share-box{background:var(--accent-light);border:1px solid #c0ddd5;border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.share-box p{font-size:13px;color:var(--accent);flex:1}
+.share-url{font-size:12px;font-family:monospace;background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;flex:1;min-width:200px;word-break:break-all;color:var(--ink2)}
+
+/* ── PENDING ── */
+.pending-card{background:var(--warm-light);border:1px solid #e8c8b0;border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.pending-info{flex:1}
+.pending-name{font-weight:600;font-size:14px}
+.pending-detail{font-size:12px;color:var(--ink3);margin-top:2px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:12px 18px;border-radius:var(--r-sm);font-size:13px;z-index:9999;transform:translateY(60px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+/* ── BOTTOM NAV (mobile) ── */
+.bottom-nav{display:none}
+.mobile-header{display:none}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  /* Nascondi sidebar laterale */
+  .sidebar{display:none}
+  .main{margin-left:0;padding:0 16px 90px 16px}
+
+  /* Mobile header con titolo app */
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--ink);color:#fff;margin:0 -16px 20px -16px;position:sticky;top:0;z-index:50}
+  .mobile-header-text h1{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;line-height:1}
+  .mobile-header-text span{font-size:11px;color:rgba(255,255,255,.5);display:block;margin-top:2px}
+
+  /* Bottom navigation bar */
+  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.06);z-index:100;padding:6px 0 calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:stretch}
+  .bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;cursor:pointer;color:var(--ink3);transition:color .15s;background:none;border:none;font-family:'DM Sans',sans-serif}
+  .bottom-nav-item.active{color:var(--accent)}
+  .bottom-nav-item .bn-icon{font-size:22px;line-height:1}
+  .bottom-nav-item .bn-label{font-size:10px;font-weight:600;letter-spacing:.3px}
+
+  /* Resto */
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .slots-grid{grid-template-columns:repeat(4,1fr)}
+
+  /* Page header */
+  .page-title{font-size:24px}
+  .page-header{margin-bottom:20px}
+
+  /* Centri */
+  .centro-header{flex-wrap:wrap;gap:8px}
+  .centro-info{min-width:calc(100% - 30px)}
+
+  /* Stats */
+  .stat-card{padding:16px}
+  .stat-value{font-size:28px}
+
+  /* Modal */
+  .modal{max-height:95vh}
+  .modal-body{padding:18px}
+  .modal-footer{padding:14px 18px;flex-direction:column-reverse;gap:8px}
+  .modal-footer .btn{width:100%}
+
+  /* Share box */
+  .share-box{flex-direction:column;align-items:stretch;text-align:center;padding:14px}
+  .share-box .btn{width:100%}
+  .share-url{text-align:center;font-size:11px;width:100%}
+
+  /* Booking page */
+  .booking-wrap{padding:24px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ APP MEDICO ══════════════ -->
+<div id="view-app" class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><h1>MediDesk</h1><p>Il tuo studio ovunque</p></div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="icon">🏠</span><span>Dashboard</span></div>
+      <div class="nav-item" onclick="showPage('agenda')"><span class="icon">📅</span><span>Agenda</span></div>
+      <div class="nav-item" onclick="showPage('pazienti')"><span class="icon">👥</span><span>Pazienti</span></div>
+      <div class="nav-item" onclick="showPage('centri')"><span class="icon">🏥</span><span>Centri</span></div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- MOBILE HEADER (visible only on mobile) -->
+    <header class="mobile-header">
+      <div class="mobile-header-text">
+        <h1>MediDesk</h1>
+        <span id="mobile-doctor">Dr. Mario Rossi</span>
+      </div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <div><div class="page-title">Buongiorno 👋</div><div class="page-subtitle" id="today-date"></div></div>
+        <button class="btn btn-primary" onclick="openModal('modal-appuntamento')">+ Appuntamento</button>
+      </div>
+
+      <!-- SHARE BOX -->
+      <div class="share-box">
+        <span style="font-size:20px">🔗</span>
+        <p><strong>Link prenotazione pazienti</strong><br>Condividi questo link con i tuoi pazienti per permettere loro di prenotare online.</p>
+        <span class="share-url" id="share-url-display">—</span>
+        <button class="btn btn-sm btn-primary" onclick="copyShareLink()">Copia link</button>
+        <button class="btn btn-sm btn-secondary" onclick="openBookingPage()">Apri</button>
+      </div>
+
+      <!-- PENDING -->
+      <div id="pending-section" style="display:none;margin-bottom:24px">
+        <div class="section-title" style="color:var(--warm)">⏳ Prenotazioni in attesa</div>
+        <div id="pending-list"></div>
+      </div>
+
+      <div class="grid-3" style="margin-bottom:24px">
+        <div class="stat-card"><div class="stat-label">Oggi</div><div class="stat-value" id="stat-oggi">0</div><div class="stat-sub">appuntamenti</div></div>
+        <div class="stat-card"><div class="stat-label">Pazienti</div><div class="stat-value" id="stat-pazienti">0</div><div class="stat-sub">in archivio</div></div>
+        <div class="stat-card"><div class="stat-label">Centri</div><div class="stat-value" id="stat-centri">0</div><div class="stat-sub">ambulatori</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span style="font-weight:600">Appuntamenti di oggi</span><button class="btn btn-sm btn-secondary" onclick="showPage('agenda')">Vedi tutto</button></div>
+          <div id="dash-upcoming"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span style="font-weight:600">Ultimi pazienti</span><button class="btn btn-sm btn-secondary" onclick="showPage('pazienti')">Vedi tutto</button></div>
+          <div id="dash-pazienti"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div id="page-agenda" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Agenda</div><div class="page-subtitle">Appuntamenti e prenotazioni</div></div>
+        <button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+        <div class="view-toggle">
+          <button class="vt-btn active" data-view="week" onclick="setAgendaView('week')">Settimana</button>
+          <button class="vt-btn" data-view="month" onclick="setAgendaView('month')">Mese</button>
+        </div>
+        <button class="btn btn-sm btn-secondary" onclick="goToToday()">Oggi</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+        <div class="week-nav">
+          <button class="btn-icon" onclick="changeWeek(-1)">←</button>
+          <span class="week-label" id="week-label"></span>
+          <button class="btn-icon" onclick="changeWeek(1)">→</button>
+        </div>
+      </div>
+      <div id="view-week">
+        <div class="day-tabs" id="day-tabs"></div>
+        <div id="appointments-container"></div>
+      </div>
+      <div id="view-month" style="display:none">
+        <div class="month-cal" id="month-cal"></div>
+        <div id="month-day-detail" style="margin-top:20px"></div>
+      </div>
+    </div>
+
+    <!-- PAZIENTI -->
+    <div id="page-pazienti" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Pazienti</div><div class="page-subtitle">Fascicoli clinici</div></div>
+        <button class="btn btn-primary" onclick="openModalVisita()">+ Carica visita</button>
+      </div>
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <span class="sicon">🔍</span>
+          <input class="search-input" id="search-pazienti" placeholder="Cerca per nome, cognome o codice fiscale..." oninput="renderPazienti()">
+        </div>
+      </div>
+      <div id="pazienti-list"></div>
+    </div>
+
+    <!-- CENTRI -->
+    <div id="page-centri" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Centri & Disponibilità</div><div class="page-subtitle">Ambulatori, email e turni ricorrenti</div></div>
+        <button class="btn btn-primary" onclick="openModal('modal-centro')">+ Centro</button>
+      </div>
+      <div id="centri-list"></div>
+      <div style="margin-top:32px">
+        <div class="section-title">Impostazioni medico</div>
+        <div class="card"><div class="card-body">
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Nome e Cognome</label><input class="form-input" id="setting-nome" placeholder="Dr. Mario Rossi"></div>
+            <div class="form-group"><label class="form-label">Specializzazione</label><input class="form-input" id="setting-spec" placeholder="Cardiologo"></div>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label class="form-label">Anthropic API Key <span style="font-weight:400;color:var(--ink3)">(per analisi AI dei referti)</span></label>
+            <input class="form-input" id="setting-apikey" type="password" placeholder="sk-ant-...">
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()">Salva</button>
+          <button class="btn btn-secondary" style="margin-left:8px;color:var(--warm)" onclick="resetAllData()">🗑 Reset dati</button>
+        </div></div>
+      </div>
+
+      <div style="margin-top:32px">
+        <div class="section-title">Tipi di visita</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Personalizza i tipi di visita disponibili al momento della prenotazione.</p>
+          <div id="tipi-visita-list" class="tag-editor"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input class="form-input" id="new-tipo-visita" placeholder="es. Pre-chirurgica" style="flex:1" onkeydown="if(event.key==='Enter')addTipoVisita()">
+            <button class="btn btn-primary" onclick="addTipoVisita()">+ Aggiungi</button>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-top:24px">
+        <div class="section-title">Aree tematiche (opzionali)</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Aree di intervento che si possono associare a una visita. Es. Ginocchio, Spalla, Anca.</p>
+          <div id="aree-list" class="tag-editor"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input class="form-input" id="new-area" placeholder="es. Ginocchio" style="flex:1" onkeydown="if(event.key==='Enter')addArea()">
+            <button class="btn btn-primary" onclick="addArea()">+ Aggiungi</button>
+          </div>
+        </div></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION (visible only on mobile) -->
+  <nav class="bottom-nav">
+    <button class="bottom-nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+      <span class="bn-icon">🏠</span>
+      <span class="bn-label">Home</span>
+    </button>
+    <button class="bottom-nav-item" data-page="agenda" onclick="showPage('agenda')">
+      <span class="bn-icon">📅</span>
+      <span class="bn-label">Agenda</span>
+    </button>
+    <button class="bottom-nav-item" data-page="pazienti" onclick="showPage('pazienti')">
+      <span class="bn-icon">👥</span>
+      <span class="bn-label">Pazienti</span>
+    </button>
+    <button class="bottom-nav-item" data-page="centri" onclick="showPage('centri')">
+      <span class="bn-icon">🏥</span>
+      <span class="bn-label">Centri</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ══════════════ PAGINA PRENOTAZIONE PUBBLICA ══════════════ -->
+<div id="view-booking">
+  <div class="booking-wrap">
+    <div class="booking-logo">MediDesk</div>
+    <div class="booking-sub">Prenota una visita online</div>
+    <div class="booking-card">
+      <div class="booking-card-header">
+        <h2 id="bk-doctor-name">Dr. Mario Rossi</h2>
+        <p id="bk-doctor-spec">Medico specialista</p>
+      </div>
+      <div class="booking-body">
+
+        <!-- STEP 1: scegli centro -->
+        <div class="booking-step active" id="bk-step-1">
+          <div class="step-label">1 / 4 — Scegli il centro</div>
+          <div id="bk-centri-list"></div>
+          <div id="bk-no-centri" style="display:none;text-align:center;padding:24px;color:var(--ink3)">Nessun centro disponibile al momento.</div>
+        </div>
+
+        <!-- STEP 2: scegli giorno -->
+        <div class="booking-step" id="bk-step-2">
+          <button class="booking-back" onclick="bkStep(1)">← Indietro</button>
+          <div class="step-label">2 / 4 — Scegli il giorno</div>
+          <div class="cal-nav">
+            <button class="btn-icon" onclick="bkPrevMonth()">←</button>
+            <span class="cal-title" id="bk-cal-title"></span>
+            <button class="btn-icon" onclick="bkNextMonth()">→</button>
+          </div>
+          <div class="cal-grid" id="bk-cal"></div>
+        </div>
+
+        <!-- STEP 3: scegli slot -->
+        <div class="booking-step" id="bk-step-3">
+          <button class="booking-back" onclick="bkStep(2)">← Indietro</button>
+          <div class="step-label">3 / 4 — Scegli l'orario</div>
+          <div style="font-weight:600;margin-bottom:14px;font-size:14px" id="bk-selected-date-label"></div>
+          <div class="slots-grid" id="bk-slots"></div>
+        </div>
+
+        <!-- STEP 4: dati paziente -->
+        <div class="booking-step" id="bk-step-4">
+          <button class="booking-back" onclick="bkStep(3)">← Indietro</button>
+          <div class="step-label">4 / 4 — I tuoi dati</div>
+          <div class="confirm-box" id="bk-confirm-summary"></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="bk-nome" placeholder="Mario"></div>
+            <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="bk-cognome" placeholder="Rossi"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Telefono</label><input class="form-input" id="bk-tel" placeholder="+39 333 0000000"></div>
+            <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="bk-email" type="email" placeholder="mario@email.it"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo visita / motivo</label>
+            <select class="form-select" id="bk-tipo"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Area tematica (opzionale)</label>
+            <select class="form-select" id="bk-area"></select>
+          </div>
+          <div class="form-group"><label class="form-label">Note aggiuntive</label><textarea class="form-textarea" id="bk-note" style="min-height:60px"></textarea></div>
+          <button class="btn btn-primary" style="width:100%;padding:13px" onclick="confirmBooking()">Conferma prenotazione</button>
+        </div>
+
+        <!-- STEP 5: successo -->
+        <div class="booking-step" id="bk-step-5">
+          <div class="booking-success">
+            <div class="big-icon">✅</div>
+            <h3>Prenotazione confermata!</h3>
+            <p id="bk-success-msg">Il tuo appuntamento è stato registrato.<br>Riceverai conferma all'email indicata.</p>
+            <button class="btn btn-secondary" style="margin-top:20px" onclick="bkReset()">Prenota un altro appuntamento</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:24px;font-size:12px;color:rgba(255,255,255,.3)">Powered by MediDesk</div>
+  </div>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- MODAL APPUNTAMENTO (medico) — wizard -->
+<div class="modal-overlay" id="modal-appuntamento">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="appt-modal-title">Nuovo appuntamento</span><button class="modal-close" onclick="closeModal('modal-appuntamento')">✕</button></div>
+    <div class="modal-body">
+
+      <!-- STEP 0: scegli percorso -->
+      <div class="appt-step" id="appt-step-0">
+        <div class="step-label">Come vuoi procedere?</div>
+        <div class="path-choice">
+          <button class="path-btn" onclick="apptPathCenter()">
+            <div class="path-icon">🏥</div>
+            <div class="path-text"><strong>Per centro</strong><span>Scegli prima l'ambulatorio</span></div>
+          </button>
+          <button class="path-btn" onclick="apptPathDate()">
+            <div class="path-icon">📅</div>
+            <div class="path-text"><strong>Per data</strong><span>Scegli prima il giorno</span></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 1A: scegli centro -->
+      <div class="appt-step" id="appt-step-1a">
+        <button class="booking-back" onclick="apptStep(0)">← Indietro</button>
+        <div class="step-label">Centro</div>
+        <div id="appt-centri-list"></div>
+      </div>
+
+      <!-- STEP 1B: scegli data -->
+      <div class="appt-step" id="appt-step-1b">
+        <button class="booking-back" onclick="apptStep(0)">← Indietro</button>
+        <div class="step-label">Data</div>
+        <div class="cal-nav">
+          <button class="btn-icon" onclick="apptPrevMonth()">←</button>
+          <span class="cal-title" id="appt-cal-title"></span>
+          <button class="btn-icon" onclick="apptNextMonth()">→</button>
+        </div>
+        <div class="cal-grid" id="appt-cal"></div>
+        <p style="font-size:11px;color:var(--ink3);margin-top:10px;text-align:center">I giorni in verde hanno turni configurati</p>
+      </div>
+
+      <!-- STEP 2A: dopo centro → data -->
+      <div class="appt-step" id="appt-step-2a">
+        <button class="booking-back" onclick="apptBackToCenter()">← Indietro</button>
+        <div class="step-label" id="appt-step-2a-label">Data</div>
+        <div class="cal-nav">
+          <button class="btn-icon" onclick="apptPrevMonth()">←</button>
+          <span class="cal-title" id="appt-cal-title-a"></span>
+          <button class="btn-icon" onclick="apptNextMonth()">→</button>
+        </div>
+        <div class="cal-grid" id="appt-cal-a"></div>
+      </div>
+
+      <!-- STEP 2B: dopo data → centro -->
+      <div class="appt-step" id="appt-step-2b">
+        <button class="booking-back" onclick="apptBackToDate()">← Indietro</button>
+        <div class="step-label" id="appt-step-2b-label">Centri disponibili</div>
+        <div id="appt-centri-day-list"></div>
+      </div>
+
+      <!-- STEP 3: slot -->
+      <div class="appt-step" id="appt-step-3">
+        <button class="booking-back" onclick="apptBackToStep2()">← Indietro</button>
+        <div class="step-label" id="appt-step-3-label">Orario</div>
+        <div class="slots-grid" id="appt-slots"></div>
+      </div>
+
+      <!-- STEP 4: dati paziente -->
+      <div class="appt-step" id="appt-step-4">
+        <button class="booking-back" onclick="apptStep(3)">← Indietro</button>
+        <div class="step-label">Dati paziente</div>
+        <div class="confirm-box" id="appt-confirm-summary"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="appt-nome" placeholder="Mario"></div>
+          <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="appt-cognome" placeholder="Rossi"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Telefono</label><input class="form-input" id="appt-tel" placeholder="+39 333..."></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="appt-email" type="email"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo visita</label>
+          <select class="form-select" id="appt-tipo"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Area tematica (opzionale)</label>
+          <select class="form-select" id="appt-area"></select>
+        </div>
+        <div class="form-group"><label class="form-label">Note</label><textarea class="form-textarea" id="appt-note"></textarea></div>
+        <div style="margin-top:12px">
+          <div class="section-title">Notifica centro</div>
+          <div id="mail-preview-appt" class="mail-preview" style="display:none"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" onclick="previewMail()">👁 Anteprima</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyMail()">📋 Copia mail</button>
+            <button class="btn btn-secondary btn-sm" onclick="downloadICS()">📎 .ics</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-appuntamento')">Annulla</button>
+      <button class="btn btn-primary" id="appt-save-btn" style="display:none" onclick="saveAppuntamento()">Salva appuntamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CENTRO -->
+<div class="modal-overlay" id="modal-centro">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Aggiungi centro</span><button class="modal-close" onclick="closeModal('modal-centro')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome del centro</label><input class="form-input" id="centro-nome" placeholder="Poliambulatorio Milano Centro"></div>
+      <div class="form-group"><label class="form-label">Email segreteria</label><input class="form-input" id="centro-email" type="email" placeholder="segreteria@centro.it"></div>
+      <div class="form-group"><label class="form-label">Indirizzo</label><input class="form-input" id="centro-indirizzo" placeholder="Via Roma 1, Milano"></div>
+      <div class="form-group"><label class="form-label">Colore</label><input type="color" id="centro-colore" value="#2D5F4E" style="height:36px;width:60px;border:none;cursor:pointer;border-radius:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-centro')">Annulla</button>
+      <button class="btn btn-primary" onclick="saveCentro()">Salva centro</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TURNO -->
+<div class="modal-overlay" id="modal-turno">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Aggiungi turno</span><button class="modal-close" onclick="closeModal('modal-turno')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Centro: <strong id="turno-centro-label"></strong></p>
+      <div class="form-group">
+        <label class="form-label">Giorno della settimana</label>
+        <select class="form-select" id="turno-giorno">
+          <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
+          <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Inizio</label><input class="form-input" id="turno-inizio" type="time" value="09:00"></div>
+        <div class="form-group"><label class="form-label">Fine</label><input class="form-input" id="turno-fine" type="time" value="13:00"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Durata slot (minuti)</label>
+        <select class="form-select" id="turno-slot">
+          <option value="15">15 min</option><option value="20">20 min</option><option value="30" selected>30 min</option>
+          <option value="45">45 min</option><option value="60">60 min</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-turno')">Annulla</button>
+      <button class="btn btn-primary" onclick="saveTurno()">Salva turno</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUOVA VISITA -->
+<div class="modal-overlay" id="modal-nuova-visita">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><span class="modal-title" id="visita-modal-title">Carica referto</span><button class="modal-close" onclick="closeModal('modal-nuova-visita')">✕</button></div>
+    <div class="modal-body">
+
+      <!-- STEP 1: Scegli paziente -->
+      <div class="visita-step active" id="visita-step-1">
+        <div class="step-label">Per quale paziente?</div>
+
+        <div style="margin-bottom:14px">
+          <label class="form-label">Data visita</label>
+          <input class="form-input" id="visita-data-filter" type="date" onchange="renderVisitaPazienti()">
+        </div>
+
+        <div id="visita-pazienti-day" style="margin-bottom:16px"></div>
+
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+          <div class="step-label" style="margin-bottom:10px">Oppure cerca tra tutti i pazienti</div>
+          <input class="form-input" id="visita-search" placeholder="Nome o cognome..." oninput="renderVisitaSearchResults()">
+          <div id="visita-search-results" style="margin-top:8px;max-height:200px;overflow-y:auto"></div>
+        </div>
+
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+          <button class="btn btn-secondary" style="width:100%" onclick="visitaSelectNew()">+ Nuovo paziente (estrai dati dal referto)</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Upload e analisi -->
+      <div class="visita-step" id="visita-step-2" style="display:none">
+        <button class="booking-back" onclick="visitaBackToStep1()">← Cambia paziente</button>
+
+        <div class="confirm-box" id="visita-paziente-info" style="margin-bottom:16px"></div>
+
+        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Fotografa o seleziona il referto. L'AI estrarrà automaticamente il contenuto clinico.</p>
+        <div class="upload-area" onclick="document.getElementById('referto-input').click()">
+          <div class="uicon">📸</div>
+          <strong>Clicca per selezionare o fotografare</strong>
+          <p>Immagine del referto (JPG, PNG, PDF)</p>
+        </div>
+        <input type="file" id="referto-input" accept="image/*,application/pdf" style="display:none" onchange="handleRefertoUpload(this)">
+        <div id="referto-preview" style="display:none;margin-top:12px"></div>
+        <div id="ai-status" style="display:none" class="ai-processing"><div class="spinner"></div><span>Analisi AI in corso…</span></div>
+        <div id="ai-error" style="display:none;background:var(--warm-light);border:1px solid #e8c8b0;border-radius:8px;padding:12px 14px;margin-top:12px;font-size:13px;color:var(--warm)"></div>
+
+        <div id="extracted-data" style="display:none;margin-top:16px">
+          <div class="section-title">Dati estratti — verifica e correggi</div>
+          <div class="extracted-fields">
+            <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
+            <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
+            <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" style="flex:1"></div>
+            <div class="field-row" id="row-ex-cf"><span class="field-key">Cod. Fiscale</span><input class="form-input" id="ex-cf" style="flex:1"></div>
+            <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" style="flex:1"></div>
+            <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1"></div>
+          </div>
+          <div class="form-group" style="margin-top:14px">
+            <label class="form-label">Sintesi clinica (riassunto AI)</label>
+            <textarea class="form-textarea" id="ex-clinica" style="min-height:140px"></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-nuova-visita')">Annulla</button>
+      <button class="btn btn-primary" id="btn-salva-visita" style="display:none" onclick="saveVisita()">Salva nel fascicolo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETTAGLIO PAZIENTE -->
+<div class="modal-overlay" id="modal-paziente">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header"><span class="modal-title" id="modal-paziente-title">Scheda paziente</span><button class="modal-close" onclick="closeModal('modal-paziente')">✕</button></div>
+    <div class="modal-body" id="modal-paziente-body"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-paziente')">Chiudi</button></div>
+  </div>
+</div>
+
+<!-- MODAL APPUNTAMENTO DETAIL -->
+<div class="modal-overlay" id="modal-appt-detail">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Appuntamento</span><button class="modal-close" onclick="closeModal('modal-appt-detail')">✕</button></div>
+    <div class="modal-body" id="modal-appt-detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" id="btn-delete-appt">🗑 Elimina</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyMailFromDetail()">📋 Copia mail</button>
+      <button class="btn btn-secondary btn-sm" onclick="downloadICSFromDetail()">📎 .ics</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-appt-detail')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════ SCRIPT ══════════════ -->
+<script>
+// ── DICHIARAZIONI GLOBALI (in cima per evitare TDZ) ──
+var A = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, prefillDate:null };
+var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null };
+var _turnoTargetId = null;
+
+// ── STATE ──
+var S = {
+  centri:[], appuntamenti:[], pazienti:[],
+  settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista' },
+  tipiVisita: ['Prima visita', 'Controllo'],
+  areeTematiche: [],
+  weekOffset:0, selectedDay:null, currentApptId:null,
+  agendaView:'week', monthYear:null, monthMonth:null
+};
+
+// ── COSTANTI ──
+const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const DAYS_IT_SHORT=['Lu','Ma','Me','Gi','Ve','Sa','Do'];
+const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const TIPI_DEFAULT = ['Prima visita', 'Controllo'];
+
+function save(){ localStorage.setItem('medidesk_v2', JSON.stringify(S)) }
+function load(){
+  const d = localStorage.getItem('medidesk_v2');
+  if(d) S = {...S, ...JSON.parse(d)};
+  // Migrazioni per utenti esistenti
+  if(!S.tipiVisita || !S.tipiVisita.length) S.tipiVisita = ['Prima visita', 'Controllo'];
+  if(!Array.isArray(S.areeTematiche)) S.areeTematiche = [];
+}
+
+// ── INIT ──
+load();
+checkView();
+
+function checkView(){
+  // Se l'URL ha ?booking mostra la pagina pubblica
+  if(location.search.includes('booking')){
+    showBookingView();
+  } else {
+    document.getElementById('view-app').style.display='flex';
+    document.getElementById('view-booking').style.display='none';
+    init();
+  }
+}
+
+function init(){
+  const td = document.getElementById('today-date');
+  if(td) td.textContent = new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  updateShareLink();
+  renderAll();
+}
+
+function renderAll(){
+  renderCentri(); renderAgenda(); renderPazienti();
+  renderDashboard(); updateStats(); updateDoctorName();
+  populateCentroSelect(); loadSettings(); renderPending();
+  renderTipiAree();
+}
+
+// ── NAV ──
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  ['dashboard','agenda','pazienti','centri'].forEach((p,i)=>{
+    if(p===id){
+      document.querySelectorAll('.nav-item')[i].classList.add('active');
+    }
+  });
+  // Sync bottom nav
+  const bnItem = document.querySelector(`.bottom-nav-item[data-page="${id}"]`);
+  if(bnItem) bnItem.classList.add('active');
+  // Scroll to top on mobile
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='agenda') renderAgenda();
+  if(id==='pazienti') renderPazienti();
+  if(id==='centri'){ renderCentri(); renderTipiAree(); }
+  if(id==='dashboard'){ renderDashboard(); renderPending(); }
+}
+
+// ── MODALS ──
+function openModal(id){
+  try {
+    const m = document.getElementById(id);
+    if(!m){ showToast('Errore: modal non trovato'); return; }
+
+    // Verifica prerequisiti per appuntamento
+    if(id==='modal-appuntamento'){
+      const centriOk = S.centri.filter(c=>c.attivo!==false && c.turni && c.turni.length);
+      if(!centriOk.length){
+        const noCenters = !S.centri.length;
+        const noTurns = S.centri.length && !centriOk.length;
+        if(noCenters){
+          if(confirm('Non hai ancora aggiunto centri.\n\nVai alla sezione Centri per crearne uno?')){
+            showPage('centri');
+          }
+          return;
+        }
+        if(noTurns){
+          if(confirm('I tuoi centri non hanno turni configurati.\n\nVai alla sezione Centri per aggiungerli?')){
+            showPage('centri');
+          }
+          return;
+        }
+      }
+    }
+
+    m.classList.add('open');
+    if(id==='modal-appuntamento'){
+      apptResetWizard();
+    }
+  } catch(err){
+    console.error('openModal error:', err);
+    showToast('Errore apertura: '+err.message);
+  }
+}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='modal-nuova-visita') resetVisitaModal();
+}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); });
+});
+
+// ── SHARE LINK ──
+function updateShareLink(){
+  const url = location.href.split('?')[0] + '?booking';
+  const el = document.getElementById('share-url-display');
+  if(el) el.textContent = url;
+}
+function copyShareLink(){
+  const url = location.href.split('?')[0] + '?booking';
+  navigator.clipboard.writeText(url);
+  showToast('Link copiato ✓');
+}
+function openBookingPage(){
+  showBookingView();
+  history.pushState({},'','?booking');
+}
+
+// ── CENTRI ──
+function saveCentro(){
+  const nome = document.getElementById('centro-nome').value.trim();
+  const email = document.getElementById('centro-email').value.trim();
+  const indirizzo = document.getElementById('centro-indirizzo').value.trim();
+  const colore = document.getElementById('centro-colore').value;
+  if(!nome){ showToast('Inserisci il nome del centro'); return; }
+  S.centri.push({ id:Date.now(), nome, email, indirizzo, colore, turni:[], attivo:true });
+  save(); closeModal('modal-centro'); renderCentri(); populateCentroSelect(); updateStats();
+  ['centro-nome','centro-email','centro-indirizzo'].forEach(id=>document.getElementById(id).value='');
+  showToast('Centro aggiunto ✓');
+}
+
+function renderCentri(){
+  const el = document.getElementById('centri-list'); if(!el) return;
+  if(!S.centri.length){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun centro. Aggiungine uno!</div>'; return;
+  }
+  // Separiamo attivi e inattivi
+  const attivi = S.centri.filter(c=>c.attivo!==false);
+  const inattivi = S.centri.filter(c=>c.attivo===false);
+
+  let html = '';
+  if(attivi.length){
+    html += `<div class="section-title" style="margin-top:8px"><span class="status-dot active"></span> Attivi (${attivi.length})</div>`;
+    html += attivi.map(c=>renderCentroCard(c, true)).join('');
+  }
+  if(inattivi.length){
+    html += `<div class="section-title" style="margin-top:24px"><span class="status-dot inactive"></span> Disattivati (${inattivi.length})</div>`;
+    html += inattivi.map(c=>renderCentroCard(c, false)).join('');
+  }
+  if(!attivi.length && !inattivi.length){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun centro</div>'; return;
+  }
+  el.innerHTML = html;
+}
+
+function renderCentroCard(c, isActive){
+  return `
+    <div class="centro-card ${!isActive?'centro-disabled':''}">
+      <div class="centro-header">
+        <div class="centro-dot" style="background:${c.colore}"></div>
+        <div class="centro-info">
+          <div class="centro-nome">${c.nome} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
+          <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
+        </div>
+        ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno(${c.id})">+ Turno</button>`:''}
+        <button class="btn btn-sm btn-secondary" onclick="toggleCentro(${c.id})" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
+        <button class="btn btn-sm btn-secondary" onclick="deleteCentro(${c.id})" title="Elimina">🗑</button>
+      </div>
+      ${(c.turni&&c.turni.length)?`
+        <div class="turni-list">
+          ${c.turni.map((t,i)=>`
+            <div class="turno-row">
+              <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min</span>
+              ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="deleteTurno(${c.id},${i})">✕</button>`:''}
+            </div>
+          `).join('')}
+        </div>
+      `:isActive?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>':''}
+    </div>`;
+}
+
+function toggleCentro(id){
+  const c = S.centri.find(x=>x.id===id);
+  if(!c) return;
+  c.attivo = c.attivo===false ? true : false;
+  save(); renderCentri(); updateStats();
+  showToast(c.attivo===false ? 'Centro disattivato' : 'Centro riattivato ✓');
+}
+
+function openAddTurno(centroId){
+  _turnoTargetId = centroId;
+  const c = S.centri.find(x=>x.id===centroId);
+  document.getElementById('turno-centro-label').textContent = c?c.nome:'';
+  openModal('modal-turno');
+}
+function saveTurno(){
+  const c = S.centri.find(x=>x.id===_turnoTargetId); if(!c) return;
+  c.turni = c.turni||[];
+  c.turni.push({
+    giorno: parseInt(document.getElementById('turno-giorno').value),
+    inizio: document.getElementById('turno-inizio').value,
+    fine: document.getElementById('turno-fine').value,
+    slot: parseInt(document.getElementById('turno-slot').value)
+  });
+  save(); closeModal('modal-turno'); renderCentri();
+  showToast('Turno aggiunto ✓');
+}
+function deleteTurno(centroId, idx){
+  const c = S.centri.find(x=>x.id===centroId); if(!c) return;
+  c.turni.splice(idx,1); save(); renderCentri();
+}
+function deleteCentro(id){
+  if(!confirm('Eliminare questo centro?')) return;
+  S.centri = S.centri.filter(c=>c.id!==id);
+  save(); renderCentri(); populateCentroSelect(); updateStats();
+}
+function populateCentroSelect(){
+  const sel = document.getElementById('appt-centro'); if(!sel) return;
+  sel.innerHTML = S.centri.length
+    ? S.centri.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')
+    : '<option value="">— Aggiungi prima un centro —</option>';
+}
+
+function populateTipiVisitaSelects(){
+  const tipiHTML = S.tipiVisita.map(t=>`<option value="${escapeAttr(t)}">${t}</option>`).join('');
+  const areaHTML = '<option value="">— Nessuna —</option>' +
+    S.areeTematiche.map(a=>`<option value="${escapeAttr(a)}">${a}</option>`).join('');
+  ['appt-tipo','bk-tipo'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.innerHTML=tipiHTML;
+  });
+  ['appt-area','bk-area'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.innerHTML=areaHTML;
+  });
+}
+
+function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+// ── SLOT LOGIC ──
+function getSlots(centro, dateStr){
+  // Giorno della settimana
+  const d = new Date(dateStr+'T12:00:00');
+  const dow = d.getDay();
+  const turni = (centro.turni||[]).filter(t=>t.giorno===dow);
+  if(!turni.length) return [];
+  let slots = [];
+  turni.forEach(t=>{
+    let cur = timeToMin(t.inizio);
+    const end = timeToMin(t.fine);
+    while(cur + t.slot <= end){
+      slots.push(minToTime(cur));
+      cur += t.slot;
+    }
+  });
+  // Rimuovi slot già occupati
+  const taken = S.appuntamenti
+    .filter(a=>a.data===dateStr && a.centroId===centro.id)
+    .map(a=>a.ora);
+  return slots.filter(s=>!taken.includes(s));
+}
+
+function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function minToTime(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+
+function hasAvailability(centro, dateStr){
+  return getSlots(centro, dateStr).length > 0;
+}
+
+// Per il medico: ritorna TUTTI gli slot del turno con stato (libero/occupato + paziente)
+function getAllSlotsWithStatus(centro, dateStr){
+  const d = new Date(dateStr+'T12:00:00');
+  const dow = d.getDay();
+  const turni = (centro.turni||[]).filter(t=>t.giorno===dow);
+  if(!turni.length) return [];
+  let slots = [];
+  turni.forEach(t=>{
+    let cur = timeToMin(t.inizio);
+    const end = timeToMin(t.fine);
+    while(cur + t.slot <= end){
+      slots.push(minToTime(cur));
+      cur += t.slot;
+    }
+  });
+  // Mappa con info appuntamento se occupato
+  const apptsHere = S.appuntamenti.filter(a=>a.data===dateStr && a.centroId===centro.id);
+  return slots.map(s=>{
+    const appt = apptsHere.find(a=>a.ora===s);
+    return { ora:s, libero:!appt, appt:appt||null };
+  });
+}
+
+// ── APPUNTAMENTI (wizard) ──
+function apptResetWizard(){
+  try {
+    // Resetta le proprietà di A senza riassegnare
+    const prevPrefill = A.prefillDate;
+    A.centroId = null;
+    A.dateStr = null;
+    A.ora = null;
+    A.calYear = new Date().getFullYear();
+    A.calMonth = new Date().getMonth();
+    A.prefillDate = prevPrefill;
+
+    ['appt-nome','appt-cognome','appt-tel','appt-email','appt-note'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    populateTipiVisitaSelects();
+    const mp = document.getElementById('mail-preview-appt');
+    if(mp) mp.style.display='none';
+    const sb = document.getElementById('appt-save-btn');
+    if(sb) sb.style.display='none';
+    const tt = document.getElementById('appt-modal-title');
+    if(tt) tt.textContent='Nuovo appuntamento';
+
+    if(A.prefillDate){
+      const pf = A.prefillDate;
+      A.dateStr = pf;
+      A.prefillDate = null;
+      apptPathDateWithPrefill();
+    } else {
+      apptStep(0);
+    }
+  } catch(err){
+    console.error('apptResetWizard error:', err);
+    showToast('Errore wizard: '+err.message);
+  }
+}
+
+function apptStep(n){
+  try {
+    document.querySelectorAll('.appt-step').forEach(s=>s.classList.remove('active'));
+    const map={0:'appt-step-0','1a':'appt-step-1a','1b':'appt-step-1b','2a':'appt-step-2a','2b':'appt-step-2b',3:'appt-step-3',4:'appt-step-4'};
+    const el=document.getElementById(map[n]);
+    if(el) el.classList.add('active');
+    const sb = document.getElementById('appt-save-btn');
+    if(sb) sb.style.display = (n===4)?'inline-block':'none';
+  } catch(err){
+    console.error('apptStep error:', err);
+  }
+}
+
+// PERCORSO A: prima centro, poi data
+function apptPathCenter(){
+  try {
+    const list=document.getElementById('appt-centri-list');
+    if(!list) return;
+    const withTurni=S.centri.filter(c=>c.attivo!==false && c.turni&&c.turni.length);
+    if(!withTurni.length){
+      list.innerHTML='<div style="text-align:center;padding:24px;color:var(--ink3)">Nessun centro con turni configurati.<br><br><button class="btn btn-secondary btn-sm" onclick="closeModal(\'modal-appuntamento\');showPage(\'centri\')">Vai a Centri</button></div>';
+    } else {
+      list.innerHTML=withTurni.map(c=>`
+        <button class="centro-btn" onclick="apptSelectCentro(${c.id})">
+          <strong>${c.nome}</strong>
+          <span>${c.indirizzo||''} · ${c.turni.length} turni</span>
+        </button>
+      `).join('');
+    }
+    apptStep('1a');
+  } catch(err){
+    console.error('apptPathCenter error:', err);
+    showToast('Errore: '+err.message);
+  }
+}
+
+function apptSelectCentro(id){
+  A.centroId=id;
+  const c=S.centri.find(x=>x.id===id);
+  document.getElementById('appt-step-2a-label').textContent = `Data — ${c.nome}`;
+  apptStep('2a');
+  renderApptCalA();
+}
+
+function apptBackToCenter(){ apptPathCenter(); }
+
+function renderApptCalA(){
+  document.getElementById('appt-cal-title-a').textContent=MONTHS_IT[A.calMonth]+' '+A.calYear;
+  const centro=S.centri.find(c=>c.id===A.centroId);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const lastDay=new Date(A.calYear,A.calMonth+1,0);
+  const firstDay=new Date(A.calYear,A.calMonth,1);
+  let startDow=firstDay.getDay(); if(startDow===0)startDow=7; startDow--;
+  let html=DAYS_IT_SHORT.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=lastDay.getDate();d++){
+    const date=new Date(A.calYear,A.calMonth,d);
+    const ds=fmt(date);
+    const isPast=date<today;
+    const hasSlots=!isPast&&centro&&hasAvailability(centro,ds);
+    let cls='cal-day';
+    if(isPast||!hasSlots) cls+=' '+(isPast?'past':'noavail');
+    else cls+=' available';
+    if(ds===A.dateStr) cls+=' selected';
+    html+=`<div class="${cls}" ${hasSlots?`onclick="apptSelectDateA('${ds}')"`:''}>${d}</div>`;
+  }
+  document.getElementById('appt-cal-a').innerHTML=html;
+}
+
+function apptSelectDateA(ds){
+  A.dateStr=ds;
+  renderApptCalA();
+  apptShowSlots();
+}
+
+// PERCORSO B: prima data, poi centro
+function apptPathDate(){
+  apptStep('1b');
+  renderApptCalB();
+}
+
+function apptPathDateWithPrefill(){
+  // Salta calendario, vai direttamente alla scelta del centro per quella data
+  apptShowCentriForDate();
+}
+
+function renderApptCalB(){
+  document.getElementById('appt-cal-title').textContent=MONTHS_IT[A.calMonth]+' '+A.calYear;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const lastDay=new Date(A.calYear,A.calMonth+1,0);
+  const firstDay=new Date(A.calYear,A.calMonth,1);
+  let startDow=firstDay.getDay(); if(startDow===0)startDow=7; startDow--;
+  let html=DAYS_IT_SHORT.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=lastDay.getDate();d++){
+    const date=new Date(A.calYear,A.calMonth,d);
+    const ds=fmt(date);
+    const isPast=date<today;
+    // Verifica se c'è almeno un centro con disponibilità in quel giorno
+    const hasAny = !isPast && S.centri.some(c=>c.attivo!==false && hasAvailability(c,ds));
+    let cls='cal-day';
+    if(isPast||!hasAny) cls+=' '+(isPast?'past':'noavail');
+    else cls+=' available';
+    if(ds===A.dateStr) cls+=' selected';
+    html+=`<div class="${cls}" ${hasAny?`onclick="apptSelectDateB('${ds}')"`:''}>${d}</div>`;
+  }
+  document.getElementById('appt-cal').innerHTML=html;
+}
+
+function apptSelectDateB(ds){
+  A.dateStr=ds;
+  apptShowCentriForDate();
+}
+
+function apptShowCentriForDate(){
+  const d=new Date(A.dateStr+'T12:00:00');
+  document.getElementById('appt-step-2b-label').textContent =
+    'Centri disponibili — '+d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  const centriDispo = S.centri.filter(c=>c.attivo!==false && hasAvailability(c,A.dateStr));
+  const list=document.getElementById('appt-centri-day-list');
+  if(!centriDispo.length){
+    list.innerHTML='<div style="text-align:center;padding:24px;color:var(--ink3)">Nessun centro con disponibilità in questa data.</div>';
+  } else {
+    list.innerHTML=centriDispo.map(c=>{
+      const slots=getSlots(c,A.dateStr);
+      return `<button class="centro-btn" onclick="apptSelectCentroFromDate(${c.id})">
+        <strong>${c.nome}</strong>
+        <span>${c.indirizzo||''} · ${slots.length} slot disponibili</span>
+      </button>`;
+    }).join('');
+  }
+  apptStep('2b');
+}
+
+function apptSelectCentroFromDate(id){
+  A.centroId=id;
+  apptShowSlots();
+}
+
+function apptBackToDate(){
+  apptStep('1b');
+  renderApptCalB();
+}
+
+function apptBackToStep2(){
+  // Capisci da quale percorso siamo arrivati
+  const c=S.centri.find(x=>x.id===A.centroId);
+  if(c){
+    // Se siamo arrivati dal percorso A, torniamo al calendario A
+    // Heuristica: vediamo se step-2a è stato attivato di recente
+    apptStep('2a'); renderApptCalA();
+  }
+}
+
+function apptPrevMonth(){
+  A.calMonth--; if(A.calMonth<0){A.calMonth=11;A.calYear--;}
+  if(document.getElementById('appt-step-1b').classList.contains('active')) renderApptCalB();
+  else renderApptCalA();
+}
+function apptNextMonth(){
+  A.calMonth++; if(A.calMonth>11){A.calMonth=0;A.calYear++;}
+  if(document.getElementById('appt-step-1b').classList.contains('active')) renderApptCalB();
+  else renderApptCalA();
+}
+
+function apptShowSlots(){
+  const centro=S.centri.find(c=>c.id===A.centroId);
+  const slotsAll=getAllSlotsWithStatus(centro,A.dateStr);
+  const d=new Date(A.dateStr+'T12:00:00');
+  document.getElementById('appt-step-3-label').textContent =
+    `Orario — ${centro.nome} · ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}`;
+  document.getElementById('appt-slots').innerHTML = slotsAll.length
+    ? slotsAll.map(s=>{
+        if(s.libero){
+          return `<button class="slot-btn ${s.ora===A.ora?'selected':''}" onclick="apptSelectSlot('${s.ora}')">${s.ora}</button>`;
+        } else {
+          const label = `${s.appt.cognome} ${s.appt.nome[0]||''}.`;
+          return `<button class="slot-btn slot-occupied" onclick="showApptDetail(${s.appt.id})" title="Occupato: ${s.appt.cognome} ${s.appt.nome}"><span class="slot-time">${s.ora}</span><span class="slot-name">${label}</span></button>`;
+        }
+      }).join('')
+    : '<p style="color:var(--ink3);font-size:13px;grid-column:1/-1;text-align:center">Nessuno slot configurato per questo giorno.</p>';
+  apptStep(3);
+}
+
+function apptSelectSlot(ora){
+  A.ora=ora;
+  document.querySelectorAll('#appt-slots .slot-btn').forEach(b=>b.classList.toggle('selected',b.textContent===ora));
+  const centro=S.centri.find(c=>c.id===A.centroId);
+  const d=new Date(A.dateStr+'T12:00:00');
+  document.getElementById('appt-confirm-summary').innerHTML=`
+    <div class="confirm-row"><span class="confirm-key">Centro</span><span>${centro.nome}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Data</span><span>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Orario</span><span>${ora}</span></div>
+  `;
+  apptStep(4);
+}
+
+function saveAppuntamento(){
+  try {
+    const nome=document.getElementById('appt-nome').value.trim();
+    const cognome=document.getElementById('appt-cognome').value.trim();
+    if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
+    if(!A.centroId||!A.dateStr||!A.ora){ showToast('Completa la selezione'); return; }
+    const tipoEl=document.getElementById('appt-tipo');
+    const areaEl=document.getElementById('appt-area');
+    S.appuntamenti.push({
+      id:Date.now(), nome, cognome,
+      tel:(document.getElementById('appt-tel')||{}).value?.trim()||'',
+      email:(document.getElementById('appt-email')||{}).value?.trim()||'',
+      data:A.dateStr, ora:A.ora, centroId:A.centroId,
+      tipo: tipoEl ? tipoEl.value.trim() : '',
+      area: areaEl ? areaEl.value.trim() : '',
+      note:(document.getElementById('appt-note')||{}).value?.trim()||'',
+      source:'medico'
+    });
+    save();
+    closeModal('modal-appuntamento');
+    renderAgenda(); renderDashboard(); updateStats();
+    showToast('Appuntamento salvato ✓');
+  } catch(err){
+    console.error('saveAppuntamento error:', err);
+    showToast('Errore salvataggio: '+err.message);
+  }
+}
+
+function deleteAppuntamento(id){
+  S.appuntamenti = S.appuntamenti.filter(a=>a.id!==id);
+  save(); renderAgenda(); renderDashboard(); updateStats(); renderPending();
+  closeModal('modal-appt-detail');
+  showToast('Eliminato');
+}
+
+// ── AGENDA ──
+function getWeekDays(offset){
+  const now = new Date(); const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate()-(day===0?6:day-1)+offset*7);
+  return Array.from({length:7},(_,i)=>{ const d=new Date(monday); d.setDate(monday.getDate()+i); return d; });
+}
+function fmt(d){ return d.toISOString().split('T')[0]; }
+function formatDate(s){ if(!s) return ''; const [y,m,dd]=s.split('-'); return `${dd}/${m}/${y}`; }
+
+function renderAgenda(){
+  const wkLbl = document.getElementById('week-label');
+  if(!wkLbl) return;
+  if(S.agendaView==='month'){
+    renderMonthView();
+    return;
+  }
+  const days = getWeekDays(S.weekOffset);
+  wkLbl.textContent =
+    days[0].toLocaleDateString('it-IT',{day:'numeric',month:'short'})+' – '+
+    days[6].toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'});
+  const today = fmt(new Date());
+  if(!S.selectedDay||!days.find(d=>fmt(d)===S.selectedDay))
+    S.selectedDay = days.find(d=>fmt(d)===today)?today:fmt(days[0]);
+  const DAYS_IT=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  document.getElementById('day-tabs').innerHTML = days.map(d=>{
+    const ds=fmt(d);
+    const count=S.appuntamenti.filter(a=>a.data===ds).length;
+    return `<div class="day-tab ${ds===S.selectedDay?'active':''}" onclick="selectDay('${ds}')">
+      ${DAYS_IT[d.getDay()]} ${d.getDate()}${ds===today?' •':''}
+      ${count?`<span class="count">(${count})</span>`:''}
+    </div>`;
+  }).join('');
+  renderDayAppointments();
+}
+
+function selectDay(ds){ S.selectedDay=ds; renderAgenda(); }
+function changeWeek(dir){
+  if(S.agendaView==='month'){
+    S.monthMonth = (S.monthMonth==null?new Date().getMonth():S.monthMonth) + dir;
+    if(S.monthMonth<0){S.monthMonth=11;S.monthYear--;}
+    if(S.monthMonth>11){S.monthMonth=0;S.monthYear++;}
+  } else {
+    S.weekOffset+=dir; S.selectedDay=null;
+  }
+  renderAgenda();
+}
+function goToToday(){
+  S.weekOffset=0; S.selectedDay=fmt(new Date());
+  S.monthYear=new Date().getFullYear(); S.monthMonth=new Date().getMonth();
+  renderAgenda();
+}
+
+function setAgendaView(v){
+  S.agendaView = v;
+  document.querySelectorAll('.vt-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  document.getElementById('view-week').style.display = v==='week'?'block':'none';
+  document.getElementById('view-month').style.display = v==='month'?'block':'none';
+  if(v==='month' && S.monthYear==null){
+    S.monthYear=new Date().getFullYear(); S.monthMonth=new Date().getMonth();
+  }
+  renderAgenda();
+}
+
+function renderMonthView(){
+  const monthCal = document.getElementById('month-cal');
+  if(!monthCal) return;
+  if(S.monthYear==null){ S.monthYear=new Date().getFullYear(); S.monthMonth=new Date().getMonth(); }
+  const y=S.monthYear, m=S.monthMonth;
+  const wkLbl = document.getElementById('week-label');
+  if(wkLbl) wkLbl.textContent = MONTHS_IT[m]+' '+y;
+
+  const today = fmt(new Date());
+  const firstDay=new Date(y,m,1);
+  const lastDay=new Date(y,m+1,0);
+  let startDow=firstDay.getDay(); if(startDow===0)startDow=7; startDow--;
+
+  let html = DAYS_IT_SHORT.map(d=>`<div class="mc-hdr">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html+=`<div class="mc-day empty"></div>`;
+
+  for(let d=1; d<=lastDay.getDate(); d++){
+    const date=new Date(y,m,d);
+    const ds=fmt(date);
+    const isPast = ds < today;
+    const isToday = ds === today;
+    const isSelected = ds === S.selectedDay;
+    // Trova gli appuntamenti del giorno raggruppati per centro
+    const dayAppts = S.appuntamenti.filter(a=>a.data===ds);
+    // Centri unici di questo giorno (per i pallini)
+    const centrosId = [...new Set(dayAppts.map(a=>a.centroId))];
+    const dotsHtml = centrosId.slice(0,4).map(cid=>{
+      const c = S.centri.find(x=>x.id===cid);
+      return `<span class="mc-dot" style="background:${c?c.colore:'#999'}"></span>`;
+    }).join('');
+    let cls = 'mc-day';
+    if(isPast) cls += ' past';
+    if(isToday) cls += ' today';
+    if(isSelected) cls += ' selected';
+    html += `<div class="${cls}" onclick="selectMonthDay('${ds}')">
+      <span class="mc-num">${d}</span>
+      <div class="mc-dots">${dotsHtml}</div>
+      ${dayAppts.length?`<span class="mc-count">${dayAppts.length}</span>`:''}
+    </div>`;
+  }
+  monthCal.innerHTML = html;
+
+  // Legenda con i centri usati nel mese
+  const allCentriInMonth = new Set();
+  S.appuntamenti.forEach(a=>{
+    const date=new Date(a.data+'T12:00:00');
+    if(date.getFullYear()===y && date.getMonth()===m) allCentriInMonth.add(a.centroId);
+  });
+  let legendHtml = '';
+  if(allCentriInMonth.size){
+    const items = [...allCentriInMonth].map(cid=>{
+      const c=S.centri.find(x=>x.id===cid);
+      return c?`<span class="month-legend-item"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}</span>`:'';
+    }).join('');
+    legendHtml = `<div class="month-legend">${items}</div>`;
+  }
+
+  // Dettaglio del giorno selezionato
+  const detEl = document.getElementById('month-day-detail');
+  if(S.selectedDay){
+    const dayAppts = S.appuntamenti.filter(a=>a.data===S.selectedDay).sort((a,b)=>a.ora.localeCompare(b.ora));
+    const dDate = new Date(S.selectedDay+'T12:00:00');
+    const dLabel = dDate.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    if(dayAppts.length){
+      detEl.innerHTML = legendHtml + `<div class="section-title" style="margin-top:20px;text-transform:capitalize">${dLabel}</div>` +
+        dayAppts.map(a=>{
+          const c = S.centri.find(x=>x.id===a.centroId);
+          const isOnline = a.source==='paziente';
+          return `<div class="appt-card" onclick="showApptDetail(${a.id})">
+            <div class="appt-time">${a.ora}</div>
+            <div class="appt-info">
+              <div class="appt-patient">${a.cognome} ${a.nome}</div>
+              <div class="appt-detail">${a.tipo||'Visita'}${a.area?' · '+a.area:''}${isOnline?' · 🌐':''}</div>
+            </div>
+            ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${c.nome}</div>`:''}
+          </div>`;
+        }).join('');
+    } else {
+      detEl.innerHTML = legendHtml + `<div style="text-align:center;padding:30px;color:var(--ink3);text-transform:capitalize">Nessun appuntamento il ${dLabel}</div>`;
+    }
+  } else {
+    detEl.innerHTML = legendHtml + '<div style="text-align:center;padding:20px;color:var(--ink3);font-size:13px">Tocca un giorno per vedere il dettaglio</div>';
+  }
+}
+
+function selectMonthDay(ds){
+  S.selectedDay = ds;
+  renderMonthView();
+}
+
+function openAppuntamentoFromAgenda(){
+  // Pre-imposta la data selezionata in agenda
+  if(S.selectedDay){
+    A.prefillDate = S.selectedDay;
+  }
+  openModal('modal-appuntamento');
+}
+
+function renderDayAppointments(){
+  const container = document.getElementById('appointments-container');
+  const appts = S.appuntamenti.filter(a=>a.data===S.selectedDay).sort((a,b)=>a.ora.localeCompare(b.ora));
+  if(!appts.length){
+    container.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">✨ Nessun appuntamento</div>'; return;
+  }
+  container.innerHTML = appts.map(a=>{
+    const centro = S.centri.find(c=>c.id===a.centroId);
+    const isOnline = a.source==='paziente';
+    return `<div class="appt-card" onclick="showApptDetail(${a.id})">
+      <div class="appt-time">${a.ora}</div>
+      <div class="appt-info">
+        <div class="appt-patient">${a.cognome} ${a.nome}</div>
+        <div class="appt-detail">${a.tipo||'Visita'}${a.area?' · '+a.area:''}${isOnline?' · 🌐 Online':''} ${a.note?'· '+a.note:''}</div>
+      </div>
+      ${centro?`<div class="appt-centro" style="background:${centro.colore}22;color:${centro.colore}">${centro.nome}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function showApptDetail(id){
+  const a = S.appuntamenti.find(x=>x.id===id); if(!a) return;
+  S.currentApptId = id;
+  const centro = S.centri.find(c=>c.id===a.centroId);
+  document.getElementById('modal-appt-detail-body').innerHTML=`
+    <div class="extracted-fields">
+      <div class="field-row"><span class="field-key">Paziente</span><span class="field-val">${a.cognome} ${a.nome}</span></div>
+      <div class="field-row"><span class="field-key">Data</span><span class="field-val">${formatDate(a.data)} alle ${a.ora}</span></div>
+      <div class="field-row"><span class="field-key">Centro</span><span class="field-val">${centro?centro.nome:'—'}</span></div>
+      <div class="field-row"><span class="field-key">Tipo visita</span><span class="field-val">${a.tipo||'—'}</span></div>
+      ${a.area?`<div class="field-row"><span class="field-key">Area</span><span class="field-val">${a.area}</span></div>`:''}
+      <div class="field-row"><span class="field-key">Note</span><span class="field-val">${a.note||'—'}</span></div>
+      ${a.tel?`<div class="field-row"><span class="field-key">Telefono</span><span class="field-val">${a.tel}</span></div>`:''}
+      ${a.email?`<div class="field-row"><span class="field-key">Email</span><span class="field-val">${a.email}</span></div>`:''}
+      ${a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val">🌐 Prenotazione online</span></div>`:''}
+      ${centro&&centro.email?`<div class="field-row"><span class="field-key">Email centro</span><span class="field-val">${centro.email}</span></div>`:''}
+    </div>`;
+  document.getElementById('btn-delete-appt').onclick = ()=>deleteAppuntamento(id);
+  openModal('modal-appt-detail');
+}
+
+// ── MAIL & ICS ──
+function buildMailText(a){
+  const centro = S.centri.find(c=>c.id===a.centroId);
+  const medico = S.settings.nome||'Il medico';
+  return `Oggetto: Prenotazione visita – ${a.cognome} ${a.nome}
+
+Gentile Segreteria${centro?' di '+centro.nome:''},
+
+si comunica la seguente prenotazione:
+
+Paziente: ${a.cognome} ${a.nome}${a.tel?'\nTelefono: '+a.tel:''}${a.email?'\nEmail: '+a.email:''}
+Data: ${formatDate(a.data)}
+Ora: ${a.ora}
+Tipo visita: ${a.tipo||'Non specificato'}${a.area?'\nArea: '+a.area:''}
+${a.note?'Note: '+a.note:''}
+
+Medico: ${medico}
+
+Cordiali saluti,
+${medico}`;
+}
+function previewMail(){
+  const a = getCurrentFormAppt(); if(!a) return;
+  const el = document.getElementById('mail-preview-appt');
+  el.textContent = buildMailText(a); el.style.display='block';
+}
+function copyMail(){ const a=getCurrentFormAppt(); if(!a) return; navigator.clipboard.writeText(buildMailText(a)); showToast('Mail copiata ✓'); }
+function copyMailFromDetail(){ const a=S.appuntamenti.find(x=>x.id===S.currentApptId); if(!a) return; navigator.clipboard.writeText(buildMailText(a)); showToast('Mail copiata ✓'); }
+function getCurrentFormAppt(){
+  if(!A.centroId||!A.dateStr||!A.ora){ showToast('Completa prima la selezione'); return null; }
+  const nome=document.getElementById('appt-nome').value.trim();
+  const cognome=document.getElementById('appt-cognome').value.trim();
+  if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return null; }
+  return {
+    nome, cognome,
+    data:A.dateStr, ora:A.ora, centroId:A.centroId,
+    tel:document.getElementById('appt-tel').value.trim(),
+    email:document.getElementById('appt-email').value.trim(),
+    tipo:document.getElementById('appt-tipo').value.trim(),
+    area:document.getElementById('appt-area').value.trim(),
+    note:document.getElementById('appt-note').value.trim()
+  };
+}
+function buildICS(a){
+  const centro=S.centri.find(c=>c.id===a.centroId);
+  const medico=S.settings.nome||'Medico';
+  const [y,m,d]=a.data.split('-'); const [hh,mm]=a.ora.split(':');
+  const dtStart=`${y}${m}${d}T${hh}${mm}00`;
+  const endH=String(parseInt(hh)+1).padStart(2,'0');
+  const dtEnd=`${y}${m}${d}T${endH}${mm}00`;
+  return `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MediDesk//IT\r\nBEGIN:VEVENT\r\nUID:${Date.now()}@medidesk\r\nDTSTART:${dtStart}\r\nDTEND:${dtEnd}\r\nSUMMARY:Visita ${a.cognome} ${a.nome}\r\nLOCATION:${centro?centro.nome:''}${centro&&centro.indirizzo?', '+centro.indirizzo:''}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+}
+function downloadICS(){ const a=getCurrentFormAppt(); if(!a) return; triggerICS(a); }
+function downloadICSFromDetail(){ const a=S.appuntamenti.find(x=>x.id===S.currentApptId); if(!a) return; triggerICS(a); }
+function triggerICS(a){
+  const blob=new Blob([buildICS(a)],{type:'text/calendar'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a'); link.href=url; link.download=`visita_${a.cognome}_${a.data}.ics`;
+  link.click(); URL.revokeObjectURL(url); showToast('.ics scaricato ✓');
+}
+
+// ── PENDING ──
+function renderPending(){
+  const list = S.appuntamenti.filter(a=>a.source==='paziente' && !a.seen);
+  const section = document.getElementById('pending-section');
+  const el = document.getElementById('pending-list');
+  if(!section||!el) return;
+  if(!list.length){ section.style.display='none'; return; }
+  section.style.display='block';
+  el.innerHTML = list.map(a=>{
+    const centro=S.centri.find(c=>c.id===a.centroId);
+    return `<div class="pending-card">
+      <div class="pending-info">
+        <div class="pending-name">${a.cognome} ${a.nome}</div>
+        <div class="pending-detail">${formatDate(a.data)} alle ${a.ora} — ${centro?centro.nome:'?'} — ${a.tipo||'Visita'}</div>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="markSeen(${a.id})">✓ Visto</button>
+    </div>`;
+  }).join('');
+}
+function markSeen(id){
+  const a=S.appuntamenti.find(x=>x.id===id); if(a) a.seen=true;
+  save(); renderPending();
+}
+
+// ── PAZIENTI ──
+function renderPazienti(){
+  const el=document.getElementById('pazienti-list'); if(!el) return;
+  const q=(document.getElementById('search-pazienti')?.value||'').toLowerCase();
+  let list=S.pazienti;
+  if(q) list=list.filter(p=>`${p.nome} ${p.cognome} ${p.cf}`.toLowerCase().includes(q));
+  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>'; return; }
+  el.innerHTML=list.map(p=>{
+    const initials=(p.nome[0]||'')+(p.cognome[0]||'');
+    const n=(p.visite||[]).length;
+    return `<div class="paziente-card" onclick="showPazienteDetail(${p.id})">
+      <div class="paziente-avatar">${initials.toUpperCase()}</div>
+      <div class="paziente-info">
+        <div class="paziente-name">${p.cognome} ${p.nome}</div>
+        <div class="paziente-meta">${p.nascita?'Nato/a il '+p.nascita:''} ${p.cf?'· CF: '+p.cf:''}</div>
+      </div>
+      <span style="font-size:12px;color:var(--accent);font-weight:500">${n} ${n===1?'visita':'visite'}</span>
+    </div>`;
+  }).join('');
+}
+
+function showPazienteDetail(id){
+  const p=S.pazienti.find(x=>x.id===id); if(!p) return;
+  document.getElementById('modal-paziente-title').textContent=p.cognome+' '+p.nome;
+  const visite=p.visite||[];
+  document.getElementById('modal-paziente-body').innerHTML=`
+    <div class="extracted-fields" style="margin-bottom:16px">
+      <div class="field-row"><span class="field-key">Nome</span><span class="field-val">${p.nome} ${p.cognome}</span></div>
+      ${p.nascita?`<div class="field-row"><span class="field-key">Data nascita</span><span class="field-val">${p.nascita}</span></div>`:''}
+      ${p.cf?`<div class="field-row"><span class="field-key">Cod. Fiscale</span><span class="field-val">${p.cf}</span></div>`:''}
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+    <div class="section-title">${visite.length} ${visite.length===1?'visita':'visite'}</div>
+    ${visite.map((v,i)=>`
+      <div class="visita-item">
+        <div class="visita-header" onclick="toggleV('vv-${id}-${i}')">
+          <div><div class="visita-date">📋 ${v.data||'N/A'}</div><div style="font-size:12px;color:var(--ink3)">${v.luogo||''}</div></div>
+          <span style="color:var(--ink3)">▾</span>
+        </div>
+        <div class="visita-body" id="vv-${id}-${i}" style="display:none">${v.clinica||'—'}</div>
+      </div>
+    `).join('')}
+    <div style="margin-top:16px"><button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deletePaziente(${id})">🗑 Elimina paziente</button></div>`;
+  openModal('modal-paziente');
+}
+function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
+function deletePaziente(id){
+  if(!confirm('Eliminare questo paziente?')) return;
+  S.pazienti=S.pazienti.filter(p=>p.id!==id);
+  save(); renderPazienti(); updateStats(); closeModal('modal-paziente'); showToast('Paziente eliminato');
+}
+
+// ── VISITA / FASCICOLO (flusso a step) ──
+var V = { selectedPazienteId:null, isNewPaziente:false };
+
+function openModalVisita(){
+  V.selectedPazienteId = null;
+  V.isNewPaziente = false;
+  document.getElementById('visita-modal-title').textContent='Carica referto';
+  // Default data filtro = oggi
+  const dEl = document.getElementById('visita-data-filter');
+  if(dEl) dEl.value = fmt(new Date());
+  const sEl = document.getElementById('visita-search');
+  if(sEl) sEl.value = '';
+  const srEl = document.getElementById('visita-search-results');
+  if(srEl) srEl.innerHTML = '';
+  // Reset upload
+  resetVisitaUpload();
+  // Vai a step 1
+  visitaStep(1);
+  renderVisitaPazienti();
+  openModal('modal-nuova-visita');
+}
+
+function visitaStep(n){
+  document.querySelectorAll('.visita-step').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.visita-step').forEach(s=>s.style.display='none');
+  const el = document.getElementById('visita-step-'+n);
+  if(el){ el.classList.add('active'); el.style.display='block'; }
+}
+
+function renderVisitaPazienti(){
+  const dataFilter = document.getElementById('visita-data-filter').value;
+  const cont = document.getElementById('visita-pazienti-day');
+  if(!cont) return;
+
+  // Trova appuntamenti del giorno
+  const appts = S.appuntamenti.filter(a=>a.data===dataFilter).sort((a,b)=>a.ora.localeCompare(b.ora));
+
+  if(!appts.length){
+    cont.innerHTML = '<div style="padding:14px;text-align:center;color:var(--ink3);font-size:13px;background:var(--surface2);border-radius:8px">Nessun appuntamento in questa data</div>';
+    return;
+  }
+
+  cont.innerHTML = appts.map(a=>{
+    const ini = (a.nome[0]||'')+(a.cognome[0]||'');
+    return `<div class="paziente-pick" onclick="visitaSelectFromAppt(${a.id})">
+      <div class="avatar-sm">${ini.toUpperCase()}</div>
+      <div class="info">
+        <strong>${a.cognome} ${a.nome}</strong>
+        <span>${a.tipo||'Visita'}${a.area?' · '+a.area:''}</span>
+      </div>
+      <span class="ora">${a.ora}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderVisitaSearchResults(){
+  const q = document.getElementById('visita-search').value.trim().toLowerCase();
+  const resEl = document.getElementById('visita-search-results');
+  if(!q){ resEl.innerHTML = ''; return; }
+  const matches = S.pazienti.filter(p=>
+    `${p.nome} ${p.cognome} ${p.cf||''}`.toLowerCase().includes(q)
+  ).slice(0,8);
+  if(!matches.length){
+    resEl.innerHTML = '<div style="padding:10px;color:var(--ink3);font-size:12px">Nessun paziente trovato</div>';
+    return;
+  }
+  resEl.innerHTML = matches.map(p=>{
+    const ini = (p.nome[0]||'')+(p.cognome[0]||'');
+    const n = (p.visite||[]).length;
+    return `<div class="paziente-pick" onclick="visitaSelectExisting(${p.id})">
+      <div class="avatar-sm">${ini.toUpperCase()}</div>
+      <div class="info">
+        <strong>${p.cognome} ${p.nome}</strong>
+        <span>${n} ${n===1?'visita':'visite'} in archivio</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function visitaSelectFromAppt(apptId){
+  const a = S.appuntamenti.find(x=>x.id===apptId);
+  if(!a) return;
+  // Cerca paziente esistente per nome/cognome
+  let paz = S.pazienti.find(p=>
+    p.nome.toLowerCase()===a.nome.toLowerCase() &&
+    p.cognome.toLowerCase()===a.cognome.toLowerCase()
+  );
+  if(!paz){
+    // Crea record paziente al volo (senza visite)
+    paz = { id:Date.now(), nome:a.nome, cognome:a.cognome, cf:'', nascita:'', visite:[] };
+    S.pazienti.unshift(paz);
+    save();
+  }
+  V.selectedPazienteId = paz.id;
+  V.isNewPaziente = false;
+  goToVisitaUpload(paz, a);
+}
+
+function visitaSelectExisting(pazId){
+  const paz = S.pazienti.find(p=>p.id===pazId);
+  if(!paz) return;
+  V.selectedPazienteId = pazId;
+  V.isNewPaziente = false;
+  goToVisitaUpload(paz, null);
+}
+
+function visitaSelectNew(){
+  V.selectedPazienteId = null;
+  V.isNewPaziente = true;
+  goToVisitaUpload(null, null);
+}
+
+function goToVisitaUpload(paziente, appt){
+  const infoEl = document.getElementById('visita-paziente-info');
+  if(paziente){
+    infoEl.innerHTML = `
+      <div class="confirm-row"><span class="confirm-key">Paziente</span><span><strong>${paziente.cognome} ${paziente.nome}</strong></span></div>
+      ${appt ? `<div class="confirm-row"><span class="confirm-key">Appuntamento</span><span>${formatDate(appt.data)} ore ${appt.ora}</span></div>` : ''}
+      ${paziente.cf ? `<div class="confirm-row"><span class="confirm-key">CF</span><span>${paziente.cf}</span></div>` : ''}
+    `;
+    // Nascondi i campi anagrafici (già noti) ma li lascio editabili nascosti
+    ['row-ex-nome','row-ex-cognome','row-ex-nascita','row-ex-cf'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+  } else {
+    infoEl.innerHTML = `<div style="font-size:13px;color:var(--ink2)">📋 Nuovo paziente — i dati anagrafici verranno estratti dal referto</div>`;
+    ['row-ex-nome','row-ex-cognome','row-ex-nascita','row-ex-cf'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'flex';
+    });
+  }
+  // Pre-imposta data visita se c'è appuntamento
+  if(appt){
+    const dvEl = document.getElementById('ex-data-visita');
+    if(dvEl) dvEl.value = formatDate(appt.data);
+    const luogoEl = document.getElementById('ex-luogo');
+    if(luogoEl){
+      const c = S.centri.find(c=>c.id===appt.centroId);
+      luogoEl.value = c ? c.nome : '';
+    }
+  }
+  visitaStep(2);
+}
+
+function visitaBackToStep1(){
+  resetVisitaUpload();
+  visitaStep(1);
+}
+
+function resetVisitaUpload(){
+  const fi = document.getElementById('referto-input');
+  if(fi) fi.value='';
+  ['referto-preview','ai-status','extracted-data','ai-error'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+  const sb = document.getElementById('btn-salva-visita');
+  if(sb) sb.style.display='none';
+  ['ex-nome','ex-cognome','ex-nascita','ex-cf','ex-data-visita','ex-luogo','ex-clinica'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value='';
+  });
+}
+
+// ── UPLOAD REFERTO ──
+async function handleRefertoUpload(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    try {
+      const base64=e.target.result.split(',')[1];
+      const prev=document.getElementById('referto-preview');
+      if(file.type.startsWith('image/')) prev.innerHTML=`<img class="referto-thumb" src="${e.target.result}">`;
+      else prev.innerHTML=`<div style="padding:10px;background:var(--surface2);border-radius:8px;font-size:13px">📄 ${file.name}</div>`;
+      prev.style.display='block';
+      document.getElementById('ai-status').style.display='flex';
+      document.getElementById('ai-error').style.display='none';
+      document.getElementById('extracted-data').style.display='none';
+      document.getElementById('btn-salva-visita').style.display='none';
+
+      // Prompt diverso a seconda che paziente sia noto o nuovo
+      const isNew = V.isNewPaziente;
+      let prompt;
+      if(isNew){
+        prompt = `Sei un assistente medico. Analizza questo referto e produci una sintesi clinica concisa ma completa.
+
+ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
+{
+  "nome": "nome del paziente",
+  "cognome": "cognome del paziente",
+  "data_nascita": "gg/mm/aaaa o vuoto",
+  "codice_fiscale": "CF se presente, altrimenti vuoto",
+  "data_visita": "gg/mm/aaaa della visita",
+  "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
+  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
+}`;
+      } else {
+        const paz = S.pazienti.find(p=>p.id===V.selectedPazienteId);
+        prompt = `Sei un assistente medico. Il paziente è: ${paz ? paz.cognome+' '+paz.nome : 'noto'}.
+Analizza questo referto e produci una sintesi clinica strutturata.
+
+Rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
+{
+  "data_visita": "gg/mm/aaaa della visita",
+  "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
+  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
+}
+Il campo nome/cognome/CF non serve, è già noto.`;
+      }
+
+      const apiKey = getApiKey();
+      if(!apiKey) throw new Error('API key mancante — inseriscila nelle Impostazioni');
+
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST", headers:{
+          "Content-Type":"application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body:JSON.stringify({
+          model:"claude-sonnet-4-5-20250514", max_tokens:2000,
+          messages:[{role:"user",content:[
+            {type:file.type==='application/pdf'?'document':'image',source:{type:'base64',media_type:file.type,data:base64}},
+            {type:"text",text:prompt}
+          ]}]
+        })
+      });
+      if(!res.ok){
+        const errBody = await res.json().catch(()=>({}));
+        throw new Error('HTTP '+res.status+(errBody.error?.message?' — '+errBody.error.message:''));
+      }
+      const data=await res.json();
+      let text=data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim();
+      const p=JSON.parse(text);
+
+      // Popola i campi
+      if(isNew){
+        document.getElementById('ex-nome').value=p.nome||'';
+        document.getElementById('ex-cognome').value=p.cognome||'';
+        document.getElementById('ex-nascita').value=p.data_nascita||'';
+        document.getElementById('ex-cf').value=p.codice_fiscale||'';
+      }
+      if(p.data_visita) document.getElementById('ex-data-visita').value=p.data_visita;
+      if(p.luogo) document.getElementById('ex-luogo').value=p.luogo;
+      document.getElementById('ex-clinica').value=p.contenuto_clinico||'';
+
+      showToast('Sintesi AI completata ✓');
+    } catch(err){
+      console.error('AI error:', err);
+      const errEl = document.getElementById('ai-error');
+      if(errEl){
+        errEl.innerHTML = `<strong>⚠ Analisi AI non riuscita</strong><br>
+          ${err.message ? '<small>'+err.message+'</small><br>' : ''}
+          Inserisci manualmente i dati qui sotto. La foto del referto è comunque visibile per riferimento.`;
+        errEl.style.display='block';
+      }
+    } finally{
+      document.getElementById('ai-status').style.display='none';
+      document.getElementById('extracted-data').style.display='block';
+      document.getElementById('btn-salva-visita').style.display='inline-block';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveVisita(){
+  try {
+    const dataVisita = document.getElementById('ex-data-visita').value.trim() || new Date().toLocaleDateString('it-IT');
+    const luogo = document.getElementById('ex-luogo').value.trim();
+    const clinica = document.getElementById('ex-clinica').value.trim();
+    const visita = { id:Date.now(), data:dataVisita, luogo, clinica };
+
+    if(V.isNewPaziente){
+      const nome = document.getElementById('ex-nome').value.trim();
+      const cognome = document.getElementById('ex-cognome').value.trim();
+      if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return; }
+      const cf = document.getElementById('ex-cf').value.trim();
+      const nascita = document.getElementById('ex-nascita').value.trim();
+      // Verifica se esiste già
+      let paz = S.pazienti.find(p=>(cf&&p.cf===cf)||(p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase()));
+      if(paz){
+        paz.visite = paz.visite||[];
+        paz.visite.unshift(visita);
+        showToast(`Visita aggiunta a ${paz.cognome} ${paz.nome} ✓`);
+      } else {
+        S.pazienti.unshift({ id:Date.now(), nome, cognome, cf, nascita, visite:[visita] });
+        showToast('Nuovo paziente e visita salvati ✓');
+      }
+    } else {
+      const paz = S.pazienti.find(p=>p.id===V.selectedPazienteId);
+      if(!paz){ showToast('Errore: paziente non trovato'); return; }
+      paz.visite = paz.visite||[];
+      paz.visite.unshift(visita);
+      showToast(`Visita aggiunta a ${paz.cognome} ${paz.nome} ✓`);
+    }
+    save();
+    closeModal('modal-nuova-visita');
+    renderPazienti(); updateStats(); renderDashboard();
+  } catch(err){
+    console.error('saveVisita error:', err);
+    showToast('Errore salvataggio: '+err.message);
+  }
+}
+
+function resetVisitaModal(){
+  resetVisitaUpload();
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const today=fmt(new Date());
+  const todayAppts=S.appuntamenti.filter(a=>a.data===today).sort((a,b)=>a.ora.localeCompare(b.ora));
+  const upEl=document.getElementById('dash-upcoming');
+  if(!upEl) return;
+  if(todayAppts.length)
+    upEl.innerHTML=todayAppts.slice(0,5).map(a=>{
+      const c=S.centri.find(x=>x.id===a.centroId);
+      return `<div class="appt-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showApptDetail(${a.id})">
+        <div class="appt-time">${a.ora}</div>
+        <div class="appt-info"><div class="appt-patient">${a.cognome} ${a.nome}</div><div class="appt-detail">${a.tipo||'Visita'}${a.source==='paziente'?' · 🌐':''}</div></div>
+        ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${c.nome}</div>`:''}
+      </div>`;
+    }).join('');
+  else upEl.innerHTML='<div style="text-align:center;padding:32px;color:var(--ink3)">✨ Nessun appuntamento oggi</div>';
+
+  const pazEl=document.getElementById('dash-pazienti');
+  if(S.pazienti.length)
+    pazEl.innerHTML=S.pazienti.slice(0,5).map(p=>{
+      const ini=(p.nome[0]||'')+(p.cognome[0]||'');
+      return `<div class="paziente-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showPazienteDetail(${p.id})">
+        <div class="paziente-avatar" style="width:34px;height:34px;font-size:12px">${ini.toUpperCase()}</div>
+        <div class="paziente-info"><div class="paziente-name">${p.cognome} ${p.nome}</div><div class="paziente-meta">${(p.visite||[]).length} visite</div></div>
+      </div>`;
+    }).join('');
+  else pazEl.innerHTML='<div style="text-align:center;padding:32px;color:var(--ink3)">Nessun paziente</div>';
+}
+
+// ── STATS ──
+function updateStats(){
+  const today=fmt(new Date());
+  const elO=document.getElementById('stat-oggi');
+  const elP=document.getElementById('stat-pazienti');
+  const elC=document.getElementById('stat-centri');
+  if(elO) elO.textContent=S.appuntamenti.filter(a=>a.data===today).length;
+  if(elP) elP.textContent=S.pazienti.length;
+  if(elC) elC.textContent=S.centri.filter(c=>c.attivo!==false).length;
+}
+
+// ── SETTINGS ──
+function loadSettings(){
+  const n = document.getElementById('setting-nome');
+  const s = document.getElementById('setting-spec');
+  const k = document.getElementById('setting-apikey');
+  if(n) n.value=S.settings.nome||'';
+  if(s) s.value=S.settings.spec||'';
+  if(k) k.value=localStorage.getItem('medidesk_apikey')||'';
+}
+function saveSettings(){
+  const n = document.getElementById('setting-nome');
+  const s = document.getElementById('setting-spec');
+  const k = document.getElementById('setting-apikey');
+  if(n) S.settings.nome=n.value.trim();
+  if(s) S.settings.spec=s.value.trim();
+  if(k){ const key=k.value.trim(); if(key) localStorage.setItem('medidesk_apikey',key); else localStorage.removeItem('medidesk_apikey'); }
+  save(); updateDoctorName(); showToast('Salvato ✓');
+}
+function getApiKey(){ return localStorage.getItem('medidesk_apikey')||''; }
+function updateDoctorName(){
+  const dd = document.getElementById('doctor-display');
+  if(dd) dd.textContent=S.settings.nome||'Medico';
+  const m = document.getElementById('mobile-doctor');
+  if(m) m.textContent = S.settings.nome||'Medico';
+}
+
+function resetAllData(){
+  if(!confirm('Cancellare TUTTI i dati (centri, appuntamenti, pazienti)?\n\nQuesta azione non è reversibile.')) return;
+  if(!confirm('Sei davvero sicuro? Verrà cancellato tutto.')) return;
+  localStorage.removeItem('medidesk_v2');
+  location.reload();
+}
+
+// ══════════════ PAGINA PRENOTAZIONE ══════════════
+function showBookingView(){
+  document.getElementById('view-app').style.display='none';
+  document.getElementById('view-booking').style.display='block';
+  bkInit();
+}
+function showAppView(){
+  document.getElementById('view-booking').style.display='none';
+  document.getElementById('view-app').style.display='flex';
+  history.pushState({},'',location.pathname);
+  renderAll();
+}
+
+function bkInit(){
+  document.getElementById('bk-doctor-name').textContent=S.settings.nome||'Medico';
+  document.getElementById('bk-doctor-spec').textContent=S.settings.spec||'';
+  populateTipiVisitaSelects();
+  const now=new Date();
+  bk.calYear=now.getFullYear(); bk.calMonth=now.getMonth();
+  bkStep(1);
+  renderBkCentri();
+}
+
+function bkStep(n){
+  document.querySelectorAll('.booking-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('bk-step-'+n).classList.add('active');
+}
+
+function renderBkCentri(){
+  const el=document.getElementById('bk-centri-list');
+  const noEl=document.getElementById('bk-no-centri');
+  const withTurni=S.centri.filter(c=>c.attivo!==false && c.turni&&c.turni.length);
+  if(!withTurni.length){ el.innerHTML=''; noEl.style.display='block'; return; }
+  noEl.style.display='none';
+  el.innerHTML=withTurni.map(c=>`
+    <div class="centro-btn" onclick="bkSelectCentro(${c.id})">
+      <strong>${c.nome}</strong>
+      <span>${c.indirizzo||''} · ${c.turni.length} turni configurati</span>
+    </div>
+  `).join('');
+}
+
+function bkSelectCentro(id){
+  bk.centroId=id;
+  bkStep(2);
+  renderBkCal();
+}
+
+function renderBkCal(){
+  document.getElementById('bk-cal-title').textContent=MONTHS_IT[bk.calMonth]+' '+bk.calYear;
+  const centro=S.centri.find(c=>c.id===bk.centroId);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const firstDay=new Date(bk.calYear,bk.calMonth,1);
+  const lastDay=new Date(bk.calYear,bk.calMonth+1,0);
+  // Start from Monday
+  let startDow=firstDay.getDay(); if(startDow===0) startDow=7; startDow--;
+  let html=DAYS_IT_SHORT.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=lastDay.getDate();d++){
+    const date=new Date(bk.calYear,bk.calMonth,d);
+    const ds=fmt(date);
+    const isPast=date<today;
+    const hasSlots=!isPast&&centro&&hasAvailability(centro,ds);
+    let cls='cal-day';
+    if(isPast||!hasSlots) cls+=' '+(isPast?'past':'noavail');
+    else cls+=' available';
+    if(ds===bk.dateStr) cls+=' selected';
+    html+=`<div class="${cls}" ${hasSlots?`onclick="bkSelectDate('${ds}')"`:''}>${d}</div>`;
+  }
+  document.getElementById('bk-cal').innerHTML=html;
+}
+
+function bkPrevMonth(){
+  bk.calMonth--; if(bk.calMonth<0){bk.calMonth=11;bk.calYear--;} renderBkCal();
+}
+function bkNextMonth(){
+  bk.calMonth++; if(bk.calMonth>11){bk.calMonth=0;bk.calYear++;} renderBkCal();
+}
+
+function bkSelectDate(ds){
+  bk.dateStr=ds;
+  renderBkCal();
+  const centro=S.centri.find(c=>c.id===bk.centroId);
+  const slots=getSlots(centro,ds);
+  const d=new Date(ds+'T12:00:00');
+  document.getElementById('bk-selected-date-label').textContent=
+    d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('bk-slots').innerHTML=slots.length
+    ? slots.map(s=>`<button class="slot-btn ${s===bk.ora?'selected':''}" onclick="bkSelectSlot('${s}')">${s}</button>`).join('')
+    : '<p style="color:var(--ink3);font-size:13px;grid-column:1/-1">Nessuno slot disponibile per questo giorno.</p>';
+  bkStep(3);
+}
+
+function bkSelectSlot(ora){
+  bk.ora=ora;
+  document.querySelectorAll('.slot-btn').forEach(b=>b.classList.toggle('selected',b.textContent===ora));
+  const centro=S.centri.find(c=>c.id===bk.centroId);
+  const d=new Date(bk.dateStr+'T12:00:00');
+  document.getElementById('bk-confirm-summary').innerHTML=`
+    <div class="confirm-row"><span class="confirm-key">Centro</span><span>${centro?centro.nome:'—'}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Data</span><span>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Orario</span><span>${ora}</span></div>
+    ${centro&&centro.indirizzo?`<div class="confirm-row"><span class="confirm-key">Dove</span><span>${centro.indirizzo}</span></div>`:''}
+  `;
+  bkStep(4);
+}
+
+function confirmBooking(){
+  const nome=document.getElementById('bk-nome').value.trim();
+  const cognome=document.getElementById('bk-cognome').value.trim();
+  if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
+  const appt={
+    id:Date.now(), nome, cognome,
+    tel:document.getElementById('bk-tel').value.trim(),
+    email:document.getElementById('bk-email').value.trim(),
+    tipo:document.getElementById('bk-tipo').value.trim()||'Prima visita',
+    area:document.getElementById('bk-area').value.trim(),
+    note:document.getElementById('bk-note').value.trim(),
+    data:bk.dateStr, ora:bk.ora,
+    centroId:bk.centroId, source:'paziente', seen:false
+  };
+  S.appuntamenti.push(appt);
+  save();
+  const centro=S.centri.find(c=>c.id===bk.centroId);
+  const d=new Date(bk.dateStr+'T12:00:00');
+  document.getElementById('bk-success-msg').innerHTML=
+    `Il tuo appuntamento con <strong>${S.settings.nome||'il medico'}</strong> è confermato.<br><br>`+
+    `📅 <strong>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${bk.ora}</strong><br>`+
+    `🏥 ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
+    `${appt.email?'Riceverai un riepilogo all\'email indicata.':''}`;
+  bkStep(5);
+}
+
+function bkReset(){
+  bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth()};
+  ['bk-nome','bk-cognome','bk-tel','bk-email','bk-tipo','bk-note'].forEach(id=>document.getElementById(id).value='');
+  bkInit();
+}
+
+// ── TIPI VISITA & AREE ──
+function renderTipiAree(){
+  const tEl = document.getElementById('tipi-visita-list');
+  if(tEl){
+    tEl.innerHTML = S.tipiVisita.map((t,i)=>{
+      const isDefault = TIPI_DEFAULT.includes(t);
+      return `<span class="tag-chip ${isDefault?'tag-default':''}">${t}${!isDefault?`<button class="tag-chip-x" onclick="removeTipoVisita(${i})" title="Rimuovi">✕</button>`:''}</span>`;
+    }).join('');
+  }
+  const aEl = document.getElementById('aree-list');
+  if(aEl){
+    aEl.innerHTML = S.areeTematiche.map((a,i)=>
+      `<span class="tag-chip">${a}<button class="tag-chip-x" onclick="removeArea(${i})" title="Rimuovi">✕</button></span>`
+    ).join('');
+  }
+}
+
+function addTipoVisita(){
+  const inp = document.getElementById('new-tipo-visita');
+  const v = inp.value.trim();
+  if(!v) return;
+  if(S.tipiVisita.some(t=>t.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
+  S.tipiVisita.push(v); inp.value=''; save(); renderTipiAree();
+  populateTipiVisitaSelects(); showToast('Tipo aggiunto ✓');
+}
+function removeTipoVisita(idx){
+  const t = S.tipiVisita[idx];
+  if(TIPI_DEFAULT.includes(t)){ showToast('I tipi predefiniti non si possono rimuovere'); return; }
+  S.tipiVisita.splice(idx,1); save(); renderTipiAree();
+  populateTipiVisitaSelects(); showToast('Rimosso');
+}
+function addArea(){
+  const inp = document.getElementById('new-area');
+  const v = inp.value.trim();
+  if(!v) return;
+  if(S.areeTematiche.some(a=>a.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
+  S.areeTematiche.push(v); inp.value=''; save(); renderTipiAree();
+  populateTipiVisitaSelects(); showToast('Area aggiunta ✓');
+}
+function removeArea(idx){
+  S.areeTematiche.splice(idx,1); save(); renderTipiAree();
+  populateTipiVisitaSelects(); showToast('Rimossa');
+}
+
+// ── TOAST ──
+function showToast(msg){
+  const t=document.getElementById('toast');
+  if(!t){ console.log('[toast]', msg); return; }
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
