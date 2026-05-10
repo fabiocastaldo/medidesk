@@ -168,12 +168,12 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .mc-day.empty{background:transparent;cursor:default}
 .mc-day.past{opacity:.5}
 .mc-day.today{border-color:var(--accent)}
-.mc-day.selected{background:var(--accent);color:#fff}
-.mc-day.selected .mc-num{color:#fff}
+.mc-day.selected{background:var(--accent-light);border-color:var(--accent);border-width:3px}
+.mc-day.selected .mc-num{color:var(--accent)}
 .mc-day:not(.empty):not(.selected):hover{background:var(--accent-light)}
 .mc-num{font-size:13px;font-weight:600;color:var(--ink)}
-.mc-dots{display:flex;flex-wrap:wrap;gap:2px;margin-top:auto}
-.mc-dot{width:6px;height:6px;border-radius:50%}
+.mc-centri{display:flex;flex-direction:column;gap:2px;margin-top:auto}
+.mc-centro{font-size:10px;font-weight:600;border-radius:3px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .mc-count{font-size:9px;color:var(--ink3);font-weight:600;line-height:1}
 .mc-day.selected .mc-count{color:rgba(255,255,255,.85)}
 
@@ -1514,20 +1514,23 @@ function renderMonthView(){
     const isSelected = ds === S.selectedDay;
     // Trova gli appuntamenti del giorno raggruppati per centro
     const dayAppts = S.appuntamenti.filter(a=>a.data===ds);
-    // Centri unici di questo giorno (per i pallini)
+    // Centri unici di questo giorno
     const centrosId = [...new Set(dayAppts.map(a=>a.centroId))];
-    const dotsHtml = centrosId.slice(0,4).map(cid=>{
+    const centriHtml = centrosId.slice(0,3).map(cid=>{
       const c = S.centri.find(x=>x.id===cid);
-      return `<span class="mc-dot" style="background:${c?c.colore:'#999'}"></span>`;
+      const nome = c ? c.nome : '?';
+      const colore = c ? c.colore : '#999';
+      const n = dayAppts.filter(a=>a.centroId===cid).length;
+      return `<span class="mc-centro" style="background:${colore}22;color:${colore};border:1px solid ${colore}55">${nome} <strong>${n}</strong></span>`;
     }).join('');
+    const extra = centrosId.length > 3 ? `<span class="mc-count">+${centrosId.length-3}</span>` : '';
     let cls = 'mc-day';
     if(isPast) cls += ' past';
     if(isToday) cls += ' today';
     if(isSelected) cls += ' selected';
     html += `<div class="${cls}" onclick="selectMonthDay('${ds}')">
       <span class="mc-num">${d}</span>
-      <div class="mc-dots">${dotsHtml}</div>
-      ${dayAppts.length?`<span class="mc-count">${dayAppts.length}</span>`:''}
+      <div class="mc-centri">${centriHtml}${extra}</div>
     </div>`;
   }
   monthCal.innerHTML = html;
