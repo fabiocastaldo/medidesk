@@ -636,6 +636,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
             <label class="form-label">URL personalizzato <span style="font-weight:400;color:var(--ink3)">(slug)</span></label>
             <input class="form-input" id="setting-slug" placeholder="mario-rossi" oninput="onSlugInput()" style="font-family:monospace">
             <div class="slug-preview" id="slug-preview"></div>
+            <div id="slug-availability" style="font-size:12px;margin-top:3px;min-height:16px"></div>
           </div>
           <!-- Bio -->
           <div class="form-group">
@@ -1203,15 +1204,73 @@ function showAuthView(){
 }
 
 let _appInitialized = false;
-function showAppView(){
+async function showAppView(){
   console.log('[MediDesk] showAppView() eseguita');
   document.getElementById('view-auth').style.display    = 'none';
   document.getElementById('view-booking').style.display = 'none';
   document.getElementById('view-app').style.display     = 'flex';
   history.pushState({}, '', location.pathname);
   updateLogoutButtons();
+  if(isOnline()){
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if(user){
+        await ensureMedicoRecord(user);
+        await loadMedicoFromDB(user);
+      }
+    } catch(e){ console.error('[MediDesk] showAppView DB:', e.message); }
+  }
   if(!_appInitialized){ _appInitialized = true; init(); }
   else renderAll();
+}
+
+async function ensureMedicoRecord(user){
+  if(!isOnline() || !user) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('medici').select('id').eq('user_id', user.id).maybeSingle();
+    if(error) throw error;
+    if(!data){
+      console.log('[MediDesk] Primo login: creo record medico per', user.email);
+      const { data: newMedico, error: insErr } = await supabaseClient
+        .from('medici').insert({ user_id: user.id, email: user.email }).select('id').single();
+      if(insErr) throw insErr;
+      await supabaseClient.from('tipi_visita').insert([
+        { medico_id: newMedico.id, nome: 'Prima visita', is_default: true },
+        { medico_id: newMedico.id, nome: 'Controllo',    is_default: true }
+      ]);
+    }
+  } catch(e){ console.error('[MediDesk] ensureMedicoRecord:', e.message); }
+}
+
+async function loadMedicoFromDB(user){
+  if(!isOnline() || !user) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('medici').select('*').eq('user_id', user.id).single();
+    if(error) throw error;
+    if(data){
+      S.settings.titolo      = data.titolo            || '';
+      S.settings.nomeProf    = data.nome               || '';
+      S.settings.cognomeProf = data.cognome            || '';
+      S.settings.nome        = [data.titolo, data.nome, data.cognome].filter(Boolean).join(' ') || S.settings.nome;
+      S.settings.spec        = data.specializzazione   || '';
+      S.settings.slug        = data.slug               || '';
+      S.settings.albo        = data.numero_albo        || '';
+      S.settings.bio         = data.bio                || '';
+      S.settings.esperienza  = data.anni_esperienza    || '';
+      S.settings.lingue      = Array.isArray(data.lingue) ? data.lingue : [];
+      S.settings.email       = data.email_pubblica     || '';
+      S.settings.telefono    = data.telefono           || '';
+      S.settings.sitoWeb     = data.sito_web           || '';
+      S.settings.linkedin    = data.linkedin           || '';
+      S.settings.instagram   = data.instagram          || '';
+      S.settings.youtube     = data.youtube            || '';
+      S.settings.facebook    = data.facebook           || '';
+      save();
+      console.log('[MediDesk] Profilo medico caricato da DB:', user.email);
+    }
+  } catch(e){ console.error('[MediDesk] loadMedicoFromDB:', e.message); }
 }
 
 function updateLogoutButtons(){
@@ -2720,12 +2779,30 @@ function onNomeCognomeChange(){
   if(!slugEl.value.trim()||slugEl.value.trim()===prevAuto) slugEl.value=slugify(np+' '+cp);
   renderSlugPreview();
 }
+let _slugDebounce = null;
 function onSlugInput(){
   const inp=document.getElementById('setting-slug'); if(!inp) return;
   const pos=inp.selectionStart;
   inp.value=slugify(inp.value);
   try{ inp.setSelectionRange(pos,pos); }catch(e){}
   renderSlugPreview();
+  const fb=document.getElementById('slug-availability'); if(fb) fb.textContent='';
+  clearTimeout(_slugDebounce);
+  _slugDebounce=setTimeout(checkSlugAvailability, 500);
+}
+async function checkSlugAvailability(){
+  if(!isOnline()) return;
+  const inp=document.getElementById('setting-slug'); if(!inp) return;
+  const slug=inp.value.trim(); if(!slug) return;
+  const fb=document.getElementById('slug-availability'); if(!fb) return;
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if(!user) return;
+    const { data } = await supabaseClient
+      .from('medici').select('id').eq('slug', slug).neq('user_id', user.id).maybeSingle();
+    fb.textContent = data ? '✗ Slug già in uso' : '✓ Slug disponibile';
+    fb.style.color  = data ? '#e74c3c' : '#27ae60';
+  } catch(e){ fb.textContent=''; }
 }
 function renderSlugPreview(){
   const el=document.getElementById('slug-preview'); if(!el) return;
@@ -2774,14 +2851,15 @@ function loadSettings(){
   renderSlugPreview();
   renderLingue();
 }
-function saveSettings(){
+async function saveSettings(){
   const val=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
   S.settings.titolo      = val('setting-titolo');
   S.settings.nomeProf    = val('setting-nome-prof');
   S.settings.cognomeProf = val('setting-cognome-prof');
   S.settings.nome        = getFullName();
   S.settings.spec        = val('setting-spec');
-  S.settings.slug        = slugify(val('setting-slug'));
+  const newSlug          = slugify(val('setting-slug'));
+  S.settings.slug        = newSlug;
   S.settings.bio         = val('setting-bio');
   S.settings.esperienza  = val('setting-esperienza');
   S.settings.albo        = val('setting-albo');
@@ -2794,7 +2872,43 @@ function saveSettings(){
   S.settings.facebook    = val('setting-facebook');
   const key = val('setting-apikey');
   if(key) localStorage.setItem('medidesk_apikey',key); else localStorage.removeItem('medidesk_apikey');
-  save(); updateDoctorName(); updateShareLink(); showToast('Salvato ✓');
+  save(); updateDoctorName(); updateShareLink();
+  if(isOnline()){
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if(!user){ showToast('Salvato ✓ (solo locale — nessun utente)'); return; }
+      if(newSlug){
+        const { data: conflict } = await supabaseClient
+          .from('medici').select('id').eq('slug', newSlug).neq('user_id', user.id).maybeSingle();
+        if(conflict){ showToast('✗ Slug già in uso — scegli uno diverso'); return; }
+      }
+      const { error } = await supabaseClient.from('medici').update({
+        titolo:           S.settings.titolo      || null,
+        nome:             S.settings.nomeProf    || null,
+        cognome:          S.settings.cognomeProf || null,
+        specializzazione: S.settings.spec        || null,
+        slug:             S.settings.slug        || null,
+        numero_albo:      S.settings.albo        || null,
+        bio:              S.settings.bio         || null,
+        anni_esperienza:  S.settings.esperienza  || null,
+        lingue:           S.settings.lingue.length ? S.settings.lingue : null,
+        email_pubblica:   S.settings.email       || null,
+        telefono:         S.settings.telefono    || null,
+        sito_web:         S.settings.sitoWeb     || null,
+        linkedin:         S.settings.linkedin    || null,
+        instagram:        S.settings.instagram   || null,
+        youtube:          S.settings.youtube     || null,
+        facebook:         S.settings.facebook    || null
+      }).eq('user_id', user.id);
+      if(error) throw error;
+      showToast('Salvato ✓');
+    } catch(e){
+      console.error('[MediDesk] saveSettings DB:', e.message);
+      showToast('Errore salvataggio: ' + e.message);
+    }
+  } else {
+    showToast('Salvato ✓');
+  }
 }
 function getApiKey(){ return localStorage.getItem('medidesk_apikey')||''; }
 // foto profilo
@@ -2809,8 +2923,18 @@ function addLingua(){
   const inp=document.getElementById('new-lingua'); const v=inp.value.trim(); if(!v) return;
   if((S.settings.lingue||[]).some(l=>l.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
   S.settings.lingue.push(v); inp.value=''; save(); renderLingue(); showToast('Aggiunta ✓');
+  syncLingueToDB();
 }
-function removeLingua(idx){ S.settings.lingue.splice(idx,1); save(); renderLingue(); }
+function removeLingua(idx){ S.settings.lingue.splice(idx,1); save(); renderLingue(); syncLingueToDB(); }
+async function syncLingueToDB(){
+  if(!isOnline()) return;
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser(); if(!user) return;
+    await supabaseClient.from('medici')
+      .update({ lingue: S.settings.lingue.length ? S.settings.lingue : null })
+      .eq('user_id', user.id);
+  } catch(e){ console.error('[MediDesk] syncLingueToDB:', e.message); }
+}
 function updateDoctorName(){
   const name=getFullName();
   const dd=document.getElementById('doctor-display'); if(dd) dd.textContent=name;
