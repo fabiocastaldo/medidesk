@@ -1988,7 +1988,7 @@ Il campo nome/cognome/CF non serve, è già noto.`;
           "anthropic-dangerous-direct-browser-access": "true"
         },
         body:JSON.stringify({
-          model:"claude-sonnet-4-5-20250514", max_tokens:2000,
+          model:"claude-sonnet-4-5-20250929", max_tokens:2000,
           messages:[{role:"user",content:[
             {type:file.type==='application/pdf'?'document':'image',source:{type:'base64',media_type:file.type,data:base64}},
             {type:"text",text:prompt}
