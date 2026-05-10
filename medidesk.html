@@ -1313,7 +1313,7 @@ async function loadTipiVisitaFromDB(user){
       .from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient
-      .from('tipi_visita').select('*').eq('medico_id', medico.id).order('created_at');
+      .from('tipi_visita').select('*').eq('medico_id', medico.id).order('nome');
     if(error) throw error;
     S.tipiVisitaRecords = data || [];
     S.tipiVisita = S.tipiVisitaRecords.map(r => r.nome);
@@ -1329,7 +1329,7 @@ async function loadAreeTematicheFromDB(user){
       .from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient
-      .from('aree_tematiche').select('*').eq('medico_id', medico.id).order('created_at');
+      .from('aree_tematiche').select('*').eq('medico_id', medico.id).order('nome');
     if(error) throw error;
     S.areeTematicheRecords = data || [];
     S.areeTematiche = S.areeTematicheRecords.map(r => r.nome);
