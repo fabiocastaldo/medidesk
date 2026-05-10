@@ -474,7 +474,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 </div>
 
 <!-- ══════════════ APP MEDICO ══════════════ -->
-<div id="view-app" class="app">
+<div id="view-app" class="app" style="display:none">
   <aside class="sidebar">
     <div class="sidebar-logo"><h1>MediDesk</h1><p>Il tuo studio ovunque</p></div>
     <nav class="nav">
@@ -1327,6 +1327,7 @@ function checkView(){
 function init(){
   const td = document.getElementById('today-date');
   if(td) td.textContent = new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  updateLogoutButtons();
   updateShareLink();
   renderAll();
   // aggiornamento cross-tab: quando un paziente prenota da un'altra finestra
