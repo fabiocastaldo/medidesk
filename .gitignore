@@ -13,5 +13,8 @@ desktop.ini
 # Claude Code local settings
 .claude/
 
+# Supabase credentials (non committare mai config.js!)
+config.js
+
 # Logs
 *.log
