@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -388,6 +388,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
       <div class="nav-item" onclick="showPage('agenda')"><span class="icon">📅</span><span>Agenda</span></div>
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon">👥</span><span>Pazienti</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon">🏥</span><span>Centri</span></div>
+      <div class="nav-item" onclick="showPage('profilo')"><span class="icon">👤</span><span>Profilo</span></div>
     </nav>
     <div class="sidebar-bottom">
       <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
@@ -498,6 +499,13 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
         <button class="btn btn-primary" onclick="openModal('modal-centro')">+ Centro</button>
       </div>
       <div id="centri-list"></div>
+    </div>
+
+    <div id="page-profilo" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Profilo medico</div><div class="page-subtitle">Identità, contatti e impostazioni</div></div>
+        <button class="btn btn-primary" onclick="saveSettings()">Salva</button>
+      </div>
       <div style="margin-top:32px">
         <div class="section-title">Impostazioni medico</div>
         <div class="card"><div class="card-body">
@@ -569,8 +577,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
             <label class="form-label">Anthropic API Key <span style="font-weight:400;color:var(--ink3)">(per analisi AI dei referti)</span></label>
             <input class="form-input" id="setting-apikey" type="password" placeholder="sk-ant-...">
           </div>
-          <button class="btn btn-primary" style="margin-top:4px" onclick="saveSettings()">Salva</button>
-          <button class="btn btn-secondary" style="margin-left:8px;color:var(--warm)" onclick="resetAllData()">🗑 Reset dati</button>
+          <button class="btn btn-secondary" style="margin-top:4px;color:var(--warm)" onclick="resetAllData()">🗑 Reset dati</button>
         </div></div>
       </div>
 
@@ -598,7 +605,6 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
         </div></div>
       </div>
     </div>
-
   </main>
 
   <!-- BOTTOM NAVIGATION (visible only on mobile) -->
@@ -618,6 +624,10 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
     <button class="bottom-nav-item" data-page="centri" onclick="showPage('centri')">
       <span class="bn-icon">🏥</span>
       <span class="bn-label">Centri</span>
+    </button>
+    <button class="bottom-nav-item" data-page="profilo" onclick="showPage('profilo')">
+      <span class="bn-icon">👤</span>
+      <span class="bn-label">Profilo</span>
     </button>
   </nav>
 </div>
@@ -1097,7 +1107,7 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','centri'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','centri','profilo'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
@@ -1109,7 +1119,8 @@ function showPage(id){
   window.scrollTo({top:0,behavior:'smooth'});
   if(id==='agenda') renderAgenda();
   if(id==='pazienti') renderPazienti();
-  if(id==='centri'){ renderCentri(); renderTipiAree(); }
+  if(id==='centri') renderCentri();
+  if(id==='profilo'){ loadSettings(); renderTipiAree(); }
   if(id==='dashboard'){ renderDashboard(); renderPending(); }
 }
 
