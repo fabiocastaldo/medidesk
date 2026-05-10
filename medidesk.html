@@ -973,18 +973,19 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 
 <!-- MODAL QR CODE -->
 <div class="modal-overlay" id="modal-qr">
-  <div class="modal" style="max-width:340px">
+  <div class="modal" style="max-width:360px">
     <div class="modal-header">
       <span class="modal-title">QR Code prenotazione</span>
       <button class="modal-close" onclick="closeModal('modal-qr')">✕</button>
     </div>
-    <div class="modal-body" style="text-align:center">
-      <p style="font-size:13px;color:var(--ink2);margin-bottom:4px">Mostra questo codice ai tuoi pazienti per prenotare direttamente.</p>
-      <div class="qr-canvas-wrap" id="qr-canvas-wrap"></div>
-      <p id="qr-url-label" style="font-size:11px;font-family:monospace;color:var(--ink3);word-break:break-all"></p>
+    <div class="modal-body" style="text-align:center;padding:20px 24px">
+      <div id="qr-canvas-wrap" style="display:flex;justify-content:center;align-items:center;min-height:120px;margin-bottom:12px"></div>
+      <p id="qr-url-label" style="font-size:11px;font-family:monospace;color:var(--ink3);word-break:break-all;margin-bottom:6px"></p>
+      <p style="font-size:12px;color:var(--ink2)">Mostra ai pazienti per prenotare · tocca ⛶ per il fullscreen</p>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="gap:8px">
       <button class="btn btn-secondary" onclick="closeModal('modal-qr')">Chiudi</button>
+      <button class="btn btn-secondary" onclick="showQRFullscreen()">⛶ Schermo intero</button>
       <button class="btn btn-primary" onclick="downloadQR()">⬇ Scarica PNG</button>
     </div>
   </div>
@@ -1182,27 +1183,45 @@ function openQRModal(){
   const url = getShareUrl();
   const wrap = document.getElementById('qr-canvas-wrap');
   if(!wrap) return;
-  wrap.innerHTML = '';
-  const canvas = document.createElement('canvas');
-  wrap.appendChild(canvas);
-  if(typeof QRCode !== 'undefined'){
-    QRCode.toCanvas(canvas, url, {width:200, margin:2}, err=>{
-      if(err) wrap.innerHTML='<p style="color:red;font-size:13px">Errore generazione QR</p>';
-    });
-  } else {
-    wrap.innerHTML='<p style="font-size:13px;color:var(--ink3)">Libreria QR non caricata</p>';
-  }
+  wrap._qrDataUrl = null;
+  wrap.innerHTML = '<span style="font-size:13px;color:var(--ink3)">Generazione in corso…</span>';
   const lbl = document.getElementById('qr-url-label');
   if(lbl) lbl.textContent = url;
   openModal('modal-qr');
+  if(typeof QRCode === 'undefined'){
+    wrap.innerHTML = '<p style="font-size:13px;color:red">Libreria QR non disponibile (verifica connessione)</p>';
+    return;
+  }
+  QRCode.toDataURL(url, {width:280, margin:2, color:{dark:'#1A1814',light:'#ffffff'}}, (err, dataUrl)=>{
+    if(err){ wrap.innerHTML='<p style="font-size:13px;color:red">Errore: '+err.message+'</p>'; return; }
+    wrap._qrDataUrl = dataUrl;
+    wrap.innerHTML='';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.cssText='width:240px;height:240px;border-radius:8px;cursor:pointer';
+    img.title = 'Tocca per schermo intero';
+    img.onclick = showQRFullscreen;
+    wrap.appendChild(img);
+  });
+}
+function showQRFullscreen(){
+  const wrap = document.getElementById('qr-canvas-wrap');
+  if(!wrap||!wrap._qrDataUrl){ showToast('QR non ancora generato'); return; }
+  const url = document.getElementById('qr-url-label').textContent;
+  const ov = document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99999;cursor:pointer;padding:24px';
+  ov.innerHTML=`<img src="${wrap._qrDataUrl}" style="max-width:min(380px,92vw);max-height:72vh;border-radius:12px"><p style="color:rgba(255,255,255,.45);font-size:11px;font-family:monospace;margin-top:16px;text-align:center;word-break:break-all;max-width:340px">${url}</p><p style="color:rgba(255,255,255,.3);font-size:12px;margin-top:14px">Tocca per chiudere</p>`;
+  ov.onclick=()=>document.body.removeChild(ov);
+  document.body.appendChild(ov);
 }
 function downloadQR(){
-  const canvas = document.querySelector('#qr-canvas-wrap canvas');
-  if(!canvas){ showToast('QR non disponibile'); return; }
+  const wrap = document.getElementById('qr-canvas-wrap');
+  if(!wrap||!wrap._qrDataUrl){ showToast('QR non ancora generato'); return; }
   const link = document.createElement('a');
   link.download = 'qr-prenotazione.png';
-  link.href = canvas.toDataURL();
+  link.href = wrap._qrDataUrl;
   link.click();
+  showToast('Download avviato ✓');
 }
 
 // ── CENTRI ──
