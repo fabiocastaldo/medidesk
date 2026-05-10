@@ -1147,11 +1147,20 @@ async function signIn(){
   const email    = document.getElementById('auth-login-email').value.trim();
   const password = document.getElementById('auth-login-password').value;
   if(!email || !password){ showAuthMsg('Inserisci email e password', 'error'); return; }
+  if(!supabaseClient){ showAuthMsg('Supabase non configurato', 'error'); return; }
   setAuthLoading(true);
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  setAuthLoading(false);
-  if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
-  showAppView();
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    setAuthLoading(false);
+    console.log('[signIn] data:', data, 'error:', error);
+    if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
+    if(!data?.session){ showAuthMsg('Sessione non ricevuta — controlla email di conferma', 'error'); return; }
+    showAppView();
+  } catch(e) {
+    setAuthLoading(false);
+    console.error('[signIn] eccezione:', e);
+    showAuthMsg('Errore di rete: ' + e.message, 'error');
+  }
 }
 
 async function signOut(){
