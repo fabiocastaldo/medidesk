@@ -1221,6 +1221,7 @@ async function showAppView(){
         await loadCentriFromDB(user);
         await loadTipiVisitaFromDB(user);
         await loadAreeTematicheFromDB(user);
+        await loadPazientiFromDB(user);
       }
     } catch(e){ console.error('[MediDesk] showAppView DB:', e.message); }
   }
@@ -1336,6 +1337,33 @@ async function loadAreeTematicheFromDB(user){
     save();
     console.log('[MediDesk] Aree tematiche caricate da DB:', S.areeTematiche.length);
   } catch(e){ console.error('[MediDesk] loadAreeTematicheFromDB:', e.message); }
+}
+
+async function loadPazientiFromDB(user){
+  if(!isOnline() || !user) return;
+  try {
+    // Snapshot visite locali PRIMA di sovrascrivere S.pazienti
+    const visiteLoc = {};
+    (S.pazienti || []).forEach(p => {
+      if((p.visite||[]).length){
+        const key = (p.nome||'').toLowerCase()+'|'+(p.cognome||'').toLowerCase();
+        visiteLoc[key] = p.visite;
+        if(p.id) visiteLoc[String(p.id)] = p.visite;
+      }
+    });
+    const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+    if(!medico) return;
+    const { data, error } = await supabaseClient.from('pazienti')
+      .select('*').eq('medico_id', medico.id).order('cognome').order('nome');
+    if(error) throw error;
+    S.pazienti = (data || []).map(p => {
+      const key = (p.nome||'').toLowerCase()+'|'+(p.cognome||'').toLowerCase();
+      const visite = visiteLoc[String(p.id)] || visiteLoc[key] || [];
+      return { id:p.id, nome:p.nome||'', cognome:p.cognome||'', cf:p.codice_fiscale||'', nascita:p.data_nascita||'', visite };
+    });
+    save();
+    console.log('[MediDesk] Pazienti caricati da DB:', S.pazienti.length);
+  } catch(e){ console.error('[MediDesk] loadPazientiFromDB:', e.message); }
 }
 
 function updateLogoutButtons(){
@@ -2439,7 +2467,7 @@ function renderPazienti(){
   el.innerHTML=list.map(p=>{
     const initials=(p.nome[0]||'')+(p.cognome[0]||'');
     const n=(p.visite||[]).length;
-    return `<div class="paziente-card" onclick="showPazienteDetail(${p.id})">
+    return `<div class="paziente-card" onclick="showPazienteDetail('${p.id}')">
       <div class="paziente-avatar">${initials.toUpperCase()}</div>
       <div class="paziente-info">
         <div class="paziente-name">${p.cognome} ${p.nome}</div>
@@ -2451,7 +2479,7 @@ function renderPazienti(){
 }
 
 function showPazienteDetail(id){
-  const p=S.pazienti.find(x=>x.id===id); if(!p) return;
+  const p=S.pazienti.find(x=>String(x.id)===String(id)); if(!p) return;
   document.getElementById('modal-paziente-title').textContent=p.cognome+' '+p.nome;
   const visite=p.visite||[];
   document.getElementById('modal-paziente-body').innerHTML=`
@@ -2473,17 +2501,28 @@ function showPazienteDetail(id){
     `).join('')}
     ${visite.length>=2?`
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <button class="btn btn-secondary" onclick="sintetizzaStoria(${id})" id="btn-storia-${id}">✦ Sintetizza storia clinica</button>
+      <button class="btn btn-secondary" onclick="sintetizzaStoria('${id}')" id="btn-storia-${id}">✦ Sintetizza storia clinica</button>
     </div>
     <div id="storia-container-${id}"></div>`:''}
-    <div style="margin-top:16px"><button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deletePaziente(${id})">🗑 Elimina paziente</button></div>`;
+    <div style="margin-top:16px"><button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deletePaziente('${id}')">🗑 Elimina paziente</button></div>`;
   openModal('modal-paziente');
 }
 function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
-function deletePaziente(id){
-  if(!confirm('Eliminare questo paziente?')) return;
-  S.pazienti=S.pazienti.filter(p=>p.id!==id);
-  save(); renderPazienti(); updateStats(); closeModal('modal-paziente'); showToast('Paziente eliminato');
+async function deletePaziente(id){
+  if(!confirm('Eliminare questo paziente e tutte le sue visite?')) return;
+  if(!isOnline()){
+    S.pazienti=S.pazienti.filter(p=>String(p.id)!==String(id));
+    save(); renderPazienti(); updateStats(); closeModal('modal-paziente'); showToast('Paziente eliminato'); return;
+  }
+  try {
+    const { error } = await supabaseClient.from('pazienti').delete().eq('id', id);
+    if(error) throw error;
+    S.pazienti=S.pazienti.filter(p=>String(p.id)!==String(id));
+    save(); renderPazienti(); updateStats(); closeModal('modal-paziente'); showToast('Paziente eliminato');
+  } catch(e){
+    console.error('[MediDesk] deletePaziente:', e.message);
+    showToast('Errore: '+e.message);
+  }
 }
 
 function parseVisitDate(s){
@@ -2494,7 +2533,7 @@ function parseVisitDate(s){
 }
 
 async function sintetizzaStoria(pazId){
-  const p=S.pazienti.find(x=>x.id===pazId); if(!p) return;
+  const p=S.pazienti.find(x=>String(x.id)===String(pazId)); if(!p) return;
   const container=document.getElementById('storia-container-'+pazId); if(!container) return;
   const btn=document.getElementById('btn-storia-'+pazId); if(btn) btn.disabled=true;
 
@@ -2615,7 +2654,7 @@ function renderVisitaSearchResults(){
   resEl.innerHTML = matches.map(p=>{
     const ini = (p.nome[0]||'')+(p.cognome[0]||'');
     const n = (p.visite||[]).length;
-    return `<div class="paziente-pick" onclick="visitaSelectExisting(${p.id})">
+    return `<div class="paziente-pick" onclick="visitaSelectExisting('${p.id}')">
       <div class="avatar-sm">${ini.toUpperCase()}</div>
       <div class="info">
         <strong>${p.cognome} ${p.nome}</strong>
@@ -2625,17 +2664,30 @@ function renderVisitaSearchResults(){
   }).join('');
 }
 
-function visitaSelectFromAppt(apptId){
+async function visitaSelectFromAppt(apptId){
   const a = S.appuntamenti.find(x=>x.id===apptId);
   if(!a) return;
-  // Cerca paziente esistente per nome/cognome
   let paz = S.pazienti.find(p=>
     p.nome.toLowerCase()===a.nome.toLowerCase() &&
     p.cognome.toLowerCase()===a.cognome.toLowerCase()
   );
   if(!paz){
-    // Crea record paziente al volo (senza visite)
-    paz = { id:Date.now(), nome:a.nome, cognome:a.cognome, cf:'', nascita:'', visite:[] };
+    if(isOnline()){
+      try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+        const { data: newPaz, error } = await supabaseClient.from('pazienti')
+          .insert({ medico_id: medico.id, nome: a.nome, cognome: a.cognome }).select('id').single();
+        if(error) throw error;
+        paz = { id: newPaz.id, nome: a.nome, cognome: a.cognome, cf:'', nascita:'', visite:[] };
+        console.log('[MediDesk] Paziente creato da appuntamento:', { id: newPaz.id });
+      } catch(e){
+        console.error('[MediDesk] visitaSelectFromAppt:', e.message);
+        paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, cf:'', nascita:'', visite:[] };
+      }
+    } else {
+      paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, cf:'', nascita:'', visite:[] };
+    }
     S.pazienti.unshift(paz);
     save();
   }
@@ -2645,7 +2697,7 @@ function visitaSelectFromAppt(apptId){
 }
 
 function visitaSelectExisting(pazId){
-  const paz = S.pazienti.find(p=>p.id===pazId);
+  const paz = S.pazienti.find(p=>String(p.id)===String(pazId));
   if(!paz) return;
   V.selectedPazienteId = pazId;
   V.isNewPaziente = false;
@@ -2744,7 +2796,7 @@ ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero 
   "contenuto_clinico": "SINTESI CLINICA STRUTTURATA: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
 }`;
       } else {
-        const paz = S.pazienti.find(p=>p.id===V.selectedPazienteId);
+        const paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
         prompt = `Sei un assistente medico. Il paziente è: ${paz ? paz.cognome+' '+paz.nome : 'noto'}.
 Analizza questo referto e produci una sintesi clinica strutturata.
 
@@ -2813,7 +2865,7 @@ Il campo nome/cognome/CF non serve, è già noto.`;
   reader.readAsDataURL(file);
 }
 
-function saveVisita(){
+async function saveVisita(){
   try {
     const dataVisita = document.getElementById('ex-data-visita').value.trim() || new Date().toLocaleDateString('it-IT');
     const luogo = document.getElementById('ex-luogo').value.trim();
@@ -2824,30 +2876,42 @@ function saveVisita(){
       const nome = document.getElementById('ex-nome').value.trim();
       const cognome = document.getElementById('ex-cognome').value.trim();
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return; }
-      const cf = document.getElementById('ex-cf').value.trim();
+      const cf = document.getElementById('ex-nascita') && document.getElementById('ex-cf').value.trim();
       const nascita = document.getElementById('ex-nascita').value.trim();
-      // Verifica se esiste già
       let paz = S.pazienti.find(p=>(cf&&p.cf===cf)||(p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase()));
       if(paz){
         paz.visite = paz.visite||[];
         paz.visite.unshift(visita);
-        showToast(`Visita aggiunta a ${paz.cognome} ${paz.nome} ✓`);
+        showToast('Visita aggiunta ✓');
       } else {
-        S.pazienti.unshift({ id:Date.now(), nome, cognome, cf, nascita, visite:[visita] });
+        if(isOnline()){
+          const { data: { user } } = await supabaseClient.auth.getUser();
+          const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+          const { data: newPaz, error } = await supabaseClient.from('pazienti').insert({
+            medico_id: medico.id, nome, cognome,
+            codice_fiscale: cf || null,
+            data_nascita: nascita || null
+          }).select('id').single();
+          if(error) throw error;
+          S.pazienti.unshift({ id: newPaz.id, nome, cognome, cf, nascita, visite:[visita] });
+          console.log('[MediDesk] Paziente creato:', { id: newPaz.id });
+        } else {
+          S.pazienti.unshift({ id:Date.now(), nome, cognome, cf, nascita, visite:[visita] });
+        }
         showToast('Nuovo paziente e visita salvati ✓');
       }
     } else {
-      const paz = S.pazienti.find(p=>p.id===V.selectedPazienteId);
+      const paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
       if(!paz){ showToast('Errore: paziente non trovato'); return; }
       paz.visite = paz.visite||[];
       paz.visite.unshift(visita);
-      showToast(`Visita aggiunta a ${paz.cognome} ${paz.nome} ✓`);
+      showToast('Visita aggiunta ✓');
     }
     save();
     closeModal('modal-nuova-visita');
     renderPazienti(); updateStats(); renderDashboard();
   } catch(err){
-    console.error('saveVisita error:', err);
+    console.error('saveVisita error:', err.message);
     showToast('Errore salvataggio: '+err.message);
   }
 }
@@ -2877,7 +2941,7 @@ function renderDashboard(){
   if(S.pazienti.length)
     pazEl.innerHTML=S.pazienti.slice(0,5).map(p=>{
       const ini=(p.nome[0]||'')+(p.cognome[0]||'');
-      return `<div class="paziente-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showPazienteDetail(${p.id})">
+      return `<div class="paziente-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showPazienteDetail('${p.id}')">
         <div class="paziente-avatar" style="width:34px;height:34px;font-size:12px">${ini.toUpperCase()}</div>
         <div class="paziente-info"><div class="paziente-name">${p.cognome} ${p.nome}</div><div class="paziente-meta">${(p.visite||[]).length} visite</div></div>
       </div>`;
