@@ -1929,7 +1929,7 @@ function apptPathCenter(){
       list.innerHTML='<div style="text-align:center;padding:24px;color:var(--ink3)">Nessun centro con turni configurati.<br><br><button class="btn btn-secondary btn-sm" onclick="closeModal(\'modal-appuntamento\');showPage(\'centri\')">Vai a Centri</button></div>';
     } else {
       list.innerHTML=withTurni.map(c=>`
-        <button class="centro-btn" onclick="apptSelectCentro(${c.id})">
+        <button class="centro-btn" onclick="apptSelectCentro('${c.id}')">
           <strong>${c.nome}</strong>
           <span>${c.indirizzo||''} · ${c.turni.length} turni</span>
         </button>
@@ -1944,7 +1944,7 @@ function apptPathCenter(){
 
 function apptSelectCentro(id){
   A.centroId=id;
-  const c=S.centri.find(x=>x.id===id);
+  const c=S.centri.find(x=>String(x.id)===String(id));
   document.getElementById('appt-step-2a-label').textContent = `Data — ${c.nome}`;
   apptStep('2a');
   renderApptCalA();
@@ -1954,7 +1954,7 @@ function apptBackToCenter(){ apptPathCenter(); }
 
 function renderApptCalA(){
   document.getElementById('appt-cal-title-a').textContent=MONTHS_IT[A.calMonth]+' '+A.calYear;
-  const centro=S.centri.find(c=>c.id===A.centroId);
+  const centro=S.centri.find(c=>String(c.id)===String(A.centroId));
   const today=new Date(); today.setHours(0,0,0,0);
   const lastDay=new Date(A.calYear,A.calMonth+1,0);
   const firstDay=new Date(A.calYear,A.calMonth,1);
@@ -2031,7 +2031,7 @@ function apptShowCentriForDate(){
   } else {
     list.innerHTML=centriDispo.map(c=>{
       const slots=getSlots(c,A.dateStr);
-      return `<button class="centro-btn" onclick="apptSelectCentroFromDate(${c.id})">
+      return `<button class="centro-btn" onclick="apptSelectCentroFromDate('${c.id}')">
         <strong>${c.nome}</strong>
         <span>${c.indirizzo||''} · ${slots.length} slot disponibili</span>
       </button>`;
@@ -2052,7 +2052,7 @@ function apptBackToDate(){
 
 function apptBackToStep2(){
   // Capisci da quale percorso siamo arrivati
-  const c=S.centri.find(x=>x.id===A.centroId);
+  const c=S.centri.find(x=>String(x.id)===String(A.centroId));
   if(c){
     // Se siamo arrivati dal percorso A, torniamo al calendario A
     // Heuristica: vediamo se step-2a è stato attivato di recente
@@ -2072,7 +2072,7 @@ function apptNextMonth(){
 }
 
 function apptShowSlots(){
-  const centro=S.centri.find(c=>c.id===A.centroId);
+  const centro=S.centri.find(c=>String(c.id)===String(A.centroId));
   const slotsAll=getAllSlotsWithStatus(centro,A.dateStr);
   const d=new Date(A.dateStr+'T12:00:00');
   document.getElementById('appt-step-3-label').textContent =
@@ -2093,7 +2093,7 @@ function apptShowSlots(){
 function apptSelectSlot(ora){
   A.ora=ora;
   document.querySelectorAll('#appt-slots .slot-btn').forEach(b=>b.classList.toggle('selected',b.textContent===ora));
-  const centro=S.centri.find(c=>c.id===A.centroId);
+  const centro=S.centri.find(c=>String(c.id)===String(A.centroId));
   const d=new Date(A.dateStr+'T12:00:00');
   document.getElementById('appt-confirm-summary').innerHTML=`
     <div class="confirm-row"><span class="confirm-key">Centro</span><span>${centro.nome}</span></div>
@@ -3158,7 +3158,7 @@ function renderBkCentri(){
   if(!withTurni.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
   el.innerHTML=withTurni.map(c=>`
-    <div class="centro-btn" onclick="bkSelectCentro(${c.id})">
+    <div class="centro-btn" onclick="bkSelectCentro('${c.id}')">
       <strong>${c.nome}</strong>
       <span>${c.indirizzo||''} · ${c.turni.length} turni configurati</span>
     </div>
@@ -3173,7 +3173,7 @@ function bkSelectCentro(id){
 
 function renderBkCal(){
   document.getElementById('bk-cal-title').textContent=MONTHS_IT[bk.calMonth]+' '+bk.calYear;
-  const centro=S.centri.find(c=>c.id===bk.centroId);
+  const centro=S.centri.find(c=>String(c.id)===String(bk.centroId));
   const today=new Date(); today.setHours(0,0,0,0);
   const firstDay=new Date(bk.calYear,bk.calMonth,1);
   const lastDay=new Date(bk.calYear,bk.calMonth+1,0);
@@ -3205,7 +3205,7 @@ function bkNextMonth(){
 function bkSelectDate(ds){
   bk.dateStr=ds;
   renderBkCal();
-  const centro=S.centri.find(c=>c.id===bk.centroId);
+  const centro=S.centri.find(c=>String(c.id)===String(bk.centroId));
   const slots=getSlots(centro,ds);
   const d=new Date(ds+'T12:00:00');
   document.getElementById('bk-selected-date-label').textContent=
@@ -3219,7 +3219,7 @@ function bkSelectDate(ds){
 function bkSelectSlot(ora){
   bk.ora=ora;
   document.querySelectorAll('.slot-btn').forEach(b=>b.classList.toggle('selected',b.textContent===ora));
-  const centro=S.centri.find(c=>c.id===bk.centroId);
+  const centro=S.centri.find(c=>String(c.id)===String(bk.centroId));
   const d=new Date(bk.dateStr+'T12:00:00');
   document.getElementById('bk-confirm-summary').innerHTML=`
     <div class="confirm-row"><span class="confirm-key">Centro</span><span>${centro?centro.nome:'—'}</span></div>
@@ -3249,7 +3249,7 @@ function confirmBooking(){
   // aggiorna agenda medico in background (stessa tab)
   if(document.getElementById('view-app').style.display!=='none') renderAll();
   else { try{ renderDashboard(); updateStats(); renderPending(); renderAgenda(); }catch(e){} }
-  const centro=S.centri.find(c=>c.id===bk.centroId);
+  const centro=S.centri.find(c=>String(c.id)===String(bk.centroId));
   const d=new Date(bk.dateStr+'T12:00:00');
   document.getElementById('bk-success-msg').innerHTML=
     `Il tuo appuntamento con <strong>${getFullName()}</strong> è confermato.<br><br>`+
