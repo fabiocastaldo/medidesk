@@ -1219,6 +1219,8 @@ async function showAppView(){
         await ensureMedicoRecord(user);
         await loadMedicoFromDB(user);
         await loadCentriFromDB(user);
+        await loadTipiVisitaFromDB(user);
+        await loadAreeTematicheFromDB(user);
       }
     } catch(e){ console.error('[MediDesk] showAppView DB:', e.message); }
   }
@@ -1304,6 +1306,38 @@ async function loadCentriFromDB(user){
   } catch(e){ console.error('[MediDesk] loadCentriFromDB:', e.message); }
 }
 
+async function loadTipiVisitaFromDB(user){
+  if(!isOnline() || !user) return;
+  try {
+    const { data: medico } = await supabaseClient
+      .from('medici').select('id').eq('user_id', user.id).single();
+    if(!medico) return;
+    const { data, error } = await supabaseClient
+      .from('tipi_visita').select('*').eq('medico_id', medico.id).order('created_at');
+    if(error) throw error;
+    S.tipiVisitaRecords = data || [];
+    S.tipiVisita = S.tipiVisitaRecords.map(r => r.nome);
+    save();
+    console.log('[MediDesk] Tipi visita caricati da DB:', S.tipiVisita.length);
+  } catch(e){ console.error('[MediDesk] loadTipiVisitaFromDB:', e.message); }
+}
+
+async function loadAreeTematicheFromDB(user){
+  if(!isOnline() || !user) return;
+  try {
+    const { data: medico } = await supabaseClient
+      .from('medici').select('id').eq('user_id', user.id).single();
+    if(!medico) return;
+    const { data, error } = await supabaseClient
+      .from('aree_tematiche').select('*').eq('medico_id', medico.id).order('created_at');
+    if(error) throw error;
+    S.areeTematicheRecords = data || [];
+    S.areeTematiche = S.areeTematicheRecords.map(r => r.nome);
+    save();
+    console.log('[MediDesk] Aree tematiche caricate da DB:', S.areeTematiche.length);
+  } catch(e){ console.error('[MediDesk] loadAreeTematicheFromDB:', e.message); }
+}
+
 function updateLogoutButtons(){
   const show = isOnline();
   const s = document.getElementById('sidebar-logout-btn');
@@ -1358,7 +1392,9 @@ var S = {
              titolo:'Dr.', nomeProf:'Mario', cognomeProf:'Rossi', slug:'',
              email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'' },
   tipiVisita: ['Prima visita', 'Controllo'],
+  tipiVisitaRecords: [],
   areeTematiche: [],
+  areeTematicheRecords: [],
   weekOffset:0, selectedDay:null, currentApptId:null,
   agendaView:'week', monthYear:null, monthMonth:null
 };
@@ -3246,31 +3282,75 @@ function renderTipiAree(){
   }
 }
 
-function addTipoVisita(){
+async function addTipoVisita(){
   const inp = document.getElementById('new-tipo-visita');
-  const v = inp.value.trim();
-  if(!v) return;
+  const v = inp.value.trim(); if(!v) return;
   if(S.tipiVisita.some(t=>t.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
-  S.tipiVisita.push(v); inp.value=''; save(); renderTipiAree();
-  populateTipiVisitaSelects(); showToast('Tipo aggiunto ✓');
+  if(!isOnline()){
+    S.tipiVisita.push(v); inp.value=''; save(); renderTipiAree();
+    populateTipiVisitaSelects(); showToast('Tipo aggiunto ✓'); return;
+  }
+  try {
+    const { data: medico } = await supabaseClient.from('medici')
+      .select('id').eq('user_id', (await supabaseClient.auth.getUser()).data.user.id).single();
+    const { data: rec, error } = await supabaseClient.from('tipi_visita')
+      .insert({ medico_id: medico.id, nome: v, is_default: false }).select('*').single();
+    if(error) throw error;
+    S.tipiVisitaRecords.push(rec);
+    S.tipiVisita.push(rec.nome); inp.value=''; save(); renderTipiAree();
+    populateTipiVisitaSelects(); showToast('Tipo aggiunto ✓');
+  } catch(e){ console.error('[MediDesk] addTipoVisita:', e.message); showToast('Errore: '+e.message); }
 }
-function removeTipoVisita(idx){
+
+async function removeTipoVisita(idx){
   const t = S.tipiVisita[idx];
   if(TIPI_DEFAULT.includes(t)){ showToast('I tipi predefiniti non si possono rimuovere'); return; }
-  S.tipiVisita.splice(idx,1); save(); renderTipiAree();
-  populateTipiVisitaSelects(); showToast('Rimosso');
+  if(!isOnline()){
+    S.tipiVisita.splice(idx,1); save(); renderTipiAree();
+    populateTipiVisitaSelects(); showToast('Rimosso'); return;
+  }
+  const rec = S.tipiVisitaRecords.find(r => r.nome === t);
+  try {
+    if(rec){ const { error } = await supabaseClient.from('tipi_visita').delete().eq('id', rec.id); if(error) throw error; }
+    S.tipiVisita.splice(idx,1);
+    S.tipiVisitaRecords = S.tipiVisitaRecords.filter(r => r.nome !== t);
+    save(); renderTipiAree(); populateTipiVisitaSelects(); showToast('Rimosso');
+  } catch(e){ console.error('[MediDesk] removeTipoVisita:', e.message); showToast('Errore: '+e.message); }
 }
-function addArea(){
+
+async function addArea(){
   const inp = document.getElementById('new-area');
-  const v = inp.value.trim();
-  if(!v) return;
+  const v = inp.value.trim(); if(!v) return;
   if(S.areeTematiche.some(a=>a.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
-  S.areeTematiche.push(v); inp.value=''; save(); renderTipiAree();
-  populateTipiVisitaSelects(); showToast('Area aggiunta ✓');
+  if(!isOnline()){
+    S.areeTematiche.push(v); inp.value=''; save(); renderTipiAree();
+    populateTipiVisitaSelects(); showToast('Area aggiunta ✓'); return;
+  }
+  try {
+    const { data: medico } = await supabaseClient.from('medici')
+      .select('id').eq('user_id', (await supabaseClient.auth.getUser()).data.user.id).single();
+    const { data: rec, error } = await supabaseClient.from('aree_tematiche')
+      .insert({ medico_id: medico.id, nome: v }).select('*').single();
+    if(error) throw error;
+    S.areeTematicheRecords.push(rec);
+    S.areeTematiche.push(rec.nome); inp.value=''; save(); renderTipiAree();
+    populateTipiVisitaSelects(); showToast('Area aggiunta ✓');
+  } catch(e){ console.error('[MediDesk] addArea:', e.message); showToast('Errore: '+e.message); }
 }
-function removeArea(idx){
-  S.areeTematiche.splice(idx,1); save(); renderTipiAree();
-  populateTipiVisitaSelects(); showToast('Rimossa');
+
+async function removeArea(idx){
+  const a = S.areeTematiche[idx];
+  if(!isOnline()){
+    S.areeTematiche.splice(idx,1); save(); renderTipiAree();
+    populateTipiVisitaSelects(); showToast('Rimossa'); return;
+  }
+  const rec = S.areeTematicheRecords.find(r => r.nome === a);
+  try {
+    if(rec){ const { error } = await supabaseClient.from('aree_tematiche').delete().eq('id', rec.id); if(error) throw error; }
+    S.areeTematiche.splice(idx,1);
+    S.areeTematicheRecords = S.areeTematicheRecords.filter(r => r.nome !== a);
+    save(); renderTipiAree(); populateTipiVisitaSelects(); showToast('Rimossa');
+  } catch(e){ console.error('[MediDesk] removeArea:', e.message); showToast('Errore: '+e.message); }
 }
 
 // ── TOAST ──
