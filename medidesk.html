@@ -1144,6 +1144,7 @@ async function signUp(){
 }
 
 async function signIn(){
+  console.log('[MediDesk] signIn() chiamata');
   const email    = document.getElementById('auth-login-email').value.trim();
   const password = document.getElementById('auth-login-password').value;
   if(!email || !password){ showAuthMsg('Inserisci email e password', 'error'); return; }
@@ -1154,8 +1155,7 @@ async function signIn(){
     setAuthLoading(false);
     if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
     if(!data?.session){ showAuthMsg('Conferma prima la tua email, poi riprova.', 'error'); return; }
-    // onAuthStateChange (SIGNED_IN) gestirà il cambio di vista
-    // ma lo forziamo anche qui come sicurezza immediata
+    console.log('[MediDesk] signIn: successo, utente:', data.session.user.email);
     showAppView();
   } catch(e) {
     setAuthLoading(false);
@@ -1178,16 +1178,13 @@ async function resetPassword(){
 }
 
 function checkSession(){
+  console.log('[MediDesk] checkSession() avviata, isOnline:', isOnline());
   if(!isOnline()){
     showAppView();
     return;
   }
-  // Pattern ufficiale Supabase v2: onAuthStateChange è la fonte di verità.
-  // INITIAL_SESSION si attiva subito con la sessione corrente (o null).
-  // SIGNED_IN si attiva dopo un login riuscito.
-  // SIGNED_OUT si attiva dopo il logout.
-  // Gli altri eventi (TOKEN_REFRESHED, USER_UPDATED) vengono ignorati.
   supabaseClient.auth.onAuthStateChange((event, session) => {
+    console.log('[MediDesk] onAuthStateChange:', event, session?.user?.email ?? 'no session');
     if(event === 'INITIAL_SESSION'){
       if(session){ showAppView(); } else { showAuthView(); }
     } else if(event === 'SIGNED_IN'){
@@ -1207,8 +1204,11 @@ function showAuthView(){
 
 let _appInitialized = false;
 function showAppView(){
-  document.getElementById('view-auth').style.display = 'none';
-  document.getElementById('view-app').style.display  = 'flex';
+  console.log('[MediDesk] showAppView() eseguita');
+  document.getElementById('view-auth').style.display    = 'none';
+  document.getElementById('view-booking').style.display = 'none';
+  document.getElementById('view-app').style.display     = 'flex';
+  history.pushState({}, '', location.pathname);
   updateLogoutButtons();
   if(!_appInitialized){ _appInitialized = true; init(); }
   else renderAll();
@@ -2830,13 +2830,6 @@ function showBookingView(){
   document.getElementById('view-booking').style.display='block';
   bkInit();
 }
-function showAppView(){
-  document.getElementById('view-booking').style.display='none';
-  document.getElementById('view-app').style.display='flex';
-  history.pushState({},'',location.pathname);
-  renderAll();
-}
-
 function bkInit(){
   const fullName=getFullName();
   document.getElementById('bk-doctor-name').textContent=fullName;
