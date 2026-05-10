@@ -1222,6 +1222,7 @@ async function showAppView(){
         await loadTipiVisitaFromDB(user);
         await loadAreeTematicheFromDB(user);
         await loadPazientiFromDB(user);
+        await loadAppuntamentiFromDB(user);
       }
     } catch(e){ console.error('[MediDesk] showAppView DB:', e.message); }
   }
@@ -1255,6 +1256,7 @@ async function loadMedicoFromDB(user){
       .from('medici').select('*').eq('user_id', user.id).single();
     if(error) throw error;
     if(data){
+      S.medicoId             = data.id;
       S.settings.titolo      = data.titolo            || '';
       S.settings.nomeProf    = data.nome               || '';
       S.settings.cognomeProf = data.cognome            || '';
@@ -1366,6 +1368,36 @@ async function loadPazientiFromDB(user){
   } catch(e){ console.error('[MediDesk] loadPazientiFromDB:', e.message); }
 }
 
+async function loadAppuntamentiFromDB(user){
+  if(!isOnline() || !user) return;
+  try {
+    const { data: medico } = await supabaseClient
+      .from('medici').select('id').eq('user_id', user.id).single();
+    if(!medico) return;
+    const { data, error } = await supabaseClient
+      .from('appuntamenti').select('*').eq('medico_id', medico.id)
+      .order('data').order('ora');
+    if(error) throw error;
+    S.appuntamenti = (data || []).map(a => ({
+      id:       a.id,
+      nome:     a.nome_paziente     || '',
+      cognome:  a.cognome_paziente  || '',
+      tel:      a.telefono_paziente || '',
+      email:    a.email_paziente    || '',
+      tipo:     a.tipo_visita       || '',
+      area:     a.area_tematica     || '',
+      note:     a.note              || '',
+      data:     a.data,
+      ora:      (a.ora || '').substring(0, 5),
+      centroId: a.centro_id,
+      source:   a.source || 'medico',
+      seen:     a.seen || false
+    }));
+    save();
+    console.log('[MediDesk] Appuntamenti caricati da DB:', S.appuntamenti.length);
+  } catch(e){ console.error('[MediDesk] loadAppuntamentiFromDB:', e.message); }
+}
+
 function updateLogoutButtons(){
   const show = isOnline();
   const s = document.getElementById('sidebar-logout-btn');
@@ -1415,6 +1447,7 @@ function translateAuthError(msg){
 
 // ── STATE ──
 var S = {
+  medicoId: null,
   centri:[], appuntamenti:[], pazienti:[],
   settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', esperienza:'', lingue:[],
              titolo:'Dr.', nomeProf:'Mario', cognomeProf:'Rossi', slug:'',
@@ -1868,7 +1901,7 @@ function getSlots(centro, dateStr){
   });
   // Rimuovi slot già occupati
   const taken = S.appuntamenti
-    .filter(a=>a.data===dateStr && a.centroId===centro.id)
+    .filter(a=>a.data===dateStr && String(a.centroId)===String(centro.id))
     .map(a=>a.ora);
   return slots.filter(s=>!taken.includes(s));
 }
@@ -1896,7 +1929,7 @@ function getAllSlotsWithStatus(centro, dateStr){
     }
   });
   // Mappa con info appuntamento se occupato
-  const apptsHere = S.appuntamenti.filter(a=>a.data===dateStr && a.centroId===centro.id);
+  const apptsHere = S.appuntamenti.filter(a=>a.data===dateStr && String(a.centroId)===String(centro.id));
   return slots.map(s=>{
     const appt = apptsHere.find(a=>a.ora===s);
     return { ora:s, libero:!appt, appt:appt||null };
@@ -2117,7 +2150,7 @@ function apptShowSlots(){
           return `<button class="slot-btn ${s.ora===A.ora?'selected':''}" onclick="apptSelectSlot('${s.ora}')">${s.ora}</button>`;
         } else {
           const label = `${s.appt.cognome} ${s.appt.nome[0]||''}.`;
-          return `<button class="slot-btn slot-occupied" onclick="showApptDetail(${s.appt.id})" title="Occupato: ${s.appt.cognome} ${s.appt.nome}"><span class="slot-time">${s.ora}</span><span class="slot-name">${label}</span></button>`;
+          return `<button class="slot-btn slot-occupied" onclick="showApptDetail('${s.appt.id}')" title="Occupato: ${s.appt.cognome} ${s.appt.nome}"><span class="slot-time">${s.ora}</span><span class="slot-name">${label}</span></button>`;
         }
       }).join('')
     : '<p style="color:var(--ink3);font-size:13px;grid-column:1/-1;text-align:center">Nessuno slot configurato per questo giorno.</p>';
@@ -2137,7 +2170,7 @@ function apptSelectSlot(ora){
   apptStep(4);
 }
 
-function saveAppuntamento(){
+async function saveAppuntamento(){
   try {
     const nome=capitalizeName(document.getElementById('appt-nome').value.trim());
     const cognome=capitalizeName(document.getElementById('appt-cognome').value.trim());
@@ -2145,8 +2178,8 @@ function saveAppuntamento(){
     if(!A.centroId||!A.dateStr||!A.ora){ showToast('Completa la selezione'); return; }
     const tipoEl=document.getElementById('appt-tipo');
     const areaEl=document.getElementById('appt-area');
-    S.appuntamenti.push({
-      id:Date.now(), nome, cognome,
+    const newAppt={
+      nome, cognome,
       tel:(document.getElementById('appt-tel')||{}).value?.trim()||'',
       email:(document.getElementById('appt-email')||{}).value?.trim()||'',
       data:A.dateStr, ora:A.ora, centroId:A.centroId,
@@ -2154,7 +2187,28 @@ function saveAppuntamento(){
       area: areaEl ? areaEl.value.trim() : '',
       note:(document.getElementById('appt-note')||{}).value?.trim()||'',
       source:'medico'
-    });
+    };
+    if(isOnline() && S.medicoId){
+      const { data: inserted, error } = await supabaseClient.from('appuntamenti').insert({
+        medico_id:         S.medicoId,
+        centro_id:         A.centroId,
+        data:              A.dateStr,
+        ora:               A.ora,
+        nome_paziente:     nome,
+        cognome_paziente:  cognome,
+        telefono_paziente: newAppt.tel  || null,
+        email_paziente:    newAppt.email|| null,
+        tipo_visita:       newAppt.tipo || null,
+        area_tematica:     newAppt.area || null,
+        note:              newAppt.note || null,
+        source:            'medico'
+      }).select('id').single();
+      if(error) throw error;
+      newAppt.id = inserted.id;
+    } else {
+      newAppt.id = Date.now();
+    }
+    S.appuntamenti.push(newAppt);
     save();
     closeModal('modal-appuntamento');
     renderAgenda(); renderDashboard(); updateStats();
@@ -2165,8 +2219,12 @@ function saveAppuntamento(){
   }
 }
 
-function deleteAppuntamento(id){
-  S.appuntamenti = S.appuntamenti.filter(a=>a.id!==id);
+async function deleteAppuntamento(id){
+  if(isOnline()){
+    try { await supabaseClient.from('appuntamenti').delete().eq('id', String(id)); }
+    catch(e){ console.error('[MediDesk] deleteAppuntamento:', e.message); }
+  }
+  S.appuntamenti = S.appuntamenti.filter(a=>String(a.id)!==String(id));
   save(); renderAgenda(); renderDashboard(); updateStats(); renderPending();
   closeModal('modal-appt-detail');
   showToast('Eliminato');
@@ -2290,7 +2348,7 @@ function renderMonthView(){
   let legendHtml = '';
   if(allCentriInMonth.size){
     const items = [...allCentriInMonth].map(cid=>{
-      const c=S.centri.find(x=>x.id===cid);
+      const c=S.centri.find(x=>String(x.id)===String(cid));
       return c?`<span class="month-legend-item"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}</span>`:'';
     }).join('');
     legendHtml = `<div class="month-legend">${items}</div>`;
@@ -2305,9 +2363,9 @@ function renderMonthView(){
     if(dayAppts.length){
       detEl.innerHTML = legendHtml + `<div class="section-title" style="margin-top:20px;text-transform:capitalize">${dLabel}</div>` +
         dayAppts.map(a=>{
-          const c = S.centri.find(x=>x.id===a.centroId);
+          const c = S.centri.find(x=>String(x.id)===String(a.centroId));
           const isOnline = a.source==='paziente';
-          return `<div class="appt-card" onclick="showApptDetail(${a.id})">
+          return `<div class="appt-card" onclick="showApptDetail('${a.id}')">
             <div class="appt-time">${a.ora}</div>
             <div class="appt-info">
               <div class="appt-patient">${a.cognome} ${a.nome}</div>
@@ -2344,9 +2402,9 @@ function renderDayAppointments(){
     container.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">✨ Nessun appuntamento</div>'; return;
   }
   container.innerHTML = appts.map(a=>{
-    const centro = S.centri.find(c=>c.id===a.centroId);
+    const centro = S.centri.find(c=>String(c.id)===String(a.centroId));
     const isOnline = a.source==='paziente';
-    return `<div class="appt-card" onclick="showApptDetail(${a.id})">
+    return `<div class="appt-card" onclick="showApptDetail('${a.id}')">
       <div class="appt-time">${a.ora}</div>
       <div class="appt-info">
         <div class="appt-patient">${a.cognome} ${a.nome}</div>
@@ -2358,9 +2416,9 @@ function renderDayAppointments(){
 }
 
 function showApptDetail(id){
-  const a = S.appuntamenti.find(x=>x.id===id); if(!a) return;
+  const a = S.appuntamenti.find(x=>String(x.id)===String(id)); if(!a) return;
   S.currentApptId = id;
-  const centro = S.centri.find(c=>c.id===a.centroId);
+  const centro = S.centri.find(c=>String(c.id)===String(a.centroId));
   document.getElementById('modal-appt-detail-body').innerHTML=`
     <div class="extracted-fields">
       <div class="field-row"><span class="field-key">Paziente</span><span class="field-val">${a.cognome} ${a.nome}</span></div>
@@ -2380,7 +2438,7 @@ function showApptDetail(id){
 
 // ── MAIL & ICS ──
 function buildMailText(a){
-  const centro = S.centri.find(c=>c.id===a.centroId);
+  const centro = S.centri.find(c=>String(c.id)===String(a.centroId));
   const medico = getFullName();
   return `Oggetto: Prenotazione visita – ${a.cognome} ${a.nome}
 
@@ -2405,7 +2463,7 @@ function previewMail(){
   el.textContent = buildMailText(a); el.style.display='block';
 }
 function copyMail(){ const a=getCurrentFormAppt(); if(!a) return; navigator.clipboard.writeText(buildMailText(a)); showToast('Mail copiata ✓'); }
-function copyMailFromDetail(){ const a=S.appuntamenti.find(x=>x.id===S.currentApptId); if(!a) return; navigator.clipboard.writeText(buildMailText(a)); showToast('Mail copiata ✓'); }
+function copyMailFromDetail(){ const a=S.appuntamenti.find(x=>String(x.id)===String(S.currentApptId)); if(!a) return; navigator.clipboard.writeText(buildMailText(a)); showToast('Mail copiata ✓'); }
 function getCurrentFormAppt(){
   if(!A.centroId||!A.dateStr||!A.ora){ showToast('Completa prima la selezione'); return null; }
   const nome=document.getElementById('appt-nome').value.trim();
@@ -2422,7 +2480,7 @@ function getCurrentFormAppt(){
   };
 }
 function buildICS(a){
-  const centro=S.centri.find(c=>c.id===a.centroId);
+  const centro=S.centri.find(c=>String(c.id)===String(a.centroId));
   const medico=getFullName();
   const [y,m,d]=a.data.split('-'); const [hh,mm]=a.ora.split(':');
   const dtStart=`${y}${m}${d}T${hh}${mm}00`;
@@ -2431,7 +2489,7 @@ function buildICS(a){
   return `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MediDesk//IT\r\nBEGIN:VEVENT\r\nUID:${Date.now()}@medidesk\r\nDTSTART:${dtStart}\r\nDTEND:${dtEnd}\r\nSUMMARY:Visita ${a.cognome} ${a.nome}\r\nLOCATION:${centro?centro.nome:''}${centro&&centro.indirizzo?', '+centro.indirizzo:''}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
 }
 function downloadICS(){ const a=getCurrentFormAppt(); if(!a) return; triggerICS(a); }
-function downloadICSFromDetail(){ const a=S.appuntamenti.find(x=>x.id===S.currentApptId); if(!a) return; triggerICS(a); }
+function downloadICSFromDetail(){ const a=S.appuntamenti.find(x=>String(x.id)===String(S.currentApptId)); if(!a) return; triggerICS(a); }
 function triggerICS(a){
   const blob=new Blob([buildICS(a)],{type:'text/calendar'});
   const url=URL.createObjectURL(blob);
@@ -2448,19 +2506,27 @@ function renderPending(){
   if(!list.length){ section.style.display='none'; return; }
   section.style.display='block';
   el.innerHTML = list.map(a=>{
-    const centro=S.centri.find(c=>c.id===a.centroId);
+    const centro=S.centri.find(c=>String(c.id)===String(a.centroId));
     return `<div class="pending-card">
       <div class="pending-info">
         <div class="pending-name">${a.cognome} ${a.nome}</div>
         <div class="pending-detail">${formatDate(a.data)} alle ${a.ora} — ${centro?centro.nome:'?'} — ${a.tipo||'Visita'}</div>
       </div>
-      <button class="btn btn-sm btn-primary" onclick="markSeen(${a.id})">✓ Visto</button>
+      <button class="btn btn-sm btn-primary" onclick="markSeen('${a.id}')">✓ Visto</button>
     </div>`;
   }).join('');
 }
-function markSeen(id){
-  const a=S.appuntamenti.find(x=>x.id===id); if(a) a.seen=true;
-  save(); renderPending();
+async function markSeen(id){
+  const a=S.appuntamenti.find(x=>String(x.id)===String(id));
+  if(a){
+    a.seen=true;
+    if(isOnline()){
+      try { await supabaseClient.from('appuntamenti').update({ seen: true }).eq('id', String(id)); }
+      catch(e){ console.error('[MediDesk] markSeen:', e.message); }
+    }
+    save();
+  }
+  renderPending();
 }
 
 // ── PAZIENTI ──
@@ -2934,8 +3000,8 @@ function renderDashboard(){
   if(!upEl) return;
   if(todayAppts.length)
     upEl.innerHTML=todayAppts.slice(0,5).map(a=>{
-      const c=S.centri.find(x=>x.id===a.centroId);
-      return `<div class="appt-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showApptDetail(${a.id})">
+      const c=S.centri.find(x=>String(x.id)===String(a.centroId));
+      return `<div class="appt-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showApptDetail('${a.id}')">
         <div class="appt-time">${a.ora}</div>
         <div class="appt-info"><div class="appt-patient">${a.cognome} ${a.nome}</div><div class="appt-detail">${a.tipo||'Visita'}${a.source==='paziente'?' · 🌐':''}</div></div>
         ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${c.nome}</div>`:''}
@@ -3164,30 +3230,76 @@ function showBookingView(){
   document.getElementById('view-booking').style.display='block';
   bkInit();
 }
-function bkInit(){
-  const fullName=getFullName();
-  document.getElementById('bk-doctor-name').textContent=fullName;
-  document.getElementById('bk-doctor-spec').textContent=S.settings.spec||'';
-  // avatar (iniziali)
-  const avatarEl=document.getElementById('bk-avatar-display');
-  const ini=fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
-  avatarEl.textContent=ini;
-  // bio
-  const bioEl=document.getElementById('bk-hero-bio');
-  if(bioEl){ if(S.settings.bio){ bioEl.textContent=S.settings.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
-  // tag esperienza / albo / lingue
-  const tagsEl=document.getElementById('bk-hero-tags');
-  if(tagsEl){
-    const tags=[];
-    if(S.settings.esperienza) tags.push(S.settings.esperienza+' anni di esperienza');
-    if(S.settings.albo) tags.push('Albo n. '+S.settings.albo);
-    (S.settings.lingue||[]).forEach(l=>tags.push(l));
-    tagsEl.innerHTML=tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+async function bkInit(){
+  const params = new URLSearchParams(location.search);
+  const urlSlug = params.get('doc');
+
+  if(urlSlug && isOnline()){
+    try {
+      const { data: medicoArr } = await supabaseClient.rpc('get_medico_pubblico', { p_slug: urlSlug });
+      const m = medicoArr && medicoArr[0];
+      if(!m){ document.getElementById('bk-doctor-name').textContent='Medico non trovato'; return; }
+      bk.medicoId = m.id;
+      const fullName = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
+      document.getElementById('bk-doctor-name').textContent = fullName;
+      document.getElementById('bk-doctor-spec').textContent = m.specializzazione || '';
+      const avatarEl = document.getElementById('bk-avatar-display');
+      const ini = fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
+      avatarEl.textContent = ini;
+      const bioEl = document.getElementById('bk-hero-bio');
+      if(bioEl){ if(m.bio){ bioEl.textContent=m.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
+      const tagsEl = document.getElementById('bk-hero-tags');
+      if(tagsEl){
+        const tags = [];
+        if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
+        (m.lingue||[]).forEach(l=>tags.push(l));
+        tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+      }
+      const socialEl = document.getElementById('bk-social-row');
+      if(socialEl) socialEl.innerHTML = buildSocialRow({
+        email:    m.email_pubblica,
+        telefono: m.telefono,
+        sitoWeb:  m.sito_web,
+        linkedin: m.linkedin,
+        instagram:m.instagram,
+        youtube:  m.youtube,
+        facebook: m.facebook
+      });
+      const { data: centriDB } = await supabaseClient
+        .from('centri').select('*, turni(*)').eq('medico_id', m.id).eq('attivo', true);
+      S.centri = (centriDB||[]).map(c=>({
+        id: c.id, nome: c.nome, indirizzo: c.indirizzo||'', colore: c.colore||'#2D5F4E',
+        attivo: true, email: c.email_segreteria||'',
+        turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:t.inizio, fine:t.fine, slot:t.durata_slot }))
+      }));
+      const { data: tipiDB } = await supabaseClient
+        .from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
+      S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
+      const { data: areeDB } = await supabaseClient
+        .from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
+      S.areeTematiche = (areeDB||[]).map(r=>r.nome);
+    } catch(e){ console.error('[MediDesk] bkInit anon:', e.message); }
+  } else {
+    bk.medicoId = S.medicoId || null;
+    const fullName=getFullName();
+    document.getElementById('bk-doctor-name').textContent=fullName;
+    document.getElementById('bk-doctor-spec').textContent=S.settings.spec||'';
+    const avatarEl=document.getElementById('bk-avatar-display');
+    const ini=fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
+    avatarEl.textContent=ini;
+    const bioEl=document.getElementById('bk-hero-bio');
+    if(bioEl){ if(S.settings.bio){ bioEl.textContent=S.settings.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
+    const tagsEl=document.getElementById('bk-hero-tags');
+    if(tagsEl){
+      const tags=[];
+      if(S.settings.esperienza) tags.push(S.settings.esperienza+' anni di esperienza');
+      if(S.settings.albo) tags.push('Albo n. '+S.settings.albo);
+      (S.settings.lingue||[]).forEach(l=>tags.push(l));
+      tagsEl.innerHTML=tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+    }
+    const socialEl=document.getElementById('bk-social-row');
+    if(socialEl) socialEl.innerHTML=buildSocialRow(S.settings);
   }
-  // social row
-  const socialEl=document.getElementById('bk-social-row');
-  if(socialEl) socialEl.innerHTML=buildSocialRow(S.settings);
-  // dove ricevo
   renderDoveRicevo();
   populateTipiVisitaSelects();
   const now=new Date();
@@ -3306,7 +3418,7 @@ function bkSelectSlot(ora){
   bkStep(4);
 }
 
-function confirmBooking(){
+async function confirmBooking(){
   const nome=capitalizeName(document.getElementById('bk-nome').value.trim());
   const cognome=capitalizeName(document.getElementById('bk-cognome').value.trim());
   if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
@@ -3320,6 +3432,26 @@ function confirmBooking(){
     data:bk.dateStr, ora:bk.ora,
     centroId:bk.centroId, source:'paziente', seen:false
   };
+  if(isOnline() && bk.medicoId){
+    try {
+      const { data: inserted, error } = await supabaseClient.from('appuntamenti').insert({
+        medico_id:         bk.medicoId,
+        centro_id:         bk.centroId,
+        data:              bk.dateStr,
+        ora:               bk.ora,
+        nome_paziente:     nome,
+        cognome_paziente:  cognome,
+        telefono_paziente: appt.tel   || null,
+        email_paziente:    appt.email || null,
+        tipo_visita:       appt.tipo  || null,
+        area_tematica:     appt.area  || null,
+        note:              appt.note  || null,
+        source:            'paziente'
+      }).select('id').single();
+      if(error) throw error;
+      appt.id = inserted.id;
+    } catch(e){ console.error('[MediDesk] confirmBooking INSERT:', e.message); }
+  }
   S.appuntamenti.push(appt);
   save();
   // aggiorna agenda medico in background (stessa tab)
