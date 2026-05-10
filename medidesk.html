@@ -1218,6 +1218,7 @@ async function showAppView(){
       if(user){
         await ensureMedicoRecord(user);
         await loadMedicoFromDB(user);
+        await loadCentriFromDB(user);
       }
     } catch(e){ console.error('[MediDesk] showAppView DB:', e.message); }
   }
@@ -1272,6 +1273,35 @@ async function loadMedicoFromDB(user){
       console.log('[MediDesk] Profilo medico caricato da DB:', user.email);
     }
   } catch(e){ console.error('[MediDesk] loadMedicoFromDB:', e.message); }
+}
+
+async function loadCentriFromDB(user){
+  if(!isOnline() || !user) return;
+  try {
+    const { data: medico } = await supabaseClient
+      .from('medici').select('id').eq('user_id', user.id).single();
+    if(!medico) return;
+    const { data: centri, error } = await supabaseClient
+      .from('centri').select('*, turni(*)').eq('medico_id', medico.id);
+    if(error) throw error;
+    S.centri = (centri || []).map(c => ({
+      id:        c.id,
+      nome:      c.nome,
+      email:     c.email_segreteria || '',
+      indirizzo: c.indirizzo        || '',
+      colore:    c.colore           || '#2D5F4E',
+      attivo:    c.attivo !== false,
+      turni:     (c.turni || []).map(t => ({
+        id:     t.id,
+        giorno: t.giorno,
+        inizio: t.inizio,
+        fine:   t.fine,
+        slot:   t.durata_slot
+      }))
+    }));
+    save();
+    console.log('[MediDesk] Centri caricati da DB:', S.centri.length);
+  } catch(e){ console.error('[MediDesk] loadCentriFromDB:', e.message); }
 }
 
 function updateLogoutButtons(){
@@ -1565,16 +1595,35 @@ function downloadQR(){
 }
 
 // ── CENTRI ──
-function saveCentro(){
-  const nome = document.getElementById('centro-nome').value.trim();
-  const email = document.getElementById('centro-email').value.trim();
-  const indirizzo = document.getElementById('centro-indirizzo').value.trim();
-  const colore = document.getElementById('centro-colore').value;
+async function saveCentro(){
+  const nome     = document.getElementById('centro-nome').value.trim();
+  const email    = document.getElementById('centro-email').value.trim();
+  const indirizzo= document.getElementById('centro-indirizzo').value.trim();
+  const colore   = document.getElementById('centro-colore').value;
   if(!nome){ showToast('Inserisci il nome del centro'); return; }
-  S.centri.push({ id:Date.now(), nome, email, indirizzo, colore, turni:[], attivo:true });
-  save(); closeModal('modal-centro'); renderCentri(); populateCentroSelect(); updateStats();
-  ['centro-nome','centro-email','centro-indirizzo'].forEach(id=>document.getElementById(id).value='');
-  showToast('Centro aggiunto ✓');
+  const resetForm = () => ['centro-nome','centro-email','centro-indirizzo'].forEach(id=>document.getElementById(id).value='');
+  if(!isOnline()){
+    S.centri.push({ id:Date.now(), nome, email, indirizzo, colore, turni:[], attivo:true });
+    save(); closeModal('modal-centro'); renderCentri(); populateCentroSelect(); updateStats();
+    resetForm(); showToast('Centro aggiunto ✓'); return;
+  }
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: medico }   = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+    const { data: newCentro, error } = await supabaseClient.from('centri').insert({
+      medico_id: medico.id, nome,
+      email_segreteria: email    || null,
+      indirizzo:        indirizzo|| null,
+      colore, attivo: true
+    }).select('id').single();
+    if(error) throw error;
+    S.centri.push({ id: newCentro.id, nome, email, indirizzo, colore, turni:[], attivo:true });
+    save(); closeModal('modal-centro'); renderCentri(); populateCentroSelect(); updateStats();
+    resetForm(); showToast('Centro aggiunto ✓');
+  } catch(e){
+    console.error('[MediDesk] saveCentro:', e.message);
+    showToast('Errore: ' + e.message);
+  }
 }
 
 function renderCentri(){
@@ -1610,16 +1659,16 @@ function renderCentroCard(c, isActive){
           <div class="centro-nome">${c.nome} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
           <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
         </div>
-        ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno(${c.id})">+ Turno</button>`:''}
-        <button class="btn btn-sm btn-secondary" onclick="toggleCentro(${c.id})" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
-        <button class="btn btn-sm btn-secondary" onclick="deleteCentro(${c.id})" title="Elimina">🗑</button>
+        ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
+        <button class="btn btn-sm btn-secondary" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
+        <button class="btn btn-sm btn-secondary" onclick="deleteCentro('${c.id}')" title="Elimina">🗑</button>
       </div>
       ${(c.turni&&c.turni.length)?`
         <div class="turni-list">
           ${c.turni.map((t,i)=>`
             <div class="turno-row">
               <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min</span>
-              ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="deleteTurno(${c.id},${i})">✕</button>`:''}
+              ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="deleteTurno('${c.id}',${i})">✕</button>`:''}
             </div>
           `).join('')}
         </div>
@@ -1627,40 +1676,88 @@ function renderCentroCard(c, isActive){
     </div>`;
 }
 
-function toggleCentro(id){
-  const c = S.centri.find(x=>x.id===id);
-  if(!c) return;
-  c.attivo = c.attivo===false ? true : false;
-  save(); renderCentri(); updateStats();
-  showToast(c.attivo===false ? 'Centro disattivato' : 'Centro riattivato ✓');
+async function toggleCentro(id){
+  const c = S.centri.find(x=>String(x.id)===String(id)); if(!c) return;
+  const newAttivo = c.attivo === false;
+  if(!isOnline()){
+    c.attivo = newAttivo; save(); renderCentri(); updateStats();
+    showToast(newAttivo ? 'Centro riattivato ✓' : 'Centro disattivato'); return;
+  }
+  try {
+    const { error } = await supabaseClient.from('centri').update({ attivo: newAttivo }).eq('id', id);
+    if(error) throw error;
+    c.attivo = newAttivo; save(); renderCentri(); updateStats();
+    showToast(newAttivo ? 'Centro riattivato ✓' : 'Centro disattivato');
+  } catch(e){
+    console.error('[MediDesk] toggleCentro:', e.message);
+    showToast('Errore: ' + e.message);
+  }
 }
 
 function openAddTurno(centroId){
   _turnoTargetId = centroId;
-  const c = S.centri.find(x=>x.id===centroId);
+  const c = S.centri.find(x=>String(x.id)===String(centroId));
   document.getElementById('turno-centro-label').textContent = c?c.nome:'';
   openModal('modal-turno');
 }
-function saveTurno(){
-  const c = S.centri.find(x=>x.id===_turnoTargetId); if(!c) return;
+async function saveTurno(){
+  const c = S.centri.find(x=>String(x.id)===String(_turnoTargetId)); if(!c) return;
   c.turni = c.turni||[];
-  c.turni.push({
-    giorno: parseInt(document.getElementById('turno-giorno').value),
-    inizio: document.getElementById('turno-inizio').value,
-    fine: document.getElementById('turno-fine').value,
-    slot: parseInt(document.getElementById('turno-slot').value)
-  });
-  save(); closeModal('modal-turno'); renderCentri();
-  showToast('Turno aggiunto ✓');
+  const giorno = parseInt(document.getElementById('turno-giorno').value);
+  const inizio = document.getElementById('turno-inizio').value;
+  const fine   = document.getElementById('turno-fine').value;
+  const slot   = parseInt(document.getElementById('turno-slot').value);
+  if(!isOnline()){
+    c.turni.push({ giorno, inizio, fine, slot });
+    save(); closeModal('modal-turno'); renderCentri();
+    showToast('Turno aggiunto ✓'); return;
+  }
+  try {
+    const { data: newTurno, error } = await supabaseClient.from('turni').insert({
+      centro_id: c.id, giorno, inizio, fine, durata_slot: slot
+    }).select('id').single();
+    if(error) throw error;
+    c.turni.push({ id: newTurno.id, giorno, inizio, fine, slot });
+    save(); closeModal('modal-turno'); renderCentri();
+    showToast('Turno aggiunto ✓');
+  } catch(e){
+    console.error('[MediDesk] saveTurno:', e.message);
+    showToast('Errore: ' + e.message);
+  }
 }
-function deleteTurno(centroId, idx){
-  const c = S.centri.find(x=>x.id===centroId); if(!c) return;
-  c.turni.splice(idx,1); save(); renderCentri();
+async function deleteTurno(centroId, idx){
+  const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
+  if(!isOnline()){
+    c.turni.splice(idx,1); save(); renderCentri(); return;
+  }
+  const turno = c.turni[idx]; if(!turno) return;
+  try {
+    if(turno.id){
+      const { error } = await supabaseClient.from('turni').delete().eq('id', turno.id);
+      if(error) throw error;
+    }
+    c.turni.splice(idx,1); save(); renderCentri();
+  } catch(e){
+    console.error('[MediDesk] deleteTurno:', e.message);
+    showToast('Errore: ' + e.message);
+  }
 }
-function deleteCentro(id){
-  if(!confirm('Eliminare questo centro?')) return;
-  S.centri = S.centri.filter(c=>c.id!==id);
-  save(); renderCentri(); populateCentroSelect(); updateStats();
+async function deleteCentro(id){
+  if(!confirm('Eliminare questo centro e tutti i suoi turni?')) return;
+  if(!isOnline()){
+    S.centri = S.centri.filter(c=>String(c.id)!==String(id));
+    save(); renderCentri(); populateCentroSelect(); updateStats(); return;
+  }
+  try {
+    const { error } = await supabaseClient.from('centri').delete().eq('id', id);
+    if(error) throw error;
+    S.centri = S.centri.filter(c=>String(c.id)!==String(id));
+    save(); renderCentri(); populateCentroSelect(); updateStats();
+    showToast('Centro eliminato');
+  } catch(e){
+    console.error('[MediDesk] deleteCentro:', e.message);
+    showToast('Errore: ' + e.message);
+  }
 }
 function populateCentroSelect(){
   const sel = document.getElementById('appt-centro'); if(!sel) return;
