@@ -486,7 +486,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
     </nav>
     <div class="sidebar-bottom">
       <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
-      <button class="sidebar-logout" id="sidebar-logout-btn" onclick="signOut()" style="display:none">🚪 Esci dall'account</button>
+      <button class="sidebar-logout" id="sidebar-logout-btn" onclick="signOut()">🚪 Esci dall'account</button>
     </div>
   </aside>
 
@@ -498,7 +498,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
         <h1>MediDesk</h1>
         <span id="mobile-doctor">Dr. Mario Rossi</span>
       </div>
-      <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" style="display:none" title="Esci">🚪</button>
+      <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" title="Esci">🚪</button>
     </header>
 
     <!-- DASHBOARD -->
@@ -1155,7 +1155,7 @@ async function signIn(){
 }
 
 async function signOut(){
-  if(!isOnline()) return;
+  if(!isOnline()){ showToast('Modalità offline — nessun account attivo'); return; }
   await supabaseClient.auth.signOut();
   showAuthView();
 }
@@ -1207,13 +1207,7 @@ function showAppView(){
   else renderAll();
 }
 
-function updateLogoutButtons(){
-  const sideBtn   = document.getElementById('sidebar-logout-btn');
-  const mobileBtn = document.getElementById('mobile-logout-btn');
-  const show = isOnline();
-  if(sideBtn)   sideBtn.style.display   = show ? 'flex'  : 'none';
-  if(mobileBtn) mobileBtn.style.display = show ? 'block' : 'none';
-}
+function updateLogoutButtons(){ /* pulsanti sempre visibili nell'app */ }
 
 // ── AUTH UI HELPERS ──
 function switchAuthTab(tab){
