@@ -73,6 +73,13 @@
 - [x] Foto visibile nella pagina prenotazione pubblica (`bkInit` anon e loggato)
 - [x] Policy RLS storage `fotoprofilo`: INSERT/UPDATE/DELETE solo per `auth.uid() = foldername[1]`; SELECT pubblica
 
+### UX e fix recenti ✅
+- [x] Doppio click (desktop) / long press 500ms (mobile) sul calendario mensile → passa alla vista settimana sul giorno selezionato
+- [x] Hint contestuale sotto il calendario mensile ("Doppio click / Tieni premuto per aprire la settimana")
+- [x] Capitalizzazione automatica (`capitalizeName`) su campi "Tipo di visita" e "Area tematica" (onblur + al salvataggio)
+- [x] Modal di conferma prima di eliminare un turno (con dettagli giorno/orario e avviso slot prenotati)
+- [x] Fix `deleteCentro`: FK `appuntamenti.centro_id` cambiato da `NOT NULL / NO ACTION` a nullable `ON DELETE SET NULL` — eliminare un centro conserva tutti gli appuntamenti e fascicoli
+
 ### Step 4.8 — Pulizia e hardening
 - [ ] Rimuovere `save()` / `load()` da localStorage dove non più necessario (o tenere come cache offline)
 - [ ] Gestire conflitti di sync (es. appuntamento creato offline e poi sincronizzato)
@@ -123,4 +130,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-13 — Step 4.7 completato (foto profilo su Supabase Storage + policy RLS)*
+*Ultimo aggiornamento: 2026-05-13 — UX: calendario mensile, capitalizzazione, conferma turno, fix deleteCentro*
