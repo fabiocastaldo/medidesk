@@ -1937,7 +1937,9 @@ async function deleteTurno(centroId, idx){
   }
 }
 async function deleteCentro(id){
-  if(!confirm('Eliminare questo centro e tutti i suoi turni?')) return;
+  if(!confirm('Eliminare questo centro e tutti i suoi turni?\n\nGli appuntamenti e i fascicoli dei pazienti verranno conservati.')) return;
+  // Null out centroId in local state (gli appuntamenti rimangono, il DB fa SET NULL via FK)
+  S.appuntamenti.forEach(a=>{ if(String(a.centroId)===String(id)) a.centroId=null; });
   if(!isOnline()){
     S.centri = S.centri.filter(c=>String(c.id)!==String(id));
     save(); renderCentri(); populateCentroSelect(); updateStats(); return;
@@ -1947,9 +1949,11 @@ async function deleteCentro(id){
     if(error) throw error;
     S.centri = S.centri.filter(c=>String(c.id)!==String(id));
     save(); renderCentri(); populateCentroSelect(); updateStats();
-    showToast('Centro eliminato');
+    showToast('Centro eliminato ✓');
   } catch(e){
     console.error('[MediDesk] deleteCentro:', e.message);
+    // Ripristina centroId in caso di errore
+    S.appuntamenti.forEach(a=>{ if(a.centroId===null) a.centroId=id; });
     showToast('Errore: ' + e.message);
   }
 }

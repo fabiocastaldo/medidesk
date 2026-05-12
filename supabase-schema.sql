@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS appuntamenti (
     id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     medico_id         uuid        NOT NULL REFERENCES medici(id) ON DELETE CASCADE,
     paziente_id       uuid        REFERENCES pazienti(id) ON DELETE SET NULL,
-    centro_id         uuid        NOT NULL REFERENCES centri(id),
+    centro_id         uuid        REFERENCES centri(id) ON DELETE SET NULL,  -- nullable: SET NULL se il centro viene eliminato
     data              date        NOT NULL,
     ora               time        NOT NULL,
     tipo_visita       text,
