@@ -570,6 +570,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
       </div>
       <div id="view-month" style="display:none">
         <div class="month-cal" id="month-cal"></div>
+        <div id="month-hint" style="text-align:center;font-size:11px;color:var(--ink3);margin-top:6px"></div>
         <div id="month-day-detail" style="margin-top:20px"></div>
       </div>
     </div>
@@ -698,7 +699,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
           <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Personalizza i tipi di visita disponibili al momento della prenotazione.</p>
           <div id="tipi-visita-list" class="tag-editor"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
-            <input class="form-input" id="new-tipo-visita" placeholder="es. Pre-chirurgica" style="flex:1" onkeydown="if(event.key==='Enter')addTipoVisita()">
+            <input class="form-input" id="new-tipo-visita" placeholder="es. Pre-chirurgica" style="flex:1" onkeydown="if(event.key==='Enter')addTipoVisita()" onblur="this.value=capitalizeName(this.value)">
             <button class="btn btn-primary" onclick="addTipoVisita()">+ Aggiungi</button>
           </div>
         </div></div>
@@ -710,7 +711,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
           <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Aree di intervento che si possono associare a una visita. Es. Ginocchio, Spalla, Anca.</p>
           <div id="aree-list" class="tag-editor"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
-            <input class="form-input" id="new-area" placeholder="es. Ginocchio" style="flex:1" onkeydown="if(event.key==='Enter')addArea()">
+            <input class="form-input" id="new-area" placeholder="es. Ginocchio" style="flex:1" onkeydown="if(event.key==='Enter')addArea()" onblur="this.value=capitalizeName(this.value)">
             <button class="btn btn-primary" onclick="addArea()">+ Aggiungi</button>
           </div>
         </div></div>
@@ -1114,6 +1115,23 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
   </div>
 </div>
 
+<!-- MODAL CONFERMA ELIMINA TURNO -->
+<div class="modal-overlay" id="modal-confirm-turno">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title">Elimina turno</span>
+      <button class="modal-close" onclick="closeModal('modal-confirm-turno')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-turno-msg" style="margin:0;font-size:14px;line-height:1.6;color:var(--ink)"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-confirm-turno')">Annulla</button>
+      <button class="btn btn-warm" onclick="deleteTurnoConfirmed()">Elimina</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════ SCRIPT ══════════════ -->
@@ -1122,6 +1140,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 var A = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, prefillDate:null };
 var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, medicoId:null, slotOccupati:[] };
 var _turnoTargetId = null;
+var _lpTimer = null;
+var _pendingDeleteTurno = null;
 
 // ── SUPABASE ──
 let supabaseClient = null;
@@ -1827,7 +1847,7 @@ function renderCentroCard(c, isActive){
           ${c.turni.map((t,i)=>`
             <div class="turno-row">
               <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min</span>
-              ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="deleteTurno('${c.id}',${i})">✕</button>`:''}
+              ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
             </div>
           `).join('')}
         </div>
@@ -1883,6 +1903,21 @@ async function saveTurno(){
     console.error('[MediDesk] saveTurno:', e.message);
     showToast('Errore: ' + e.message);
   }
+}
+function confirmDeleteTurno(centroId, idx){
+  const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
+  const turno = c.turni[idx]; if(!turno) return;
+  _pendingDeleteTurno = { centroId, idx };
+  document.getElementById('confirm-turno-msg').textContent =
+    `Sei sicuro di voler eliminare il turno ${GIORNI[turno.giorno]} ${turno.inizio}–${turno.fine}? Gli slot già prenotati in questo turno non verranno cancellati.`;
+  openModal('modal-confirm-turno');
+}
+async function deleteTurnoConfirmed(){
+  if(!_pendingDeleteTurno) return;
+  const { centroId, idx } = _pendingDeleteTurno;
+  _pendingDeleteTurno = null;
+  closeModal('modal-confirm-turno');
+  await deleteTurno(centroId, idx);
 }
 async function deleteTurno(centroId, idx){
   const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
@@ -2341,6 +2376,17 @@ function goToToday(){
   S.monthYear=new Date().getFullYear(); S.monthMonth=new Date().getMonth();
   renderAgenda();
 }
+function goToWeekOnDay(ds){
+  const now = new Date(); now.setHours(12,0,0,0);
+  const target = new Date(ds+'T12:00:00');
+  const nowMonday = new Date(now);
+  nowMonday.setDate(now.getDate() - (now.getDay()===0 ? 6 : now.getDay()-1));
+  const targetMonday = new Date(target);
+  targetMonday.setDate(target.getDate() - (target.getDay()===0 ? 6 : target.getDay()-1));
+  S.weekOffset = Math.round((targetMonday - nowMonday) / (7*24*60*60*1000));
+  S.selectedDay = ds;
+  setAgendaView('week');
+}
 
 function setAgendaView(v){
   S.agendaView = v;
@@ -2391,12 +2437,25 @@ function renderMonthView(){
     if(isPast) cls += ' past';
     if(isToday) cls += ' today';
     if(isSelected) cls += ' selected';
-    html += `<div class="${cls}" onclick="selectMonthDay('${ds}')">
+    html += `<div class="${cls}" data-ds="${ds}" onclick="selectMonthDay('${ds}')" ondblclick="goToWeekOnDay('${ds}')">
       <span class="mc-num">${d}</span>
       <div class="mc-centri">${centriHtml}${extra}</div>
     </div>`;
   }
   monthCal.innerHTML = html;
+
+  // Long press su mobile → vai alla vista settimana
+  monthCal.querySelectorAll('.mc-day[data-ds]').forEach(el => {
+    el.addEventListener('touchstart', () => {
+      _lpTimer = setTimeout(() => { _lpTimer = null; goToWeekOnDay(el.dataset.ds); }, 500);
+    }, { passive: true });
+    el.addEventListener('touchend',  () => { clearTimeout(_lpTimer); _lpTimer = null; }, { passive: true });
+    el.addEventListener('touchmove', () => { clearTimeout(_lpTimer); _lpTimer = null; }, { passive: true });
+  });
+  const hintEl = document.getElementById('month-hint');
+  if(hintEl) hintEl.textContent = ('ontouchstart' in window)
+    ? 'Tieni premuto per aprire la settimana'
+    : 'Doppio click per aprire la settimana';
 
   // Legenda con i centri usati nel mese
   const allCentriInMonth = new Set();
@@ -3799,7 +3858,7 @@ function renderTipiAree(){
 
 async function addTipoVisita(){
   const inp = document.getElementById('new-tipo-visita');
-  const v = inp.value.trim(); if(!v) return;
+  const v = capitalizeName(inp.value.trim()); if(!v) return;
   if(S.tipiVisita.some(t=>t.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
   if(!isOnline()){
     S.tipiVisita.push(v); inp.value=''; save(); renderTipiAree();
@@ -3835,7 +3894,7 @@ async function removeTipoVisita(idx){
 
 async function addArea(){
   const inp = document.getElementById('new-area');
-  const v = inp.value.trim(); if(!v) return;
+  const v = capitalizeName(inp.value.trim()); if(!v) return;
   if(S.areeTematiche.some(a=>a.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
   if(!isOnline()){
     S.areeTematiche.push(v); inp.value=''; save(); renderTipiAree();
