@@ -1026,9 +1026,9 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
         <div class="upload-area" onclick="document.getElementById('referto-input').click()">
           <div class="uicon">📸</div>
           <strong>Clicca per selezionare o fotografare</strong>
-          <p>Immagine del referto (JPG, PNG, PDF)</p>
+          <p>Uno o più file (JPG, PNG, PDF) — l'AI produrrà una sintesi unificata</p>
         </div>
-        <input type="file" id="referto-input" accept="image/*,application/pdf" style="display:none" onchange="handleRefertoUpload(this)">
+        <input type="file" id="referto-input" accept="image/*,application/pdf" style="display:none" multiple onchange="handleRefertoUpload(this)">
         <div id="referto-preview" style="display:none;margin-top:12px"></div>
         <div id="ai-status" style="display:none" class="ai-processing"><div class="spinner"></div><span>Analisi AI in corso…</span></div>
         <div id="ai-error" style="display:none;background:var(--warm-light);border:1px solid #e8c8b0;border-radius:8px;padding:12px 14px;margin-top:12px;font-size:13px;color:var(--warm)"></div>
@@ -1107,7 +1107,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 <script>
 // ── DICHIARAZIONI GLOBALI (in cima per evitare TDZ) ──
 var A = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, prefillDate:null };
-var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null };
+var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, medicoId:null, slotOccupati:[] };
 var _turnoTargetId = null;
 
 // ── SUPABASE ──
@@ -1221,8 +1221,10 @@ async function showAppView(){
         await loadCentriFromDB(user);
         await loadTipiVisitaFromDB(user);
         await loadAreeTematicheFromDB(user);
+        await migrateLocalVisite();
         await loadPazientiFromDB(user);
         await loadAppuntamentiFromDB(user);
+        await loadVisiteFromDB(user);
       }
     } catch(e){ console.error('[MediDesk] showAppView DB:', e.message); }
   }
@@ -1344,28 +1346,66 @@ async function loadAreeTematicheFromDB(user){
 async function loadPazientiFromDB(user){
   if(!isOnline() || !user) return;
   try {
-    // Snapshot visite locali PRIMA di sovrascrivere S.pazienti
-    const visiteLoc = {};
-    (S.pazienti || []).forEach(p => {
-      if((p.visite||[]).length){
-        const key = (p.nome||'').toLowerCase()+'|'+(p.cognome||'').toLowerCase();
-        visiteLoc[key] = p.visite;
-        if(p.id) visiteLoc[String(p.id)] = p.visite;
-      }
-    });
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient.from('pazienti')
-      .select('*').eq('medico_id', medico.id).order('cognome').order('nome');
+      .select('id, nome, cognome, codice_fiscale, data_nascita')
+      .eq('medico_id', medico.id).order('cognome').order('nome');
     if(error) throw error;
-    S.pazienti = (data || []).map(p => {
-      const key = (p.nome||'').toLowerCase()+'|'+(p.cognome||'').toLowerCase();
-      const visite = visiteLoc[String(p.id)] || visiteLoc[key] || [];
-      return { id:p.id, nome:p.nome||'', cognome:p.cognome||'', cf:p.codice_fiscale||'', nascita:p.data_nascita||'', visite };
-    });
+    S.pazienti = (data || []).map(p => ({
+      id: p.id, nome: p.nome||'', cognome: p.cognome||'',
+      cf: p.codice_fiscale||'', nascita: p.data_nascita||'', visite: []
+    }));
     save();
     console.log('[MediDesk] Pazienti caricati da DB:', S.pazienti.length);
   } catch(e){ console.error('[MediDesk] loadPazientiFromDB:', e.message); }
+}
+
+async function loadVisiteFromDB(user){
+  if(!isOnline() || !user || !S.medicoId) return;
+  try {
+    const { data, error } = await supabaseClient.from('visite')
+      .select('id, paziente_id, data_visita, luogo, contenuto_clinico, foto_referto_url')
+      .eq('medico_id', S.medicoId)
+      .order('created_at', { ascending: false });
+    if(error) throw error;
+    (data || []).forEach(v => {
+      const paz = S.pazienti.find(p => String(p.id) === String(v.paziente_id));
+      if(paz){
+        paz.visite.push({ id:v.id, data:v.data_visita||'', luogo:v.luogo||'', clinica:v.contenuto_clinico||'', foto_url:v.foto_referto_url||null });
+      }
+    });
+    save();
+    console.log('[MediDesk] Visite caricate da DB:', (data||[]).length);
+  } catch(e){ console.error('[MediDesk] loadVisiteFromDB:', e.message); }
+}
+
+async function migrateLocalVisite(){
+  if(!isOnline() || !S.medicoId) return;
+  if(localStorage.getItem('visite_migrated')) return;
+  const toMigrate = [];
+  (S.pazienti || []).forEach(p => {
+    if(!String(p.id).includes('-')) return;
+    (p.visite || []).forEach(v => {
+      if(String(v.id).includes('-')) return; // già in DB
+      toMigrate.push({
+        paziente_id:       p.id,
+        medico_id:         S.medicoId,
+        data_visita:       v.data  || null,
+        luogo:             v.luogo || null,
+        contenuto_clinico: v.clinica || null,
+        foto_referto_url:  null
+      });
+    });
+  });
+  if(!toMigrate.length){ localStorage.setItem('visite_migrated', '1'); return; }
+  try {
+    const { error } = await supabaseClient.from('visite').insert(toMigrate);
+    if(error) throw error;
+    localStorage.setItem('visite_migrated', '1');
+    showToast(`Migrazione ${toMigrate.length} ${toMigrate.length===1?'visita':'visite'} completata ✓`);
+    console.log('[MediDesk] Visite migrate:', toMigrate.length);
+  } catch(e){ console.error('[MediDesk] migrateLocalVisite:', e.message); }
 }
 
 async function loadAppuntamentiFromDB(user){
@@ -1899,11 +1939,14 @@ function getSlots(centro, dateStr){
       cur += t.slot;
     }
   });
-  // Rimuovi slot già occupati
+  // Rimuovi slot già occupati (dal medico autenticato o da prenotazioni anonime DB)
   const taken = S.appuntamenti
     .filter(a=>a.data===dateStr && String(a.centroId)===String(centro.id))
     .map(a=>a.ora);
-  return slots.filter(s=>!taken.includes(s));
+  const takenBk = (bk.slotOccupati||[])
+    .filter(s=>s.data===dateStr && String(s.centroId)===String(centro.id))
+    .map(s=>s.ora);
+  return slots.filter(s=>!taken.includes(s) && !takenBk.includes(s));
 }
 
 function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
@@ -2545,7 +2588,10 @@ function renderPazienti(){
         <div class="paziente-name">${p.cognome} ${p.nome}</div>
         <div class="paziente-meta">${p.nascita?'Nato/a il '+p.nascita:''} ${p.cf?'· CF: '+p.cf:''}</div>
       </div>
-      <span style="font-size:12px;color:var(--accent);font-weight:500">${n} ${n===1?'visita':'visite'}</span>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-size:12px;color:var(--accent);font-weight:500">${n} ${n===1?'visita':'visite'}</span>
+        <button class="btn btn-sm btn-secondary" style="white-space:nowrap" onclick="event.stopPropagation();openVisitaForPaziente('${p.id}')" title="Carica visita">📎</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -2566,20 +2612,83 @@ function showPazienteDetail(id){
       <div class="visita-item">
         <div class="visita-header" onclick="toggleV('vv-${id}-${i}')">
           <div><div class="visita-date">📋 ${v.data||'N/A'}</div><div style="font-size:12px;color:var(--ink3)">${v.luogo||''}</div></div>
-          <span style="color:var(--ink3)">▾</span>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="btn btn-sm" style="color:var(--warm);background:none;border:none;padding:2px 6px;cursor:pointer" onclick="event.stopPropagation();deleteVisita('${id}','${v.id}')" title="Elimina visita">🗑</button>
+            <span style="color:var(--ink3)">▾</span>
+          </div>
         </div>
-        <div class="visita-body" id="vv-${id}-${i}" style="display:none">${v.clinica||'—'}</div>
+        <div class="visita-body" id="vv-${id}-${i}" style="display:none">
+          ${v.clinica||'—'}
+          ${v.foto_url?(()=>{ const n=getFotoPaths(v.foto_url).length; return `<div style="margin-top:10px"><button class="btn btn-sm btn-secondary" onclick="openFotoRefertoByVisita('${id}','${v.id}')">📷 ${n>1?'Vedi '+n+' foto':'Vedi foto referto'}</button></div>`; })():''}
+        </div>
       </div>
     `).join('')}
     ${visite.length>=2?`
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <button class="btn btn-secondary" onclick="sintetizzaStoria('${id}')" id="btn-storia-${id}">✦ Sintetizza storia clinica</button>
+      <button class="btn btn-secondary" onclick="sintetizzaStoria('${id}')" id="btn-storia-${id}">✦ Sintetizza storia clinica (${visite.length} visite)</button>
     </div>
     <div id="storia-container-${id}"></div>`:''}
-    <div style="margin-top:16px"><button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deletePaziente('${id}')">🗑 Elimina paziente</button></div>`;
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${id}')">+ Carica visita</button>
+      <button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deletePaziente('${id}')">🗑 Elimina paziente</button>
+    </div>`;
   openModal('modal-paziente');
 }
 function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
+
+function getFotoPaths(fotoUrl){
+  if(!fotoUrl) return [];
+  try { const arr = JSON.parse(fotoUrl); return Array.isArray(arr) ? arr : [fotoUrl]; }
+  catch(e){ return [fotoUrl]; }
+}
+
+async function openFotoReferto(fotoUrl){
+  if(!isOnline()){ showToast('Connessione richiesta'); return; }
+  for(const path of getFotoPaths(fotoUrl)){
+    try {
+      const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 3600);
+      if(error) throw error;
+      window.open(data.signedUrl, '_blank');
+    } catch(e){ showToast('Errore apertura foto: '+e.message); return; }
+  }
+}
+
+async function openFotoRefertoByVisita(pazId, visitaId){
+  const paz = S.pazienti.find(p=>String(p.id)===String(pazId));
+  const visita = (paz?.visite||[]).find(v=>String(v.id)===String(visitaId));
+  if(visita?.foto_url) await openFotoReferto(visita.foto_url);
+}
+
+function openVisitaForPaziente(pazId){
+  document.getElementById('visita-modal-title').textContent = 'Carica referto';
+  V.selectedPazienteId = null;
+  V.isNewPaziente = false;
+  resetVisitaUpload();
+  closeModal('modal-paziente');
+  visitaSelectExisting(pazId);
+  openModal('modal-nuova-visita');
+}
+async function deleteVisita(pazId, visitaId){
+  if(!confirm('Eliminare questa visita?')) return;
+  const paz = S.pazienti.find(p=>String(p.id)===String(pazId));
+  if(!paz) return;
+  const visita = (paz.visite||[]).find(v=>String(v.id)===String(visitaId));
+  if(isOnline() && String(visitaId).includes('-')){
+    try {
+      const fotoPathsDel = getFotoPaths(visita?.foto_url);
+      if(fotoPathsDel.length){
+        await supabaseClient.storage.from('fotoreferti').remove(fotoPathsDel).catch(e=>console.error('[MediDesk] deleteVisita storage:', e.message));
+      }
+      const { error } = await supabaseClient.from('visite').delete().eq('id', String(visitaId));
+      if(error) throw error;
+    } catch(e){ console.error('[MediDesk] deleteVisita:', e.message); showToast('Errore: '+e.message); return; }
+  }
+  paz.visite = (paz.visite||[]).filter(v=>String(v.id)!==String(visitaId));
+  save();
+  showPazienteDetail(pazId);
+  showToast('Visita eliminata ✓');
+}
+
 async function deletePaziente(id){
   if(!confirm('Eliminare questo paziente e tutte le sue visite?')) return;
   if(!isOnline()){
@@ -2587,6 +2696,13 @@ async function deletePaziente(id){
     save(); renderPazienti(); updateStats(); closeModal('modal-paziente'); showToast('Paziente eliminato'); return;
   }
   try {
+    // Elimina foto referti dallo storage prima del CASCADE DB
+    const paz = S.pazienti.find(p=>String(p.id)===String(id));
+    const fotoPaths = (paz?.visite||[]).flatMap(v=>getFotoPaths(v.foto_url));
+    if(fotoPaths.length){
+      await supabaseClient.storage.from('fotoreferti').remove(fotoPaths)
+        .catch(e=>console.error('[MediDesk] deletePaziente storage:', e.message));
+    }
     const { error } = await supabaseClient.from('pazienti').delete().eq('id', id);
     if(error) throw error;
     S.pazienti=S.pazienti.filter(p=>String(p.id)!==String(id));
@@ -2658,7 +2774,7 @@ Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
 }
 
 // ── VISITA / FASCICOLO (flusso a step) ──
-var V = { selectedPazienteId:null, isNewPaziente:false };
+var V = { selectedPazienteId:null, isNewPaziente:false, refertoFiles:[] };
 
 function openModalVisita(){
   V.selectedPazienteId = null;
@@ -2701,7 +2817,7 @@ function renderVisitaPazienti(){
 
   cont.innerHTML = appts.map(a=>{
     const ini = (a.nome[0]||'')+(a.cognome[0]||'');
-    return `<div class="paziente-pick" onclick="visitaSelectFromAppt(${a.id})">
+    return `<div class="paziente-pick" onclick="visitaSelectFromAppt('${a.id}')">
       <div class="avatar-sm">${ini.toUpperCase()}</div>
       <div class="info">
         <strong>${a.cognome} ${a.nome}</strong>
@@ -2737,7 +2853,7 @@ function renderVisitaSearchResults(){
 }
 
 async function visitaSelectFromAppt(apptId){
-  const a = S.appuntamenti.find(x=>x.id===apptId);
+  const a = S.appuntamenti.find(x=>String(x.id)===String(apptId));
   if(!a) return;
   let paz = S.pazienti.find(p=>
     p.nome.toLowerCase()===a.nome.toLowerCase() &&
@@ -2821,6 +2937,7 @@ function visitaBackToStep1(){
 }
 
 function resetVisitaUpload(){
+  V.refertoFiles = [];
   const fi = document.getElementById('referto-input');
   if(fi) fi.value='';
   ['referto-preview','ai-status','extracted-data','ai-error'].forEach(id=>{
@@ -2837,25 +2954,39 @@ function resetVisitaUpload(){
 
 // ── UPLOAD REFERTO ──
 async function handleRefertoUpload(input){
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=async(e)=>{
-    try {
-      const base64=e.target.result.split(',')[1];
-      const prev=document.getElementById('referto-preview');
-      if(file.type.startsWith('image/')) prev.innerHTML=`<img class="referto-thumb" src="${e.target.result}">`;
-      else prev.innerHTML=`<div style="padding:10px;background:var(--surface2);border-radius:8px;font-size:13px">📄 ${file.name}</div>`;
-      prev.style.display='block';
-      document.getElementById('ai-status').style.display='flex';
-      document.getElementById('ai-error').style.display='none';
-      document.getElementById('extracted-data').style.display='none';
-      document.getElementById('btn-salva-visita').style.display='none';
+  const files = Array.from(input.files);
+  if(!files.length) return;
+  V.refertoFiles = files;
 
-      // Prompt diverso a seconda che paziente sia noto o nuovo
-      const isNew = V.isNewPaziente;
-      let prompt;
-      if(isNew){
-        prompt = `Sei un assistente medico. Analizza questo referto e produci una sintesi clinica concisa ma completa.
+  const prev = document.getElementById('referto-preview');
+  prev.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">`+
+    files.map(f => f.type.startsWith('image/')
+      ? `<img src="${URL.createObjectURL(f)}" style="max-height:90px;max-width:110px;border-radius:6px;object-fit:cover;border:1px solid var(--border)">`
+      : `<div style="padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--ink2)">📄 ${f.name}</div>`
+    ).join('')+`</div>`;
+  prev.style.display = 'block';
+  document.getElementById('ai-status').style.display = 'flex';
+  document.getElementById('ai-error').style.display = 'none';
+  document.getElementById('extracted-data').style.display = 'none';
+  document.getElementById('btn-salva-visita').style.display = 'none';
+
+  try {
+    // Leggi tutti i file come base64 in parallelo
+    const fileContents = await Promise.all(files.map(f => new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = e => res({ base64: e.target.result.split(',')[1], type: f.type });
+      r.onerror = rej;
+      r.readAsDataURL(f);
+    })));
+
+    const isNew = V.isNewPaziente;
+    const n = files.length;
+    const multiLabel = n > 1 ? `questi ${n} referti` : 'questo referto';
+    const multiNote  = n > 1 ? ` unificata dei ${n} documenti (usa la data più recente se ci sono più date)` : '';
+
+    let prompt;
+    if(isNew){
+      prompt = `Sei un assistente medico. Analizza ${multiLabel} e produci una sintesi clinica concisa ma completa.
 
 ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
 {
@@ -2865,126 +2996,173 @@ ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero 
   "codice_fiscale": "CF se presente, altrimenti vuoto",
   "data_visita": "gg/mm/aaaa della visita",
   "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
-  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
+  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
 }`;
-      } else {
-        const paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
-        prompt = `Sei un assistente medico. Il paziente è: ${paz ? paz.cognome+' '+paz.nome : 'noto'}.
-Analizza questo referto e produci una sintesi clinica strutturata.
+    } else {
+      const paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
+      prompt = `Sei un assistente medico. Il paziente è: ${paz ? paz.cognome+' '+paz.nome : 'noto'}.
+Analizza ${multiLabel} e produci una sintesi clinica strutturata.
 
 Rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
 {
   "data_visita": "gg/mm/aaaa della visita",
   "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
-  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
+  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
 }
 Il campo nome/cognome/CF non serve, è già noto.`;
-      }
-
-      const apiKey = getApiKey();
-      if(!apiKey) throw new Error('API key mancante — inseriscila nelle Impostazioni');
-
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST", headers:{
-          "Content-Type":"application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true"
-        },
-        body:JSON.stringify({
-          model:"claude-sonnet-4-5-20250929", max_tokens:2000,
-          messages:[{role:"user",content:[
-            {type:file.type==='application/pdf'?'document':'image',source:{type:'base64',media_type:file.type,data:base64}},
-            {type:"text",text:prompt}
-          ]}]
-        })
-      });
-      if(!res.ok){
-        const errBody = await res.json().catch(()=>({}));
-        throw new Error('HTTP '+res.status+(errBody.error?.message?' — '+errBody.error.message:''));
-      }
-      const data=await res.json();
-      let text=data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim();
-      const p=JSON.parse(text);
-
-      // Popola i campi
-      if(isNew){
-        document.getElementById('ex-nome').value=p.nome||'';
-        document.getElementById('ex-cognome').value=p.cognome||'';
-        document.getElementById('ex-nascita').value=p.data_nascita||'';
-        document.getElementById('ex-cf').value=p.codice_fiscale||'';
-      }
-      if(p.data_visita) document.getElementById('ex-data-visita').value=p.data_visita;
-      if(p.luogo) document.getElementById('ex-luogo').value=p.luogo;
-      document.getElementById('ex-clinica').value=p.contenuto_clinico||'';
-
-      showToast('Sintesi AI completata ✓');
-    } catch(err){
-      console.error('AI error:', err);
-      const errEl = document.getElementById('ai-error');
-      if(errEl){
-        errEl.innerHTML = `<strong>⚠ Analisi AI non riuscita</strong><br>
-          ${err.message ? '<small>'+err.message+'</small><br>' : ''}
-          Inserisci manualmente i dati qui sotto. La foto del referto è comunque visibile per riferimento.`;
-        errEl.style.display='block';
-      }
-    } finally{
-      document.getElementById('ai-status').style.display='none';
-      document.getElementById('extracted-data').style.display='block';
-      document.getElementById('btn-salva-visita').style.display='inline-block';
     }
-  };
-  reader.readAsDataURL(file);
+
+    const apiKey = getApiKey();
+    if(!apiKey) throw new Error('API key mancante — inseriscila nelle Impostazioni');
+
+    const contentBlocks = fileContents.map(fc => ({
+      type: fc.type === 'application/pdf' ? 'document' : 'image',
+      source: { type: 'base64', media_type: fc.type, data: fc.base64 }
+    }));
+    contentBlocks.push({ type: 'text', text: prompt });
+
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({ model: "claude-sonnet-4-5-20250929", max_tokens: 2000,
+        messages: [{ role: "user", content: contentBlocks }] })
+    });
+    if(!res.ok){
+      const errBody = await res.json().catch(()=>({}));
+      throw new Error('HTTP '+res.status+(errBody.error?.message?' — '+errBody.error.message:''));
+    }
+    const data = await res.json();
+    let text = data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim();
+    const p = JSON.parse(text);
+
+    if(isNew){
+      document.getElementById('ex-nome').value = p.nome||'';
+      document.getElementById('ex-cognome').value = p.cognome||'';
+      document.getElementById('ex-nascita').value = p.data_nascita||'';
+      document.getElementById('ex-cf').value = p.codice_fiscale||'';
+    }
+    if(p.data_visita) document.getElementById('ex-data-visita').value = p.data_visita;
+    if(p.luogo) document.getElementById('ex-luogo').value = p.luogo;
+    document.getElementById('ex-clinica').value = p.contenuto_clinico||'';
+    showToast(`Sintesi AI completata${n>1?' ('+n+' file)':''} ✓`);
+  } catch(err){
+    console.error('AI error:', err);
+    const errEl = document.getElementById('ai-error');
+    if(errEl){
+      errEl.innerHTML = `<strong>⚠ Analisi AI non riuscita</strong><br>
+        ${err.message?'<small>'+err.message+'</small><br>':''}
+        Inserisci manualmente i dati qui sotto. Le foto sono visibili per riferimento.`;
+      errEl.style.display = 'block';
+    }
+  } finally {
+    document.getElementById('ai-status').style.display = 'none';
+    document.getElementById('extracted-data').style.display = 'block';
+    document.getElementById('btn-salva-visita').style.display = 'inline-block';
+  }
 }
 
 async function saveVisita(){
+  const btnSalva = document.getElementById('btn-salva-visita');
   try {
+    if(btnSalva){ btnSalva.disabled = true; btnSalva.textContent = 'Salvataggio...'; }
+
     const dataVisita = document.getElementById('ex-data-visita').value.trim() || new Date().toLocaleDateString('it-IT');
     const luogo = document.getElementById('ex-luogo').value.trim();
     const clinica = document.getElementById('ex-clinica').value.trim();
-    const visita = { id:Date.now(), data:dataVisita, luogo, clinica };
+    const visita = { id: Date.now(), data: dataVisita, luogo, clinica, foto_url: null };
+
+    let authUser = null;
+    if(isOnline()){ try{ const r = await supabaseClient.auth.getUser(); authUser = r.data.user; }catch(e){} }
+
+    let paz = null;
 
     if(V.isNewPaziente){
       const nome = capitalizeName(document.getElementById('ex-nome').value.trim());
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return; }
-      const cf = document.getElementById('ex-nascita') && document.getElementById('ex-cf').value.trim();
+      const cf = document.getElementById('ex-cf')?.value.trim() || '';
       const nascita = document.getElementById('ex-nascita').value.trim();
-      let paz = S.pazienti.find(p=>(cf&&p.cf===cf)||(p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase()));
-      if(paz){
-        paz.visite = paz.visite||[];
-        paz.visite.unshift(visita);
-        showToast('Visita aggiunta ✓');
-      } else {
-        if(isOnline()){
-          const { data: { user } } = await supabaseClient.auth.getUser();
-          const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+      paz = S.pazienti.find(p=>(cf&&p.cf===cf)||(p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase()));
+      if(!paz){
+        if(isOnline() && S.medicoId){
           const { data: newPaz, error } = await supabaseClient.from('pazienti').insert({
-            medico_id: medico.id, nome, cognome,
-            codice_fiscale: cf || null,
-            data_nascita: nascita || null
+            medico_id: S.medicoId, nome, cognome,
+            codice_fiscale: cf || null, data_nascita: nascita || null
           }).select('id').single();
           if(error) throw error;
-          S.pazienti.unshift({ id: newPaz.id, nome, cognome, cf, nascita, visite:[visita] });
-          console.log('[MediDesk] Paziente creato:', { id: newPaz.id });
+          paz = { id: newPaz.id, nome, cognome, cf, nascita, visite:[] };
         } else {
-          S.pazienti.unshift({ id:Date.now(), nome, cognome, cf, nascita, visite:[visita] });
+          paz = { id: Date.now(), nome, cognome, cf, nascita, visite:[] };
         }
+        S.pazienti.unshift(paz);
         showToast('Nuovo paziente e visita salvati ✓');
+      } else {
+        showToast('Visita aggiunta ✓');
       }
     } else {
-      const paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
+      paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
       if(!paz){ showToast('Errore: paziente non trovato'); return; }
-      paz.visite = paz.visite||[];
-      paz.visite.unshift(visita);
       showToast('Visita aggiunta ✓');
     }
+
+    // INSERT visita su DB + upload foto (solo se paziente ha UUID)
+    if(isOnline() && S.medicoId && authUser && paz?.id && String(paz.id).includes('-')){
+      try {
+        if(V.refertoFiles && V.refertoFiles.length > 0){
+          if(btnSalva) btnSalva.textContent = 'Upload foto...';
+          const uploadedPaths = [];
+          for(const file of V.refertoFiles){
+            const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+            const path = `${authUser.id}/${paz.id}/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+            const { error: upErr } = await supabaseClient.storage
+              .from('fotoreferti').upload(path, file, { contentType: file.type });
+            if(upErr) console.error('[MediDesk] foto upload:', upErr.message);
+            else uploadedPaths.push(path);
+          }
+          if(uploadedPaths.length === 0){
+            const cont = confirm('Upload foto non riuscito.\nVuoi salvare la visita senza foto?');
+            if(!cont) return;
+          } else {
+            visita.foto_url = uploadedPaths.length === 1 ? uploadedPaths[0] : JSON.stringify(uploadedPaths);
+          }
+          if(btnSalva) btnSalva.textContent = 'Salvataggio...';
+        }
+        const { data: dbV, error: vErr } = await supabaseClient.from('visite').insert({
+          paziente_id:       paz.id,
+          medico_id:         S.medicoId,
+          data_visita:       dataVisita  || null,
+          luogo:             luogo       || null,
+          contenuto_clinico: clinica     || null,
+          foto_referto_url:  visita.foto_url || null
+        }).select('id').single();
+        if(vErr){
+          // Rollback: elimina tutte le foto già caricate
+          const pathsToRollback = getFotoPaths(visita.foto_url);
+          if(pathsToRollback.length){
+            await supabaseClient.storage.from('fotoreferti').remove(pathsToRollback).catch(()=>{});
+            visita.foto_url = null;
+          }
+          throw vErr;
+        }
+        visita.id = dbV.id;
+      } catch(e){ console.error('[MediDesk] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return; }
+    }
+
+    paz.visite = paz.visite||[];
+    paz.visite.unshift(visita);
     save();
     closeModal('modal-nuova-visita');
     renderPazienti(); updateStats(); renderDashboard();
   } catch(err){
     console.error('saveVisita error:', err.message);
     showToast('Errore salvataggio: '+err.message);
+  } finally {
+    if(btnSalva){ btnSalva.disabled = false; btnSalva.textContent = 'Salva nel fascicolo'; }
   }
 }
 
@@ -3278,6 +3456,8 @@ async function bkInit(){
       const { data: areeDB } = await supabaseClient
         .from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
       S.areeTematiche = (areeDB||[]).map(r=>r.nome);
+      const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: m.id });
+      bk.slotOccupati = (slotDB||[]).map(s=>({ centroId: s.centro_id, data: s.data, ora: s.ora }));
     } catch(e){ console.error('[MediDesk] bkInit anon:', e.message); }
   } else {
     bk.medicoId = S.medicoId || null;
@@ -3453,14 +3633,18 @@ async function confirmBooking(){
     } catch(e){ console.error('[MediDesk] confirmBooking INSERT:', e.message); }
   }
   S.appuntamenti.push(appt);
+  // Aggiorna slotOccupati localmente così "Prenota un altro" blocca subito lo slot
+  bk.slotOccupati = (bk.slotOccupati||[]);
+  bk.slotOccupati.push({ centroId: bk.centroId, data: bk.dateStr, ora: bk.ora });
   save();
   // aggiorna agenda medico in background (stessa tab)
   if(document.getElementById('view-app').style.display!=='none') renderAll();
   else { try{ renderDashboard(); updateStats(); renderPending(); renderAgenda(); }catch(e){} }
   const centro=S.centri.find(c=>String(c.id)===String(bk.centroId));
   const d=new Date(bk.dateStr+'T12:00:00');
+  const medicoDisplayName=document.getElementById('bk-doctor-name').textContent||getFullName();
   document.getElementById('bk-success-msg').innerHTML=
-    `Il tuo appuntamento con <strong>${getFullName()}</strong> è confermato.<br><br>`+
+    `Il tuo appuntamento con <strong>${medicoDisplayName}</strong> è confermato.<br><br>`+
     `📅 <strong>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${bk.ora}</strong><br>`+
     `🏥 ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
     `${appt.email?'Riceverai un riepilogo all\'email indicata.':''}`;
@@ -3468,7 +3652,7 @@ async function confirmBooking(){
 }
 
 function bkReset(){
-  bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth()};
+  bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),medicoId:null,slotOccupati:[]};
   ['bk-nome','bk-cognome','bk-tel','bk-email','bk-tipo','bk-note'].forEach(id=>document.getElementById(id).value='');
   bkInit();
 }
