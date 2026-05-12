@@ -606,6 +606,19 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
       <div style="margin-top:32px">
         <div class="section-title">Impostazioni medico</div>
         <div class="card"><div class="card-body">
+          <!-- Foto profilo -->
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+            <div id="foto-profilo-preview" style="width:80px;height:80px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:28px;overflow:hidden;flex-shrink:0;border:2px solid var(--border)"></div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:500;margin-bottom:8px">Foto profilo</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('foto-profilo-input').click()">Carica foto</button>
+                <button class="btn btn-sm" id="foto-profilo-remove-btn" style="color:var(--warm);display:none" onclick="removeFotoProfilo()">Rimuovi</button>
+              </div>
+              <input type="file" id="foto-profilo-input" accept="image/*" style="display:none" onchange="handleFotoProfiloChange(this)">
+              <div id="foto-profilo-status" style="font-size:12px;color:var(--ink2);margin-top:6px;display:none"></div>
+            </div>
+          </div>
           <!-- Identità -->
           <div style="display:grid;grid-template-columns:110px 1fr 1fr;gap:12px;margin-bottom:12px">
             <div class="form-group" style="margin-bottom:0">
@@ -1276,6 +1289,7 @@ async function loadMedicoFromDB(user){
       S.settings.instagram   = data.instagram          || '';
       S.settings.youtube     = data.youtube            || '';
       S.settings.facebook    = data.facebook           || '';
+      S.settings.foto_url    = data.foto_url           || null;
       save();
       console.log('[MediDesk] Profilo medico caricato da DB:', user.email);
     }
@@ -1491,7 +1505,8 @@ var S = {
   centri:[], appuntamenti:[], pazienti:[],
   settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', esperienza:'', lingue:[],
              titolo:'Dr.', nomeProf:'Mario', cognomeProf:'Rossi', slug:'',
-             email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'' },
+             email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'',
+             foto_url: null },
   tipiVisita: ['Prima visita', 'Controllo'],
   tipiVisitaRecords: [],
   areeTematiche: [],
@@ -1541,7 +1556,8 @@ function load(){
   if(!S.settings.linkedin)  S.settings.linkedin = '';
   if(!S.settings.instagram) S.settings.instagram = '';
   if(!S.settings.youtube)   S.settings.youtube = '';
-  if(!S.settings.facebook)  S.settings.facebook = '';
+  if(!S.settings.facebook)   S.settings.facebook = '';
+  if(S.settings.foto_url === undefined) S.settings.foto_url = null;
 }
 
 // ── INIT ──
@@ -3304,6 +3320,7 @@ function loadSettings(){
   updateBioCounter();
   renderSlugPreview();
   renderLingue();
+  renderFotoProfilo();
 }
 async function saveSettings(){
   const val=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
@@ -3365,7 +3382,111 @@ async function saveSettings(){
   }
 }
 function getApiKey(){ return localStorage.getItem('medidesk_apikey')||''; }
-// foto profilo
+
+// ── FOTO PROFILO ──
+function renderFotoProfilo(){
+  const preview = document.getElementById('foto-profilo-preview');
+  const removeBtn = document.getElementById('foto-profilo-remove-btn');
+  if(!preview) return;
+  const url = S.settings.foto_url;
+  if(url){
+    preview.innerHTML = `<img src="${url}" alt="Foto profilo" style="width:100%;height:100%;object-fit:cover">`;
+    if(removeBtn) removeBtn.style.display = '';
+  } else {
+    const ini = (((S.settings.nomeProf||'')[0]||'') + ((S.settings.cognomeProf||'')[0]||'')).toUpperCase() || 'M';
+    preview.innerHTML = `<span>${ini}</span>`;
+    if(removeBtn) removeBtn.style.display = 'none';
+  }
+}
+
+function handleFotoProfiloChange(input){
+  const file = input.files[0];
+  input.value = '';
+  if(file) uploadFotoProfilo(file);
+}
+
+async function uploadFotoProfilo(file){
+  const statusEl = document.getElementById('foto-profilo-status');
+  function setStatus(msg){ if(statusEl){ statusEl.textContent = msg; statusEl.style.display = msg ? 'block' : 'none'; } }
+  try {
+    setStatus('Ridimensionamento...');
+    const resizedBlob = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 400;
+        let w = img.width, h = img.height;
+        if(w > MAX || h > MAX){
+          if(w > h){ h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob fallita')), 'image/jpeg', 0.85);
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+
+    if(!isOnline()){
+      // Fallback offline: base64 in localStorage
+      const reader = new FileReader();
+      reader.onload = e => {
+        S.settings.foto_url = e.target.result;
+        save(); renderFotoProfilo(); setStatus('');
+        showToast('Foto salvata localmente ✓');
+      };
+      reader.readAsDataURL(resizedBlob);
+      return;
+    }
+
+    setStatus('Caricamento...');
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if(!user) throw new Error('Utente non autenticato');
+    const path = `${user.id}/avatar.jpg`;
+    const { error: upErr } = await supabaseClient.storage
+      .from('fotoprofilo').upload(path, resizedBlob, { contentType: 'image/jpeg', upsert: true });
+    if(upErr) throw upErr;
+
+    const { data: urlData } = supabaseClient.storage.from('fotoprofilo').getPublicUrl(path);
+    const cleanUrl = urlData.publicUrl;
+
+    setStatus('Salvataggio...');
+    const { error: dbErr } = await supabaseClient.from('medici')
+      .update({ foto_url: cleanUrl }).eq('user_id', user.id);
+    if(dbErr) throw dbErr;
+
+    S.settings.foto_url = cleanUrl + '?t=' + Date.now();
+    save(); renderFotoProfilo(); setStatus('');
+    showToast('Foto profilo aggiornata ✓');
+  } catch(e){
+    console.error('[MediDesk] uploadFotoProfilo:', e.message);
+    setStatus('');
+    showToast('Errore upload foto: ' + e.message);
+  }
+}
+
+async function removeFotoProfilo(){
+  if(!confirm('Rimuovere la foto profilo?')) return;
+  try {
+    if(isOnline()){
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if(user){
+        const path = `${user.id}/avatar.jpg`;
+        await supabaseClient.storage.from('fotoprofilo').remove([path])
+          .catch(e => console.error('[MediDesk] removeFotoProfilo storage:', e.message));
+        await supabaseClient.from('medici').update({ foto_url: null }).eq('user_id', user.id);
+      }
+    }
+    S.settings.foto_url = null;
+    save(); renderFotoProfilo();
+    showToast('Foto rimossa ✓');
+  } catch(e){
+    console.error('[MediDesk] removeFotoProfilo:', e.message);
+    showToast('Errore rimozione foto: ' + e.message);
+  }
+}
+
 // lingue
 function renderLingue(){
   const el=document.getElementById('lingue-list'); if(!el) return;
@@ -3423,7 +3544,8 @@ async function bkInit(){
       document.getElementById('bk-doctor-spec').textContent = m.specializzazione || '';
       const avatarEl = document.getElementById('bk-avatar-display');
       const ini = fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
-      avatarEl.textContent = ini;
+      if(m.foto_url){ avatarEl.innerHTML = `<img src="${m.foto_url}" alt="${fullName}">`; }
+      else { avatarEl.textContent = ini; }
       const bioEl = document.getElementById('bk-hero-bio');
       if(bioEl){ if(m.bio){ bioEl.textContent=m.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
       const tagsEl = document.getElementById('bk-hero-tags');
@@ -3466,7 +3588,8 @@ async function bkInit(){
     document.getElementById('bk-doctor-spec').textContent=S.settings.spec||'';
     const avatarEl=document.getElementById('bk-avatar-display');
     const ini=fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
-    avatarEl.textContent=ini;
+    if(S.settings.foto_url){ avatarEl.innerHTML=`<img src="${S.settings.foto_url}" alt="${fullName}">`; }
+    else { avatarEl.textContent=ini; }
     const bioEl=document.getElementById('bk-hero-bio');
     if(bioEl){ if(S.settings.bio){ bioEl.textContent=S.settings.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
     const tagsEl=document.getElementById('bk-hero-tags');
