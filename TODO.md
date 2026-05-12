@@ -63,7 +63,17 @@
 - [x] Fix CF bug: `document.getElementById('ex-cf')?.value.trim()`
 - [x] `V.refertoFile`: conservato dopo AI extraction, resetato in `resetVisitaUpload`
 
-### Step 4.7 — Pulizia e hardening
+### Step 4.7 — Foto profilo su Supabase Storage ✅
+- [x] Upload foto profilo su bucket `fotoprofilo` (pubblico): ridimensionamento canvas max 400×400, JPEG 0.85
+- [x] Path: `{uid}/avatar.jpg` (upsert — sovrascrive senza creare duplicati)
+- [x] URL pubblico salvato in `medici.foto_url` e `S.settings.foto_url`
+- [x] `renderFotoProfilo()`: mostra img se URL presente, altrimenti fallback iniziali
+- [x] `removeFotoProfilo()`: rimuove da storage + `foto_url = null` in DB
+- [x] Fallback offline: base64 in localStorage se `supabaseClient` è null
+- [x] Foto visibile nella pagina prenotazione pubblica (`bkInit` anon e loggato)
+- [x] Policy RLS storage `fotoprofilo`: INSERT/UPDATE/DELETE solo per `auth.uid() = foldername[1]`; SELECT pubblica
+
+### Step 4.8 — Pulizia e hardening
 - [ ] Rimuovere `save()` / `load()` da localStorage dove non più necessario (o tenere come cache offline)
 - [ ] Gestire conflitti di sync (es. appuntamento creato offline e poi sincronizzato)
 - [ ] Loading states / skeleton UI durante le fetch DB
@@ -113,4 +123,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-12 — Step 4.6 completato (visite + foto referti su Supabase)*
+*Ultimo aggiornamento: 2026-05-13 — Step 4.7 completato (foto profilo su Supabase Storage + policy RLS)*
