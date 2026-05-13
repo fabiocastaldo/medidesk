@@ -2892,12 +2892,12 @@ function showPazienteDetail(id){
         </div>
         <div class="visita-body" id="vv-${id}-${i}" style="display:none">
           ${v.clinica||'—'}
-          ${v.foto_url?(()=>{ const n=getFotoPaths(v.foto_url).length; return `<div style="margin-top:10px"><button class="btn btn-sm btn-secondary" onclick="openFotoRefertoByVisita('${id}','${v.id}')">📷 ${n>1?'Vedi '+n+' foto':'Vedi foto referto'}</button></div>`; })():''}
-          ${v.clinica?`<div class="visita-actions">
-            <button class="btn btn-sm btn-secondary" onclick="condividiVisita('${id}','${v.id}')" title="Condividi">📤 Condividi</button>
-            <button class="btn btn-sm btn-secondary" onclick="emailVisita('${id}','${v.id}')" title="Invia via email">📧 Email</button>
-            <button class="btn btn-sm btn-secondary" onclick="downloadPdfVisita('${id}','${v.id}')" title="Scarica PDF">⬇️ PDF</button>
-          </div>`:''}
+          ${v.foto_url?(()=>{ const n=getFotoPaths(v.foto_url).length; return '<div style="margin-top:10px"><button class="btn btn-sm btn-secondary" onclick="openFotoRefertoByVisita(\''+id+'\',\''+v.id+'\')">📷 '+(n>1?'Vedi '+n+' foto':'Vedi foto referto')+'</button></div>'; })():''}
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-secondary" onclick="shareVisita('${id}','${v.id}')">📤 Condividi</button>
+            <button class="btn btn-sm btn-secondary" onclick="emailVisita('${id}','${v.id}')">📧 Email</button>
+            <button class="btn btn-sm btn-secondary" onclick="downloadVisitaPDF('${id}','${v.id}')">⬇️ PDF</button>
+          </div>
         </div>
       </div>
     `).join('')}
@@ -4410,16 +4410,16 @@ function toggleCentroGroup(gid){
 }
 
 // ── CONDIVISIONE VISITA (PDF, EMAIL, SHARE) ──
-function condividiVisita(pazId, visitaId){
+function shareVisita(pazId, visitaId){
   const paz=S.pazienti.find(p=>String(p.id)===String(pazId));
   const v=(paz?.visite||[]).find(v=>String(v.id)===String(visitaId));
   if(!v) return;
-  const text=v.clinica||'';
-  const title=`Visita ${v.data||''} — ${paz.nome} ${paz.cognome}`;
+  const text=v.clinica||'(nessun contenuto)';
+  const title='Visita '+(v.data||'')+' — '+paz.nome+' '+paz.cognome;
   if(navigator.share){
     navigator.share({title, text}).catch(()=>{});
   } else {
-    navigator.clipboard.writeText(text).then(()=>showToast('Contenuto copiato ✓'));
+    navigator.clipboard.writeText(text).then(()=>showToast('Contenuto copiato ✓')).catch(()=>showToast('Copia non supportata'));
   }
 }
 
@@ -4427,12 +4427,12 @@ function emailVisita(pazId, visitaId){
   const paz=S.pazienti.find(p=>String(p.id)===String(pazId));
   const v=(paz?.visite||[]).find(v=>String(v.id)===String(visitaId));
   if(!v) return;
-  const subject=encodeURIComponent(`Visita del ${v.data||''} — ${paz.cognome} ${paz.nome}`);
+  const subject=encodeURIComponent('Visita del '+(v.data||'')+' — '+paz.cognome+' '+paz.nome);
   const body=encodeURIComponent(v.clinica||'');
-  window.open(`mailto:?subject=${subject}&body=${body}`,'_blank');
+  window.open('mailto:?subject='+subject+'&body='+body,'_blank');
 }
 
-function downloadPdfVisita(pazId, visitaId){
+function downloadVisitaPDF(pazId, visitaId){
   const paz=S.pazienti.find(p=>String(p.id)===String(pazId));
   const v=(paz?.visite||[]).find(v=>String(v.id)===String(visitaId));
   if(!v){ showToast('Visita non trovata'); return; }
@@ -4477,7 +4477,7 @@ function downloadPdfVisita(pazId, visitaId){
     doc.text(`Generato da MediDesk il ${oggi}`, margin, y);
     const fn=`Visita_${paz.cognome}_${paz.nome}_${v.data||'nd'}.pdf`.replace(/\s/g,'_');
     doc.save(fn);
-  } catch(e){ console.error('downloadPdfVisita', e); showToast('Errore generazione PDF: '+e.message); }
+  } catch(e){ console.error('downloadVisitaPDF', e); showToast('Errore generazione PDF: '+e.message); }
 }
 
 // ── TOAST ──
