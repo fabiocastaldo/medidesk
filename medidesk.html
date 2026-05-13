@@ -486,6 +486,48 @@ html.dark .slot-btn{background:var(--surface2);color:var(--accent)}
 /* ── MOBILE: zoom block + font-size ── */
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 @media(max-width:768px){input,select,textarea{font-size:16px!important}}
+
+/* ── VIEW CANCEL ── */
+#view-cancel{display:none;min-height:100vh;background:linear-gradient(135deg,#0D9488 0%,#0F766E 60%,#134E48 100%);align-items:center;justify-content:center;padding:24px;font-family:'DM Sans',sans-serif;position:relative}
+html.dark #view-cancel{background:linear-gradient(135deg,#051212 0%,#0A1A1A 60%,#0D2020 100%)}
+.cancel-card{background:#fff;border-radius:20px;padding:36px;width:100%;max-width:460px;box-shadow:0 24px 64px rgba(0,0,0,.25);text-align:center}
+html.dark .cancel-card{background:var(--surface);color:var(--ink)}
+.cancel-card h2{font-family:'DM Serif Display',serif;font-size:24px;color:var(--ink);margin-bottom:8px}
+.cancel-card p{font-size:14px;color:var(--ink2);line-height:1.6;margin-bottom:16px}
+
+/* ── CANCELLATION TOKEN ── */
+.cancel-token-box{background:var(--ink);color:#fff;border-radius:var(--r);padding:16px 20px;margin:16px 0;text-align:center}
+html.dark .cancel-token-box{background:var(--surface2)}
+.cancel-token-code{font-family:monospace;font-size:28px;font-weight:700;letter-spacing:4px;color:#fff;display:block;margin-top:4px}
+html.dark .cancel-token-code{color:var(--ink)}
+
+/* ── CALENDAR ADD BUTTONS ── */
+.cal-add-btns{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.cal-add-btn{display:flex;align-items:center;gap:10px;padding:12px 16px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;min-height:44px;transition:all .15s;justify-content:center;width:100%}
+.cal-add-btn:hover{border-color:var(--accent);background:var(--accent-light)}
+@media(min-width:480px){.cal-add-btns{flex-direction:row}}
+
+/* ── NOTIFICATION TOGGLES ── */
+.notif-toggle-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.notif-toggle-row:last-child{border-bottom:none}
+.notif-toggle-info{flex:1}
+.notif-toggle-label{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.notif-toggle-desc{font-size:12px;color:var(--ink3);line-height:1.4}
+.toggle-switch{position:relative;display:inline-flex;align-items:center;cursor:pointer;flex-shrink:0;margin-top:2px}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{width:42px;height:24px;background:var(--border);border-radius:12px;transition:background .2s;position:relative;display:block}
+.toggle-slider::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle-switch input:checked~.toggle-slider{background:var(--accent)}
+.toggle-switch input:checked~.toggle-slider::after{transform:translateX(18px)}
+
+/* ── APPUNTAMENTO CANCELLATO ── */
+.appt-card.appt-cancelled{opacity:.4}
+.appt-card.appt-cancelled .appt-patient{text-decoration:line-through}
+.badge-cancelled{background:#fee2e2;color:#dc2626;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:6px;vertical-align:middle}
+
+/* ── GIORNATE SINGOLE ── */
+.giornata-row{display:flex;align-items:center;gap:8px;font-size:13px;background:var(--accent-light);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:6px}
+.giornata-row span{flex:1;color:var(--ink2)}
 </style>
 </head>
 <body>
@@ -807,6 +849,34 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           </div>
         </div></div>
       </div>
+
+      <div style="margin-top:24px">
+        <div class="section-title">Notifiche email ai centri</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Le email reali verranno attivate allo Step 7 con Resend. Qui puoi configurare le preferenze.</p>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Nuova prenotazione online</div>
+              <div class="notif-toggle-desc">La segreteria viene avvisata quando un paziente prenota dalla pagina pubblica</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="notif-nuova-prenotazione" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Cancellazione paziente</div>
+              <div class="notif-toggle-desc">La segreteria viene avvisata delle cancellazioni entro 24h dalla visita</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="notif-cancellazione" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Appuntamento inserito manualmente</div>
+              <div class="notif-toggle-desc">Attiva se vuoi avvisare la segreteria anche quando inserisci tu stesso un appuntamento</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="notif-appuntamento-manuale"><span class="toggle-slider"></span></label>
+          </div>
+        </div></div>
+      </div>
     </div>
   </main>
 
@@ -923,14 +993,57 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="booking-success">
             <div class="big-icon">✅</div>
             <h3>Prenotazione confermata!</h3>
-            <p id="bk-success-msg">Il tuo appuntamento è stato registrato.<br>Riceverai conferma all'email indicata.</p>
-            <button class="btn btn-secondary" style="margin-top:20px" onclick="bkReset()">Prenota un altro appuntamento</button>
+            <p id="bk-success-msg">Il tuo appuntamento è stato registrato.</p>
+
+            <!-- CODICE CANCELLAZIONE -->
+            <div class="cancel-token-box" id="bk-token-box" style="display:none">
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;opacity:.7">Il tuo codice di cancellazione</div>
+              <span class="cancel-token-code" id="bk-token-display">—</span>
+              <div style="font-size:11px;margin-top:6px;opacity:.65">Conservalo se desideri cancellare l'appuntamento · Puoi cancellare fino a 24 ore prima della visita</div>
+            </div>
+
+            <!-- EMAIL PLACEHOLDER -->
+            <p style="font-size:12px;color:var(--ink3);margin-top:6px">📧 Riceverai una email di conferma con il link per cancellare l'appuntamento. <em>(Funzione email in arrivo)</em></p>
+
+            <!-- AGGIUNGI AL CALENDARIO -->
+            <div style="margin-top:20px;text-align:left">
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:8px">Aggiungi al calendario</div>
+              <div class="cal-add-btns">
+                <button class="cal-add-btn" onclick="bkAddToGoogleCal()">📅 Google Calendar</button>
+                <button class="cal-add-btn" onclick="bkAddToIcal()">🍎 Apple / iCal</button>
+                <button class="cal-add-btn" onclick="bkAddToOutlook()">📆 Outlook</button>
+              </div>
+            </div>
+
+            <!-- DOCUMENTAZIONE SANITARIA -->
+            <div style="margin-top:16px;text-align:left;padding:14px 16px;background:var(--accent-light);border:1px solid var(--border);border-radius:var(--r)">
+              <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px">📋 Ricorda di portare alla visita:</div>
+              <ul style="font-size:13px;color:var(--ink2);line-height:1.7;padding-left:18px;margin:0">
+                <li>Tutta la documentazione sanitaria in tuo possesso (referti precedenti, esami, cartelle cliniche)</li>
+                <li>Eventuali farmaci che stai assumendo</li>
+                <li>Documento di identità</li>
+              </ul>
+            </div>
+
+            <button class="btn btn-secondary" style="margin-top:20px;width:100%" onclick="bkReset()">Prenota un altro appuntamento</button>
           </div>
         </div>
 
       </div>
     </div>
     <div class="bk-footer">Prenotazione gestita con MediDesk · Sistema professionale per medici</div>
+  </div>
+</div>
+
+<!-- ══════════════ PAGINA CANCELLAZIONE ══════════════ -->
+<div id="view-cancel">
+  <button class="auth-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
+  <div class="cancel-card">
+    <div id="cancel-loading">
+      <div class="spinner" style="margin:0 auto 16px;width:32px;height:32px;border-width:3px;border-color:var(--accent);border-top-color:transparent"></div>
+      <p>Verifica in corso...</p>
+    </div>
+    <div id="cancel-content" style="display:none"></div>
   </div>
 </div>
 
@@ -1074,6 +1187,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Frequenza</label>
+        <select class="form-select" id="turno-frequenza" onchange="onTurnoFrequenzaChange()">
+          <option value="1">Ogni settimana</option>
+          <option value="2">Ogni 2 settimane</option>
+          <option value="3">Ogni 3 settimane</option>
+          <option value="4">Ogni 4 settimane (mensile)</option>
+        </select>
+      </div>
+      <div class="form-group" id="turno-inizio-validita-group" style="display:none">
+        <label class="form-label">A partire dal <span style="font-weight:400;color:var(--ink3)">(primo giorno di questo turno)</span></label>
+        <input class="form-input" id="turno-inizio-validita" type="date">
+      </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Inizio</label><input class="form-input" id="turno-inizio" type="time" value="09:00"></div>
         <div class="form-group"><label class="form-label">Fine</label><input class="form-input" id="turno-fine" type="time" value="13:00"></div>
@@ -1084,6 +1210,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <option value="15">15 min</option><option value="20">20 min</option><option value="30" selected>30 min</option>
           <option value="45">45 min</option><option value="60">60 min</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valido fino al <span style="font-weight:400;color:var(--ink3)">(opzionale — lascia vuoto per tempo indeterminato)</span></label>
+        <input class="form-input" id="turno-fine-validita" type="date">
       </div>
     </div>
     <div class="modal-footer">
@@ -1282,14 +1412,42 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
+<!-- MODAL GIORNATA SINGOLA -->
+<div class="modal-overlay" id="modal-giornata-singola">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Aggiungi giornata singola</span><button class="modal-close" onclick="closeModal('modal-giornata-singola')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Centro: <strong id="giornata-centro-label"></strong></p>
+      <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="giornata-data" type="date"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Inizio</label><input class="form-input" id="giornata-inizio" type="time" value="09:00"></div>
+        <div class="form-group"><label class="form-label">Fine</label><input class="form-input" id="giornata-fine" type="time" value="13:00"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Durata slot (minuti)</label>
+        <select class="form-select" id="giornata-slot">
+          <option value="15">15 min</option><option value="20">20 min</option><option value="30" selected>30 min</option>
+          <option value="45">45 min</option><option value="60">60 min</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-giornata-singola')">Annulla</button>
+      <button class="btn btn-primary" onclick="saveGiornataSingola()">Salva giornata</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════ SCRIPT ══════════════ -->
 <script>
 // ── DICHIARAZIONI GLOBALI (in cima per evitare TDZ) ──
 var A = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, prefillDate:null };
-var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, medicoId:null, slotOccupati:[] };
+var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, medicoId:null, slotOccupati:[], _centroData:null };
 var _turnoTargetId = null;
+var _giornataSingolaTargetId = null;
+var _bkLastAppt = null;
 var _lpTimer = null;
 var _pendingDeleteTurno = null;
 
@@ -1511,8 +1669,12 @@ async function loadCentriFromDB(user){
         giorno: t.giorno,
         inizio: t.inizio,
         fine:   t.fine,
-        slot:   t.durata_slot
-      }))
+        slot:   t.durata_slot,
+        frequenza: t.frequenza_settimane||1,
+        dataInizioValidita: t.data_inizio_validita||null,
+        dataFineValidita:   t.data_fine_validita||null
+      })),
+      giornateSingole: []
     }));
     save();
     console.log('[MediDesk] Centri caricati da DB:', S.centri.length);
@@ -1822,11 +1984,12 @@ load();
 loadConfig().then(checkView);
 
 function checkView(){
-  // Se l'URL ha ?booking mostra la pagina pubblica (no auth necessaria)
-  if(location.search.includes('booking')){
+  const params = new URLSearchParams(location.search);
+  if(params.has('cancel')){
+    showCancelView();
+  } else if(location.search.includes('booking')){
     showBookingView();
   } else {
-    // Controlla sessione Supabase (o avvia offline se non configurato)
     checkSession();
   }
 }
@@ -2069,6 +2232,34 @@ function renderCentri(){
 }
 
 function renderCentroCard(c, isActive){
+  const todayStr = new Date().toISOString().split('T')[0];
+  const freqLabel = {1:'',2:' · ogni 2 sett.',3:' · ogni 3 sett.',4:' · mensile'};
+  const turniHtml = (c.turni&&c.turni.length) ? `
+    <div class="turni-list">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;margin-bottom:4px">Turni ricorrenti</div>
+      ${c.turni.map((t,i)=>{
+        const scaduto = t.dataFineValidita && t.dataFineValidita < todayStr;
+        const freqStr = freqLabel[t.frequenza||1]||'';
+        const fineStr = t.dataFineValidita ? ` · fino al ${formatDate(t.dataFineValidita)}` : '';
+        return `<div class="turno-row" style="${scaduto?'opacity:.5':''}">
+          <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min${freqStr}${fineStr}${scaduto?' <span class="badge-inactive">Scaduto</span>':''}</span>
+          ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
+        </div>`;
+      }).join('')}
+    </div>` : isActive?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>':'';
+
+  const giornate = (c.giornateSingole||[]).filter(g=>g.data>=todayStr).sort((a,b)=>a.data.localeCompare(b.data));
+  const giornateHtml = (giornate.length||isActive) ? `
+    <div class="turni-list" style="margin-top:8px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;margin-bottom:4px">Giornate singole</div>
+      ${giornate.map((g,i)=>`
+        <div class="giornata-row">
+          <span>📆 ${formatDate(g.data)} ${g.inizio}–${g.fine} · slot ${g.slot} min</span>
+          ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="deleteGiornataSingola('${c.id}',${i})">✕</button>`:''}
+        </div>`).join('')}
+      ${isActive?`<button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button>`:''}
+    </div>` : '';
+
   return `
     <div class="centro-card ${!isActive?'centro-disabled':''}">
       <div class="centro-header">
@@ -2081,16 +2272,7 @@ function renderCentroCard(c, isActive){
         <button class="btn btn-sm btn-secondary" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
         <button class="btn btn-sm btn-secondary" onclick="deleteCentro('${c.id}')" title="Elimina">🗑</button>
       </div>
-      ${(c.turni&&c.turni.length)?`
-        <div class="turni-list">
-          ${c.turni.map((t,i)=>`
-            <div class="turno-row">
-              <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min</span>
-              ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
-            </div>
-          `).join('')}
-        </div>
-      `:isActive?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>':''}
+      ${turniHtml}${giornateHtml}
     </div>`;
 }
 
@@ -2118,6 +2300,12 @@ function openAddTurno(centroId){
   document.getElementById('turno-centro-label').textContent = c?c.nome:'';
   openModal('modal-turno');
 }
+function onTurnoFrequenzaChange(){
+  const freq = parseInt(document.getElementById('turno-frequenza').value)||1;
+  const g = document.getElementById('turno-inizio-validita-group');
+  if(g) g.style.display = freq > 1 ? 'block' : 'none';
+}
+
 async function saveTurno(){
   const c = S.centri.find(x=>String(x.id)===String(_turnoTargetId)); if(!c) return;
   c.turni = c.turni||[];
@@ -2125,8 +2313,12 @@ async function saveTurno(){
   const inizio = document.getElementById('turno-inizio').value;
   const fine   = document.getElementById('turno-fine').value;
   const slot   = parseInt(document.getElementById('turno-slot').value);
+  const frequenza = parseInt(document.getElementById('turno-frequenza').value)||1;
+  const dataInizioValidita = document.getElementById('turno-inizio-validita').value||null;
+  const dataFineValidita   = document.getElementById('turno-fine-validita').value||null;
+  const turnoData = { giorno, inizio, fine, slot, frequenza, dataInizioValidita, dataFineValidita };
   if(!isOnline()){
-    c.turni.push({ giorno, inizio, fine, slot });
+    c.turni.push(turnoData);
     save(); closeModal('modal-turno'); renderCentri();
     showToast('Turno aggiunto ✓');
     checkTurnoFestivita(c.id, giorno);
@@ -2134,10 +2326,13 @@ async function saveTurno(){
   }
   try {
     const { data: newTurno, error } = await supabaseClient.from('turni').insert({
-      centro_id: c.id, giorno, inizio, fine, durata_slot: slot
+      centro_id: c.id, giorno, inizio, fine, durata_slot: slot,
+      frequenza_settimane: frequenza,
+      data_inizio_validita: dataInizioValidita,
+      data_fine_validita: dataFineValidita
     }).select('id').single();
     if(error) throw error;
-    c.turni.push({ id: newTurno.id, giorno, inizio, fine, slot });
+    c.turni.push({ id: newTurno.id, ...turnoData });
     save(); closeModal('modal-turno'); renderCentri();
     showToast('Turno aggiunto ✓');
     checkTurnoFestivita(c.id, giorno);
@@ -2178,6 +2373,55 @@ async function deleteTurno(centroId, idx){
     showToast('Errore: ' + e.message);
   }
 }
+// ── GIORNATE SINGOLE ──
+function openGiornataSingola(centroId){
+  _giornataSingolaTargetId=centroId;
+  const c=S.centri.find(x=>String(x.id)===String(centroId));
+  document.getElementById('giornata-centro-label').textContent=c?c.nome:'';
+  document.getElementById('giornata-data').value='';
+  document.getElementById('giornata-inizio').value='09:00';
+  document.getElementById('giornata-fine').value='13:00';
+  document.getElementById('giornata-slot').value='30';
+  openModal('modal-giornata-singola');
+}
+async function saveGiornataSingola(){
+  const c=S.centri.find(x=>String(x.id)===String(_giornataSingolaTargetId)); if(!c) return;
+  const data=document.getElementById('giornata-data').value;
+  const inizio=document.getElementById('giornata-inizio').value;
+  const fine=document.getElementById('giornata-fine').value;
+  const slot=parseInt(document.getElementById('giornata-slot').value);
+  if(!data){ showToast('Seleziona una data'); return; }
+  if(inizio>=fine){ showToast('L\'ora di fine deve essere successiva all\'inizio'); return; }
+  const g={data,inizio,fine,slot,centroId:String(c.id)};
+  c.giornateSingole=c.giornateSingole||[];
+  if(!isOnline()){
+    c.giornateSingole.push(g); save(); closeModal('modal-giornata-singola'); renderCentri();
+    showToast('Giornata aggiunta ✓'); return;
+  }
+  try {
+    const { data: {user} }=await supabaseClient.auth.getUser();
+    const { data: ins, error }=await supabaseClient.from('disponibilita_singole').insert({
+      centro_id:c.id, medico_id:S.medicoId||user?.id, data, inizio, fine, durata_slot:slot
+    }).select('id').single();
+    if(error) throw error;
+    c.giornateSingole.push({id:ins.id,...g});
+    save(); closeModal('modal-giornata-singola'); renderCentri();
+    showToast('Giornata aggiunta ✓');
+  } catch(e){ console.error('[MediDesk] saveGiornataSingola:',e.message); showToast('Errore: '+e.message); }
+}
+async function deleteGiornataSingola(centroId,idx){
+  const c=S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
+  const g=(c.giornateSingole||[])[idx]; if(!g) return;
+  if(!isOnline()){ c.giornateSingole.splice(idx,1); save(); renderCentri(); return; }
+  try {
+    if(g.id){
+      const {error}=await supabaseClient.from('disponibilita_singole').delete().eq('id',g.id);
+      if(error) throw error;
+    }
+    c.giornateSingole.splice(idx,1); save(); renderCentri(); showToast('Giornata eliminata');
+  } catch(e){ console.error('[MediDesk] deleteGiornataSingola:',e.message); showToast('Errore: '+e.message); }
+}
+
 async function deleteCentro(id){
   if(!confirm('Eliminare questo centro e tutti i suoi turni?\n\nGli appuntamenti e i fascicoli dei pazienti verranno conservati.')) return;
   // Null out centroId in local state (gli appuntamenti rimangono, il DB fa SET NULL via FK)
@@ -2224,23 +2468,35 @@ function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
 // ── SLOT LOGIC ──
 function getSlots(centro, dateStr){
   if(isChiusura(dateStr, centro.id)) return [];
-  // Giorno della settimana
   const d = new Date(dateStr+'T12:00:00');
   const dow = d.getDay();
-  const turni = (centro.turni||[]).filter(t=>t.giorno===dow);
-  if(!turni.length) return [];
+  const turni = (centro.turni||[]).filter(t=>{
+    if(t.giorno!==dow) return false;
+    if(t.dataFineValidita && dateStr > t.dataFineValidita) return false;
+    const freq = t.frequenza||1;
+    if(freq > 1 && t.dataInizioValidita){
+      const startD = new Date(t.dataInizioValidita+'T12:00:00');
+      const diffWeeks = Math.round((d - startD) / (7*24*3600*1000));
+      if(diffWeeks < 0 || diffWeeks % freq !== 0) return false;
+    }
+    return true;
+  });
   let slots = [];
   turni.forEach(t=>{
     let cur = timeToMin(t.inizio);
     const end = timeToMin(t.fine);
-    while(cur + t.slot <= end){
-      slots.push(minToTime(cur));
-      cur += t.slot;
-    }
+    while(cur + t.slot <= end){ slots.push(minToTime(cur)); cur += t.slot; }
   });
-  // Rimuovi slot già occupati (dal medico autenticato o da prenotazioni anonime DB)
+  // Giornate singole
+  (centro.giornateSingole||[]).filter(g=>g.data===dateStr).forEach(g=>{
+    let cur = timeToMin(g.inizio);
+    const end = timeToMin(g.fine);
+    while(cur + g.slot <= end){ slots.push(minToTime(cur)); cur += g.slot; }
+  });
+  slots = [...new Set(slots)].sort();
+  // Rimuovi slot già occupati (cancellati non contano come occupati)
   const taken = S.appuntamenti
-    .filter(a=>a.data===dateStr && String(a.centroId)===String(centro.id))
+    .filter(a=>a.data===dateStr && String(a.centroId)===String(centro.id) && !a.cancelled)
     .map(a=>a.ora);
   const takenBk = (bk.slotOccupati||[])
     .filter(s=>s.data===dateStr && String(s.centroId)===String(centro.id))
@@ -2259,21 +2515,32 @@ function hasAvailability(centro, dateStr){
 function getAllSlotsWithStatus(centro, dateStr){
   const d = new Date(dateStr+'T12:00:00');
   const dow = d.getDay();
-  const turni = (centro.turni||[]).filter(t=>t.giorno===dow);
-  if(!turni.length) return [];
+  const turni = (centro.turni||[]).filter(t=>{
+    if(t.giorno!==dow) return false;
+    if(t.dataFineValidita && dateStr > t.dataFineValidita) return false;
+    const freq = t.frequenza||1;
+    if(freq > 1 && t.dataInizioValidita){
+      const startD = new Date(t.dataInizioValidita+'T12:00:00');
+      const diffWeeks = Math.round((d - startD) / (7*24*3600*1000));
+      if(diffWeeks < 0 || diffWeeks % freq !== 0) return false;
+    }
+    return true;
+  });
   let slots = [];
   turni.forEach(t=>{
     let cur = timeToMin(t.inizio);
     const end = timeToMin(t.fine);
-    while(cur + t.slot <= end){
-      slots.push(minToTime(cur));
-      cur += t.slot;
-    }
+    while(cur + t.slot <= end){ slots.push(minToTime(cur)); cur += t.slot; }
   });
-  // Mappa con info appuntamento se occupato
+  (centro.giornateSingole||[]).filter(g=>g.data===dateStr).forEach(g=>{
+    let cur = timeToMin(g.inizio);
+    const end = timeToMin(g.fine);
+    while(cur + g.slot <= end){ slots.push(minToTime(cur)); cur += g.slot; }
+  });
+  slots = [...new Set(slots)].sort();
   const apptsHere = S.appuntamenti.filter(a=>a.data===dateStr && String(a.centroId)===String(centro.id));
   return slots.map(s=>{
-    const appt = apptsHere.find(a=>a.ora===s);
+    const appt = apptsHere.find(a=>a.ora===s && !a.cancelled);
     return { ora:s, libero:!appt, appt:appt||null };
   });
 }
@@ -2557,6 +2824,7 @@ async function saveAppuntamento(){
     closeModal('modal-appuntamento');
     renderAgenda(); renderDashboard(); updateStats();
     showToast('Appuntamento salvato ✓');
+    await sendNotificaCentro('appuntamento_manuale', newAppt);
   } catch(err){
     console.error('saveAppuntamento error:', err);
     showToast('Errore salvataggio: '+err.message);
@@ -2799,22 +3067,33 @@ function openAppuntamentoFromAgenda(){
   openModal('modal-appuntamento');
 }
 
+var _mostraCancellati = false;
+function toggleMostraCancellati(){
+  _mostraCancellati=!_mostraCancellati;
+  const btn=document.getElementById('btn-mostra-cancellati');
+  if(btn) btn.textContent=_mostraCancellati?'Nascondi cancellati':'Mostra cancellati';
+  renderDayAppointments();
+}
 function renderDayAppointments(){
   const container = document.getElementById('appointments-container');
-  const appts = S.appuntamenti.filter(a=>a.data===S.selectedDay).sort((a,b)=>a.ora.localeCompare(b.ora));
+  let appts = S.appuntamenti.filter(a=>a.data===S.selectedDay).sort((a,b)=>a.ora.localeCompare(b.ora));
+  const hasCancelled = appts.some(a=>a.cancelled);
+  if(!_mostraCancellati) appts=appts.filter(a=>!a.cancelled);
   if(!appts.length){
-    container.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">✨ Nessun appuntamento</div>'; return;
+    container.innerHTML=`<div style="text-align:center;padding:40px;color:var(--ink3)">✨ Nessun appuntamento${hasCancelled?' <button class="btn btn-sm btn-secondary" style="margin-top:8px;display:block;margin:8px auto 0" onclick="toggleMostraCancellati()">Mostra cancellati</button>':''}</div>`; return;
   }
-  container.innerHTML = appts.map(a=>{
+  const toggleBtn = hasCancelled ? `<div style="text-align:right;margin-bottom:8px"><button id="btn-mostra-cancellati" class="btn btn-sm btn-secondary" onclick="toggleMostraCancellati()">${_mostraCancellati?'Nascondi cancellati':'Mostra cancellati'}</button></div>` : '';
+  container.innerHTML = toggleBtn + appts.map(a=>{
     const centro = S.centri.find(c=>String(c.id)===String(a.centroId));
     const isOnlineAppt = a.source==='paziente';
     const centroNomeDisplay = centro ? centro.nome : (a.centroNome||'');
     const centroColore = centro ? centro.colore : '#999';
     const centroOpacity = centro && centro.attivo===false ? '0.5' : '1';
-    return `<div class="appt-card" onclick="showApptDetail('${a.id}')">
+    const cancelledClass = a.cancelled ? ' appt-cancelled' : '';
+    return `<div class="appt-card${cancelledClass}" onclick="showApptDetail('${a.id}')">
       <div class="appt-time">${a.ora}</div>
       <div class="appt-info">
-        <div class="appt-patient">${a.cognome} ${a.nome}</div>
+        <div class="appt-patient">${a.cognome} ${a.nome}${a.cancelled?'<span class="badge-cancelled" style="font-size:10px;padding:1px 5px">Cancellato</span>':''}</div>
         <div class="appt-detail">${a.tipo||'Visita'}${a.area?' · '+a.area:''}${isOnlineAppt?' · 🌐 Online':''} ${a.note?'· '+a.note:''}</div>
       </div>
       ${centroNomeDisplay?`<div class="appt-centro" style="background:${centroColore}22;color:${centroColore};opacity:${centroOpacity}">${centroNomeDisplay}</div>`:''}
@@ -2827,9 +3106,10 @@ function showApptDetail(id){
   S.currentApptId = id;
   const centro = S.centri.find(c=>String(c.id)===String(a.centroId));
   const _centroNomeDetail = centro ? centro.nome : (a.centroNome||'—');
+  const cancelledBadge = a.cancelled ? `<span class="badge-cancelled">Cancellato</span>` : '';
   document.getElementById('modal-appt-detail-body').innerHTML=`
     <div class="extracted-fields">
-      <div class="field-row"><span class="field-key">Paziente</span><span class="field-val">${a.cognome} ${a.nome}</span></div>
+      <div class="field-row"><span class="field-key">Paziente</span><span class="field-val">${a.cognome} ${a.nome}${cancelledBadge}</span></div>
       <div class="field-row"><span class="field-key">Data</span><span class="field-val">${formatDate(a.data)} alle ${a.ora}</span></div>
       <div class="field-row"><span class="field-key">Centro</span><span class="field-val">${_centroNomeDetail}</span></div>
       <div class="field-row"><span class="field-key">Tipo visita</span><span class="field-val">${a.tipo||'—'}</span></div>
@@ -2839,9 +3119,25 @@ function showApptDetail(id){
       ${a.email?`<div class="field-row"><span class="field-key">Email</span><span class="field-val">${a.email}</span></div>`:''}
       ${a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val">🌐 Prenotazione online</span></div>`:''}
       ${centro&&centro.email?`<div class="field-row"><span class="field-key">Email centro</span><span class="field-val">${centro.email}</span></div>`:''}
-    </div>`;
+      ${a.cancelled?`<div class="field-row"><span class="field-key">Cancellato il</span><span class="field-val">${a.cancelledAt?new Date(a.cancelledAt).toLocaleDateString('it-IT'):'—'}</span></div>`:''}
+      ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
+    </div>
+    ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${id}')">Ripristina appuntamento</button>`:''}`;
   document.getElementById('btn-delete-appt').onclick = ()=>deleteAppuntamento(id);
   openModal('modal-appt-detail');
+}
+async function ripristinaAppuntamento(id){
+  const a=S.appuntamenti.find(x=>String(x.id)===String(id)); if(!a) return;
+  if(isOnline()){
+    try {
+      const {error}=await supabaseClient.from('appuntamenti').update({cancelled:false,cancelled_at:null}).eq('id',id);
+      if(error) throw error;
+    } catch(e){ showToast('Errore: '+e.message); return; }
+  }
+  a.cancelled=false; a.cancelledAt=null;
+  save(); closeModal('modal-appt-detail');
+  renderAgenda(); showToast('Appuntamento ripristinato ✓');
+  await sendNotificaCentro('nuova_prenotazione', a);
 }
 
 // ── MAIL & ICS ──
@@ -3698,6 +3994,46 @@ function toggleTheme(){
   localStorage.setItem('medidesk_theme', dark ? 'dark' : 'light');
 }
 
+// ── NOTIFICHE EMAIL (placeholder — Step 7 attiverà Resend) ──
+async function sendNotificaCentro(tipo, appt){
+  const toggleMap={
+    nuova_prenotazione: S.settings.notifNuovaPrenotazione,
+    cancellazione:      S.settings.notifCancellazione,
+    appuntamento_manuale: S.settings.notifAppuntamentoManuale
+  };
+  if(!toggleMap[tipo]) return;
+  const centro=S.centri.find(c=>String(c.id)===String(appt.centroId||appt.centro_id));
+  if(!centro||!centro.email) return;
+  const medico=getFullName();
+  const d=new Date(appt.data+'T12:00:00');
+  const dataFmt=d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  let subject, body;
+  if(tipo==='cancellazione'){
+    const paz=`${appt.cognome||appt.cognome_paziente} ${appt.nome||appt.nome_paziente}`;
+    subject=`Cancellazione appuntamento — ${paz}`;
+    body=`Oggetto: ${subject}\n\nGentile Segreteria di ${centro.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${dataFmt}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||appt.tipo||'—'}\n\nL'appuntamento è stato cancellato dal paziente in data ${new Date().toLocaleDateString('it-IT')}.\nLo slot è ora nuovamente disponibile per altre prenotazioni.\n\nCordiali saluti,\n${S.settings.titolo||''} ${medico}`;
+  } else {
+    subject=`Nuova prenotazione — ${appt.cognome||appt.cognome_paziente} ${appt.nome||appt.nome_paziente}`;
+    body=buildMailText(appt);
+  }
+  console.log('[EMAIL PLACEHOLDER]',{to:centro.email, subject, body});
+  showToast('📧 Notifica centro pronta (email attiva allo Step 7)');
+}
+async function sendNotificaCentroAnonimo(appt){
+  if(!isOnline()) return;
+  try {
+    const {data:med}=await supabaseClient.from('medici').select('notifica_cancellazione').eq('id',appt.medico_id).maybeSingle();
+    if(!med?.notifica_cancellazione) return;
+    const {data:c}=await supabaseClient.from('centri').select('nome,email_segreteria').eq('id',appt.centro_id).maybeSingle();
+    if(!c?.email_segreteria) return;
+    const d=new Date(appt.data+'T12:00:00');
+    const paz=`${appt.cognome_paziente} ${appt.nome_paziente}`;
+    const subject=`Cancellazione appuntamento — ${paz}`;
+    const body=`Oggetto: ${subject}\n\nGentile Segreteria di ${c.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||'—'}\n\nL'appuntamento è stato cancellato dal paziente.\nLo slot è ora nuovamente disponibile per altre prenotazioni.`;
+    console.log('[EMAIL PLACEHOLDER]',{to:c.email_segreteria, subject, body});
+  } catch(e){ console.error('[MediDesk] sendNotificaCentroAnonimo:',e.message); }
+}
+
 function loadSettings(){
   const fld=(id,val)=>{ const el=document.getElementById(id); if(el) el.value=val||''; };
   fld('setting-titolo',    S.settings.titolo);
@@ -3723,6 +4059,11 @@ function loadSettings(){
   } else {
     fld('setting-apikey', localStorage.getItem('medidesk_apikey'));
   }
+  // Notifiche
+  const chk=(id,val)=>{ const el=document.getElementById(id); if(el) el.checked=!!val; };
+  chk('notif-nuova-prenotazione', S.settings.notifNuovaPrenotazione!==false);
+  chk('notif-cancellazione',      S.settings.notifCancellazione!==false);
+  chk('notif-appuntamento-manuale', !!S.settings.notifAppuntamentoManuale);
   updateBioCounter();
   renderSlugPreview();
   renderLingue();
@@ -3747,6 +4088,10 @@ async function saveSettings(){
   S.settings.instagram   = val('setting-instagram');
   S.settings.youtube     = val('setting-youtube');
   S.settings.facebook    = val('setting-facebook');
+  const chkVal=id=>{ const el=document.getElementById(id); return el?el.checked:false; };
+  S.settings.notifNuovaPrenotazione   = chkVal('notif-nuova-prenotazione');
+  S.settings.notifCancellazione       = chkVal('notif-cancellazione');
+  S.settings.notifAppuntamentoManuale = chkVal('notif-appuntamento-manuale');
   if(!ANTHROPIC_KEY_RUNTIME){
     const key = val('setting-apikey');
     if(key) localStorage.setItem('medidesk_apikey',key); else localStorage.removeItem('medidesk_apikey');
@@ -3777,7 +4122,10 @@ async function saveSettings(){
         linkedin:         S.settings.linkedin    || null,
         instagram:        S.settings.instagram   || null,
         youtube:          S.settings.youtube     || null,
-        facebook:         S.settings.facebook    || null
+        facebook:         S.settings.facebook    || null,
+        notifica_nuova_prenotazione:   S.settings.notifNuovaPrenotazione,
+        notifica_cancellazione:        S.settings.notifCancellazione,
+        notifica_appuntamento_manuale: S.settings.notifAppuntamentoManuale
       }).eq('user_id', user.id);
       if(error) throw error;
       showToast('Salvato ✓');
@@ -3978,7 +4326,8 @@ async function bkInit(){
       S.centri = (centriDB||[]).map(c=>({
         id: c.id, nome: c.nome, indirizzo: c.indirizzo||'', colore: c.colore||'#0D9488',
         attivo: true, email: c.email_segreteria||'',
-        turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:t.inizio, fine:t.fine, slot:t.durata_slot }))
+        turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:t.inizio, fine:t.fine, slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
+        giornateSingole: []
       }));
       const { data: tipiDB } = await supabaseClient
         .from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
@@ -4129,10 +4478,18 @@ function bkSelectSlot(ora){
   bkStep(4);
 }
 
+function generateCancellationToken(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let t='';
+  for(let i=0;i<8;i++){ if(i===4) t+='-'; t+=chars[Math.floor(Math.random()*chars.length)]; }
+  return t;
+}
+
 async function confirmBooking(){
   const nome=capitalizeName(document.getElementById('bk-nome').value.trim());
   const cognome=capitalizeName(document.getElementById('bk-cognome').value.trim());
   if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
+  const cancellationToken = generateCancellationToken();
   const appt={
     id:Date.now(), nome, cognome,
     tel:document.getElementById('bk-tel').value.trim(),
@@ -4141,37 +4498,39 @@ async function confirmBooking(){
     area:document.getElementById('bk-area').value.trim(),
     note:document.getElementById('bk-note').value.trim(),
     data:bk.dateStr, ora:bk.ora,
-    centroId:bk.centroId, source:'paziente', seen:false
+    centroId:bk.centroId, source:'paziente', seen:false,
+    cancellationToken, cancelled:false
   };
   if(isOnline() && bk.medicoId){
     try {
       const { data: inserted, error } = await supabaseClient.from('appuntamenti').insert({
-        medico_id:         bk.medicoId,
-        centro_id:         bk.centroId,
-        data:              bk.dateStr,
-        ora:               bk.ora,
-        nome_paziente:     nome,
-        cognome_paziente:  cognome,
-        telefono_paziente: appt.tel   || null,
-        email_paziente:    appt.email || null,
-        tipo_visita:       appt.tipo  || null,
-        area_tematica:     appt.area  || null,
-        note:              appt.note  || null,
-        source:            'paziente'
+        medico_id:          bk.medicoId,
+        centro_id:          bk.centroId,
+        data:               bk.dateStr,
+        ora:                bk.ora,
+        nome_paziente:      nome,
+        cognome_paziente:   cognome,
+        telefono_paziente:  appt.tel   || null,
+        email_paziente:     appt.email || null,
+        tipo_visita:        appt.tipo  || null,
+        area_tematica:      appt.area  || null,
+        note:               appt.note  || null,
+        source:             'paziente',
+        cancellation_token: cancellationToken
       }).select('id').single();
       if(error) throw error;
       appt.id = inserted.id;
     } catch(e){ console.error('[MediDesk] confirmBooking INSERT:', e.message); }
   }
+  _bkLastAppt = appt;
+  bk._centroData = S.centri.find(c=>String(c.id)===String(bk.centroId))||null;
   S.appuntamenti.push(appt);
-  // Aggiorna slotOccupati localmente così "Prenota un altro" blocca subito lo slot
   bk.slotOccupati = (bk.slotOccupati||[]);
   bk.slotOccupati.push({ centroId: bk.centroId, data: bk.dateStr, ora: bk.ora });
   save();
-  // aggiorna agenda medico in background (stessa tab)
   if(document.getElementById('view-app').style.display!=='none') renderAll();
   else { try{ renderDashboard(); updateStats(); renderPending(); renderAgenda(); }catch(e){} }
-  const centro=S.centri.find(c=>String(c.id)===String(bk.centroId));
+  const centro=bk._centroData;
   const d=new Date(bk.dateStr+'T12:00:00');
   const medicoDisplayName=document.getElementById('bk-doctor-name').textContent||getFullName();
   document.getElementById('bk-success-msg').innerHTML=
@@ -4179,11 +4538,133 @@ async function confirmBooking(){
     `📅 <strong>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${bk.ora}</strong><br>`+
     `🏥 ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
     `${appt.email?'Riceverai un riepilogo all\'email indicata.':''}`;
+  const tokenBox=document.getElementById('bk-token-box');
+  const tokenDisplay=document.getElementById('bk-token-display');
+  if(tokenBox&&tokenDisplay){ tokenBox.style.display='block'; tokenDisplay.textContent=cancellationToken; }
   bkStep(5);
+  await sendNotificaCentro('nuova_prenotazione', appt);
+}
+
+// ── CALENDARIO ADD (step 5) ──
+function _bkCalDates(){
+  if(!_bkLastAppt) return null;
+  const a=_bkLastAppt;
+  const [y,m,dd]=a.data.split('-'); const [hh,mm]=a.ora.split(':');
+  const endMin=parseInt(hh)*60+parseInt(mm)+30;
+  const endH=String(Math.floor(endMin/60)).padStart(2,'0');
+  const endM=String(endMin%60).padStart(2,'0');
+  return {y,m,dd,hh,mm,endH,endM};
+}
+function bkAddToGoogleCal(){
+  const dt=_bkCalDates(); if(!dt) return;
+  const c=bk._centroData;
+  const dtStart=`${dt.y}${dt.m}${dt.dd}T${dt.hh}${dt.mm}00`;
+  const dtEnd=`${dt.y}${dt.m}${dt.dd}T${dt.endH}${dt.endM}00`;
+  const title=encodeURIComponent('Visita medica');
+  const loc=encodeURIComponent(c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}`:'');
+  const det=encodeURIComponent('Prenotazione confermata con '+document.getElementById('bk-doctor-name').textContent);
+  window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dtStart}/${dtEnd}&details=${det}&location=${loc}`,'_blank');
+}
+function bkAddToIcal(){
+  const dt=_bkCalDates(); if(!dt) return;
+  const c=bk._centroData;
+  const dtStart=`${dt.y}${dt.m}${dt.dd}T${dt.hh}${dt.mm}00`;
+  const dtEnd=`${dt.y}${dt.m}${dt.dd}T${dt.endH}${dt.endM}00`;
+  const loc=c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}` : '';
+  const ics=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MediDesk//IT\r\nBEGIN:VEVENT\r\nUID:${Date.now()}@medidesk\r\nDTSTART:${dtStart}\r\nDTEND:${dtEnd}\r\nSUMMARY:Visita medica\r\nLOCATION:${loc}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+  const blob=new Blob([ics],{type:'text/calendar'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a'); link.href=url; link.download='visita_medica.ics'; link.click(); URL.revokeObjectURL(url);
+}
+function bkAddToOutlook(){
+  const dt=_bkCalDates(); if(!dt) return;
+  const c=bk._centroData;
+  const dtStart=`${dt.y}-${dt.m}-${dt.dd}T${dt.hh}:${dt.mm}:00`;
+  const dtEnd=`${dt.y}-${dt.m}-${dt.dd}T${dt.endH}:${dt.endM}:00`;
+  const subject=encodeURIComponent('Visita medica');
+  const loc=encodeURIComponent(c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}`:'');
+  const body=encodeURIComponent('Prenotazione confermata con '+document.getElementById('bk-doctor-name').textContent);
+  window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${subject}&startdt=${dtStart}&enddt=${dtEnd}&body=${body}&location=${loc}`,'_blank');
+}
+
+// ── PAGINA CANCELLAZIONE ──
+function showCancelView(){
+  document.getElementById('view-app').style.display='none';
+  document.getElementById('view-booking').style.display='none';
+  document.getElementById('view-auth').style.display='none';
+  document.getElementById('view-cancel').style.display='flex';
+  loadCancelPage();
+}
+async function loadCancelPage(){
+  const params=new URLSearchParams(location.search);
+  const token=params.get('cancel');
+  const content=document.getElementById('cancel-content');
+  const loading=document.getElementById('cancel-loading');
+  if(!token){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="font-size:56px;margin-bottom:16px">❌</div><h2>Codice non valido</h2><p>Il link di cancellazione non è corretto.</p>';
+    return;
+  }
+  if(!isOnline()){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="font-size:56px;margin-bottom:16px">📵</div><h2>Nessuna connessione</h2><p>Impossibile verificare la cancellazione senza connessione.</p>';
+    return;
+  }
+  try {
+    const { data: appt, error } = await supabaseClient
+      .from('appuntamenti')
+      .select('id,medico_id,centro_id,nome_paziente,cognome_paziente,data,ora,tipo_visita,cancelled')
+      .eq('cancellation_token', token)
+      .maybeSingle();
+    loading.style.display='none'; content.style.display='block';
+    if(error||!appt){
+      content.innerHTML='<div style="font-size:56px;margin-bottom:16px">❌</div><h2>Codice non valido</h2><p>Non è stato trovato nessun appuntamento con questo codice.</p>'; return;
+    }
+    if(appt.cancelled){
+      content.innerHTML='<div style="font-size:56px;margin-bottom:16px">✅</div><h2>Già cancellato</h2><p>Questo appuntamento risulta già cancellato.</p>'; return;
+    }
+    const apptDate=new Date(appt.data+'T'+appt.ora);
+    const diffH=(apptDate-new Date())/3600000;
+    if(diffH<24){
+      content.innerHTML='<div style="font-size:56px;margin-bottom:16px">⏰</div><h2>Termine scaduto</h2><p>Non è più possibile cancellare questo appuntamento online.<br>Contatta direttamente il centro.</p>'; return;
+    }
+    const d=new Date(appt.data+'T12:00:00');
+    window._cancelApptData=appt;
+    content.innerHTML=`
+      <div style="font-size:56px;margin-bottom:16px">📅</div>
+      <h2>Cancellazione appuntamento</h2>
+      <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin:16px 0;text-align:left;font-size:13px;color:var(--ink2);line-height:1.8">
+        <strong>${appt.cognome_paziente} ${appt.nome_paziente}</strong><br>
+        ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${appt.ora}<br>
+        ${appt.tipo_visita||'Visita'}
+      </div>
+      <p>Vuoi cancellare questo appuntamento?</p>
+      <button class="btn btn-warm" style="width:100%;padding:13px;margin-top:8px;font-size:15px" onclick="cancelBookingByToken('${appt.id}')">Conferma cancellazione</button>
+      <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="history.back()">Annulla</button>`;
+  } catch(e){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="font-size:56px;margin-bottom:16px">❌</div><h2>Errore</h2><p>Si è verificato un errore. Riprova più tardi.</p>';
+    console.error('[MediDesk] loadCancelPage:', e.message);
+  }
+}
+async function cancelBookingByToken(apptId){
+  try {
+    const { error }=await supabaseClient.from('appuntamenti')
+      .update({ cancelled:true, cancelled_at:new Date().toISOString() }).eq('id',apptId);
+    if(error) throw error;
+    const local=S.appuntamenti.find(a=>String(a.id)===String(apptId));
+    if(local){ local.cancelled=true; local.cancelledAt=new Date().toISOString(); save(); }
+    document.getElementById('cancel-content').innerHTML=
+      '<div style="font-size:56px;margin-bottom:16px">✅</div><h2>Cancellato</h2><p>Il tuo appuntamento è stato cancellato.<br>Lo slot è nuovamente disponibile per altri pazienti.</p>';
+    if(window._cancelApptData) await sendNotificaCentroAnonimo(window._cancelApptData);
+  } catch(e){
+    showToast('Errore nella cancellazione: '+e.message);
+    console.error('[MediDesk] cancelBookingByToken:', e.message);
+  }
 }
 
 function bkReset(){
-  bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),medicoId:null,slotOccupati:[]};
+  bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),medicoId:null,slotOccupati:[],_centroData:null};
   ['bk-nome','bk-cognome','bk-tel','bk-email','bk-tipo','bk-note'].forEach(id=>document.getElementById(id).value='');
   bkInit();
 }
