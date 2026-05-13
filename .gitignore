@@ -19,3 +19,5 @@ config.js
 
 # Logs
 *.log
+
+.vercel
