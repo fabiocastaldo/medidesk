@@ -15,6 +15,7 @@ desktop.ini
 
 # Supabase credentials (non committare mai config.js!)
 config.js
+!api/config.js
 
 # Logs
 *.log
