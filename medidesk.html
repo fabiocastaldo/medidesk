@@ -2933,31 +2933,40 @@ function downloadVisitaPDF(pazId, visitaId){
   } catch(e){ console.error('downloadVisitaPDF', e); showToast('Errore generazione PDF: '+e.message); }
 }
 
+function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function _buildVisitaHTML(paz, v, i){
   var pid=String(paz.id), vid=String(v.id);
   var h='<div class="visita-item">';
+  // ── Header (sempre visibile, click per espandere)
   h+='<div class="visita-header" onclick="toggleV(\'vv-'+pid+'-'+i+'\')">';
-  h+='<div><div class="visita-date">📋 '+(v.data||'N/A')+'</div>';
-  h+='<div style="font-size:12px;color:var(--ink3)">'+(v.luogo||'')+'</div></div>';
+  h+='<div>';
+  h+='<div class="visita-date">📋 '+_esc(v.data||'N/A')+'</div>';
+  h+='<div style="font-size:12px;color:var(--ink3)">'+_esc(v.luogo||'')+'</div>';
+  h+='</div>';
   h+='<div style="display:flex;align-items:center;gap:6px">';
   h+='<button class="btn btn-sm" style="color:var(--warm);background:none;border:none;padding:2px 6px;cursor:pointer"';
   h+=' onclick="event.stopPropagation();deleteVisita(\''+pid+'\',\''+vid+'\')" title="Elimina visita">🗑</button>';
   h+='<span style="color:var(--ink3)">▾</span>';
-  h+='</div></div>';
+  h+='</div>';
+  h+='</div>';
+  // ── Body collassabile: solo testo clinico e foto
   h+='<div class="visita-body" id="vv-'+pid+'-'+i+'" style="display:none">';
-  h+='<div style="white-space:pre-wrap">'+(v.clinica||'—')+'</div>';
+  h+=_esc(v.clinica||'—');
   if(v.foto_url){
     var n=getFotoPaths(v.foto_url).length;
-    h+='<div style="margin-top:10px"><button class="btn btn-sm btn-secondary"';
-    h+=' onclick="openFotoRefertoByVisita(\''+pid+'\',\''+vid+'\')">📷 ';
+    h+='<div style="margin-top:10px;white-space:normal">';
+    h+='<button class="btn btn-sm btn-secondary" onclick="openFotoRefertoByVisita(\''+pid+'\',\''+vid+'\')">📷 ';
     h+=(n>1?'Vedi '+n+' foto':'Vedi foto referto')+'</button></div>';
   }
-  h+='<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;white-space:normal">';
+  h+='</div>';
+  // ── Pulsanti condivisione: SEMPRE VISIBILI sotto ogni visita
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">';
   h+='<button class="btn btn-sm btn-secondary" onclick="shareVisita(\''+pid+'\',\''+vid+'\')">📤 Condividi</button>';
   h+='<button class="btn btn-sm btn-secondary" onclick="emailVisita(\''+pid+'\',\''+vid+'\')">📧 Email</button>';
   h+='<button class="btn btn-sm btn-secondary" onclick="downloadVisitaPDF(\''+pid+'\',\''+vid+'\')">⬇️ PDF</button>';
   h+='</div>';
-  h+='</div></div>';
+  h+='</div>';
   return h;
 }
 
