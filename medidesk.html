@@ -2867,72 +2867,6 @@ async function markSeen(id){
   renderPending();
 }
 
-// ── CONDIVISIONE VISITA (PDF, EMAIL, SHARE) ──
-function shareVisita(pazId, visitaId){
-  const paz=S.pazienti.find(p=>String(p.id)===String(pazId));
-  const v=(paz?.visite||[]).find(v=>String(v.id)===String(visitaId));
-  if(!v) return;
-  const text=v.clinica||'(nessun contenuto)';
-  const title='Visita '+(v.data||'')+' — '+paz.nome+' '+paz.cognome;
-  if(navigator.share){
-    navigator.share({title, text}).catch(()=>{});
-  } else {
-    navigator.clipboard.writeText(text).then(()=>showToast('Contenuto copiato ✓')).catch(()=>showToast('Copia non supportata'));
-  }
-}
-
-function emailVisita(pazId, visitaId){
-  const paz=S.pazienti.find(p=>String(p.id)===String(pazId));
-  const v=(paz?.visite||[]).find(v=>String(v.id)===String(visitaId));
-  if(!v) return;
-  const subject=encodeURIComponent('Visita del '+(v.data||'')+' — '+paz.cognome+' '+paz.nome);
-  const body=encodeURIComponent(v.clinica||'');
-  window.open('mailto:?subject='+subject+'&body='+body,'_blank');
-}
-
-function downloadVisitaPDF(pazId, visitaId){
-  const paz=S.pazienti.find(p=>String(p.id)===String(pazId));
-  const v=(paz?.visite||[]).find(v=>String(v.id)===String(visitaId));
-  if(!v){ showToast('Visita non trovata'); return; }
-  try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({unit:'mm',format:'a4'});
-    const m=S.settings;
-    const nomeDoc=(m.titolo||'')+' '+(m.nomeProf||'')+' '+(m.cognomeProf||'');
-    const spec=m.spec||m.specializzazione||'';
-    const margin=20, pageW=210, maxW=pageW-margin*2;
-    let y=20;
-    doc.setFont('helvetica','bold'); doc.setFontSize(14);
-    doc.text(nomeDoc.trim(), margin, y); y+=7;
-    if(spec){ doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(spec, margin, y); y+=5; }
-    doc.setDrawColor(180,180,180); doc.line(margin, y, pageW-margin, y); y+=8;
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('Paziente', margin, y); y+=6;
-    doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.text('Nome: '+paz.nome+' '+paz.cognome, margin, y); y+=5;
-    if(paz.nascita){ doc.text('Data di nascita: '+paz.nascita, margin, y); y+=5; }
-    if(paz.cf){ doc.text('Codice Fiscale: '+paz.cf, margin, y); y+=5; }
-    y+=3;
-    doc.setDrawColor(220,220,220); doc.line(margin, y, pageW-margin, y); y+=8;
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('Visita del '+(v.data||'N/D'), margin, y); y+=6;
-    if(v.luogo){ doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text('Centro: '+v.luogo, margin, y); y+=5; }
-    y+=3;
-    doc.setFont('helvetica','bold'); doc.setFontSize(11);
-    doc.text('Contenuto clinico', margin, y); y+=7;
-    doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    const lines=doc.splitTextToSize(v.clinica||'—', maxW);
-    lines.forEach(line=>{ if(y>275){doc.addPage();y=20;} doc.text(line,margin,y); y+=5; });
-    y+=5;
-    doc.setDrawColor(220,220,220); doc.line(margin, y, pageW-margin, y); y+=6;
-    doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
-    const oggi=new Date().toLocaleDateString('it-IT');
-    doc.text('Generato da MediDesk il '+oggi, margin, y);
-    const fn=('Visita_'+paz.cognome+'_'+paz.nome+'_'+(v.data||'nd')+'.pdf').replace(/\s/g,'_');
-    doc.save(fn);
-  } catch(e){ console.error('downloadVisitaPDF', e); showToast('Errore generazione PDF: '+e.message); }
-}
-
 function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function _buildVisitaHTML(paz, v, i){
@@ -2959,12 +2893,6 @@ function _buildVisitaHTML(paz, v, i){
     h+='<button class="btn btn-sm btn-secondary" onclick="openFotoRefertoByVisita(\''+pid+'\',\''+vid+'\')">📷 ';
     h+=(n>1?'Vedi '+n+' foto':'Vedi foto referto')+'</button></div>';
   }
-  h+='</div>';
-  // ── Pulsanti condivisione: SEMPRE VISIBILI sotto ogni visita
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border)">';
-  h+='<button class="btn btn-sm btn-secondary" onclick="shareVisita(\''+pid+'\',\''+vid+'\')">📤 Condividi</button>';
-  h+='<button class="btn btn-sm btn-secondary" onclick="emailVisita(\''+pid+'\',\''+vid+'\')">📧 Email</button>';
-  h+='<button class="btn btn-sm btn-secondary" onclick="downloadVisitaPDF(\''+pid+'\',\''+vid+'\')">⬇️ PDF</button>';
   h+='</div>';
   h+='</div>';
   return h;
@@ -3082,6 +3010,56 @@ function parseVisitDate(s){
   return new Date(s+'T12:00:00');
 }
 
+function shareStoria(pazId){
+  const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return;
+  const testo=(document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo')?.textContent)||'';
+  const title='Storia clinica — '+paz.cognome+' '+paz.nome;
+  if(navigator.share){ navigator.share({title,text:testo}).catch(()=>{}); }
+  else { navigator.clipboard.writeText(testo).then(()=>showToast('Copiato ✓')).catch(()=>showToast('Copia non supportata')); }
+}
+
+function emailStoria(pazId){
+  const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return;
+  const testo=(document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo')?.textContent)||'';
+  const subject=encodeURIComponent('Storia clinica — '+paz.cognome+' '+paz.nome);
+  window.open('mailto:?subject='+subject+'&body='+encodeURIComponent(testo),'_blank');
+}
+
+function downloadStoriaPDF(pazId){
+  const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return;
+  const testo=(document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo')?.textContent)||'';
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc=new jsPDF({unit:'mm',format:'a4'});
+    const m=S.settings;
+    const nomeDoc=((m.titolo||'')+' '+(m.nomeProf||'')+' '+(m.cognomeProf||'')).trim();
+    const spec=m.spec||m.specializzazione||'';
+    const margin=20, pageW=210, maxW=pageW-margin*2;
+    let y=20;
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text(nomeDoc, margin, y); y+=7;
+    if(spec){ doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(spec,margin,y); y+=5; }
+    doc.setDrawColor(180,180,180); doc.line(margin,y,pageW-margin,y); y+=8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Paziente', margin, y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text('Nome: '+paz.nome+' '+paz.cognome, margin, y); y+=5;
+    if(paz.nascita){ doc.text('Data di nascita: '+paz.nascita, margin, y); y+=5; }
+    if(paz.cf){ doc.text('Codice Fiscale: '+paz.cf, margin, y); y+=5; }
+    y+=3;
+    doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Storia clinica sintetizzata', margin, y); y+=7;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.splitTextToSize(testo||'—', maxW).forEach(line=>{ if(y>275){doc.addPage();y=20;} doc.text(line,margin,y); y+=5; });
+    y+=5;
+    doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=6;
+    doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text('Generato da MediDesk il '+new Date().toLocaleDateString('it-IT'), margin, y);
+    doc.save(('StoriaClinica_'+paz.cognome+'_'+paz.nome+'.pdf').replace(/\s/g,'_'));
+  } catch(e){ showToast('Errore PDF: '+e.message); }
+}
+
 async function sintetizzaStoria(pazId){
   const p=S.pazienti.find(x=>String(x.id)===String(pazId)); if(!p) return;
   const container=document.getElementById('storia-container-'+pazId); if(!container) return;
@@ -3127,7 +3105,7 @@ Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?.message?' — '+e.error.message:''));}
     const data=await res.json();
     const testo=data.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${testo}</div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${testo}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')">📤 Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')">📧 Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')">⬇️ PDF</button></div></div>`;
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px">⚠ ${err.message}</div>`;
   } finally{
