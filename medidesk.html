@@ -2,7 +2,8 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script>(function(){var s=localStorage.getItem('medidesk_theme'),d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');})()</script>
 <link rel="icon" href="data:,">
 <title>MediDesk</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
@@ -13,26 +14,35 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 </script>
 <style>
 :root {
-  --bg: #F5F2ED; --surface: #FFFEFB; --surface2: #F0EDE8;
-  --ink: #1A1814; --ink2: #6B6560; --ink3: #A09890;
-  --accent: #2D5F4E; --accent2: #4A8C76; --accent-light: #E8F2EE;
-  --warm: #C4622D; --warm-light: #FAF0EA;
-  --border: #E2DDD8; --shadow: 0 2px 16px rgba(26,24,20,.08); --shadow-lg: 0 8px 40px rgba(26,24,20,.14);
+  --bg: #F0FAFA; --surface: #FFFFFF; --surface2: #E6F7F7;
+  --ink: #0F2A2A; --ink2: #2D5A5A; --ink3: #6B9999;
+  --accent: #0D9488; --accent2: #0F766E; --accent-light: #CCFBF1;
+  --warm: #DC6B3A; --warm-light: #FEF3EE;
+  --border: #B2DFDF; --shadow: 0 2px 16px rgba(13,148,136,.08); --shadow-lg: 0 8px 40px rgba(13,148,136,.15);
   --r: 12px; --r-sm: 8px;
+  --sidebar-bg: #0D9488; --header-bg: #0D9488; --nav-bg: #FFFFFF;
 }
-*{box-sizing:border-box;margin:0;padding:0}
+html.dark {
+  --bg: #0A1A1A; --surface: #0F2424; --surface2: #142E2E;
+  --ink: #E0F7F5; --ink2: #89CCCC; --ink3: #4A8888;
+  --accent: #14B8A6; --accent2: #0D9488; --accent-light: rgba(13,148,136,.2);
+  --warm: #F87171; --warm-light: rgba(248,113,113,.15);
+  --border: #1E3A3A; --shadow: 0 2px 16px rgba(0,0,0,.4); --shadow-lg: 0 8px 40px rgba(0,0,0,.5);
+  --sidebar-bg: #0A1A1A; --header-bg: #0A1A1A; --nav-bg: #0F2424;
+}
+*{box-sizing:border-box;margin:0;padding:0;transition:background-color .2s ease,color .2s ease,border-color .2s ease}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px}
 
 /* ── APP SHELL ── */
 .app{display:flex;min-height:100vh}
-.sidebar{width:220px;background:var(--ink);color:#fff;display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .25s}
+.sidebar{width:220px;background:var(--sidebar-bg);color:#fff;display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .25s,background-color .2s ease}
 .sidebar-logo{padding:0 20px 28px;border-bottom:1px solid rgba(255,255,255,.08)}
 .sidebar-logo h1{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;letter-spacing:-.5px}
 .sidebar-logo p{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
 .nav{padding:16px 0;flex:1}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .15s}
 .nav-item:hover{color:#fff;background:rgba(255,255,255,.06)}
-.nav-item.active{color:#fff;border-left-color:#4A8C76;background:rgba(74,140,118,.12)}
+.nav-item.active{color:#fff;border-left-color:rgba(255,255,255,.9);background:rgba(255,255,255,.15)}
 .nav-item .icon{font-size:16px;width:20px;text-align:center}
 .sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
 .doctor-name strong{display:block;color:#fff;font-size:13px;margin-bottom:2px}
@@ -167,7 +177,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 /* ── VIEW TOGGLE ── */
 .view-toggle{display:inline-flex;background:var(--surface2);border-radius:var(--r-sm);padding:3px;border:1px solid var(--border)}
 .vt-btn{padding:6px 14px;background:none;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink2);cursor:pointer;border-radius:6px;transition:all .15s}
-.vt-btn.active{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.vt-btn.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.06)}
 
 /* ── MONTH CALENDAR ── */
 .month-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px;box-shadow:var(--shadow)}
@@ -254,7 +264,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paziente-pick .ora{font-size:12px;color:var(--accent);font-weight:600}
 
 /* ── PRENOTAZIONE PUBBLICA ── */
-#view-booking{display:none;min-height:100vh;background:linear-gradient(160deg,#151311 0%,#1e2e28 60%,#243328 100%)}
+#view-booking{display:none;min-height:100vh;background:linear-gradient(160deg,#0F766E 0%,#0D9488 50%,#14B8A6 100%)}
+html.dark #view-booking{background:linear-gradient(160deg,#051212 0%,#0A1A1A 60%,#0D2020 100%)}
 .booking-wrap{max-width:580px;margin:0 auto;padding:48px 20px 40px}
 .booking-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.35)}
 /* hero */
@@ -274,7 +285,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .bk-centro-nome{font-weight:600;color:#fff;font-size:14px;margin-bottom:2px}
 .bk-centro-addr{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:8px}
 .bk-centro-giorni{display:flex;flex-wrap:wrap;gap:4px}
-.bk-giorno{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(74,140,118,.45);color:#a8d8c8}
+.bk-giorno{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(13,148,136,.45);color:#ccfbf1}
 /* booking card (no colored header) */
 .booking-card-title{padding:22px 28px 0;font-family:'DM Serif Display',serif;font-size:18px;color:var(--ink)}
 /* footer */
@@ -371,12 +382,12 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
   .main{margin-left:0;padding:0 16px 90px 16px}
 
   /* Mobile header con titolo app */
-  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--ink);color:#fff;margin:0 -16px 20px -16px;position:sticky;top:0;z-index:50}
+  .mobile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--header-bg);color:#fff;margin:0 -16px 20px -16px;position:sticky;top:0;z-index:50;transition:background-color .2s ease}
   .mobile-header-text h1{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;line-height:1}
   .mobile-header-text span{font-size:11px;color:rgba(255,255,255,.5);display:block;margin-top:2px}
 
   /* Bottom navigation bar */
-  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.06);z-index:100;padding:6px 0 calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:stretch}
+  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--nav-bg);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,.06);z-index:100;padding:6px 0 calc(6px + env(safe-area-inset-bottom));justify-content:space-around;align-items:stretch}
   .bottom-nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 4px;cursor:pointer;color:var(--ink3);transition:color .15s;background:none;border:none;font-family:'DM Sans',sans-serif}
   .bottom-nav-item.active{color:var(--accent)}
   .bottom-nav-item .bn-icon{font-size:22px;line-height:1}
@@ -415,7 +426,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 }
 
 /* ── AUTH SCREEN ── */
-#view-auth{display:none;min-height:100vh;background:linear-gradient(135deg,#1a2e26 0%,#2D5F4E 60%,#3d7a63 100%);align-items:center;justify-content:center;padding:24px;font-family:'DM Sans',sans-serif}
+#view-auth{display:none;min-height:100vh;background:linear-gradient(135deg,#0D9488 0%,#0F766E 60%,#134E48 100%);align-items:center;justify-content:center;padding:24px;font-family:'DM Sans',sans-serif;position:relative}
+html.dark #view-auth{background:linear-gradient(135deg,#051212 0%,#0A1A1A 60%,#0D2020 100%)}
 .auth-card{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.25)}
 .auth-logo{text-align:center;margin-bottom:28px}
 .auth-logo h1{font-family:'DM Serif Display',serif;font-size:32px;color:var(--ink);margin:0 0 4px}
@@ -436,20 +448,51 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .auth-link:hover{color:var(--accent)}
 .auth-legal{font-size:11px;color:var(--ink3);text-align:center;margin-top:14px;line-height:1.5}
 .auth-msg{font-size:13px;text-align:center;padding:10px 14px;border-radius:8px;margin-bottom:16px;display:none}
-.auth-msg.success{background:#e8f2ee;color:#2D5F4E;display:block}
+.auth-msg.success{background:var(--accent-light);color:var(--accent2);display:block}
 .auth-msg.error{background:#fdecea;color:#c0392b;display:block}
-.sidebar-logout{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--ink3);font-size:13px;font-weight:500;background:none;border:none;font-family:'DM Sans',sans-serif;width:100%;margin-top:8px;transition:color .15s}
-.sidebar-logout:hover{color:var(--warm);background:rgba(0,0,0,.04)}
+.sidebar-logout{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;background:none;border:none;font-family:'DM Sans',sans-serif;width:100%;margin-top:8px;transition:color .15s}
+.sidebar-logout:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.1)}
 .mobile-logout{background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1}
 @media(max-width:768px){
   .auth-card{padding:28px 20px}
 }
+
+/* ── THEME TOGGLE ── */
+.icon-dark{display:none}
+html.dark .icon-light{display:none}
+html.dark .icon-dark{display:inline}
+.btn-theme-toggle{background:rgba(255,255,255,.1);border:none;border-radius:var(--r-sm);padding:7px 12px;cursor:pointer;font-size:14px;line-height:1;color:rgba(255,255,255,.7);width:100%;text-align:left;margin-top:8px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px}
+.btn-theme-toggle:hover{background:rgba(255,255,255,.2);color:#fff}
+.mobile-theme-btn{background:rgba(255,255,255,.12);border:none;border-radius:var(--r-sm);padding:7px 10px;cursor:pointer;font-size:16px;line-height:1;color:rgba(255,255,255,.8)}
+.mobile-theme-btn:hover{background:rgba(255,255,255,.22)}
+.auth-theme-btn{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:var(--r-sm);padding:8px 12px;cursor:pointer;font-size:16px;line-height:1;color:#fff}
+.auth-theme-btn:hover{background:rgba(255,255,255,.28)}
+
+/* ── DARK MODE: auth card ── */
+html.dark .auth-card{background:var(--surface);color:var(--ink)}
+html.dark .auth-logo h1{color:var(--ink)}
+html.dark .auth-tab.active{background:var(--surface2);color:var(--ink)}
+html.dark .auth-tabs{background:var(--bg)}
+html.dark .auth-field input{background:var(--surface2);border-color:var(--border);color:var(--ink)}
+html.dark .auth-btn{background:var(--accent)}
+html.dark .auth-btn:hover{background:var(--accent2)}
+
+/* ── DARK MODE: booking card ── */
+html.dark .booking-card{background:var(--surface)}
+html.dark .booking-card-title{color:var(--ink)}
+html.dark .centro-btn{background:var(--surface2);color:var(--ink);border-color:var(--border)}
+html.dark .slot-btn{background:var(--surface2);color:var(--accent)}
+
+/* ── MOBILE: zoom block + font-size ── */
+html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
+@media(max-width:768px){input,select,textarea{font-size:16px!important}}
 </style>
 </head>
 <body>
 
 <!-- ══════════════ AUTH ══════════════ -->
 <div id="view-auth">
+  <button class="auth-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
   <div class="auth-card">
     <div class="auth-logo">
       <h1>MediDesk</h1>
@@ -523,6 +566,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
     <div class="sidebar-bottom">
       <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
       <button class="sidebar-logout" id="sidebar-logout-btn" onclick="signOut()">🚪 Esci dall'account</button>
+      <button class="btn-theme-toggle" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span><span class="icon-light"> Tema scuro</span><span class="icon-dark"> Tema chiaro</span></button>
     </div>
   </aside>
 
@@ -534,7 +578,10 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
         <h1>MediDesk</h1>
         <span id="mobile-doctor">Dr. Mario Rossi</span>
       </div>
-      <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" title="Esci">🚪</button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="mobile-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
+        <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" title="Esci">🚪</button>
+      </div>
     </header>
 
     <!-- DASHBOARD -->
@@ -1005,7 +1052,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
       <div class="form-group"><label class="form-label">Nome del centro</label><input class="form-input" id="centro-nome" placeholder="Poliambulatorio Milano Centro"></div>
       <div class="form-group"><label class="form-label">Email segreteria</label><input class="form-input" id="centro-email" type="email" placeholder="segreteria@centro.it"></div>
       <div class="form-group"><label class="form-label">Indirizzo</label><input class="form-input" id="centro-indirizzo" placeholder="Via Roma 1, Milano"></div>
-      <div class="form-group"><label class="form-label">Colore</label><input type="color" id="centro-colore" value="#2D5F4E" style="height:36px;width:60px;border:none;cursor:pointer;border-radius:6px"></div>
+      <div class="form-group"><label class="form-label">Colore</label><input type="color" id="centro-colore" value="#0D9488" style="height:36px;width:60px;border:none;cursor:pointer;border-radius:6px"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-centro')">Annulla</button>
@@ -1457,7 +1504,7 @@ async function loadCentriFromDB(user){
       nome:      c.nome,
       email:     c.email_segreteria || '',
       indirizzo: c.indirizzo        || '',
-      colore:    c.colore           || '#2D5F4E',
+      colore:    c.colore           || '#0D9488',
       attivo:    c.attivo !== false,
       turni:     (c.turni || []).map(t => ({
         id:     t.id,
@@ -3646,6 +3693,11 @@ function buildSocialRow(st){
   return links.join('');
 }
 
+function toggleTheme(){
+  const dark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('medidesk_theme', dark ? 'dark' : 'light');
+}
+
 function loadSettings(){
   const fld=(id,val)=>{ const el=document.getElementById(id); if(el) el.value=val||''; };
   fld('setting-titolo',    S.settings.titolo);
@@ -3924,7 +3976,7 @@ async function bkInit(){
       const { data: centriDB } = await supabaseClient
         .from('centri').select('*, turni(*)').eq('medico_id', m.id).eq('attivo', true);
       S.centri = (centriDB||[]).map(c=>({
-        id: c.id, nome: c.nome, indirizzo: c.indirizzo||'', colore: c.colore||'#2D5F4E',
+        id: c.id, nome: c.nome, indirizzo: c.indirizzo||'', colore: c.colore||'#0D9488',
         attivo: true, email: c.email_segreteria||'',
         turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:t.inizio, fine:t.fine, slot:t.durata_slot }))
       }));
