@@ -99,10 +99,11 @@
 
 **Condivisione sintesi clinica:**
 - [x] jsPDF incluso da CDN nel `<head>`
-- [x] Pulsanti 📤 Condividi / 📧 Email / ⬇️ PDF in ogni visita espansa (sempre visibili)
-- [x] `shareVisita()`: Web Share API con fallback clipboard
-- [x] `emailVisita()`: apre `mailto:` con oggetto e corpo precompilati
-- [x] `downloadVisitaPDF()`: PDF A4 con intestazione medico, dati paziente, contenuto clinico, footer
+- [x] Pulsanti 📤 Condividi / 📧 Email / ⬇️ PDF in fondo alla **storia clinica sintetizzata** (non sui singoli referti)
+- [x] `shareStoria()`: Web Share API con fallback clipboard
+- [x] `emailStoria()`: apre `mailto:` con oggetto e corpo precompilati
+- [x] `downloadStoriaPDF()`: PDF A4 con intestazione medico, dati paziente, storia AI, footer
+- [x] `_esc()`: HTML-escape del contenuto clinico prima dell'inserimento via innerHTML
 
 **Bug fix centri:**
 - [x] Campo `centroNome` in ogni appuntamento come fallback se il centro viene eliminato
