@@ -80,6 +80,39 @@
 - [x] Modal di conferma prima di eliminare un turno (con dettagli giorno/orario e avviso slot prenotati)
 - [x] Fix `deleteCentro`: FK `appuntamenti.centro_id` cambiato da `NOT NULL / NO ACTION` a nullable `ON DELETE SET NULL` — eliminare un centro conserva tutti gli appuntamenti e fascicoli
 
+### Migliorie 2026-05-13 ✅
+
+**Festività e ferie:**
+- [x] `isHoliday(dateStr)` con algoritmo di Meeus per Pasqua/Pasquetta + 10 festività fisse italiane
+- [x] Calendario mensile: sfondo warm per festività, punto arancione, nome festività, icona 🏖 per chiusure, ⚠️ se ci sono appuntamenti in festività, opacità 0.5 per centri disattivati nella legenda
+- [x] Calendario settimanale: day-tab con nome festività/chiusura in piccolo sotto la data
+- [x] Avviso modal dopo `saveTurno()` se il turno ricorrente cade su festività nei prossimi 90 giorni → opzione "Escludi festività" (aggiunge chiusure puntuali)
+- [x] Vista **🏖 Ferie** (3° tab agenda): CRUD periodi di chiusura con etichetta, range date, selezione centri
+- [x] `isChiusura()` integrata in `getSlots()`: gli slot non vengono generati nei giorni di chiusura
+- [x] Bozza mail automatica per ogni centro coinvolto dopo salvataggio chiusura
+- [x] Tabella Supabase `chiusure` con RLS + `loadChiusureFromDB()` (eseguito `add-chiusure-table.sql`)
+
+**Pazienti per centro:**
+- [x] `renderPazienti()` raggruppa per centro con header colorato collassabile
+- [x] Un paziente appartiene a un centro se ha visite con `luogo = nome centro` o appuntamenti con `centroId`
+- [x] Gruppo "Senza centro" in fondo; ricerca attiva → lista piatta come prima
+
+**Condivisione sintesi clinica:**
+- [x] jsPDF incluso da CDN nel `<head>`
+- [x] Pulsanti 📤 Condividi / 📧 Email / ⬇️ PDF in ogni visita espansa (sempre visibili)
+- [x] `shareVisita()`: Web Share API con fallback clipboard
+- [x] `emailVisita()`: apre `mailto:` con oggetto e corpo precompilati
+- [x] `downloadVisitaPDF()`: PDF A4 con intestazione medico, dati paziente, contenuto clinico, footer
+
+**Bug fix centri:**
+- [x] Campo `centroNome` in ogni appuntamento come fallback se il centro viene eliminato
+- [x] `saveCentro()` aggiorna il calendario mensile se è la vista attiva (bug B)
+- [x] Legenda mese include centri disattivati (opacity 0.5) e centri eliminati con nome salvato
+
+**Ordine tipi visita:**
+- [x] `sortTipiVisita()`: "Prima visita" sempre primo, "Controllo" sempre secondo, resto alfabetico
+- [x] Applicato in `load()`, `loadTipiVisitaFromDB()`, `populateTipiVisitaSelects()`, `addTipoVisita()`
+
 ### Step 4.8 — Pulizia e hardening
 - [ ] Rimuovere `save()` / `load()` da localStorage dove non più necessario (o tenere come cache offline)
 - [ ] Gestire conflitti di sync (es. appuntamento creato offline e poi sincronizzato)
@@ -130,4 +163,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-13 — UX: calendario mensile, capitalizzazione, conferma turno, fix deleteCentro*
+*Ultimo aggiornamento: 2026-05-13 — Migliorie: festività+ferie, pazienti per centro, condivisione PDF/email/share, fix centri eliminati, ordine tipi visita*
