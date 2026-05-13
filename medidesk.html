@@ -3011,8 +3011,11 @@ function renderMonthView(){
     ? 'Tieni premuto per aprire la settimana'
     : 'Doppio click per aprire la settimana';
 
-  // Legenda con i centri usati nel mese (inclusi disattivati con opacità ridotta)
+  // Legenda: centri attivi con turni + centri con appuntamenti nel mese
   const allCentriInMonth = new Set();
+  // Tutti i centri attivi con turni configurati (sempre visibili nella legenda)
+  S.centri.filter(c=>c.attivo!==false && c.turni && c.turni.length).forEach(c=>allCentriInMonth.add(String(c.id)));
+  // Centri con appuntamenti nel mese corrente
   S.appuntamenti.forEach(a=>{
     const date=new Date(a.data+'T12:00:00');
     if(date.getFullYear()===y && date.getMonth()===m) allCentriInMonth.add(String(a.centroId));
