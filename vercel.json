@@ -1,6 +1,12 @@
 {
-  "routes": [
-    { "src": "^/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)",      "dest": "/medidesk.html" }
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/medidesk.html"
+    }
   ]
 }
