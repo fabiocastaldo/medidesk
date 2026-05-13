@@ -730,6 +730,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
           <!-- API Key -->
           <div class="form-group" style="margin-top:4px">
             <label class="form-label">Anthropic API Key <span style="font-weight:400;color:var(--ink3)">(per analisi AI dei referti)</span></label>
+            <div id="apikey-runtime-msg" style="display:none;font-size:13px;color:var(--accent);padding:8px 12px;background:var(--accent-light);border-radius:6px">✓ API key configurata dal sistema</div>
             <input class="form-input" id="setting-apikey" type="password" placeholder="sk-ant-...">
           </div>
           <button class="btn btn-secondary" style="margin-top:4px;color:var(--warm)" onclick="resetAllData()">🗑 Reset dati</button>
@@ -1247,6 +1248,7 @@ var _pendingDeleteTurno = null;
 
 // ── SUPABASE ──
 let supabaseClient = null;
+let ANTHROPIC_KEY_RUNTIME = '';   // caricata da /api/config (Vercel env), mai in localStorage
 
 function _initSupabaseWithConfig(cfg){
   try {
@@ -1267,6 +1269,7 @@ async function loadConfig(){
     const res = await fetch('/api/config');
     if(res.ok){
       const cfg = await res.json();
+      if(cfg.anthropicKey) ANTHROPIC_KEY_RUNTIME = cfg.anthropicKey;
       if(cfg.url && cfg.anonKey){
         _initSupabaseWithConfig(cfg);
         return;
@@ -3660,7 +3663,14 @@ function loadSettings(){
   fld('setting-instagram', S.settings.instagram);
   fld('setting-youtube',   S.settings.youtube);
   fld('setting-facebook',  S.settings.facebook);
-  fld('setting-apikey', localStorage.getItem('medidesk_apikey'));
+  if(ANTHROPIC_KEY_RUNTIME){
+    const inp=document.getElementById('setting-apikey');
+    const msg=document.getElementById('apikey-runtime-msg');
+    if(inp){ inp.style.display='none'; inp.disabled=true; }
+    if(msg) msg.style.display='block';
+  } else {
+    fld('setting-apikey', localStorage.getItem('medidesk_apikey'));
+  }
   updateBioCounter();
   renderSlugPreview();
   renderLingue();
@@ -3685,8 +3695,10 @@ async function saveSettings(){
   S.settings.instagram   = val('setting-instagram');
   S.settings.youtube     = val('setting-youtube');
   S.settings.facebook    = val('setting-facebook');
-  const key = val('setting-apikey');
-  if(key) localStorage.setItem('medidesk_apikey',key); else localStorage.removeItem('medidesk_apikey');
+  if(!ANTHROPIC_KEY_RUNTIME){
+    const key = val('setting-apikey');
+    if(key) localStorage.setItem('medidesk_apikey',key); else localStorage.removeItem('medidesk_apikey');
+  }
   save(); updateDoctorName(); updateShareLink();
   if(isOnline()){
     try {
@@ -3725,7 +3737,7 @@ async function saveSettings(){
     showToast('Salvato ✓');
   }
 }
-function getApiKey(){ return localStorage.getItem('medidesk_apikey')||''; }
+function getApiKey(){ return ANTHROPIC_KEY_RUNTIME || localStorage.getItem('medidesk_apikey') || ''; }
 
 // ── FOTO PROFILO ──
 function renderFotoProfilo(){
