@@ -863,8 +863,8 @@ html.dark .cancel-token-code{color:var(--ink)}
           </div>
           <div class="notif-toggle-row">
             <div class="notif-toggle-info">
-              <div class="notif-toggle-label">Cancellazione paziente</div>
-              <div class="notif-toggle-desc">La segreteria viene avvisata delle cancellazioni entro 24h dalla visita</div>
+              <div class="notif-toggle-label">Cancellazione prenotazione paziente</div>
+              <div class="notif-toggle-desc">La segreteria viene avvisata quando un paziente cancella la propria prenotazione</div>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="notif-cancellazione" checked><span class="toggle-slider"></span></label>
           </div>
@@ -1196,8 +1196,8 @@ html.dark .cancel-token-code{color:var(--ink)}
           <option value="4">Ogni 4 settimane (mensile)</option>
         </select>
       </div>
-      <div class="form-group" id="turno-inizio-validita-group" style="display:none">
-        <label class="form-label">A partire dal <span style="font-weight:400;color:var(--ink3)">(primo giorno di questo turno)</span></label>
+      <div class="form-group" id="turno-inizio-validita-group">
+        <label class="form-label">A partire dal <span style="font-weight:400;color:var(--ink3)">(obbligatorio)</span></label>
         <input class="form-input" id="turno-inizio-validita" type="date">
       </div>
       <div class="form-row">
@@ -2233,16 +2233,17 @@ function renderCentri(){
 
 function renderCentroCard(c, isActive){
   const todayStr = new Date().toISOString().split('T')[0];
-  const freqLabel = {1:'',2:' · ogni 2 sett.',3:' · ogni 3 sett.',4:' · mensile'};
+  const freqLabel = {1:'Settimanale',2:'Ogni 2 settimane',3:'Ogni 3 settimane',4:'Mensile'};
   const turniHtml = (c.turni&&c.turni.length) ? `
     <div class="turni-list">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;margin-bottom:4px">Turni ricorrenti</div>
       ${c.turni.map((t,i)=>{
         const scaduto = t.dataFineValidita && t.dataFineValidita < todayStr;
-        const freqStr = freqLabel[t.frequenza||1]||'';
+        const freqStr = ' · ' + (freqLabel[t.frequenza||1]||'Settimanale');
+        const inizioStr = t.dataInizioValidita ? ` · dal ${formatDate(t.dataInizioValidita)}` : '';
         const fineStr = t.dataFineValidita ? ` · fino al ${formatDate(t.dataFineValidita)}` : '';
         return `<div class="turno-row" style="${scaduto?'opacity:.5':''}">
-          <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min${freqStr}${fineStr}${scaduto?' <span class="badge-inactive">Scaduto</span>':''}</span>
+          <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min${freqStr}${inizioStr}${fineStr}${scaduto?' <span class="badge-inactive">Scaduto</span>':''}</span>
           ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
         </div>`;
       }).join('')}
@@ -2252,10 +2253,10 @@ function renderCentroCard(c, isActive){
   const giornateHtml = (giornate.length||isActive) ? `
     <div class="turni-list" style="margin-top:8px">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;margin-bottom:4px">Giornate singole</div>
-      ${giornate.map((g,i)=>`
+      ${giornate.map((g)=>`
         <div class="giornata-row">
           <span>📆 ${formatDate(g.data)} ${g.inizio}–${g.fine} · slot ${g.slot} min</span>
-          ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="deleteGiornataSingola('${c.id}',${i})">✕</button>`:''}
+          ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="deleteGiornataSingola('${c.id}','${g.data}','${g.inizio}')">✕</button>`:''}
         </div>`).join('')}
       ${isActive?`<button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button>`:''}
     </div>` : '';
@@ -2270,7 +2271,7 @@ function renderCentroCard(c, isActive){
         </div>
         ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
         <button class="btn btn-sm btn-secondary" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
-        <button class="btn btn-sm btn-secondary" onclick="deleteCentro('${c.id}')" title="Elimina">🗑</button>
+        <button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deleteCentro('${c.id}')" title="Elimina centro">✕</button>
       </div>
       ${turniHtml}${giornateHtml}
     </div>`;
@@ -2298,12 +2299,13 @@ function openAddTurno(centroId){
   _turnoTargetId = centroId;
   const c = S.centri.find(x=>String(x.id)===String(centroId));
   document.getElementById('turno-centro-label').textContent = c?c.nome:'';
+  document.getElementById('turno-frequenza').value = '1';
+  document.getElementById('turno-inizio-validita').value = new Date().toISOString().split('T')[0];
+  document.getElementById('turno-fine-validita').value = '';
   openModal('modal-turno');
 }
 function onTurnoFrequenzaChange(){
-  const freq = parseInt(document.getElementById('turno-frequenza').value)||1;
-  const g = document.getElementById('turno-inizio-validita-group');
-  if(g) g.style.display = freq > 1 ? 'block' : 'none';
+  // campo data inizio sempre visibile (obbligatorio per tutte le frequenze)
 }
 
 async function saveTurno(){
@@ -2316,10 +2318,11 @@ async function saveTurno(){
   const frequenza = parseInt(document.getElementById('turno-frequenza').value)||1;
   const dataInizioValidita = document.getElementById('turno-inizio-validita').value||null;
   const dataFineValidita   = document.getElementById('turno-fine-validita').value||null;
+  if(!dataInizioValidita){ showToast('Seleziona la data di inizio validità'); return; }
   const turnoData = { giorno, inizio, fine, slot, frequenza, dataInizioValidita, dataFineValidita };
   if(!isOnline()){
     c.turni.push(turnoData);
-    save(); closeModal('modal-turno'); renderCentri();
+    save(); closeModal('modal-turno'); renderCentri(); renderAgenda();
     showToast('Turno aggiunto ✓');
     checkTurnoFestivita(c.id, giorno);
     return;
@@ -2333,7 +2336,7 @@ async function saveTurno(){
     }).select('id').single();
     if(error) throw error;
     c.turni.push({ id: newTurno.id, ...turnoData });
-    save(); closeModal('modal-turno'); renderCentri();
+    save(); closeModal('modal-turno'); renderCentri(); renderAgenda();
     showToast('Turno aggiunto ✓');
     checkTurnoFestivita(c.id, giorno);
   } catch(e){
@@ -2359,7 +2362,7 @@ async function deleteTurnoConfirmed(){
 async function deleteTurno(centroId, idx){
   const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
   if(!isOnline()){
-    c.turni.splice(idx,1); save(); renderCentri(); return;
+    c.turni.splice(idx,1); save(); renderCentri(); renderAgenda(); return;
   }
   const turno = c.turni[idx]; if(!turno) return;
   try {
@@ -2367,7 +2370,7 @@ async function deleteTurno(centroId, idx){
       const { error } = await supabaseClient.from('turni').delete().eq('id', turno.id);
       if(error) throw error;
     }
-    c.turni.splice(idx,1); save(); renderCentri();
+    c.turni.splice(idx,1); save(); renderCentri(); renderAgenda();
   } catch(e){
     console.error('[MediDesk] deleteTurno:', e.message);
     showToast('Errore: ' + e.message);
@@ -2409,9 +2412,12 @@ async function saveGiornataSingola(){
     showToast('Giornata aggiunta ✓');
   } catch(e){ console.error('[MediDesk] saveGiornataSingola:',e.message); showToast('Errore: '+e.message); }
 }
-async function deleteGiornataSingola(centroId,idx){
+async function deleteGiornataSingola(centroId, data, inizio){
   const c=S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
-  const g=(c.giornateSingole||[])[idx]; if(!g) return;
+  const idx=(c.giornateSingole||[]).findIndex(g=>g.data===data && g.inizio===inizio);
+  if(idx===-1) return;
+  const g=c.giornateSingole[idx];
+  if(!confirm(`Eliminare la giornata del ${formatDate(data)}?`)) return;
   if(!isOnline()){ c.giornateSingole.splice(idx,1); save(); renderCentri(); return; }
   try {
     if(g.id){
@@ -2873,16 +2879,20 @@ function renderAgenda(){
   const DAYS_IT=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
   document.getElementById('day-tabs').innerHTML = days.map(d=>{
     const ds=fmt(d);
-    const count=S.appuntamenti.filter(a=>a.data===ds).length;
+    const count=S.appuntamenti.filter(a=>a.data===ds && !a.cancelled).length;
     const hol=isHoliday(ds);
     const chiuso=isChiusura(ds);
     let tabCls=`day-tab ${ds===S.selectedDay?'active':''}`;
     if(hol.isHoliday) tabCls+=' holiday';
+    const centriConTurno = S.centri.filter(c=>c.attivo!==false && (c.turni||[]).some(t=>t.giorno===d.getDay() && (!t.dataFineValidita||t.dataFineValidita>=ds)));
+    const dotsCentri = centriConTurno.slice(0,4).map(c=>`<span style="width:7px;height:7px;border-radius:50%;background:${c.colore};display:inline-block;flex-shrink:0"></span>`).join('');
+    const dotsHtml = dotsCentri ? `<span style="display:flex;justify-content:center;gap:3px;margin-top:2px">${dotsCentri}</span>` : '';
     return `<div class="${tabCls}" onclick="selectDay('${ds}')">
       ${DAYS_IT[d.getDay()]} ${d.getDate()}${ds===today?' •':''}
       ${count?`<span class="count">(${count})</span>`:''}
       ${hol.isHoliday?`<span class="holiday-sub">${hol.name}</span>`:''}
       ${chiuso?`<span class="holiday-sub">🏖 Chiuso</span>`:''}
+      ${dotsHtml}
     </div>`;
   }).join('');
   renderDayAppointments();
@@ -3341,6 +3351,7 @@ async function deleteVisita(pazId, visitaId){
   }
   paz.visite = (paz.visite||[]).filter(v=>String(v.id)!==String(visitaId));
   save();
+  renderPazienti();
   showPazienteDetail(pazId);
   showToast('Visita eliminata ✓');
 }
