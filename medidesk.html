@@ -2087,12 +2087,18 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
   m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); });
 });
 // Event delegation in capture phase: intercetta prima di onclick inline su visita-header
-// (necessario su mobile dove toggleV prima del confirm blocca il dialog)
+// (necessario su mobile: stopPropagation blocca toggleV, confirm() non viene interrotto da DOM changes)
 document.getElementById('modal-paziente').addEventListener('click', function(e){
-  const btnVis = e.target.closest('.btn-del-visita');
-  if(btnVis){ e.stopPropagation(); e.preventDefault(); deleteVisita(btnVis.dataset.pazid, btnVis.dataset.visid); return; }
-  const btnPaz = e.target.closest('.btn-del-paz');
-  if(btnPaz){ e.stopPropagation(); deletePaziente(btnPaz.dataset.pazid); return; }
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+  if(action === 'delete-visita'){
+    e.stopPropagation(); e.preventDefault();
+    deleteVisita(btn.dataset.pazid, btn.dataset.visid);
+  } else if(action === 'delete-paziente'){
+    e.stopPropagation();
+    deletePaziente(btn.dataset.pazid);
+  }
 }, true);
 
 // ── SHARE LINK ──
@@ -3274,8 +3280,9 @@ function _buildVisitaHTML(paz, v, i){
   h+='<div style="font-size:12px;color:var(--ink3)">'+_esc(v.luogo||'')+'</div>';
   h+='</div>';
   h+='<div style="display:flex;align-items:center;gap:6px">';
-  h+='<button type="button" class="btn btn-sm btn-del-visita" style="color:var(--warm);background:none;border:none;padding:2px 6px;cursor:pointer"';
-  h+=' data-pazid="'+pid+'" data-visid="'+vid+'" title="Elimina visita">🗑</button>';
+  h+='<button type="button" class="btn-del-visita" style="color:var(--warm);background:none;border:none;padding:10px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;flex-shrink:0"';
+  h+=' data-pazid="'+pid+'" data-visid="'+vid+'" data-action="delete-visita" title="Elimina visita">';
+  h+='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>';
   h+='<span style="color:var(--ink3)">▾</span>';
   h+='</div>';
   h+='</div>';
@@ -3315,7 +3322,7 @@ function showPazienteDetail(id){
     <div id="storia-container-${id}"></div>`:''}
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${id}')">+ Carica visita</button>
-      <button type="button" class="btn btn-sm btn-secondary btn-del-paz" style="color:var(--warm)" data-pazid="${id}">🗑 Elimina paziente</button>
+      <button type="button" class="btn btn-secondary btn-del-paz" style="color:var(--warm);min-height:44px;padding:10px 16px" data-pazid="${id}" data-action="delete-paziente">🗑 Elimina paziente</button>
     </div>`;
   openModal('modal-paziente');
 }
