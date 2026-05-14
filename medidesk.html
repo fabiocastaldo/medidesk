@@ -190,7 +190,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .mc-day.selected .mc-num{color:var(--accent)}
 .mc-day:not(.empty):not(.selected):hover{background:var(--accent-light)}
 .mc-num{font-size:13px;font-weight:600;color:var(--ink)}
-.mc-centri{display:flex;flex-direction:column;gap:2px;margin-top:auto}
+.mc-centri{display:flex;flex-direction:column;gap:2px;margin-top:3px}
 .mc-centro{font-size:10px;font-weight:600;border-radius:3px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .mc-count{font-size:9px;color:var(--ink3);font-weight:600;line-height:1}
 .mc-day.selected .mc-count{color:rgba(255,255,255,.85)}
@@ -206,6 +206,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .mc-day.chiusura{background:#f0f0f0!important;opacity:.75}
 .mc-day.chiusura .mc-num{color:var(--ink3)}
 .mc-holiday-dot{width:5px;height:5px;border-radius:50%;background:var(--warm);display:inline-block;vertical-align:middle;margin-left:2px;flex-shrink:0}
+.mc-turni-dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:2px}
+.mc-turno-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;opacity:.75}
 .mc-holiday-name{font-size:8px;color:var(--warm);font-weight:600;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mc-holiday-warn{font-size:9px;font-weight:700;color:var(--warm);flex-shrink:0}
 .mc-chiusura-icon{font-size:9px;color:var(--ink3)}
@@ -2085,6 +2087,13 @@ function closeModal(id){
 document.querySelectorAll('.modal-overlay').forEach(m=>{
   m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); });
 });
+// Event delegation per eliminazione visita/paziente (più robusto di onclick inline)
+document.getElementById('modal-paziente').addEventListener('click', function(e){
+  const btnVis = e.target.closest('.btn-del-visita');
+  if(btnVis){ e.stopPropagation(); deleteVisita(btnVis.dataset.pazid, btnVis.dataset.visid); return; }
+  const btnPaz = e.target.closest('.btn-del-paz');
+  if(btnPaz){ deletePaziente(btnPaz.dataset.pazid); return; }
+});
 
 // ── SHARE LINK ──
 function getShareUrl(){
@@ -2977,6 +2986,13 @@ function renderMonthView(){
       return `<span class="mc-centro" style="background:${colore}22;color:${colore};border:1px solid ${colore}55;opacity:${op}">${nome} <strong>${n}</strong></span>`;
     }).join('');
     const extra = centrosId.length > 3 ? `<span class="mc-count">+${centrosId.length-3}</span>` : '';
+    // Pallini turni-based (come vista settimanale): mostrati quando non ci sono appuntamenti
+    const centriConTurno = !centriHtml ? S.centri.filter(c =>
+      c.attivo !== false &&
+      (c.turni||[]).some(t => t.giorno === date.getDay() && (!t.dataFineValidita || t.dataFineValidita >= ds))
+    ) : [];
+    const turniDotsHtml = centriConTurno.length ?
+      `<div class="mc-turni-dots">${centriConTurno.slice(0,4).map(c=>`<span class="mc-turno-dot" style="background:${c.colore}" title="${c.nome}"></span>`).join('')}</div>` : '';
     // Avviso turno su festività
     const turniWarn = hol.isHoliday && dayAppts.length ? `<span class="mc-holiday-warn" title="Appuntamenti in festività">⚠️</span>` : '';
     let cls = 'mc-day';
@@ -2993,7 +3009,7 @@ function renderMonthView(){
         <span class="mc-num">${d}</span>${holIndicator}${chiusuraIcon}${turniWarn}
       </div>
       ${hol.isHoliday?`<div class="mc-holiday-name">${hol.name}</div>`:''}
-      <div class="mc-centri">${centriHtml}${extra}</div>
+      <div class="mc-centri">${centriHtml}${extra}${turniDotsHtml}</div>
     </div>`;
   }
   monthCal.innerHTML = html;
@@ -3258,8 +3274,8 @@ function _buildVisitaHTML(paz, v, i){
   h+='<div style="font-size:12px;color:var(--ink3)">'+_esc(v.luogo||'')+'</div>';
   h+='</div>';
   h+='<div style="display:flex;align-items:center;gap:6px">';
-  h+='<button class="btn btn-sm" style="color:var(--warm);background:none;border:none;padding:2px 6px;cursor:pointer"';
-  h+=' onclick="event.stopPropagation();deleteVisita(\''+pid+'\',\''+vid+'\')" title="Elimina visita">🗑</button>';
+  h+='<button type="button" class="btn btn-sm btn-del-visita" style="color:var(--warm);background:none;border:none;padding:2px 6px;cursor:pointer"';
+  h+=' data-pazid="'+pid+'" data-visid="'+vid+'" title="Elimina visita">🗑</button>';
   h+='<span style="color:var(--ink3)">▾</span>';
   h+='</div>';
   h+='</div>';
@@ -3299,7 +3315,7 @@ function showPazienteDetail(id){
     <div id="storia-container-${id}"></div>`:''}
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${id}')">+ Carica visita</button>
-      <button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deletePaziente('${id}')">🗑 Elimina paziente</button>
+      <button type="button" class="btn btn-sm btn-secondary btn-del-paz" style="color:var(--warm)" data-pazid="${id}">🗑 Elimina paziente</button>
     </div>`;
   openModal('modal-paziente');
 }
