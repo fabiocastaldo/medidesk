@@ -986,7 +986,7 @@ html.dark .cancel-token-code{color:var(--ink)}
             <select class="form-select" id="bk-area"></select>
           </div>
           <div class="form-group"><label class="form-label">Note aggiuntive</label><textarea class="form-textarea" id="bk-note" style="min-height:60px"></textarea></div>
-          <button class="btn btn-primary" style="width:100%;padding:13px" onclick="confirmBooking()">Conferma prenotazione</button>
+          <button class="btn btn-primary" id="bk-confirm-btn" style="width:100%;padding:13px" onclick="confirmBooking()">Conferma prenotazione</button>
         </div>
 
         <!-- STEP 5: successo -->
@@ -4522,7 +4522,12 @@ async function confirmBooking(){
     centroId:bk.centroId, source:'paziente', seen:false,
     cancellationToken, cancelled:false
   };
+  console.log('[Booking] supabaseClient:', !!supabaseClient);
+  console.log('[Booking] medico_id:', bk.medicoId);
+  console.log('[Booking] dati appuntamento:', { data: bk.dateStr, ora: bk.ora, centroId: bk.centroId, nome, cognome });
   if(isOnline() && bk.medicoId){
+    const btn = document.getElementById('bk-confirm-btn');
+    if(btn){ btn.disabled = true; btn.textContent = 'Invio in corso…'; }
     try {
       const { data: inserted, error } = await supabaseClient.from('appuntamenti').insert({
         medico_id:          bk.medicoId,
@@ -4541,7 +4546,13 @@ async function confirmBooking(){
       }).select('id').single();
       if(error) throw error;
       appt.id = inserted.id;
-    } catch(e){ console.error('[MediDesk] confirmBooking INSERT:', e.message); }
+      console.log('[Booking] INSERT OK, id:', inserted.id);
+    } catch(e){
+      console.error('[MediDesk] confirmBooking INSERT:', e.message);
+      if(btn){ btn.disabled = false; btn.textContent = 'Conferma prenotazione'; }
+      showToast('Servizio temporaneamente non disponibile. Riprova tra qualche istante.');
+      return;
+    }
   }
   _bkLastAppt = appt;
   bk._centroData = S.centri.find(c=>String(c.id)===String(bk.centroId))||null;
