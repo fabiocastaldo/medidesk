@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script>(function(){var s=localStorage.getItem('medidesk_theme'),d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');})()</script>
 <link rel="icon" href="data:,">
-<title>MediDesk</title>
+<title>Delphi Med</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -529,16 +529,103 @@ html.dark .cancel-token-code{color:var(--ink)}
 /* ── GIORNATE SINGOLE ── */
 .giornata-row{display:flex;align-items:center;gap:8px;font-size:13px;background:var(--accent-light);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:6px}
 .giornata-row span{flex:1;color:var(--ink2)}
+
+/* ── HOME PUBBLICA ── */
+#view-home{display:none;flex-direction:column;min-height:100vh;background:#f8fafb;font-family:'DM Sans',Arial,sans-serif}
+.home-header{background:#0D9488;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.home-logo-wrap{display:flex;flex-direction:column;line-height:1.2}
+.home-logo{color:#fff;font-size:21px;font-weight:700;letter-spacing:-.3px}
+.home-logo-payoff{color:rgba(255,255,255,.7);font-size:12px;font-weight:400;margin-top:2px}
+.home-header-btn{background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.45);border-radius:8px;padding:9px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit;white-space:nowrap}
+.home-header-btn:hover{background:rgba(255,255,255,.27)}
+.home-hero{background:linear-gradient(160deg,#0F766E 0%,#0D9488 55%,#14B8A6 100%);padding:72px 20px 88px;text-align:center;flex-shrink:0}
+.home-hero h2{color:#fff;font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
+.home-hero-sub{color:rgba(255,255,255,.82);font-size:15px;margin:0 0 34px}
+.home-search-wrap{max-width:520px;margin:0 auto;position:relative}
+.home-search-input{width:100%;box-sizing:border-box;padding:15px 18px 15px 48px;border-radius:14px;border:none;font-size:15px;outline:none;box-shadow:0 8px 32px rgba(0,0,0,.22);font-family:'DM Sans',Arial,sans-serif;color:#111}
+.home-search-input::placeholder{color:#aaa}
+.home-search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none;line-height:1}
+.home-search-results{max-width:520px;margin:10px auto 0;display:none;text-align:left}
+.home-result-card{background:#fff;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:8px;box-shadow:0 2px 12px rgba(0,0,0,.11);transition:transform .12s,box-shadow .12s}
+.home-result-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.16)}
+.home-result-avatar{width:42px;height:42px;border-radius:50%;background:#0D9488;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;overflow:hidden}
+.home-result-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.home-result-name{font-weight:700;color:#111;font-size:14px}
+.home-result-spec{font-size:12px;color:#666;margin-top:2px}
+.home-search-msg{color:rgba(255,255,255,.75);font-size:13px;margin-top:10px;min-height:20px}
+.home-body{flex:1;background:#f8fafb}
+.home-sections{display:flex;gap:0;flex-wrap:wrap;max-width:860px;margin:0 auto;padding:52px 24px}
+.home-section{flex:1;min-width:260px;padding:0 32px}
+.home-section:first-child{border-right:1px solid #e2e8e8}
+.home-section h3{font-size:19px;font-weight:700;color:#0D9488;margin:0 0 20px;letter-spacing:-.2px}
+.home-feature{display:flex;align-items:flex-start;gap:10px;margin-bottom:13px;font-size:14px;color:#444;line-height:1.55}
+.home-feature::before{content:'✓';color:#0D9488;font-weight:700;flex-shrink:0;margin-top:1px}
+.home-cta-btn{display:inline-block;background:#0D9488;color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;margin-top:18px;transition:background .15s;font-family:'DM Sans',Arial,sans-serif}
+.home-cta-btn:hover{background:#0b7d72}
+.home-footer{background:#f0f0f0;padding:16px;text-align:center;font-size:12px;color:#aaa;flex-shrink:0}
+@media(max-width:640px){
+  .home-hero{padding:48px 16px 60px}
+  .home-hero h2{font-size:24px}
+  .home-header{padding:14px 16px}
+  .home-logo{font-size:18px}
+  .home-sections{padding:32px 16px}
+  .home-section+.home-section{border-right:none;border-top:1px solid #e2e8e8;margin-top:28px;padding-top:28px}
+  .home-section{padding:0}
+}
 </style>
 </head>
 <body>
+
+<!-- ══════════════ HOME PUBBLICA ══════════════ -->
+<div id="view-home">
+  <header class="home-header">
+    <div class="home-logo-wrap">
+      <span class="home-logo">Delphi Med</span>
+      <span class="home-logo-payoff">Il tuo studio, ovunque</span>
+    </div>
+    <button class="home-header-btn" onclick="showLoginView('login')">Accedi / Registrati</button>
+  </header>
+
+  <section class="home-hero">
+    <h2>Trova il tuo specialista</h2>
+    <p class="home-hero-sub">Prenota una visita in pochi click, ricevi la conferma via email</p>
+    <div class="home-search-wrap">
+      <span class="home-search-icon">🔍</span>
+      <input class="home-search-input" id="home-search" type="text"
+             placeholder="Cerca il tuo medico specialista…"
+             oninput="homeSearch(this.value)" autocomplete="off">
+    </div>
+    <div class="home-search-results" id="home-search-results"></div>
+    <div id="home-search-msg" class="home-search-msg"></div>
+  </section>
+
+  <div class="home-body">
+    <div class="home-sections">
+      <div class="home-section">
+        <h3>Delphi Med per i pazienti</h3>
+        <div class="home-feature">Prenota online in pochi click</div>
+        <div class="home-feature">Ricevi conferma via email</div>
+        <div class="home-feature">Cancella quando vuoi</div>
+      </div>
+      <div class="home-section">
+        <h3>Delphi Med per i medici</h3>
+        <div class="home-feature">Gestisci più ambulatori dalla stessa agenda</div>
+        <div class="home-feature">Agenda unificata e fascicolo paziente digitale</div>
+        <div class="home-feature">Assistente AI per la storia clinica</div>
+        <button class="home-cta-btn" onclick="showLoginView('register')">Registrati gratuitamente</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="home-footer">© 2025 Delphi Med</footer>
+</div>
 
 <!-- ══════════════ AUTH ══════════════ -->
 <div id="view-auth">
   <button class="auth-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
   <div class="auth-card">
     <div class="auth-logo">
-      <h1>MediDesk</h1>
+      <h1>Delphi Med</h1>
       <p>Il tuo studio, ovunque</p>
     </div>
 
@@ -580,7 +667,7 @@ html.dark .cancel-token-code{color:var(--ink)}
         <input type="password" id="auth-reg-confirm" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')signUp()">
       </div>
       <button class="auth-btn" id="auth-reg-btn" onclick="signUp()">Crea account</button>
-      <p class="auth-legal">Registrandoti accetti i termini di servizio e la privacy policy di MediDesk.</p>
+      <p class="auth-legal">Registrandoti accetti i termini di servizio e la privacy policy di Delphi Med.</p>
     </div>
 
     <!-- RESET PASSWORD -->
@@ -598,7 +685,7 @@ html.dark .cancel-token-code{color:var(--ink)}
 <!-- ══════════════ APP MEDICO ══════════════ -->
 <div id="view-app" class="app" style="display:none">
   <aside class="sidebar">
-    <div class="sidebar-logo"><h1>MediDesk</h1><p>Il tuo studio ovunque</p></div>
+    <div class="sidebar-logo"><h1>Delphi Med</h1><p>Il tuo studio ovunque</p></div>
     <nav class="nav">
       <div class="nav-item active" onclick="showPage('dashboard')"><span class="icon">🏠</span><span>Dashboard</span></div>
       <div class="nav-item" onclick="showPage('agenda')"><span class="icon">📅</span><span>Agenda</span></div>
@@ -618,7 +705,7 @@ html.dark .cancel-token-code{color:var(--ink)}
     <!-- MOBILE HEADER (visible only on mobile) -->
     <header class="mobile-header">
       <div class="mobile-header-text">
-        <h1>MediDesk</h1>
+        <h1>Delphi Med</h1>
         <span id="mobile-doctor">Dr. Mario Rossi</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
@@ -1032,7 +1119,7 @@ html.dark .cancel-token-code{color:var(--ink)}
 
       </div>
     </div>
-    <div class="bk-footer">Prenotazione gestita con MediDesk · Sistema professionale per medici</div>
+    <div class="bk-footer">Prenotazione gestita con Delphi Med · Sistema professionale per medici</div>
   </div>
 </div>
 
@@ -1460,12 +1547,12 @@ function _initSupabaseWithConfig(cfg){
   try {
     if(cfg && cfg.url && !cfg.url.includes('YOUR_PROJECT') && !cfg.url.includes('INSERIRE_QUI')){
       supabaseClient = supabase.createClient(cfg.url, cfg.anonKey);
-      console.log('[MediDesk] Supabase connesso:', cfg.url);
+      console.log('[Delphi Med] Supabase connesso:', cfg.url);
     } else {
-      console.warn('[MediDesk] Credenziali non valide — modalità offline (localStorage)');
+      console.warn('[Delphi Med] Credenziali non valide — modalità offline (localStorage)');
     }
   } catch(e){
-    console.error('[MediDesk] Errore inizializzazione Supabase:', e);
+    console.error('[Delphi Med] Errore inizializzazione Supabase:', e);
   }
 }
 
@@ -1490,7 +1577,7 @@ async function loadConfig(){
   }
 
   // 3. Nessuna credenziale → modalità offline
-  console.warn('[MediDesk] Nessuna credenziale trovata — modalità offline (localStorage)');
+  console.warn('[Delphi Med] Nessuna credenziale trovata — modalità offline (localStorage)');
 }
 
 function isOnline(){ return supabaseClient !== null; }
@@ -1511,7 +1598,7 @@ async function signUp(){
 }
 
 async function signIn(){
-  console.log('[MediDesk] signIn() chiamata');
+  console.log('[Delphi Med] signIn() chiamata');
   const email    = document.getElementById('auth-login-email').value.trim();
   const password = document.getElementById('auth-login-password').value;
   if(!email || !password){ showAuthMsg('Inserisci email e password', 'error'); return; }
@@ -1522,7 +1609,7 @@ async function signIn(){
     setAuthLoading(false);
     if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
     if(!data?.session){ showAuthMsg('Conferma prima la tua email, poi riprova.', 'error'); return; }
-    console.log('[MediDesk] signIn: successo, utente:', data.session.user.email);
+    console.log('[Delphi Med] signIn: successo, utente:', data.session.user.email);
     showAppView();
   } catch(e) {
     setAuthLoading(false);
@@ -1545,13 +1632,13 @@ async function resetPassword(){
 }
 
 function checkSession(){
-  console.log('[MediDesk] checkSession() avviata, isOnline:', isOnline());
+  console.log('[Delphi Med] checkSession() avviata, isOnline:', isOnline());
   if(!isOnline()){
     showAppView();
     return;
   }
   supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('[MediDesk] onAuthStateChange:', event, session?.user?.email ?? 'no session');
+    console.log('[Delphi Med] onAuthStateChange:', event, session?.user?.email ?? 'no session');
     if(event === 'INITIAL_SESSION'){
       if(session){ showAppView(); } else { showAuthView(); }
     } else if(event === 'SIGNED_IN'){
@@ -1566,16 +1653,24 @@ function checkSession(){
 }
 
 function showAuthView(){
-  document.getElementById('view-auth').style.display = 'flex';
-  document.getElementById('view-app').style.display  = 'none';
+  document.getElementById('view-home').style.display    = 'flex';
+  document.getElementById('view-auth').style.display    = 'none';
+  document.getElementById('view-app').style.display     = 'none';
   document.getElementById('view-booking').style.display = 'none';
+}
+
+function showLoginView(tab){
+  document.getElementById('view-home').style.display = 'none';
+  document.getElementById('view-auth').style.display = 'flex';
+  if(tab) switchAuthTab(tab);
 }
 
 let _appInitialized = false;
 let _pollingInterval = null;
 let _realtimeChannel = null;
 async function showAppView(){
-  console.log('[MediDesk] showAppView() eseguita');
+  console.log('[Delphi Med] showAppView() eseguita');
+  document.getElementById('view-home').style.display    = 'none';
   document.getElementById('view-auth').style.display    = 'none';
   document.getElementById('view-booking').style.display = 'none';
   document.getElementById('view-app').style.display     = 'flex';
@@ -1596,7 +1691,7 @@ async function showAppView(){
         await loadVisiteFromDB(user);
         await loadChiusureFromDB(user);
       }
-    } catch(e){ console.error('[MediDesk] showAppView DB:', e.message); }
+    } catch(e){ console.error('[Delphi Med] showAppView DB:', e.message); }
   }
   if(!_appInitialized){ _appInitialized = true; init(); }
   else renderAll();
@@ -1611,7 +1706,7 @@ async function ensureMedicoRecord(user){
       .from('medici').select('id').eq('user_id', user.id).maybeSingle();
     if(error) throw error;
     if(!data){
-      console.log('[MediDesk] Primo login: creo record medico per', user.email);
+      console.log('[Delphi Med] Primo login: creo record medico per', user.email);
       const { data: newMedico, error: insErr } = await supabaseClient
         .from('medici').insert({ user_id: user.id, email: user.email }).select('id').single();
       if(insErr) throw insErr;
@@ -1620,7 +1715,7 @@ async function ensureMedicoRecord(user){
         { medico_id: newMedico.id, nome: 'Controllo',    is_default: true }
       ]);
     }
-  } catch(e){ console.error('[MediDesk] ensureMedicoRecord:', e.message); }
+  } catch(e){ console.error('[Delphi Med] ensureMedicoRecord:', e.message); }
 }
 
 async function loadMedicoFromDB(user){
@@ -1650,9 +1745,9 @@ async function loadMedicoFromDB(user){
       S.settings.facebook    = data.facebook           || '';
       S.settings.foto_url    = data.foto_url           || null;
       save();
-      console.log('[MediDesk] Profilo medico caricato da DB:', user.email);
+      console.log('[Delphi Med] Profilo medico caricato da DB:', user.email);
     }
-  } catch(e){ console.error('[MediDesk] loadMedicoFromDB:', e.message); }
+  } catch(e){ console.error('[Delphi Med] loadMedicoFromDB:', e.message); }
 }
 
 async function loadCentriFromDB(user){
@@ -1684,8 +1779,8 @@ async function loadCentriFromDB(user){
       giornateSingole: []
     }));
     save();
-    console.log('[MediDesk] Centri caricati da DB:', S.centri.length);
-  } catch(e){ console.error('[MediDesk] loadCentriFromDB:', e.message); }
+    console.log('[Delphi Med] Centri caricati da DB:', S.centri.length);
+  } catch(e){ console.error('[Delphi Med] loadCentriFromDB:', e.message); }
 }
 
 async function loadTipiVisitaFromDB(user){
@@ -1701,8 +1796,8 @@ async function loadTipiVisitaFromDB(user){
     S.tipiVisita = S.tipiVisitaRecords.map(r => r.nome);
     sortTipiVisita();
     save();
-    console.log('[MediDesk] Tipi visita caricati da DB:', S.tipiVisita.length);
-  } catch(e){ console.error('[MediDesk] loadTipiVisitaFromDB:', e.message); }
+    console.log('[Delphi Med] Tipi visita caricati da DB:', S.tipiVisita.length);
+  } catch(e){ console.error('[Delphi Med] loadTipiVisitaFromDB:', e.message); }
 }
 
 async function loadAreeTematicheFromDB(user){
@@ -1717,8 +1812,8 @@ async function loadAreeTematicheFromDB(user){
     S.areeTematicheRecords = data || [];
     S.areeTematiche = S.areeTematicheRecords.map(r => r.nome);
     save();
-    console.log('[MediDesk] Aree tematiche caricate da DB:', S.areeTematiche.length);
-  } catch(e){ console.error('[MediDesk] loadAreeTematicheFromDB:', e.message); }
+    console.log('[Delphi Med] Aree tematiche caricate da DB:', S.areeTematiche.length);
+  } catch(e){ console.error('[Delphi Med] loadAreeTematicheFromDB:', e.message); }
 }
 
 async function loadPazientiFromDB(user){
@@ -1735,8 +1830,8 @@ async function loadPazientiFromDB(user){
       cf: p.codice_fiscale||'', nascita: p.data_nascita||'', visite: []
     }));
     save();
-    console.log('[MediDesk] Pazienti caricati da DB:', S.pazienti.length);
-  } catch(e){ console.error('[MediDesk] loadPazientiFromDB:', e.message); }
+    console.log('[Delphi Med] Pazienti caricati da DB:', S.pazienti.length);
+  } catch(e){ console.error('[Delphi Med] loadPazientiFromDB:', e.message); }
 }
 
 async function loadVisiteFromDB(user){
@@ -1754,8 +1849,8 @@ async function loadVisiteFromDB(user){
       }
     });
     save();
-    console.log('[MediDesk] Visite caricate da DB:', (data||[]).length);
-  } catch(e){ console.error('[MediDesk] loadVisiteFromDB:', e.message); }
+    console.log('[Delphi Med] Visite caricate da DB:', (data||[]).length);
+  } catch(e){ console.error('[Delphi Med] loadVisiteFromDB:', e.message); }
 }
 
 async function migrateLocalVisite(){
@@ -1782,8 +1877,8 @@ async function migrateLocalVisite(){
     if(error) throw error;
     localStorage.setItem('visite_migrated', '1');
     showToast(`Migrazione ${toMigrate.length} ${toMigrate.length===1?'visita':'visite'} completata ✓`);
-    console.log('[MediDesk] Visite migrate:', toMigrate.length);
-  } catch(e){ console.error('[MediDesk] migrateLocalVisite:', e.message); }
+    console.log('[Delphi Med] Visite migrate:', toMigrate.length);
+  } catch(e){ console.error('[Delphi Med] migrateLocalVisite:', e.message); }
 }
 
 async function loadAppuntamentiFromDB(user){
@@ -1816,8 +1911,8 @@ async function loadAppuntamentiFromDB(user){
       };
     });
     save();
-    console.log('[MediDesk] Appuntamenti caricati da DB:', S.appuntamenti.length);
-  } catch(e){ console.error('[MediDesk] loadAppuntamentiFromDB:', e.message); }
+    console.log('[Delphi Med] Appuntamenti caricati da DB:', S.appuntamenti.length);
+  } catch(e){ console.error('[Delphi Med] loadAppuntamentiFromDB:', e.message); }
 }
 
 function stopDashboardPolling(){
@@ -2291,7 +2386,7 @@ async function saveCentro(){
     if(S.agendaView==='month') renderAgenda();
     resetForm(); showToast('Centro aggiunto ✓');
   } catch(e){
-    console.error('[MediDesk] saveCentro:', e.message);
+    console.error('[Delphi Med] saveCentro:', e.message);
     showToast('Errore: ' + e.message);
   }
 }
@@ -2379,7 +2474,7 @@ async function toggleCentro(id){
     c.attivo = newAttivo; save(); renderCentri(); updateStats();
     showToast(newAttivo ? 'Centro riattivato ✓' : 'Centro disattivato');
   } catch(e){
-    console.error('[MediDesk] toggleCentro:', e.message);
+    console.error('[Delphi Med] toggleCentro:', e.message);
     showToast('Errore: ' + e.message);
   }
 }
@@ -2429,7 +2524,7 @@ async function saveTurno(){
     showToast('Turno aggiunto ✓');
     checkTurnoFestivita(c.id, giorno);
   } catch(e){
-    console.error('[MediDesk] saveTurno:', e.message);
+    console.error('[Delphi Med] saveTurno:', e.message);
     showToast('Errore: ' + e.message);
   }
 }
@@ -2461,7 +2556,7 @@ async function deleteTurno(centroId, idx){
     }
     c.turni.splice(idx,1); save(); renderCentri(); renderAgenda();
   } catch(e){
-    console.error('[MediDesk] deleteTurno:', e.message);
+    console.error('[Delphi Med] deleteTurno:', e.message);
     showToast('Errore: ' + e.message);
   }
 }
@@ -2499,7 +2594,7 @@ async function saveGiornataSingola(){
     c.giornateSingole.push({id:ins.id,...g});
     save(); closeModal('modal-giornata-singola'); renderCentri();
     showToast('Giornata aggiunta ✓');
-  } catch(e){ console.error('[MediDesk] saveGiornataSingola:',e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi Med] saveGiornataSingola:',e.message); showToast('Errore: '+e.message); }
 }
 async function deleteGiornataSingola(centroId, data, inizio){
   const c=S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
@@ -2514,7 +2609,7 @@ async function deleteGiornataSingola(centroId, data, inizio){
       if(error) throw error;
     }
     c.giornateSingole.splice(idx,1); save(); renderCentri(); showToast('Giornata eliminata');
-  } catch(e){ console.error('[MediDesk] deleteGiornataSingola:',e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi Med] deleteGiornataSingola:',e.message); showToast('Errore: '+e.message); }
 }
 
 async function deleteCentro(id){
@@ -2532,7 +2627,7 @@ async function deleteCentro(id){
     save(); renderCentri(); populateCentroSelect(); updateStats();
     showToast('Centro eliminato ✓');
   } catch(e){
-    console.error('[MediDesk] deleteCentro:', e.message);
+    console.error('[Delphi Med] deleteCentro:', e.message);
     // Ripristina centroId in caso di errore
     S.appuntamenti.forEach(a=>{ if(a.centroId===null) a.centroId=id; });
     showToast('Errore: ' + e.message);
@@ -2929,7 +3024,7 @@ async function saveAppuntamento(){
 async function deleteAppuntamento(id){
   if(isOnline()){
     try { await supabaseClient.from('appuntamenti').delete().eq('id', String(id)); }
-    catch(e){ console.error('[MediDesk] deleteAppuntamento:', e.message); }
+    catch(e){ console.error('[Delphi Med] deleteAppuntamento:', e.message); }
   }
   S.appuntamenti = S.appuntamenti.filter(a=>String(a.id)!==String(id));
   save(); renderAgenda(); renderDashboard(); updateStats(); renderPending();
@@ -3299,7 +3394,7 @@ function buildICS(a){
   const dtStart=`${y}${m}${d}T${hh}${mm}00`;
   const endH=String(parseInt(hh)+1).padStart(2,'0');
   const dtEnd=`${y}${m}${d}T${endH}${mm}00`;
-  return `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MediDesk//IT\r\nBEGIN:VEVENT\r\nUID:${Date.now()}@medidesk\r\nDTSTART:${dtStart}\r\nDTEND:${dtEnd}\r\nSUMMARY:Visita ${a.cognome} ${a.nome}\r\nLOCATION:${centro?centro.nome:''}${centro&&centro.indirizzo?', '+centro.indirizzo:''}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+  return `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//DelphiMed//IT\r\nBEGIN:VEVENT\r\nUID:${Date.now()}@delphimed\r\nDTSTART:${dtStart}\r\nDTEND:${dtEnd}\r\nSUMMARY:Visita ${a.cognome} ${a.nome}\r\nLOCATION:${centro?centro.nome:''}${centro&&centro.indirizzo?', '+centro.indirizzo:''}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
 }
 function downloadICS(){ const a=getCurrentFormAppt(); if(!a) return; triggerICS(a); }
 function downloadICSFromDetail(){ const a=S.appuntamenti.find(x=>String(x.id)===String(S.currentApptId)); if(!a) return; triggerICS(a); }
@@ -3335,7 +3430,7 @@ async function markSeen(id){
     a.seen=true;
     if(isOnline()){
       try { await supabaseClient.from('appuntamenti').update({ seen: true }).eq('id', String(id)); }
-      catch(e){ console.error('[MediDesk] markSeen:', e.message); }
+      catch(e){ console.error('[Delphi Med] markSeen:', e.message); }
     }
     save();
   }
@@ -3443,11 +3538,11 @@ async function deleteVisita(pazId, visitaId){
     try {
       const fotoPathsDel = getFotoPaths(visita?.foto_url);
       if(fotoPathsDel.length){
-        await supabaseClient.storage.from('fotoreferti').remove(fotoPathsDel).catch(e=>console.error('[MediDesk] deleteVisita storage:', e.message));
+        await supabaseClient.storage.from('fotoreferti').remove(fotoPathsDel).catch(e=>console.error('[Delphi Med] deleteVisita storage:', e.message));
       }
       const { error } = await supabaseClient.from('visite').delete().eq('id', String(visitaId));
       if(error) throw error;
-    } catch(e){ console.error('[MediDesk] deleteVisita:', e.message); showToast('Errore: '+e.message); return; }
+    } catch(e){ console.error('[Delphi Med] deleteVisita:', e.message); showToast('Errore: '+e.message); return; }
   }
   paz.visite = (paz.visite||[]).filter(v=>String(v.id)!==String(visitaId));
   save();
@@ -3468,14 +3563,14 @@ async function deletePaziente(id){
     const fotoPaths = (paz?.visite||[]).flatMap(v=>getFotoPaths(v.foto_url));
     if(fotoPaths.length){
       await supabaseClient.storage.from('fotoreferti').remove(fotoPaths)
-        .catch(e=>console.error('[MediDesk] deletePaziente storage:', e.message));
+        .catch(e=>console.error('[Delphi Med] deletePaziente storage:', e.message));
     }
     const { error } = await supabaseClient.from('pazienti').delete().eq('id', id);
     if(error) throw error;
     S.pazienti=S.pazienti.filter(p=>String(p.id)!==String(id));
     save(); renderPazienti(); updateStats(); closeModal('modal-paziente'); showToast('Paziente eliminato');
   } catch(e){
-    console.error('[MediDesk] deletePaziente:', e.message);
+    console.error('[Delphi Med] deletePaziente:', e.message);
     showToast('Errore: '+e.message);
   }
 }
@@ -3532,7 +3627,7 @@ function downloadStoriaPDF(pazId){
     y+=5;
     doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=6;
     doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
-    doc.text('Generato da MediDesk il '+new Date().toLocaleDateString('it-IT'), margin, y);
+    doc.text('Generato da Delphi Med il '+new Date().toLocaleDateString('it-IT'), margin, y);
     doc.save(('StoriaClinica_'+paz.cognome+'_'+paz.nome+'.pdf').replace(/\s/g,'_'));
   } catch(e){ showToast('Errore PDF: '+e.message); }
 }
@@ -3678,9 +3773,9 @@ async function visitaSelectFromAppt(apptId){
           .insert({ medico_id: medico.id, nome: a.nome, cognome: a.cognome }).select('id').single();
         if(error) throw error;
         paz = { id: newPaz.id, nome: a.nome, cognome: a.cognome, cf:'', nascita:'', visite:[] };
-        console.log('[MediDesk] Paziente creato da appuntamento:', { id: newPaz.id });
+        console.log('[Delphi Med] Paziente creato da appuntamento:', { id: newPaz.id });
       } catch(e){
-        console.error('[MediDesk] visitaSelectFromAppt:', e.message);
+        console.error('[Delphi Med] visitaSelectFromAppt:', e.message);
         paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, cf:'', nascita:'', visite:[] };
       }
     } else {
@@ -3922,7 +4017,7 @@ async function saveVisita(){
             const path = `${authUser.id}/${paz.id}/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
             const { error: upErr } = await supabaseClient.storage
               .from('fotoreferti').upload(path, file, { contentType: file.type });
-            if(upErr) console.error('[MediDesk] foto upload:', upErr.message);
+            if(upErr) console.error('[Delphi Med] foto upload:', upErr.message);
             else uploadedPaths.push(path);
           }
           if(uploadedPaths.length === 0){
@@ -3951,7 +4046,7 @@ async function saveVisita(){
           throw vErr;
         }
         visita.id = dbV.id;
-      } catch(e){ console.error('[MediDesk] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return; }
+      } catch(e){ console.error('[Delphi Med] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return; }
     }
 
     paz.visite = paz.visite||[];
@@ -4126,7 +4221,7 @@ async function sendNotificaCentroAnonimo(appt){
     const subject=`Cancellazione appuntamento — ${paz}`;
     const body=`Oggetto: ${subject}\n\nGentile Segreteria di ${c.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||'—'}\n\nL'appuntamento è stato cancellato dal paziente.\nLo slot è ora nuovamente disponibile per altre prenotazioni.`;
     console.log('[EMAIL PLACEHOLDER]',{to:c.email_segreteria, subject, body});
-  } catch(e){ console.error('[MediDesk] sendNotificaCentroAnonimo:',e.message); }
+  } catch(e){ console.error('[Delphi Med] sendNotificaCentroAnonimo:',e.message); }
 }
 
 function loadSettings(){
@@ -4225,7 +4320,7 @@ async function saveSettings(){
       if(error) throw error;
       showToast('Salvato ✓');
     } catch(e){
-      console.error('[MediDesk] saveSettings DB:', e.message);
+      console.error('[Delphi Med] saveSettings DB:', e.message);
       showToast('Errore salvataggio: ' + e.message);
     }
   } else {
@@ -4311,7 +4406,7 @@ async function uploadFotoProfilo(file){
     save(); renderFotoProfilo(); setStatus('');
     showToast('Foto profilo aggiornata ✓');
   } catch(e){
-    console.error('[MediDesk] uploadFotoProfilo:', e.message);
+    console.error('[Delphi Med] uploadFotoProfilo:', e.message);
     setStatus('');
     showToast('Errore upload foto: ' + e.message);
   }
@@ -4325,7 +4420,7 @@ async function removeFotoProfilo(){
       if(user){
         const path = `${user.id}/avatar.jpg`;
         await supabaseClient.storage.from('fotoprofilo').remove([path])
-          .catch(e => console.error('[MediDesk] removeFotoProfilo storage:', e.message));
+          .catch(e => console.error('[Delphi Med] removeFotoProfilo storage:', e.message));
         await supabaseClient.from('medici').update({ foto_url: null }).eq('user_id', user.id);
       }
     }
@@ -4333,7 +4428,7 @@ async function removeFotoProfilo(){
     save(); renderFotoProfilo();
     showToast('Foto rimossa ✓');
   } catch(e){
-    console.error('[MediDesk] removeFotoProfilo:', e.message);
+    console.error('[Delphi Med] removeFotoProfilo:', e.message);
     showToast('Errore rimozione foto: ' + e.message);
   }
 }
@@ -4359,7 +4454,7 @@ async function syncLingueToDB(){
     await supabaseClient.from('medici')
       .update({ lingue: S.settings.lingue.length ? S.settings.lingue : null })
       .eq('user_id', user.id);
-  } catch(e){ console.error('[MediDesk] syncLingueToDB:', e.message); }
+  } catch(e){ console.error('[Delphi Med] syncLingueToDB:', e.message); }
 }
 function updateDoctorName(){
   const name=getFullName();
@@ -4374,9 +4469,50 @@ function resetAllData(){
   location.reload();
 }
 
+// ══════════════ HOME PUBBLICA ══════════════
+let _homeSearchTimer = null;
+function homeSearch(q){
+  clearTimeout(_homeSearchTimer);
+  const res = document.getElementById('home-search-results');
+  const msg = document.getElementById('home-search-msg');
+  q = (q||'').trim();
+  if(q.length < 2){
+    res.style.display='none'; res.innerHTML=''; msg.textContent=''; return;
+  }
+  msg.textContent = '…';
+  _homeSearchTimer = setTimeout(async () => {
+    try {
+      if(!supabaseClient){ msg.textContent='Connessione non disponibile'; return; }
+      const { data, error } = await supabaseClient.rpc('search_medici_pubblici', { p_query: q });
+      msg.textContent = '';
+      if(error) throw error;
+      if(!data || !data.length){
+        res.style.display='none';
+        msg.textContent='Nessun medico trovato per "'+q+'"';
+        return;
+      }
+      res.innerHTML = data.map(m => {
+        const nome = [m.titolo, m.nome, m.cognome].filter(Boolean).map(_esc).join(' ');
+        const ini  = [m.nome, m.cognome].filter(Boolean).map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'M';
+        const av   = m.foto_url ? `<img src="${escapeAttr(m.foto_url)}" alt="">` : ini;
+        const spec = m.specializzazione ? `<div class="home-result-spec">${_esc(m.specializzazione)}</div>` : '';
+        return `<div class="home-result-card" onclick="location.href='?booking&doc=${encodeURIComponent(m.slug)}'">
+          <div class="home-result-avatar">${av}</div>
+          <div><div class="home-result-name">${nome}</div>${spec}</div>
+        </div>`;
+      }).join('');
+      res.style.display = 'block';
+    } catch(e){
+      console.error('[DelphiMed] homeSearch:', e.message);
+      msg.textContent = 'Errore durante la ricerca';
+    }
+  }, 350);
+}
+
 // ══════════════ PAGINA PRENOTAZIONE ══════════════
 function showBookingView(){
-  document.getElementById('view-app').style.display='none';
+  document.getElementById('view-home').style.display   ='none';
+  document.getElementById('view-app').style.display    ='none';
   document.getElementById('view-booking').style.display='block';
   bkInit();
 }
@@ -4434,7 +4570,7 @@ async function bkInit(){
       S.areeTematiche = (areeDB||[]).map(r=>r.nome);
       const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: m.id });
       bk.slotOccupati = (slotDB||[]).map(s=>({ centroId: s.centro_id, data: s.data, ora: s.ora }));
-    } catch(e){ console.error('[MediDesk] bkInit anon:', e.message); }
+    } catch(e){ console.error('[Delphi Med] bkInit anon:', e.message); }
   } else {
     bk.medicoId = S.medicoId || null;
     bk.medicoEmail = S.settings.email || '';
@@ -4633,10 +4769,10 @@ async function confirmBooking(){
       console.log('[Booking] INSERT OK, id:', inserted.id);
       if(appt.email){
         const _ec=S.centri.find(c=>String(c.id)===String(bk.centroId));
-        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:appt.email,paziente_nome:nome+' '+cognome,medico_nome:bk.medicoNome||document.getElementById('bk-doctor-name').textContent,medico_email:bk.medicoEmail||'',centro_nome:_ec?_ec.nome:'',data:bk.dateStr,ora:bk.ora,tipo_visita:appt.tipo||'',codice_cancellazione:cancellationToken})}).catch(e=>console.error('[MediDesk] send-email:',e.message));
+        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:appt.email,paziente_nome:nome+' '+cognome,medico_nome:bk.medicoNome||document.getElementById('bk-doctor-name').textContent,medico_email:bk.medicoEmail||'',centro_nome:_ec?_ec.nome:'',data:bk.dateStr,ora:bk.ora,tipo_visita:appt.tipo||'',codice_cancellazione:cancellationToken})}).catch(e=>console.error('[Delphi Med] send-email:',e.message));
       }
     } catch(e){
-      console.error('[MediDesk] confirmBooking INSERT:', e.message);
+      console.error('[Delphi Med] confirmBooking INSERT:', e.message);
       if(btn){ btn.disabled = false; btn.textContent = 'Conferma prenotazione'; }
       showToast(e.message || 'Servizio temporaneamente non disponibile. Riprova tra qualche istante.');
       return;
@@ -4691,7 +4827,7 @@ function bkAddToIcal(){
   const dtStart=`${dt.y}${dt.m}${dt.dd}T${dt.hh}${dt.mm}00`;
   const dtEnd=`${dt.y}${dt.m}${dt.dd}T${dt.endH}${dt.endM}00`;
   const loc=c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}` : '';
-  const ics=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MediDesk//IT\r\nBEGIN:VEVENT\r\nUID:${Date.now()}@medidesk\r\nDTSTART:${dtStart}\r\nDTEND:${dtEnd}\r\nSUMMARY:Visita medica\r\nLOCATION:${loc}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+  const ics=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//DelphiMed//IT\r\nBEGIN:VEVENT\r\nUID:${Date.now()}@delphimed\r\nDTSTART:${dtStart}\r\nDTEND:${dtEnd}\r\nSUMMARY:Visita medica\r\nLOCATION:${loc}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
   const blob=new Blob([ics],{type:'text/calendar'});
   const url=URL.createObjectURL(blob);
   const link=document.createElement('a'); link.href=url; link.download='visita_medica.ics'; link.click(); URL.revokeObjectURL(url);
@@ -4709,10 +4845,11 @@ function bkAddToOutlook(){
 
 // ── PAGINA CANCELLAZIONE ──
 function showCancelView(){
-  document.getElementById('view-app').style.display='none';
+  document.getElementById('view-home').style.display   ='none';
+  document.getElementById('view-app').style.display    ='none';
   document.getElementById('view-booking').style.display='none';
-  document.getElementById('view-auth').style.display='none';
-  document.getElementById('view-cancel').style.display='flex';
+  document.getElementById('view-auth').style.display   ='none';
+  document.getElementById('view-cancel').style.display ='flex';
   loadCancelPage();
 }
 async function loadCancelPage(){
@@ -4764,7 +4901,7 @@ async function loadCancelPage(){
   } catch(e){
     loading.style.display='none'; content.style.display='block';
     content.innerHTML='<div style="font-size:56px;margin-bottom:16px">❌</div><h2>Errore</h2><p>Si è verificato un errore. Riprova più tardi.</p>';
-    console.error('[MediDesk] loadCancelPage:', e.message);
+    console.error('[Delphi Med] loadCancelPage:', e.message);
   }
 }
 async function cancelBookingByToken(apptId){
@@ -4779,7 +4916,7 @@ async function cancelBookingByToken(apptId){
     if(window._cancelApptData) await sendNotificaCentroAnonimo(window._cancelApptData);
   } catch(e){
     showToast('Errore nella cancellazione: '+e.message);
-    console.error('[MediDesk] cancelBookingByToken:', e.message);
+    console.error('[Delphi Med] cancelBookingByToken:', e.message);
   }
 }
 
@@ -4823,7 +4960,7 @@ async function addTipoVisita(){
     S.tipiVisitaRecords.push(rec);
     S.tipiVisita.push(rec.nome); sortTipiVisita(); inp.value=''; save(); renderTipiAree();
     populateTipiVisitaSelects(); showToast('Tipo aggiunto ✓');
-  } catch(e){ console.error('[MediDesk] addTipoVisita:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi Med] addTipoVisita:', e.message); showToast('Errore: '+e.message); }
 }
 
 async function removeTipoVisita(idx){
@@ -4839,7 +4976,7 @@ async function removeTipoVisita(idx){
     S.tipiVisita.splice(idx,1);
     S.tipiVisitaRecords = S.tipiVisitaRecords.filter(r => r.nome !== t);
     save(); renderTipiAree(); populateTipiVisitaSelects(); showToast('Rimosso');
-  } catch(e){ console.error('[MediDesk] removeTipoVisita:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi Med] removeTipoVisita:', e.message); showToast('Errore: '+e.message); }
 }
 
 async function addArea(){
@@ -4859,7 +4996,7 @@ async function addArea(){
     S.areeTematicheRecords.push(rec);
     S.areeTematiche.push(rec.nome); inp.value=''; save(); renderTipiAree();
     populateTipiVisitaSelects(); showToast('Area aggiunta ✓');
-  } catch(e){ console.error('[MediDesk] addArea:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi Med] addArea:', e.message); showToast('Errore: '+e.message); }
 }
 
 async function removeArea(idx){
@@ -4874,7 +5011,7 @@ async function removeArea(idx){
     S.areeTematiche.splice(idx,1);
     S.areeTematicheRecords = S.areeTematicheRecords.filter(r => r.nome !== a);
     save(); renderTipiAree(); populateTipiVisitaSelects(); showToast('Rimossa');
-  } catch(e){ console.error('[MediDesk] removeArea:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi Med] removeArea:', e.message); showToast('Errore: '+e.message); }
 }
 
 // ── CHIUSURE (FERIE) ──
@@ -4962,7 +5099,7 @@ async function saveChiusura(){
       }).select('id').single();
       if(error) throw error;
       nuova.id = data.id;
-    } catch(e){ console.error('[MediDesk] saveChiusura:', e.message); }
+    } catch(e){ console.error('[Delphi Med] saveChiusura:', e.message); }
   }
   S.chiusure.push(nuova);
   save();
@@ -5028,7 +5165,7 @@ async function loadChiusureFromDB(user){
       centri_ids: ch.centri_ids||[]
     }));
     save();
-  } catch(e){ console.error('[MediDesk] loadChiusureFromDB:', e.message); }
+  } catch(e){ console.error('[Delphi Med] loadChiusureFromDB:', e.message); }
 }
 
 function showMailBozzaChiusura(ch, centri){
