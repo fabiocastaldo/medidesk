@@ -975,7 +975,7 @@ html.dark .cancel-token-code{color:var(--ink)}
           </div>
           <div class="form-row">
             <div class="form-group"><label class="form-label">Telefono</label><input class="form-input" id="bk-tel" placeholder="+39 333 0000000"></div>
-            <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="bk-email" type="email" placeholder="mario@email.it"></div>
+            <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="bk-email" type="email" placeholder="mario@email.it"></div>
           </div>
           <div class="form-group">
             <label class="form-label">Tipo visita / motivo</label>
@@ -4588,6 +4588,8 @@ async function confirmBooking(){
   const nome=capitalizeName(document.getElementById('bk-nome').value.trim());
   const cognome=capitalizeName(document.getElementById('bk-cognome').value.trim());
   if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
+  const emailVal=document.getElementById('bk-email').value.trim();
+  if(!emailVal){ showToast('Inserisci la tua email per ricevere la conferma'); return; }
   const cancellationToken = generateCancellationToken();
   const appt={
     id:Date.now(), nome, cognome,
