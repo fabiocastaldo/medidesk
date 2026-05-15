@@ -18,9 +18,8 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     FROM medici
     WHERE slug IS NOT NULL
       AND (
-        nome             ILIKE '%' || p_query || '%'
-        OR cognome       ILIKE '%' || p_query || '%'
-        OR specializzazione ILIKE '%' || p_query || '%'
+        nome    ILIKE '%' || p_query || '%'
+        OR cognome ILIKE '%' || p_query || '%'
       )
     ORDER BY cognome, nome
     LIMIT 20;
