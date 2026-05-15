@@ -1445,7 +1445,7 @@ html.dark .cancel-token-code{color:var(--ink)}
 <script>
 // ── DICHIARAZIONI GLOBALI (in cima per evitare TDZ) ──
 var A = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, prefillDate:null };
-var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, medicoId:null, slotOccupati:[], _centroData:null };
+var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, medicoId:null, medicoEmail:'', medicoNome:'', slotOccupati:[], _centroData:null };
 var _turnoTargetId = null;
 var _giornataSingolaTargetId = null;
 var _bkLastAppt = null;
@@ -4390,7 +4390,9 @@ async function bkInit(){
       const m = medicoArr && medicoArr[0];
       if(!m){ document.getElementById('bk-doctor-name').textContent='Medico non trovato'; return; }
       bk.medicoId = m.id;
+      bk.medicoEmail = m.email_pubblica || '';
       const fullName = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
+      bk.medicoNome = fullName;
       document.getElementById('bk-doctor-name').textContent = fullName;
       document.getElementById('bk-doctor-spec').textContent = m.specializzazione || '';
       const avatarEl = document.getElementById('bk-avatar-display');
@@ -4435,7 +4437,9 @@ async function bkInit(){
     } catch(e){ console.error('[MediDesk] bkInit anon:', e.message); }
   } else {
     bk.medicoId = S.medicoId || null;
+    bk.medicoEmail = S.settings.email || '';
     const fullName=getFullName();
+    bk.medicoNome = fullName;
     document.getElementById('bk-doctor-name').textContent=fullName;
     document.getElementById('bk-doctor-spec').textContent=S.settings.spec||'';
     const avatarEl=document.getElementById('bk-avatar-display');
@@ -4625,6 +4629,10 @@ async function confirmBooking(){
       if(error) throw error;
       appt.id = inserted.id;
       console.log('[Booking] INSERT OK, id:', inserted.id);
+      if(appt.email){
+        const _ec=S.centri.find(c=>String(c.id)===String(bk.centroId));
+        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:appt.email,paziente_nome:nome+' '+cognome,medico_nome:bk.medicoNome||document.getElementById('bk-doctor-name').textContent,medico_email:bk.medicoEmail||'',centro_nome:_ec?_ec.nome:'',data:bk.dateStr,ora:bk.ora,tipo_visita:appt.tipo||'',codice_cancellazione:cancellationToken})}).catch(e=>console.error('[MediDesk] send-email:',e.message));
+      }
     } catch(e){
       console.error('[MediDesk] confirmBooking INSERT:', e.message);
       if(btn){ btn.disabled = false; btn.textContent = 'Conferma prenotazione'; }
@@ -4774,7 +4782,7 @@ async function cancelBookingByToken(apptId){
 }
 
 function bkReset(){
-  bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),medicoId:null,slotOccupati:[],_centroData:null};
+  bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),medicoId:null,medicoEmail:'',medicoNome:'',slotOccupati:[],_centroData:null};
   ['bk-nome','bk-cognome','bk-tel','bk-email','bk-tipo','bk-note'].forEach(id=>document.getElementById(id).value='');
   bkInit();
 }
