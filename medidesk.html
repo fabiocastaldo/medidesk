@@ -6,7 +6,7 @@
 <script>(function(){var s=localStorage.getItem('medidesk_theme'),d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');})()</script>
 <link rel="icon" href="data:,">
 <title>Delphi~Med</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Work+Sans:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>/* qrcode-generator 1.4.4 – inline, no CDN dependency */
@@ -534,7 +534,7 @@ html.dark .cancel-token-code{color:var(--ink)}
 #view-home{display:none;flex-direction:column;min-height:100vh;background:#f8fafb;font-family:'DM Sans',Arial,sans-serif}
 .home-header{background:#0D9488;padding:18px 32px;display:flex;align-items:center;flex-shrink:0}
 .home-logo-wrap{display:flex;flex-direction:column;line-height:1.2}
-.home-logo{color:#fff;font-size:24px;font-weight:700;font-family:'Inter',sans-serif;letter-spacing:-.3px}
+.home-logo{color:#fff;font-size:24px;font-weight:700;font-family:'Work Sans',sans-serif;letter-spacing:-.2px}
 .home-logo-payoff{color:rgba(255,255,255,.72);font-size:11.5px;font-weight:400;margin-top:4px;letter-spacing:.3px;font-family:'DM Sans',Arial,sans-serif}
 .home-hero{background:linear-gradient(160deg,#0F766E 0%,#0D9488 55%,#14B8A6 100%);padding:72px 20px 88px;text-align:center;flex-shrink:0}
 .home-hero h2{color:#fff;font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
@@ -587,19 +587,11 @@ html.dark .cancel-token-code{color:var(--ink)}
   </header>
 
   <section class="home-hero">
-    <h2>Trova il tuo specialista</h2>
-    <!--
-      Opzioni slogan (scegliere una):
-      1. "Il tuo medico di fiducia, sempre a portata di mano" — caldo, rassicurante, personale
-      2. "Il filo diretto con il tuo specialista di fiducia" — elegante, evoca connessione e continuità
-      3. "Vicino al tuo medico, sempre — ovunque tu sia" — poetico, warm
-      Implementata: opzione 1
-    -->
-    <p class="home-hero-sub">Il tuo medico di fiducia, sempre a portata di mano</p>
+    <h2>Trova il tuo medico di fiducia</h2>
     <div class="home-search-wrap">
       <span class="home-search-icon">🔍</span>
       <input class="home-search-input" id="home-search" type="text"
-             placeholder="Cerca il tuo medico di fiducia…"
+             placeholder="Digita nome e cognome del professionista…"
              oninput="homeSearch(this.value)" autocomplete="off">
     </div>
     <div class="home-search-results" id="home-search-results"></div>
