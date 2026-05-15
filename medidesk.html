@@ -6,7 +6,7 @@
 <script>(function(){var s=localStorage.getItem('medidesk_theme'),d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');})()</script>
 <link rel="icon" href="data:,">
 <title>Delphi Med</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>/* qrcode-generator 1.4.4 – inline, no CDN dependency */
@@ -532,12 +532,9 @@ html.dark .cancel-token-code{color:var(--ink)}
 
 /* ── HOME PUBBLICA ── */
 #view-home{display:none;flex-direction:column;min-height:100vh;background:#f8fafb;font-family:'DM Sans',Arial,sans-serif}
-.home-header{background:#0D9488;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.home-logo-wrap{display:flex;flex-direction:column;line-height:1.2}
-.home-logo{color:#fff;font-size:21px;font-weight:700;letter-spacing:-.3px}
-.home-logo-payoff{color:rgba(255,255,255,.7);font-size:12px;font-weight:400;margin-top:2px}
-.home-header-btn{background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.45);border-radius:8px;padding:9px 20px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;font-family:inherit;white-space:nowrap}
-.home-header-btn:hover{background:rgba(255,255,255,.27)}
+.home-header{background:#fff;padding:18px 32px;display:flex;align-items:center;flex-shrink:0;box-shadow:0 1px 0 #deeeed}
+.home-logo-wrap{display:flex;flex-direction:column;line-height:1.15}
+.home-logo{color:#0D9488;font-size:26px;font-weight:700;font-family:'Playfair Display',serif;letter-spacing:-.2px}
 .home-hero{background:linear-gradient(160deg,#0F766E 0%,#0D9488 55%,#14B8A6 100%);padding:72px 20px 88px;text-align:center;flex-shrink:0}
 .home-hero h2{color:#fff;font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
 .home-hero-sub{color:rgba(255,255,255,.82);font-size:15px;margin:0 0 34px}
@@ -560,14 +557,17 @@ html.dark .cancel-token-code{color:var(--ink)}
 .home-section h3{font-size:19px;font-weight:700;color:#0D9488;margin:0 0 20px;letter-spacing:-.2px}
 .home-feature{display:flex;align-items:flex-start;gap:10px;margin-bottom:13px;font-size:14px;color:#444;line-height:1.55}
 .home-feature::before{content:'✓';color:#0D9488;font-weight:700;flex-shrink:0;margin-top:1px}
-.home-cta-btn{display:inline-block;background:#0D9488;color:#fff;border:none;border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;margin-top:18px;transition:background .15s;font-family:'DM Sans',Arial,sans-serif}
-.home-cta-btn:hover{background:#0b7d72}
+.home-cta-btn{display:inline-block;background:#0D9488;color:#fff;border:1.5px solid #0D9488;border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;font-family:'DM Sans',Arial,sans-serif}
+.home-cta-btn:hover{background:#0b7d72;border-color:#0b7d72}
+.home-cta-btn-outline{background:transparent;color:#0D9488}
+.home-cta-btn-outline:hover{background:#f0fdfb;border-color:#0b7d72;color:#0b7d72}
+.home-cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
 .home-footer{background:#f0f0f0;padding:16px;text-align:center;font-size:12px;color:#aaa;flex-shrink:0}
 @media(max-width:640px){
   .home-hero{padding:48px 16px 60px}
   .home-hero h2{font-size:24px}
   .home-header{padding:14px 16px}
-  .home-logo{font-size:18px}
+  .home-logo{font-size:21px}
   .home-sections{padding:32px 16px}
   .home-section+.home-section{border-right:none;border-top:1px solid #e2e8e8;margin-top:28px;padding-top:28px}
   .home-section{padding:0}
@@ -581,14 +581,19 @@ html.dark .cancel-token-code{color:var(--ink)}
   <header class="home-header">
     <div class="home-logo-wrap">
       <span class="home-logo">Delphi Med</span>
-      <span class="home-logo-payoff">Il tuo studio, ovunque</span>
     </div>
-    <button class="home-header-btn" onclick="showLoginView('login')">Accedi / Registrati</button>
   </header>
 
   <section class="home-hero">
     <h2>Trova il tuo specialista</h2>
-    <p class="home-hero-sub">Prenota una visita in pochi click, ricevi la conferma via email</p>
+    <!--
+      Opzioni slogan (scegliere una):
+      1. "Il tuo medico di fiducia, sempre a portata di mano" — caldo, rassicurante, personale
+      2. "Il filo diretto con il tuo specialista di fiducia" — elegante, evoca connessione e continuità
+      3. "Vicino al tuo medico, sempre — ovunque tu sia" — poetico, warm
+      Implementata: opzione 1
+    -->
+    <p class="home-hero-sub">Il tuo medico di fiducia, sempre a portata di mano</p>
     <div class="home-search-wrap">
       <span class="home-search-icon">🔍</span>
       <input class="home-search-input" id="home-search" type="text"
@@ -606,13 +611,18 @@ html.dark .cancel-token-code{color:var(--ink)}
         <div class="home-feature">Prenota online in pochi click</div>
         <div class="home-feature">Ricevi conferma via email</div>
         <div class="home-feature">Cancella quando vuoi</div>
+        <div class="home-feature">Nessuna registrazione richiesta — prenota in pochi secondi</div>
       </div>
       <div class="home-section">
         <h3>Delphi Med per i medici</h3>
+        <div class="home-feature">Porta il tuo studio ovunque</div>
         <div class="home-feature">Gestisci più ambulatori dalla stessa agenda</div>
         <div class="home-feature">Agenda unificata e fascicolo paziente digitale</div>
         <div class="home-feature">Assistente AI per la storia clinica</div>
-        <button class="home-cta-btn" onclick="showLoginView('register')">Registrati gratuitamente</button>
+        <div class="home-cta-row">
+          <button class="home-cta-btn" onclick="showLoginView('register')">Registrati gratuitamente</button>
+          <button class="home-cta-btn home-cta-btn-outline" onclick="showLoginView('login')">Accedi</button>
+        </div>
       </div>
     </div>
   </div>
