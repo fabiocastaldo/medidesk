@@ -1558,6 +1558,7 @@ function checkSession(){
       showAppView();
     } else if(event === 'SIGNED_OUT'){
       _appInitialized = false;
+      stopDashboardPolling();
       showAuthView();
     }
   });
@@ -1570,6 +1571,7 @@ function showAuthView(){
 }
 
 let _appInitialized = false;
+let _pollingInterval = null;
 async function showAppView(){
   console.log('[MediDesk] showAppView() eseguita');
   document.getElementById('view-auth').style.display    = 'none';
@@ -1596,6 +1598,7 @@ async function showAppView(){
   }
   if(!_appInitialized){ _appInitialized = true; init(); }
   else renderAll();
+  startDashboardPolling();
 }
 
 async function ensureMedicoRecord(user){
@@ -1812,6 +1815,29 @@ async function loadAppuntamentiFromDB(user){
     save();
     console.log('[MediDesk] Appuntamenti caricati da DB:', S.appuntamenti.length);
   } catch(e){ console.error('[MediDesk] loadAppuntamentiFromDB:', e.message); }
+}
+
+function stopDashboardPolling(){
+  if(_pollingInterval){ clearInterval(_pollingInterval); _pollingInterval = null; }
+}
+
+function startDashboardPolling(){
+  stopDashboardPolling();
+  _pollingInterval = setInterval(async () => {
+    if(!isOnline()) return;
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if(!user) return;
+      const prevUnseen = S.appuntamenti.filter(a => a.source === 'paziente' && !a.seen).length;
+      await loadAppuntamentiFromDB(user);
+      const newUnseen = S.appuntamenti.filter(a => a.source === 'paziente' && !a.seen).length;
+      renderDashboard(); updateStats(); renderPending(); renderAgenda();
+      if(newUnseen > prevUnseen){
+        const diff = newUnseen - prevUnseen;
+        showToast(`${diff} nuov${diff === 1 ? 'a' : 'e'} prenotazion${diff === 1 ? 'e' : 'i'} ricevut${diff === 1 ? 'a' : 'e'}`);
+      }
+    } catch(e){ /* polling silenzioso */ }
+  }, 30000);
 }
 
 function updateLogoutButtons(){
@@ -4529,7 +4555,7 @@ async function confirmBooking(){
     const btn = document.getElementById('bk-confirm-btn');
     if(btn){ btn.disabled = true; btn.textContent = 'Invio in corso…'; }
     try {
-      const { data: inserted, error } = await supabaseClient.from('appuntamenti').insert({
+      const insertPromise = supabaseClient.from('appuntamenti').insert({
         medico_id:          bk.medicoId,
         centro_id:          bk.centroId,
         data:               bk.dateStr,
@@ -4544,13 +4570,17 @@ async function confirmBooking(){
         source:             'paziente',
         cancellation_token: cancellationToken
       }).select('id').single();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Servizio temporaneamente non disponibile, riprova tra qualche minuto')), 10000)
+      );
+      const { data: inserted, error } = await Promise.race([insertPromise, timeoutPromise]);
       if(error) throw error;
       appt.id = inserted.id;
       console.log('[Booking] INSERT OK, id:', inserted.id);
     } catch(e){
       console.error('[MediDesk] confirmBooking INSERT:', e.message);
       if(btn){ btn.disabled = false; btn.textContent = 'Conferma prenotazione'; }
-      showToast('Servizio temporaneamente non disponibile. Riprova tra qualche istante.');
+      showToast(e.message || 'Servizio temporaneamente non disponibile. Riprova tra qualche istante.');
       return;
     }
   }
