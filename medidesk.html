@@ -1559,6 +1559,7 @@ function checkSession(){
     } else if(event === 'SIGNED_OUT'){
       _appInitialized = false;
       stopDashboardPolling();
+      stopRealtimeChannel();
       showAuthView();
     }
   });
@@ -1572,6 +1573,7 @@ function showAuthView(){
 
 let _appInitialized = false;
 let _pollingInterval = null;
+let _realtimeChannel = null;
 async function showAppView(){
   console.log('[MediDesk] showAppView() eseguita');
   document.getElementById('view-auth').style.display    = 'none';
@@ -1599,6 +1601,7 @@ async function showAppView(){
   if(!_appInitialized){ _appInitialized = true; init(); }
   else renderAll();
   startDashboardPolling();
+  startRealtimeChannel();
 }
 
 async function ensureMedicoRecord(user){
@@ -1838,6 +1841,51 @@ function startDashboardPolling(){
       }
     } catch(e){ /* polling silenzioso */ }
   }, 30000);
+}
+
+function stopRealtimeChannel(){
+  if(_realtimeChannel){ supabaseClient.removeChannel(_realtimeChannel); _realtimeChannel = null; }
+}
+
+function startRealtimeChannel(){
+  stopRealtimeChannel();
+  if(!S.medicoId || !isOnline()) return;
+  console.log('[Realtime] Inizializzato con medicoId:', S.medicoId);
+  _realtimeChannel = supabaseClient
+    .channel('prenotazioni-' + S.medicoId)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'appuntamenti',
+      filter: 'medico_id=eq.' + S.medicoId
+    }, (payload) => {
+      const r = payload.new;
+      console.log('[Realtime] Nuova prenotazione:', r.id);
+      if(S.appuntamenti.find(a => String(a.id) === String(r.id))) return;
+      const _centro = S.centri.find(c => String(c.id) === String(r.centro_id));
+      S.appuntamenti.push({
+        id:         r.id,
+        nome:       r.nome_paziente     || '',
+        cognome:    r.cognome_paziente  || '',
+        tel:        r.telefono_paziente || '',
+        email:      r.email_paziente    || '',
+        tipo:       r.tipo_visita       || '',
+        area:       r.area_tematica     || '',
+        note:       r.note              || '',
+        data:       r.data,
+        ora:        (r.ora || '').substring(0, 5),
+        centroId:   r.centro_id,
+        centroNome: _centro ? _centro.nome : '',
+        source:     r.source || 'paziente',
+        seen:       r.seen || false
+      });
+      save();
+      renderDashboard(); updateStats(); renderPending(); renderAgenda();
+      showToast('Nuova prenotazione ricevuta');
+    })
+    .subscribe((status) => {
+      console.log('[Realtime] Status:', status);
+    });
 }
 
 function updateLogoutButtons(){
