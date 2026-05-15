@@ -16,7 +16,8 @@
       "Bash(grep -n \"showPazienteDetail\\(\\\\${p\\\\.id}\\)\\\\|deletePaziente\\(\\\\${id}\\)\\\\|sintetizzaStoria\\(\\\\${id}\\)\\\\|visitaSelectExisting\\(\\\\${p\\\\.id}\\)\" medidesk.html)",
       "Bash(python *)",
       "Bash(git check-ignore *)",
-      "Bash(npx vercel *)"
+      "Bash(npx vercel *)",
+      "Bash(git config *)"
     ]
   }
 }
