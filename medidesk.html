@@ -1837,6 +1837,7 @@ async function signUp(){
       console.error('[Delphi~Med] signUp: errore invio email admin', emailErr.message);
     }
 
+    await supabaseClient.auth.signOut();
     setAuthLoading(false);
     document.getElementById('reg-form-content').style.display = 'none';
     document.getElementById('reg-success-box').style.display  = 'block';
