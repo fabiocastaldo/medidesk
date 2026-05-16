@@ -449,6 +449,19 @@ html.dark #view-auth{background:linear-gradient(135deg,#051212 0%,#0A1A1A 60%,#0
 .auth-link{display:block;text-align:center;margin-top:14px;font-size:13px;color:var(--ink3);cursor:pointer;text-decoration:underline;background:none;border:none;font-family:'DM Sans',sans-serif;width:100%}
 .auth-link:hover{color:var(--accent)}
 .auth-legal{font-size:11px;color:var(--ink3);text-align:center;margin-top:14px;line-height:1.5}
+.auth-legal a{color:var(--accent);text-decoration:underline}
+.pwd-strength-bar{height:4px;background:var(--border);border-radius:2px;margin:8px 0 3px}
+#pwd-strength-fill{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
+#pwd-strength-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;min-height:15px;margin-bottom:5px}
+.pwd-criteria{margin:0;padding:0;list-style:none}
+.pwd-criteria li{font-size:12px;color:var(--ink3);padding:2px 0;transition:color .15s}
+.pwd-criteria li::before{content:'✕  ';color:#ef4444;font-weight:700}
+.pwd-criteria li.met{color:var(--ink2)}
+.pwd-criteria li.met::before{content:'✓  ';color:#22c55e}
+.reg-success-inner{text-align:center;padding:16px 0}
+.reg-success-icon{font-size:52px;margin-bottom:14px}
+.reg-success-title{margin:0 0 10px;font-size:19px;color:var(--ink);font-weight:700}
+.reg-success-text{margin:0 auto;font-size:14px;color:var(--ink2);line-height:1.6;max-width:300px}
 .auth-msg{font-size:13px;text-align:center;padding:10px 14px;border-radius:8px;margin-bottom:16px;display:none}
 .auth-msg.success{background:var(--accent-light);color:var(--accent2);display:block}
 .auth-msg.error{background:#fdecea;color:#c0392b;display:block}
@@ -658,13 +671,23 @@ html.dark .cancel-token-code{color:var(--ink)}
 
     <!-- REGISTRAZIONE -->
     <div class="auth-panel" id="auth-panel-register">
+      <div id="reg-form-content">
       <div class="auth-field">
         <label>Email</label>
         <input type="email" id="auth-reg-email" placeholder="mario@esempio.it" autocomplete="email">
       </div>
       <div class="auth-field">
-        <label>Password <span style="font-weight:400;color:var(--ink3)">(min. 8 caratteri)</span></label>
-        <input type="password" id="auth-reg-password" placeholder="••••••••" autocomplete="new-password" minlength="8">
+        <label>Password</label>
+        <input type="password" id="auth-reg-password" placeholder="••••••••" autocomplete="new-password" minlength="8" oninput="updatePasswordStrength()">
+        <div class="pwd-strength-bar"><div id="pwd-strength-fill"></div></div>
+        <div id="pwd-strength-label"></div>
+        <ul class="pwd-criteria">
+          <li id="crit-len">Almeno 8 caratteri</li>
+          <li id="crit-upper">Almeno una lettera maiuscola</li>
+          <li id="crit-lower">Almeno una lettera minuscola</li>
+          <li id="crit-num">Almeno un numero</li>
+          <li id="crit-special">Almeno un carattere speciale (!@#$%...)</li>
+        </ul>
       </div>
       <div class="auth-field">
         <label>Conferma password</label>
@@ -800,7 +823,15 @@ html.dark .cancel-token-code{color:var(--ink)}
         </select>
       </div>
       <button class="auth-btn" id="auth-reg-btn" onclick="signUp()">Crea account</button>
-      <p class="auth-legal">Registrandoti accetti i termini di servizio e la privacy policy di Delphi~Med.</p>
+      <p class="auth-legal">Registrandoti accetti i <a href="/termini-di-servizio" target="_blank" rel="noopener">Termini di servizio</a> e la <a href="/privacy-policy" target="_blank" rel="noopener">Privacy policy</a> di Delphi Med.</p>
+      </div><!-- /reg-form-content -->
+      <div id="reg-success-box" style="display:none">
+        <div class="reg-success-inner">
+          <div class="reg-success-icon">&#9989;</div>
+          <h3 class="reg-success-title">Registrazione inviata!</h3>
+          <p class="reg-success-text">La tua richiesta è in attesa di approvazione. Riceverai una email quando il tuo account sarà attivato.</p>
+        </div>
+      </div>
     </div>
 
     <!-- RESET PASSWORD -->
@@ -1716,6 +1747,37 @@ async function loadConfig(){
 function isOnline(){ return supabaseClient !== null; }
 
 // ── AUTH FUNCTIONS ──
+function updatePasswordStrength(){
+  const pwd = document.getElementById('auth-reg-password')?.value || '';
+  const criteria = {
+    len:     pwd.length >= 8,
+    upper:   /[A-Z]/.test(pwd),
+    lower:   /[a-z]/.test(pwd),
+    num:     /[0-9]/.test(pwd),
+    special: /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(pwd)
+  };
+  Object.keys(criteria).forEach(k => {
+    const el = document.getElementById('crit-' + k);
+    if(el) el.classList.toggle('met', criteria[k]);
+  });
+  const met   = Object.values(criteria).filter(Boolean).length;
+  const fill  = document.getElementById('pwd-strength-fill');
+  const label = document.getElementById('pwd-strength-label');
+  if(!pwd.length){
+    if(fill)  { fill.style.width = '0'; fill.style.background = ''; }
+    if(label) { label.textContent = ''; label.style.color = ''; }
+    return;
+  }
+  const levels = [
+    { max: 2, w: '25%',  color: '#ef4444', text: 'Debole' },
+    { max: 4, w: '60%',  color: '#f59e0b', text: 'Media'  },
+    { max: 5, w: '100%', color: '#22c55e', text: 'Forte'  }
+  ];
+  const lvl = levels.find(l => met <= l.max);
+  if(fill)  { fill.style.width = lvl.w; fill.style.background = lvl.color; }
+  if(label) { label.textContent = lvl.text; label.style.color = lvl.color; }
+}
+
 async function signUp(){
   const email           = document.getElementById('auth-reg-email').value.trim();
   const password        = document.getElementById('auth-reg-password').value;
@@ -1729,7 +1791,9 @@ async function signUp(){
   if(!email || !password || !nome || !cognome || !cf || !ordineNumero || !ordineProvincia){
     showAuthMsg('Compila tutti i campi obbligatori', 'error'); return;
   }
-  if(password.length < 8){ showAuthMsg('La password deve avere almeno 8 caratteri', 'error'); return; }
+  const pwdOk = password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) &&
+                /[0-9]/.test(password) && /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(password);
+  if(!pwdOk){ showAuthMsg('La password non soddisfa tutti i criteri richiesti', 'error'); return; }
   if(password !== confirm){ showAuthMsg('Le password non coincidono', 'error'); return; }
   if(cf.length !== 16){ showAuthMsg('Il Codice Fiscale deve avere 16 caratteri', 'error'); return; }
 
@@ -1773,7 +1837,9 @@ async function signUp(){
     }
 
     setAuthLoading(false);
-    showAuthMsg('Registrazione inviata! La tua richiesta è in attesa di approvazione. Riceverai una email quando il tuo account sarà attivato.', 'success');
+    document.getElementById('reg-form-content').style.display = 'none';
+    document.getElementById('reg-success-box').style.display  = 'block';
+    clearAuthMsg();
   } catch(e){
     setAuthLoading(false);
     showAuthMsg('Errore di rete: ' + e.message, 'error');
@@ -2455,7 +2521,7 @@ function showPage(id){
   if(id==='agenda') renderAgenda();
   if(id==='pazienti') renderPazienti();
   if(id==='centri') renderCentri();
-  if(id==='profilo'){ loadSettings(); renderTipiAree(); }
+  if(id==='profilo'){ loadSettings(); renderTipiAree(); prefillProfiloNome(); }
   if(id==='dashboard'){ renderDashboard(); renderPending(); }
 }
 
@@ -4469,6 +4535,21 @@ async function sendNotificaCentroAnonimo(appt){
     const body=`Oggetto: ${subject}\n\nGentile Segreteria di ${c.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||'—'}\n\nL'appuntamento è stato cancellato dal paziente.\nLo slot è ora nuovamente disponibile per altre prenotazioni.`;
     console.log('[EMAIL PLACEHOLDER]',{to:c.email_segreteria, subject, body});
   } catch(e){ console.error('[Delphi~Med] sendNotificaCentroAnonimo:',e.message); }
+}
+
+async function prefillProfiloNome(){
+  const nEl = document.getElementById('setting-nome-prof');
+  const cEl = document.getElementById('setting-cognome-prof');
+  if(!nEl || !cEl || (nEl.value && cEl.value)) return;
+  if(!isOnline()) return;
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if(!user) return;
+    const { data } = await supabaseClient
+      .from('medici').select('nome,cognome').eq('user_id', user.id).maybeSingle();
+    if(data?.nome    && !nEl.value) nEl.value = data.nome;
+    if(data?.cognome && !cEl.value) cEl.value = data.cognome;
+  } catch(e){ console.error('[Delphi~Med] prefillProfiloNome:', e.message); }
 }
 
 function loadSettings(){
