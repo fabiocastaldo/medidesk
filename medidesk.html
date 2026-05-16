@@ -2337,7 +2337,7 @@ function setAuthLoading(on){
 function translateAuthError(msg){
   if(!msg) return 'Errore sconosciuto';
   if(msg.includes('Invalid login credentials')) return 'Email o password errati';
-  if(msg.includes('Email not confirmed'))       return 'Conferma la tua email prima di accedere';
+  if(msg.includes('Email not confirmed'))       return 'Controlla la tua email: devi prima confermare il tuo indirizzo email cliccando il link che ti abbiamo inviato. Controlla anche la cartella spam.';
   if(msg.includes('User already registered'))   return 'Email già registrata — prova ad accedere';
   if(msg.includes('Password should be'))        return 'La password deve avere almeno 8 caratteri';
   if(msg.includes('Unable to validate'))        return 'Email non valida';
