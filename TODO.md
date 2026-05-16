@@ -126,23 +126,65 @@
 - [ ] Rate limiting sulla policy anon INSERT appuntamenti (attualmente qualsiasi anon può inserire per qualsiasi `medico_id` valido — valutare RPC SECURITY DEFINER per l'insert pubblico)
 - [ ] `config.js` mai committato (già in `.gitignore`) — documentare procedura onboarding per nuovi ambienti
 - [ ] Scadenza sessione Supabase: gestire `onAuthStateChange` con refresh automatico
+- [ ] Fix sicurezza: view `medici_pubblici` con SECURITY DEFINER
+
+---
+
+## ✅ Completato — sessione 2026-05-16 (onboarding medici)
+
+### Registrazione medico con approvazione manuale
+- [x] Form registrazione con campi obbligatori: nome, cognome, codice fiscale, numero iscrizione ordine, provincia ordine (107 province)
+- [x] Validazione password forte: 8+ caratteri, maiuscola, minuscola, numero, carattere speciale — indicatore visivo rosso/arancione/verde in tempo reale
+- [x] `supabase.auth.signOut()` dopo `signUp()` per bloccare il login automatico (Confirm email disattivato su Supabase)
+- [x] INSERT in `medici` con tutti i campi + `stato: 'in_attesa'`; tipi visita default creati contestualmente
+- [x] Email di notifica all'admin (`fb.castaldo@gmail.com`) con dati medico e link di approvazione
+- [x] Endpoint `api/approve-doctor.js`: PATCH `stato = 'approvato'` + invio email di benvenuto al medico
+- [x] Blocco login per medici con `stato = 'in_attesa'` (con `signOut()` automatico)
+- [x] Messaggio post-registrazione inline (form nascosto, success box visibile) con pulsante "Torna alla home"
+- [x] Link a Termini di servizio e Privacy policy nel form (pagine placeholder `termini-di-servizio.html` e `privacy-policy.html`)
+- [x] Nome e cognome prepopolati nel profilo dalla registrazione (`prefillProfiloNome()` come safeguard)
+- [x] Gestione errore "Email not confirmed" nel login con messaggio dettagliato
+
+### Infrastruttura email
+- [x] Dominio `delphi-med.com` verificato su Resend
+- [x] Mittente aggiornato da `onboarding@resend.dev` a `noreply@delphi-med.com`
+- [x] `api/send-email.js` esteso con modalità generica `{to, subject, html}` oltre al template appuntamenti
+- [x] `SUPABASE_SERVICE_ROLE_KEY` configurata in Vercel
+
+### Migration SQL necessaria
+- [ ] Eseguire `add-medici-approval.sql` su Supabase: aggiunge `codice_fiscale`, `numero_iscrizione_ordine`, `provincia_ordine`, `stato` (DEFAULT `'approvato'` per account legacy)
+
+---
+
+## 🔜 Da fare a breve
+
+### Dominio e deploy
+- [ ] Completare configurazione `delphi-med.it` su Vercel: aggiungere CNAME `www` → `8d5de3516bd187e8.vercel-dns-017.com` su Cloudflare
+- [ ] Aggiungere variabile d'ambiente `SITE_URL=https://delphi-med.com` su Vercel (usata da `approve-doctor.js`)
+
+### Contenuti legali
+- [ ] Sostituire testo placeholder di `termini-di-servizio.html` con contenuto reale
+- [ ] Sostituire testo placeholder di `privacy-policy.html` con contenuto reale
+
+### Email e notifiche (Step 7)
+- [ ] **Step 7b** — notifica email al centro quando arriva una prenotazione
+- [ ] **Step 7c** — promemoria 24h al paziente (richiede Vercel Cron Jobs)
+- [ ] **Step 7d** — notifiche al medico (3 toggle già in profilo)
+
+### Email personalizzata
+- [ ] Creare indirizzo email `@delphi-med.com` (attualmente tutte le email di test vanno a `fb.castaldo@gmail.com`)
 
 ---
 
 ## Da fare in seguito
 
-### Hosting e dominio
-- [ ] Scegliere hosting statico (Netlify / Vercel / GitHub Pages / Cloudflare Pages)
-- [ ] Dominio personalizzato (es. `medidesk.it` o sottodominio)
-- [ ] HTTPS automatico (incluso in tutti i provider sopra)
-- [ ] Separare ambiente dev / prod (Supabase project separati)
+### Funzionalità prodotto
+- [ ] Logo grafico Delphi Med (Canva o Brandmark.io)
+- [ ] **Step 8** — indirizzo email personale medico + agente AI che legge mail centri
+- [ ] **Step 9** — pagamenti Stripe (abbonamenti mensili)
+- [ ] **Step 10** — PWA + Capacitor per app store iOS/Android
 
-### Email e notifiche
-- [ ] Email di conferma al paziente dopo prenotazione (Supabase Edge Function + Resend/SendGrid)
-- [ ] Email di promemoria 24h prima dell'appuntamento (cron Supabase)
-- [ ] Notifica push al medico per nuove prenotazioni online (Web Push API o email)
-
-### Pagamenti (opzionale, lungo termine)
+### Pagamenti (lungo termine)
 - [ ] Integrazione Stripe per pagamento anticipato al momento della prenotazione
 - [ ] Gestione rimborsi e cancellazioni con policy configurabile dal medico
 - [ ] Ricevuta fiscale / fattura (valutare integrazione con Fatture in Cloud o simili)
@@ -160,8 +202,17 @@
 - [ ] Template referti personalizzabili
 - [ ] Firma digitale referti (PDF con firma)
 - [ ] Ricerca full-text sullo storico clinico (già parzialmente implementata lato UI)
-- [ ] App mobile nativa (React Native / Expo) — **ricerca futura**, non prioritaria finché la PWA regge
+- [ ] App mobile nativa (React Native / Expo) — ricerca futura, non prioritaria finché la PWA regge
 
 ---
 
-*Ultimo aggiornamento: 2026-05-13 — Migliorie: festività+ferie, pazienti per centro, condivisione PDF/email/share, fix centri eliminati, ordine tipi visita*
+## ⚠️ Note operative
+
+- **Confirm email DISATTIVATO** su Supabase Authentication: `signOut()` dopo `signUp()` compensa il login automatico
+- **Email di test** arrivano tutte a `fb.castaldo@gmail.com` finché non si crea un indirizzo `@delphi-med.com`
+- **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS per PATCH su riga altrui)
+- **`add-medici-approval.sql`** deve essere eseguito su Supabase prima che il flusso di registrazione funzioni
+
+---
+
+*Ultimo aggiornamento: 2026-05-16 — Onboarding medici: registrazione con approvazione, email flow, password strength, pagine legali*
