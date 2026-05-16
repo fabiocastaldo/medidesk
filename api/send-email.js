@@ -14,12 +14,26 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'RESEND_API_KEY non configurata' });
   }
 
-  const { to, paziente_nome, medico_nome, medico_email, centro_nome, data, ora, tipo_visita, codice_cancellazione } = req.body || {};
+  const { to, subject, html: rawHtml, paziente_nome, medico_nome, medico_email, centro_nome, data, ora, tipo_visita, codice_cancellazione } = req.body || {};
 
   if (!to || typeof to !== 'string') {
     return res.status(400).json({ error: 'Campo to mancante o non valido' });
   }
 
+  const resend = new Resend(apiKey);
+
+  // Modalità generica: subject e html forniti direttamente
+  if (subject && rawHtml) {
+    try {
+      const { error } = await resend.emails.send({ from: 'onboarding@resend.dev', to: [to], subject, html: rawHtml });
+      if (error) return res.status(500).json({ error: error.message });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+    return res.status(200).json({ ok: true });
+  }
+
+  // Modalità template: email di conferma appuntamento
   let dataFmt = data || '';
   try {
     const d = new Date(data + 'T12:00:00');
@@ -35,8 +49,6 @@ export default async function handler(req, res) {
     tipo_visita:         esc(tipo_visita) || '&mdash;',
     codice_cancellazione: esc(codice_cancellazione)
   });
-
-  const resend = new Resend(apiKey);
 
   const emailPayload = {
     from:    'onboarding@resend.dev',
