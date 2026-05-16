@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   // Modalità generica: subject e html forniti direttamente
   if (subject && rawHtml) {
     try {
-      const { error } = await resend.emails.send({ from: 'onboarding@resend.dev', to: [to], subject, html: rawHtml });
+      const { error } = await resend.emails.send({ from: 'noreply@delphi-med.com', to: [to], subject, html: rawHtml });
       if (error) return res.status(500).json({ error: error.message });
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   });
 
   const emailPayload = {
-    from:    'onboarding@resend.dev',
+    from:    'noreply@delphi-med.com',
     to:      [to],
     subject: `Conferma appuntamento con ${medico_nome || 'il medico'}`,
     html
