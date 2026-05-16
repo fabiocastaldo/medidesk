@@ -39,13 +39,20 @@ export default async function handler(req, res) {
     return res.status(500).send(htmlPage('Errore del database', `&#10060; Aggiornamento fallito (HTTP ${patchResponse.status}): ${esc(errText)}`));
   }
 
-  // Invia email di approvazione al medico
+  // Recupera dati medico dalla risposta del PATCH
+  let medico = null;
   try {
-    const rows  = await patchResponse.json();
-    const medico = Array.isArray(rows) ? rows[0] : rows;
-    if (medico?.email) {
-      const siteUrl = process.env.SITE_URL || 'https://delphi-med.com';
-      await fetch(`${siteUrl}/api/send-email`, {
+    const rows = await patchResponse.json();
+    medico = Array.isArray(rows) ? rows[0] : rows;
+    console.log('[approve-doctor] dati medico recuperati:', JSON.stringify(medico));
+  } catch (e) {
+    console.error('[approve-doctor] errore parsing risposta PATCH:', e.message);
+  }
+
+  // Invia email di approvazione al medico
+  if (medico?.email) {
+    try {
+      const emailRes = await fetch('https://delphi-med.com/api/send-email', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -54,9 +61,17 @@ export default async function handler(req, res) {
           html:    buildApprovalEmail({ nome: medico.nome, cognome: medico.cognome })
         })
       });
+      if (emailRes.ok) {
+        console.log('[approve-doctor] email di approvazione inviata a:', medico.email);
+      } else {
+        const errBody = await emailRes.text().catch(() => '');
+        console.error('[approve-doctor] send-email ha risposto con errore HTTP', emailRes.status, errBody);
+      }
+    } catch (e) {
+      console.error('[approve-doctor] errore chiamata send-email:', e.message);
     }
-  } catch (e) {
-    console.error('[approve-doctor] errore invio email medico:', e.message);
+  } else {
+    console.warn('[approve-doctor] email medico non trovata — invio email saltato. Dati:', JSON.stringify(medico));
   }
 
   return res.status(200).send(htmlPage(
