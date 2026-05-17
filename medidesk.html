@@ -705,59 +705,6 @@ html.dark .cancel-token-code{color:var(--ink)}
         <label>Specializzazione</label>
         <select id="reg-specializzazione" required>
           <option value="">— seleziona —</option>
-          <option>Allergologia e immunologia clinica</option>
-          <option>Anatomia patologica</option>
-          <option>Anestesia, rianimazione, terapia intensiva e del dolore</option>
-          <option>Cardiologia</option>
-          <option>Chirurgia generale</option>
-          <option>Chirurgia maxillo-facciale</option>
-          <option>Chirurgia pediatrica</option>
-          <option>Chirurgia plastica, ricostruttiva ed estetica</option>
-          <option>Chirurgia toracica</option>
-          <option>Chirurgia vascolare</option>
-          <option>Dermatologia e venereologia</option>
-          <option>Ematologia</option>
-          <option>Endocrinologia e malattie del metabolismo</option>
-          <option>Farmacologia e tossicologia clinica</option>
-          <option>Gastroenterologia</option>
-          <option>Genetica medica</option>
-          <option>Geriatria</option>
-          <option>Ginecologia e ostetricia</option>
-          <option>Igiene e medicina preventiva</option>
-          <option>Malattie dell'apparato cardiovascolare</option>
-          <option>Malattie dell'apparato respiratorio</option>
-          <option>Malattie infettive e tropicali</option>
-          <option>Medicina del lavoro</option>
-          <option>Medicina dello sport e dell'esercizio fisico</option>
-          <option>Medicina di comunità e delle cure primarie</option>
-          <option>Medicina d'emergenza-urgenza</option>
-          <option>Medicina fisica e riabilitativa</option>
-          <option>Medicina generale</option>
-          <option>Medicina interna</option>
-          <option>Medicina legale</option>
-          <option>Medicina nucleare</option>
-          <option>Medicina termale</option>
-          <option>Medicina tropicale</option>
-          <option>Microbiologia e virologia</option>
-          <option>Nefrologia</option>
-          <option>Neurochirurgia</option>
-          <option>Neurofisiopatologia</option>
-          <option>Neurologia</option>
-          <option>Neuropsichiatria infantile</option>
-          <option>Oftalmologia</option>
-          <option>Oncologia medica</option>
-          <option>Ortopedia e traumatologia</option>
-          <option>Otorinolaringoiatria</option>
-          <option>Patologia clinica e biochimica clinica</option>
-          <option>Pediatria</option>
-          <option>Psichiatria</option>
-          <option>Psicoterapia</option>
-          <option>Radiodiagnostica</option>
-          <option>Radioterapia</option>
-          <option>Reumatologia</option>
-          <option>Scienza dell'alimentazione</option>
-          <option>Statistica sanitaria e biometria</option>
-          <option>Urologia</option>
         </select>
       </div>
       <div class="auth-field">
@@ -1088,7 +1035,16 @@ html.dark .cancel-token-code{color:var(--ink)}
           </div>
           <div class="form-group">
             <label class="form-label">Specializzazione</label>
-            <input class="form-input" id="setting-spec" placeholder="Cardiologo">
+            <select class="form-input" id="setting-spec" onchange="onSpecPrincChange()">
+              <option value="">— seleziona —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Altre specializzazioni <span style="font-size:12px;font-weight:400;color:var(--ink3)">(opzionali)</span></label>
+            <div id="spec-altre-list" class="tag-editor" style="margin-bottom:8px"></div>
+            <select class="form-input" id="setting-spec-altre-select" onchange="addSpecAltra(this.value)">
+              <option value="">+ Aggiungi specializzazione…</option>
+            </select>
           </div>
           <!-- Slug -->
           <div class="form-group">
@@ -2179,6 +2135,9 @@ async function loadMedicoFromDB(user){
       S.settings.bio         = data.bio                || '';
       S.settings.esperienza  = data.anni_esperienza    || '';
       S.settings.lingue      = Array.isArray(data.lingue) ? data.lingue : [];
+      S.settings.specAltre   = data.specializzazioni
+        ? data.specializzazioni.filter(s => s !== data.specializzazione)
+        : [];
       S.settings.email       = data.email_pubblica     || '';
       S.settings.telefono    = data.telefono           || '';
       S.settings.sitoWeb     = data.sito_web           || '';
@@ -2481,7 +2440,7 @@ function translateAuthError(msg){
 var S = {
   medicoId: null,
   centri:[], appuntamenti:[], pazienti:[],
-  settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', esperienza:'', lingue:[],
+  settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', esperienza:'', lingue:[], specAltre:[],
              titolo:'Dr.', nomeProf:'Mario', cognomeProf:'Rossi', slug:'',
              email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'',
              foto_url: null },
@@ -2499,6 +2458,26 @@ const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio
 const DAYS_IT_SHORT=['Lu','Ma','Me','Gi','Ve','Sa','Do'];
 const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const TIPI_DEFAULT = ['Prima visita', 'Controllo'];
+const SPECIALIZZAZIONI_UFFICIALI = [
+  'Allergologia e immunologia clinica','Anatomia patologica',
+  'Anestesia, rianimazione, terapia intensiva e del dolore','Cardiologia',
+  'Chirurgia generale','Chirurgia maxillo-facciale','Chirurgia pediatrica',
+  'Chirurgia plastica, ricostruttiva ed estetica','Chirurgia toracica','Chirurgia vascolare',
+  'Dermatologia e venereologia','Ematologia','Endocrinologia e malattie del metabolismo',
+  'Farmacologia e tossicologia clinica','Gastroenterologia','Genetica medica','Geriatria',
+  'Ginecologia e ostetricia','Igiene e medicina preventiva',
+  'Malattie dell\'apparato cardiovascolare','Malattie dell\'apparato respiratorio',
+  'Malattie infettive e tropicali','Medicina del lavoro',
+  'Medicina dello sport e dell\'esercizio fisico',
+  'Medicina di comunità e delle cure primarie','Medicina d\'emergenza-urgenza',
+  'Medicina fisica e riabilitativa','Medicina generale','Medicina interna','Medicina legale',
+  'Medicina nucleare','Medicina termale','Medicina tropicale','Microbiologia e virologia',
+  'Nefrologia','Neurochirurgia','Neurofisiopatologia','Neurologia','Neuropsichiatria infantile',
+  'Oftalmologia','Oncologia medica','Ortopedia e traumatologia','Otorinolaringoiatria',
+  'Patologia clinica e biochimica clinica','Pediatria','Psichiatria','Psicoterapia',
+  'Radiodiagnostica','Radioterapia','Reumatologia','Scienza dell\'alimentazione',
+  'Statistica sanitaria e biometria','Urologia'
+];
 const SOCIAL_ICONS={
   email:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-9.1 5.7a2 2 0 0 1-1.8 0L2 7"/></svg>`,
   phone:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1A19.5 19.5 0 0 1 5 13a19.8 19.8 0 0 1-3-8.5 2 2 0 0 1 2-2.2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7a2 2 0 0 1 1.8 2z"/></svg>`,
@@ -2574,6 +2553,7 @@ function load(){
   if(!S.settings.albo) S.settings.albo = '';
   if(!S.settings.esperienza) S.settings.esperienza = '';
   if(!Array.isArray(S.settings.lingue)) S.settings.lingue = [];
+  if(!Array.isArray(S.settings.specAltre)) S.settings.specAltre = [];
   // Nuovi campi v2: migra nome → titolo/nomeProf/cognomeProf
   if(S.settings.nomeProf === undefined){
     const parts = (S.settings.nome||'').trim().split(/\s+/);
@@ -2611,7 +2591,14 @@ function checkView(){
   }
 }
 
+function _populateSpecSelect(id, placeholder){
+  const sel = document.getElementById(id); if(!sel) return;
+  const opts = SPECIALIZZAZIONI_UFFICIALI.map(s => `<option value="${s}">${s}</option>`).join('');
+  sel.innerHTML = `<option value="">${placeholder}</option>` + opts;
+}
 function init(){
+  _populateSpecSelect('reg-specializzazione', '— seleziona —');
+  _populateSpecSelect('setting-spec', '— seleziona —');
   const td = document.getElementById('today-date');
   if(td) td.textContent = new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   updateLogoutButtons();
@@ -4729,6 +4716,7 @@ function loadSettings(){
   updateBioCounter();
   renderSlugPreview();
   renderLingue();
+  renderSpecAltre();
   renderFotoProfilo();
 }
 async function saveSettings(){
@@ -4741,6 +4729,9 @@ async function saveSettings(){
   S.settings.cognomeProf = capitalizeName(val('setting-cognome-prof'));
   S.settings.nome        = getFullName();
   S.settings.spec        = val('setting-spec');
+  if(S.settings.spec && (S.settings.specAltre||[]).includes(S.settings.spec)){
+    S.settings.specAltre = S.settings.specAltre.filter(s => s !== S.settings.spec);
+  }
   const newSlug          = slugify(val('setting-slug'));
   S.settings.slug        = newSlug;
   S.settings.bio         = val('setting-bio');
@@ -4783,6 +4774,7 @@ async function saveSettings(){
         nome:             S.settings.nomeProf    || null,
         cognome:          S.settings.cognomeProf || null,
         specializzazione: S.settings.spec        || null,
+        specializzazioni: (()=>{ const a=[...new Set([S.settings.spec,...(S.settings.specAltre||[])].filter(Boolean))]; return a.length?a:null; })(),
         slug:             S.settings.slug        || null,
         numero_albo:      S.settings.albo        || null,
         bio:              S.settings.bio         || null,
@@ -4938,6 +4930,37 @@ async function syncLingueToDB(){
       .eq('user_id', user.id);
   } catch(e){ console.error('[Delphi~Med] syncLingueToDB:', e.message); }
 }
+// spec altre
+function renderSpecAltre(){
+  const list = document.getElementById('spec-altre-list'); if(!list) return;
+  const sel  = document.getElementById('setting-spec-altre-select'); if(!sel) return;
+  const specPrinc = (document.getElementById('setting-spec')||{}).value || S.settings.spec || '';
+  list.innerHTML = (S.settings.specAltre||[]).map(s =>
+    `<span class="tag-chip">${s}<button class="tag-chip-x" onclick="removeSpecAltra(${JSON.stringify(s)})" title="Rimuovi">✕</button></span>`
+  ).join('');
+  const used = new Set([...(S.settings.specAltre||[]), specPrinc].filter(Boolean));
+  sel.innerHTML = '<option value="">+ Aggiungi specializzazione…</option>' +
+    SPECIALIZZAZIONI_UFFICIALI.filter(s => !used.has(s))
+      .map(s => `<option value="${s}">${s}</option>`).join('');
+}
+function addSpecAltra(value){
+  if(!value) return;
+  if(!(S.settings.specAltre||[]).includes(value)) S.settings.specAltre.push(value);
+  renderSpecAltre();
+}
+function removeSpecAltra(value){
+  S.settings.specAltre = (S.settings.specAltre||[]).filter(s => s !== value);
+  renderSpecAltre();
+}
+function onSpecPrincChange(){
+  const newSpec = (document.getElementById('setting-spec')||{}).value || '';
+  if(newSpec && (S.settings.specAltre||[]).includes(newSpec)){
+    S.settings.specAltre = S.settings.specAltre.filter(s => s !== newSpec);
+    showToast(`"${newSpec}" rimossa da "Altre" (ora è la principale)`);
+  }
+  renderSpecAltre();
+}
+
 function updateDoctorName(){
   const name=getFullName();
   const dd=document.getElementById('doctor-display'); if(dd) dd.textContent=name;
