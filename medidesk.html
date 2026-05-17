@@ -1800,6 +1800,7 @@ async function signUp(){
 
   setAuthLoading(true);
   try {
+    _isRegistering = true;
     const { data: authData, error: authErr } = await supabaseClient.auth.signUp({ email, password });
     if(authErr){ setAuthLoading(false); showAuthMsg(translateAuthError(authErr.message), 'error'); return; }
 
@@ -1838,11 +1839,14 @@ async function signUp(){
     }
 
     await supabaseClient.auth.signOut();
+    _isRegistering = false;
     setAuthLoading(false);
     document.getElementById('reg-form-content').style.display = 'none';
     document.getElementById('reg-success-box').style.display  = 'block';
+    showAuthView();
     clearAuthMsg();
   } catch(e){
+    _isRegistering = false;
     setAuthLoading(false);
     showAuthMsg('Errore di rete: ' + e.message, 'error');
   }
@@ -1953,7 +1957,11 @@ function checkSession(){
     return;
   }
   supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('[Delphi~Med] onAuthStateChange:', event, session?.user?.email ?? 'no session');
+    console.log('[Delphi~Med] onAuthStateChange:', event, session?.user?.email ?? 'no session', '_isRegistering:', _isRegistering);
+    if(_isRegistering){
+      console.log('[Delphi~Med] Evento ignorato perché siamo in fase di registrazione');
+      return;
+    }
     if(event === 'INITIAL_SESSION'){
       if(session){ showAppView(); } else { showAuthView(); }
     } else if(event === 'SIGNED_IN'){
@@ -1981,6 +1989,7 @@ function showLoginView(tab){
 }
 
 let _appInitialized = false;
+let _isRegistering = false;
 let _pollingInterval = null;
 let _realtimeChannel = null;
 async function showAppView(){
