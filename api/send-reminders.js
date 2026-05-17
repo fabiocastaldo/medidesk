@@ -82,7 +82,7 @@ export default async function handler(req, res) {
     const html    = buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora: appt.ora, tipoVisita: appt.tipo_visita, centroNome: centro.nome, centroIndirizzo });
 
     try {
-      const emailRes = await fetch('https://delphi-med.com/api/send-email', {
+      const emailRes = await fetch('https://www.delphi-med.com/api/send-email', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ to: appt.email_paziente, subject, html })
