@@ -4698,7 +4698,13 @@ function toggleTheme(){
   localStorage.setItem('medidesk_theme', dark ? 'dark' : 'light');
 }
 
-// ── NOTIFICHE EMAIL (placeholder — Step 7 attiverà Resend) ──
+// ── NOTIFICHE EMAIL ──
+function buildEmailHtml(plainText, headerLabel){
+  const escaped = plainText
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\n/g,'<br>');
+  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;line-height:1.6;max-width:600px;margin:0 auto;padding:24px;background:#fafafa"><div style="background:#0D9488;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:600;font-size:16px">Delphi~Med · ${headerLabel}</div><div style="background:#fff;padding:24px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;white-space:normal">${escaped}</div><div style="font-size:11px;color:#888;text-align:center;margin-top:16px">Email automatica inviata da Delphi~Med · Non rispondere a questo indirizzo</div></body></html>`;
+}
 async function sendNotificaCentro(tipo, appt){
   const toggleMap={
     nuova_prenotazione: S.settings.notifNuovaPrenotazione,
@@ -4720,8 +4726,17 @@ async function sendNotificaCentro(tipo, appt){
     subject=`Nuova prenotazione — ${appt.cognome||appt.cognome_paziente} ${appt.nome||appt.nome_paziente}`;
     body=buildMailText(appt);
   }
-  console.log('[EMAIL PLACEHOLDER]',{to:centro.email, subject, body});
-  showToast('📧 Notifica centro pronta (email attiva allo Step 7)');
+  if(!isOnline()) return;
+  try {
+    const headerLabel = tipo==='cancellazione' ? 'Cancellazione appuntamento'
+                      : tipo==='appuntamento_manuale' ? 'Nuovo appuntamento'
+                      : 'Nuova prenotazione';
+    await fetch('/api/send-email', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ to: centro.email, subject, html: buildEmailHtml(body, headerLabel) })
+    });
+  } catch(e){ console.error('[Delphi~Med] sendNotificaCentro:', e.message); }
 }
 async function sendNotificaCentroAnonimo(appt){
   if(!isOnline()) return;
@@ -4734,7 +4749,11 @@ async function sendNotificaCentroAnonimo(appt){
     const paz=`${appt.cognome_paziente} ${appt.nome_paziente}`;
     const subject=`Cancellazione appuntamento — ${paz}`;
     const body=`Oggetto: ${subject}\n\nGentile Segreteria di ${c.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||'—'}\n\nL'appuntamento è stato cancellato dal paziente.\nLo slot è ora nuovamente disponibile per altre prenotazioni.`;
-    console.log('[EMAIL PLACEHOLDER]',{to:c.email_segreteria, subject, body});
+    await fetch('/api/send-email', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ to: c.email_segreteria, subject, html: buildEmailHtml(body, 'Cancellazione appuntamento') })
+    });
   } catch(e){ console.error('[Delphi~Med] sendNotificaCentroAnonimo:',e.message); }
 }
 
