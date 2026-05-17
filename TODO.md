@@ -18,6 +18,44 @@
 
 ---
 
+## ✅ Completato — sessione 2026-05-17 (notte)
+
+### Profilo medico — Altre specializzazioni
+- [x] Costante `SPECIALIZZAZIONI_UFFICIALI` (53 voci) estratta dal form di registrazione; usata sia da `#reg-specializzazione` che dal profilo
+- [x] `#setting-spec` (specializzazione principale) convertita da input libero a `<select>` a 53 voci
+- [x] Nuovo campo "Altre specializzazioni" nel profilo: area chip `#spec-altre-list` + tendina `#setting-spec-altre-select`
+- [x] `renderSpecAltre()`: ridisegna chip ed esclude dalla tendina le voci già usate (principale + altre)
+- [x] `addSpecAltra()` / `removeSpecAltra()`: aggiunge/rimuove chip con aggiornamento tendina
+- [x] `onSpecPrincChange()`: se la nuova principale era già tra le altre, la rimuove con toast
+- [x] `loadSettings()`: popola `specAltre` da `data.specializzazioni` (esclude la principale)
+- [x] `saveSettings()`: scrive `specializzazioni: [...new Set([spec, ...specAltre])]` deduplicato su Supabase
+
+### Centri — Modifica centro
+- [x] Bottone ✏️ aggiunto a ogni card centro (sia attivi che disattivati), a sinistra di ⏸/▶
+- [x] `openEditCentro(id)`: popola la modale con i dati del centro e cambia titolo/bottone in "Modifica / Salva modifiche"
+- [x] `openAddCentro()`: resetta il form e ripristina "Aggiungi centro / Salva centro"
+- [x] `closeCentroModal()`: azzera `_centroEditId` — usato da ×, Annulla e dopo il salvataggio
+- [x] `saveCentro()`: gestisce INSERT (nuovo) e UPDATE (modifica) preservando turni, giornate singole e stato attivo
+- [x] `resetCentroForm()`: utility estratta per il reset del form centro
+
+---
+
+## ✅ Completato — sessione 2026-05-17 (sera)
+
+### Merge e deploy
+- [x] Merge `feat-specializzazione-centri` → `master` (fast-forward, 3 commit) e push su origin; branch eliminato in locale e remote
+- [x] Step 5 prenotazione (`bk-step-5`): bottone "Prenota un altro appuntamento" → link "Torna alla home" che reindirizza a https://delphi-med.com
+
+### Dominio
+- [x] `delphi-med.it` configurato e funzionante: record A `@` → `76.76.21.21` + CNAME `www` → `8d5de3516bd187e8.vercel-dns-017.com` su Cloudflare (Proxy: DNS only)
+
+### Bug risolti
+- [x] Email approvazione tardiva: l'email al medico ora arriva senza necessità di refresh
+- [x] Errori 406 al login post-approvazione risolti
+- [x] 409 Conflict su `ensureMedicoRecord` risolto
+
+---
+
 ## ✅ Completato — sessione 2026-05-17 (schema DB + frontend)
 
 ### Wipe e migrazione schema DB
@@ -73,20 +111,11 @@
 
 ## ⚠️ Problemi aperti (noti, non ancora risolti)
 
-- [ ] **Email approvazione tardiva**: l'email al medico arriva solo dopo refresh della pagina admin. Sospetto: risposta HTML restituita prima che `fetch` a `send-email` completi in `approve-doctor.js`
-- [ ] **Errori 406 al login**: query `medici?user_id=eq.xxx` ×5 al primo login post-approvazione — capire se solo rumore o rompe qualcosa
-- [ ] **409 Conflict su `ensureMedicoRecord`**: innocuo (gestito da catch), ma sporca i log
+*(nessun problema aperto noto al momento)*
 
 ---
 
 ## 🔜 Prossime priorità
-
-### Merge e deploy
-- [ ] Testare branch `feat-specializzazione-centri` su Vercel preview
-- [ ] Merge `feat-specializzazione-centri` → `master` e push per deploy produzione
-
-### Dominio
-- [ ] Completare configurazione `delphi-med.it` su Vercel: CNAME `www` → `8d5de3516bd187e8.vercel-dns-017.com` su Cloudflare → Refresh Vercel
 
 ### Contenuti legali
 - [ ] Sostituire placeholder `termini-di-servizio.html` con testo reale
@@ -114,7 +143,6 @@
 
 ### Prodotto
 - [ ] Logo grafico Delphi~Med
-- [ ] Campo "altre specializzazioni" nel profilo (multi-select su `specializzazioni[]`)
 - [ ] **Step 8** — indirizzo email personale medico + agente AI che legge mail centri
 - [ ] **Step 9** — pagamenti Stripe (abbonamenti mensili ~19-29€/mese)
 - [ ] **Step 10** — PWA + Capacitor per app store iOS/Android
@@ -144,8 +172,8 @@
 - **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
 - **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
 - **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: `feat-specializzazione-centri` — da mergiare su master dopo test
+- **Branch attivo**: nessuno — tutto su `master`
 
 ---
 
-*Ultimo aggiornamento: 2026-05-17 — Schema DB aggiornato (specializzazione + centri via/città/prov/CAP), bug auth risolti, rebrand Delphi~Med*
+*Ultimo aggiornamento: 2026-05-17 notte — "Altre specializzazioni" multi-select nel profilo, modifica centro con modale in doppia modalità (crea/aggiorna)*
