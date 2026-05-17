@@ -1474,9 +1474,9 @@ html.dark .cancel-token-code{color:var(--ink)}
   <div class="modal">
     <div class="modal-header"><span class="modal-title">Aggiungi centro</span><button class="modal-close" onclick="closeModal('modal-centro')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">Nome del centro</label><input class="form-input" id="centro-nome" placeholder="Poliambulatorio Milano Centro"></div>
+      <div class="form-group"><label class="form-label">Nome del centro</label><input class="form-input" id="centro-nome" placeholder="Poliambulatorio Milano Centro" onblur="this.value=capitalizeWords(this.value.trim())"></div>
       <div class="form-group"><label class="form-label">Email segreteria</label><input class="form-input" id="centro-email" type="email" placeholder="segreteria@centro.it"></div>
-      <div class="form-group"><label class="form-label">Via / Piazza</label><input class="form-input" id="centro-via" placeholder="Via Roma 12"></div>
+      <div class="form-group"><label class="form-label">Via / Piazza</label><input class="form-input" id="centro-via" placeholder="Via Roma 12" onblur="this.value=capitalizeWords(this.value.trim())"></div>
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px">
         <div class="form-group"><label class="form-label">Città</label><input class="form-input" id="centro-citta" placeholder="Milano" onblur="this.value=capitalizeWords(this.value.trim())"></div>
         <div class="form-group"><label class="form-label">Provincia</label>
