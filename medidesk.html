@@ -5355,7 +5355,14 @@ async function confirmBooking(){
         setTimeout(() => reject(new Error('Servizio temporaneamente non disponibile, riprova tra qualche minuto')), 10000)
       );
       const { data: inserted, error } = await Promise.race([insertPromise, timeoutPromise]);
-      if(error) throw error;
+      if(error){
+        if(error.code === '23505' || (error.message && error.message.includes('appuntamenti_slot_unique'))){
+          const err = new Error('Questo orario è appena stato prenotato da un altro paziente. Ti riportiamo alla scelta dello slot.');
+          err.isSlotTaken = true;
+          throw err;
+        }
+        throw error;
+      }
       appt.id = inserted.id;
       console.log('[Booking] INSERT OK, id:', inserted.id);
       if(appt.email){
@@ -5365,6 +5372,17 @@ async function confirmBooking(){
     } catch(e){
       console.error('[Delphi~Med] confirmBooking INSERT:', e.message);
       if(btn){ btn.disabled = false; btn.textContent = 'Conferma prenotazione'; }
+      if(e.isSlotTaken){
+        bk.slotOccupati = bk.slotOccupati || [];
+        bk.slotOccupati.push({ centroId: bk.centroId, data: bk.dateStr, ora: bk.ora });
+        try {
+          const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: bk.medicoId });
+          if(slotDB) bk.slotOccupati = slotDB.map(s=>({ centroId: s.centro_id, data: s.data, ora: s.ora }));
+        } catch(_){}
+        showToast(e.message);
+        bkStep(3);
+        return;
+      }
       showToast(e.message || 'Servizio temporaneamente non disponibile. Riprova tra qualche istante.');
       return;
     }
