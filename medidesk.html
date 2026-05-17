@@ -695,11 +695,11 @@ html.dark .cancel-token-code{color:var(--ink)}
       </div>
       <div class="auth-field">
         <label>Nome</label>
-        <input type="text" id="reg-nome" placeholder="Mario" autocomplete="given-name" required>
+        <input type="text" id="reg-nome" placeholder="Mario" autocomplete="given-name" required onblur="this.value=capitalizeWords(this.value.trim())">
       </div>
       <div class="auth-field">
         <label>Cognome</label>
-        <input type="text" id="reg-cognome" placeholder="Rossi" autocomplete="family-name" required>
+        <input type="text" id="reg-cognome" placeholder="Rossi" autocomplete="family-name" required onblur="this.value=capitalizeWords(this.value.trim())">
       </div>
       <div class="auth-field">
         <label>Codice Fiscale</label>
@@ -1783,14 +1783,6 @@ function capitalizeWords(str){
   return String(str || '').toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase());
 }
 
-function attachNameCapitalize(){
-  ['reg-nome','reg-cognome'].forEach(id => {
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.addEventListener('blur', () => { el.value = capitalizeWords(el.value.trim()); });
-  });
-}
-
 async function signUp(){
   const email           = document.getElementById('auth-reg-email').value.trim();
   const password        = document.getElementById('auth-reg-password').value;
@@ -2506,7 +2498,6 @@ function init(){
   updateLogoutButtons();
   updateShareLink();
   renderAll();
-  attachNameCapitalize();
   // Capitalizzazione automatica nome/cognome al blur
   ['setting-nome-prof','setting-cognome-prof','ex-nome','ex-cognome',
    'bk-nome','bk-cognome','appt-nome','appt-cognome'].forEach(id=>{
