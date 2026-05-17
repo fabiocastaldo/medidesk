@@ -1843,12 +1843,13 @@ async function signUp(){
     }
 
     await supabaseClient.auth.signOut();
-    _isRegistering = false;
     setAuthLoading(false);
     document.getElementById('reg-form-content').style.display = 'none';
     document.getElementById('reg-success-box').style.display  = 'block';
-    showAuthView();
     clearAuthMsg();
+    // NB: NON resettare _isRegistering qui. Il listener onAuthStateChange lo resetterà
+    // quando riceve SIGNED_OUT, dopo aver evitato di chiamare showAuthView().
+    // NB: NON chiamare showAuthView() qui: resetterebbe la vista e nasconderebbe il box di successo.
   } catch(e){
     _isRegistering = false;
     setAuthLoading(false);
@@ -1963,7 +1964,15 @@ function checkSession(){
   supabaseClient.auth.onAuthStateChange((event, session) => {
     console.log('[Delphi~Med] onAuthStateChange:', event, session?.user?.email ?? 'no session', '_isRegistering:', _isRegistering);
     if(_isRegistering){
-      console.log('[Delphi~Med] Evento ignorato perché siamo in fase di registrazione');
+      // Durante la registrazione ignoriamo SIGNED_IN e SIGNED_OUT.
+      // Quando arriva il SIGNED_OUT atteso (dopo signOut() in signUp), resettiamo il flag
+      // così le future interazioni dell'utente tornano gestite normalmente.
+      if(event === 'SIGNED_OUT'){
+        _isRegistering = false;
+        console.log('[Delphi~Med] SIGNED_OUT post-registrazione: flag resettato, box successo preservato');
+      } else {
+        console.log('[Delphi~Med] Evento ignorato perché siamo in fase di registrazione');
+      }
       return;
     }
     if(event === 'INITIAL_SESSION'){
