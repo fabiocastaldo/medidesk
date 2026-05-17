@@ -985,7 +985,7 @@ html.dark .cancel-token-code{color:var(--ink)}
     <div id="page-centri" class="page">
       <div class="page-header">
         <div><div class="page-title">Centri & Disponibilità</div><div class="page-subtitle">Ambulatori, email e turni ricorrenti</div></div>
-        <button class="btn btn-primary" onclick="openModal('modal-centro')">+ Centro</button>
+        <button class="btn btn-primary" onclick="openAddCentro()">+ Centro</button>
       </div>
       <div id="centri-list"></div>
     </div>
@@ -1428,7 +1428,7 @@ html.dark .cancel-token-code{color:var(--ink)}
 <!-- MODAL CENTRO -->
 <div class="modal-overlay" id="modal-centro">
   <div class="modal">
-    <div class="modal-header"><span class="modal-title">Aggiungi centro</span><button class="modal-close" onclick="closeModal('modal-centro')">✕</button></div>
+    <div class="modal-header"><span class="modal-title" id="centro-modal-title">Aggiungi centro</span><button class="modal-close" onclick="closeCentroModal()">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Nome del centro</label><input class="form-input" id="centro-nome" placeholder="Poliambulatorio Milano Centro" onblur="this.value=capitalizeWords(this.value.trim())"></div>
       <div class="form-group"><label class="form-label">Email segreteria</label><input class="form-input" id="centro-email" type="email" placeholder="segreteria@centro.it"></div>
@@ -1481,8 +1481,8 @@ html.dark .cancel-token-code{color:var(--ink)}
       <div class="form-group"><label class="form-label">Colore</label><input type="color" id="centro-colore" value="#0D9488" style="height:36px;width:60px;border:none;cursor:pointer;border-radius:6px"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-centro')">Annulla</button>
-      <button class="btn btn-primary" onclick="saveCentro()">Salva centro</button>
+      <button class="btn btn-secondary" onclick="closeCentroModal()">Annulla</button>
+      <button class="btn btn-primary" id="centro-save-btn" onclick="saveCentro()">Salva centro</button>
     </div>
   </div>
 </div>
@@ -1759,6 +1759,7 @@ html.dark .cancel-token-code{color:var(--ink)}
 var A = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, prefillDate:null };
 var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, medicoId:null, medicoEmail:'', medicoNome:'', slotOccupati:[], _centroData:null };
 var _turnoTargetId = null;
+let _centroEditId = null;
 var _giornataSingolaTargetId = null;
 var _bkLastAppt = null;
 var _lpTimer = null;
@@ -2792,6 +2793,44 @@ function downloadQR(){
 }
 
 // ── CENTRI ──
+function resetCentroForm(){
+  ['centro-nome','centro-email','centro-via','centro-citta','centro-cap'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const prov=document.getElementById('centro-provincia'); if(prov) prov.value='';
+  const col=document.getElementById('centro-colore'); if(col) col.value='#0D9488';
+}
+function _setCentroModalMode(isEdit){
+  const title=document.getElementById('centro-modal-title');
+  const btn=document.getElementById('centro-save-btn');
+  if(title) title.textContent = isEdit ? 'Modifica centro' : 'Aggiungi centro';
+  if(btn)   btn.textContent   = isEdit ? 'Salva modifiche' : 'Salva centro';
+}
+function openAddCentro(){
+  _centroEditId = null;
+  resetCentroForm();
+  _setCentroModalMode(false);
+  openModal('modal-centro');
+}
+function openEditCentro(id){
+  const c = S.centri.find(x=>String(x.id)===String(id));
+  if(!c){ showToast('Centro non trovato'); return; }
+  _centroEditId = id;
+  const fld=(elId,val)=>{ const el=document.getElementById(elId); if(el) el.value=val||''; };
+  fld('centro-nome',     c.nome);
+  fld('centro-email',    c.email);
+  fld('centro-via',      c.via);
+  fld('centro-citta',    c.citta);
+  fld('centro-provincia',c.provincia);
+  fld('centro-cap',      c.cap);
+  const col=document.getElementById('centro-colore'); if(col) col.value=c.colore||'#0D9488';
+  _setCentroModalMode(true);
+  openModal('modal-centro');
+}
+function closeCentroModal(){
+  _centroEditId = null;
+  closeModal('modal-centro');
+}
 async function saveCentro(){
   const nome     = document.getElementById('centro-nome').value.trim();
   const email    = document.getElementById('centro-email').value.trim();
@@ -2802,15 +2841,42 @@ async function saveCentro(){
   const colore   = document.getElementById('centro-colore').value;
   if(!nome){ showToast('Inserisci il nome del centro'); return; }
   const indirizzoComposto = [via, [cap, citta].filter(Boolean).join(' '), provincia].filter(Boolean).join(', ');
-  const resetForm = () => {
-    ['centro-nome','centro-email','centro-via','centro-citta','centro-cap'].forEach(id=>document.getElementById(id).value='');
-    const prov = document.getElementById('centro-provincia'); if(prov) prov.value='';
+  const _afterSave = (isEdit) => {
+    _centroEditId = null;
+    closeModal('modal-centro');
+    resetCentroForm();
+    renderCentri(); populateCentroSelect(); updateStats();
+    if(S.agendaView==='month') renderAgenda();
+    showToast(isEdit ? 'Centro aggiornato ✓' : 'Centro aggiunto ✓');
   };
+  if(_centroEditId){
+    // UPDATE
+    const c = S.centri.find(x=>String(x.id)===String(_centroEditId));
+    if(!c){ showToast('Centro non trovato'); return; }
+    Object.assign(c, { nome, email, via, citta, provincia, cap, indirizzo: indirizzoComposto, colore });
+    if(isOnline()){
+      try {
+        const { error } = await supabaseClient.from('centri').update({
+          nome,
+          email_segreteria: email    || null,
+          via:      via      || null,
+          citta:    citta    || null,
+          provincia:provincia|| null,
+          cap:      cap      || null,
+          colore
+        }).eq('id', _centroEditId);
+        if(error) throw error;
+      } catch(e){
+        console.error('[Delphi~Med] saveCentro update:', e.message);
+        showToast('Errore aggiornamento: ' + e.message); return;
+      }
+    }
+    save(); _afterSave(true); return;
+  }
+  // INSERT
   if(!isOnline()){
     S.centri.push({ id:Date.now(), nome, email, via, citta, provincia, cap, indirizzo: indirizzoComposto, colore, turni:[], attivo:true });
-    save(); closeModal('modal-centro'); renderCentri(); populateCentroSelect(); updateStats();
-    if(S.agendaView==='month') renderAgenda();
-    resetForm(); showToast('Centro aggiunto ✓'); return;
+    save(); _afterSave(false); return;
   }
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -2826,9 +2892,7 @@ async function saveCentro(){
     }).select('id').single();
     if(error) throw error;
     S.centri.push({ id: newCentro.id, nome, email, via, citta, provincia, cap, indirizzo: indirizzoComposto, colore, turni:[], attivo:true });
-    save(); closeModal('modal-centro'); renderCentri(); populateCentroSelect(); updateStats();
-    if(S.agendaView==='month') renderAgenda();
-    resetForm(); showToast('Centro aggiunto ✓');
+    save(); _afterSave(false);
   } catch(e){
     console.error('[Delphi~Med] saveCentro:', e.message);
     showToast('Errore: ' + e.message);
@@ -2898,6 +2962,7 @@ function renderCentroCard(c, isActive){
           <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
         </div>
         ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
+        <button class="btn btn-sm btn-secondary" onclick="openEditCentro('${c.id}')" title="Modifica centro">✏️</button>
         <button class="btn btn-sm btn-secondary" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
         <button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deleteCentro('${c.id}')" title="Elimina centro">✕</button>
       </div>
