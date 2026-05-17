@@ -702,6 +702,65 @@ html.dark .cancel-token-code{color:var(--ink)}
         <input type="text" id="reg-cognome" placeholder="Rossi" autocomplete="family-name" required onblur="this.value=capitalizeWords(this.value.trim())">
       </div>
       <div class="auth-field">
+        <label>Specializzazione</label>
+        <select id="reg-specializzazione" required>
+          <option value="">— seleziona —</option>
+          <option>Allergologia e immunologia clinica</option>
+          <option>Anatomia patologica</option>
+          <option>Anestesia, rianimazione, terapia intensiva e del dolore</option>
+          <option>Cardiologia</option>
+          <option>Chirurgia generale</option>
+          <option>Chirurgia maxillo-facciale</option>
+          <option>Chirurgia pediatrica</option>
+          <option>Chirurgia plastica, ricostruttiva ed estetica</option>
+          <option>Chirurgia toracica</option>
+          <option>Chirurgia vascolare</option>
+          <option>Dermatologia e venereologia</option>
+          <option>Ematologia</option>
+          <option>Endocrinologia e malattie del metabolismo</option>
+          <option>Farmacologia e tossicologia clinica</option>
+          <option>Gastroenterologia</option>
+          <option>Genetica medica</option>
+          <option>Geriatria</option>
+          <option>Ginecologia e ostetricia</option>
+          <option>Igiene e medicina preventiva</option>
+          <option>Malattie dell'apparato cardiovascolare</option>
+          <option>Malattie dell'apparato respiratorio</option>
+          <option>Malattie infettive e tropicali</option>
+          <option>Medicina del lavoro</option>
+          <option>Medicina dello sport e dell'esercizio fisico</option>
+          <option>Medicina di comunità e delle cure primarie</option>
+          <option>Medicina d'emergenza-urgenza</option>
+          <option>Medicina fisica e riabilitativa</option>
+          <option>Medicina generale</option>
+          <option>Medicina interna</option>
+          <option>Medicina legale</option>
+          <option>Medicina nucleare</option>
+          <option>Medicina termale</option>
+          <option>Medicina tropicale</option>
+          <option>Microbiologia e virologia</option>
+          <option>Nefrologia</option>
+          <option>Neurochirurgia</option>
+          <option>Neurofisiopatologia</option>
+          <option>Neurologia</option>
+          <option>Neuropsichiatria infantile</option>
+          <option>Oftalmologia</option>
+          <option>Oncologia medica</option>
+          <option>Ortopedia e traumatologia</option>
+          <option>Otorinolaringoiatria</option>
+          <option>Patologia clinica e biochimica clinica</option>
+          <option>Pediatria</option>
+          <option>Psichiatria</option>
+          <option>Psicoterapia</option>
+          <option>Radiodiagnostica</option>
+          <option>Radioterapia</option>
+          <option>Reumatologia</option>
+          <option>Scienza dell'alimentazione</option>
+          <option>Statistica sanitaria e biometria</option>
+          <option>Urologia</option>
+        </select>
+      </div>
+      <div class="auth-field">
         <label>Codice Fiscale</label>
         <input type="text" id="reg-cf" placeholder="RSSMRA80A01H501U" maxlength="16" autocomplete="off" oninput="this.value=this.value.toUpperCase()" required>
       </div>
@@ -1417,7 +1476,52 @@ html.dark .cancel-token-code{color:var(--ink)}
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Nome del centro</label><input class="form-input" id="centro-nome" placeholder="Poliambulatorio Milano Centro"></div>
       <div class="form-group"><label class="form-label">Email segreteria</label><input class="form-input" id="centro-email" type="email" placeholder="segreteria@centro.it"></div>
-      <div class="form-group"><label class="form-label">Indirizzo</label><input class="form-input" id="centro-indirizzo" placeholder="Via Roma 1, Milano"></div>
+      <div class="form-group"><label class="form-label">Via / Piazza</label><input class="form-input" id="centro-via" placeholder="Via Roma 12"></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px">
+        <div class="form-group"><label class="form-label">Città</label><input class="form-input" id="centro-citta" placeholder="Milano" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+        <div class="form-group"><label class="form-label">Provincia</label>
+          <select class="form-input" id="centro-provincia">
+            <option value="">—</option>
+            <option value="AG">AG</option><option value="AL">AL</option><option value="AN">AN</option>
+            <option value="AO">AO</option><option value="AP">AP</option><option value="AQ">AQ</option>
+            <option value="AR">AR</option><option value="AT">AT</option><option value="AV">AV</option>
+            <option value="BA">BA</option><option value="BG">BG</option><option value="BI">BI</option>
+            <option value="BL">BL</option><option value="BN">BN</option><option value="BO">BO</option>
+            <option value="BR">BR</option><option value="BS">BS</option><option value="BT">BT</option>
+            <option value="BZ">BZ</option><option value="CA">CA</option><option value="CB">CB</option>
+            <option value="CE">CE</option><option value="CH">CH</option><option value="CL">CL</option>
+            <option value="CN">CN</option><option value="CO">CO</option><option value="CR">CR</option>
+            <option value="CS">CS</option><option value="CT">CT</option><option value="CZ">CZ</option>
+            <option value="EN">EN</option><option value="FC">FC</option><option value="FE">FE</option>
+            <option value="FG">FG</option><option value="FI">FI</option><option value="FM">FM</option>
+            <option value="FR">FR</option><option value="GE">GE</option><option value="GO">GO</option>
+            <option value="GR">GR</option><option value="IM">IM</option><option value="IS">IS</option>
+            <option value="KR">KR</option><option value="LC">LC</option><option value="LE">LE</option>
+            <option value="LI">LI</option><option value="LO">LO</option><option value="LT">LT</option>
+            <option value="LU">LU</option><option value="MB">MB</option><option value="MC">MC</option>
+            <option value="ME">ME</option><option value="MI">MI</option><option value="MN">MN</option>
+            <option value="MO">MO</option><option value="MS">MS</option><option value="MT">MT</option>
+            <option value="NA">NA</option><option value="NO">NO</option><option value="NU">NU</option>
+            <option value="OR">OR</option><option value="PA">PA</option><option value="PC">PC</option>
+            <option value="PD">PD</option><option value="PE">PE</option><option value="PG">PG</option>
+            <option value="PI">PI</option><option value="PN">PN</option><option value="PO">PO</option>
+            <option value="PR">PR</option><option value="PT">PT</option><option value="PU">PU</option>
+            <option value="PV">PV</option><option value="PZ">PZ</option><option value="RA">RA</option>
+            <option value="RC">RC</option><option value="RE">RE</option><option value="RG">RG</option>
+            <option value="RI">RI</option><option value="RM">RM</option><option value="RN">RN</option>
+            <option value="RO">RO</option><option value="SA">SA</option><option value="SI">SI</option>
+            <option value="SO">SO</option><option value="SP">SP</option><option value="SR">SR</option>
+            <option value="SS">SS</option><option value="SU">SU</option><option value="SV">SV</option>
+            <option value="TA">TA</option><option value="TE">TE</option><option value="TN">TN</option>
+            <option value="TO">TO</option><option value="TP">TP</option><option value="TR">TR</option>
+            <option value="TS">TS</option><option value="TV">TV</option><option value="UD">UD</option>
+            <option value="VA">VA</option><option value="VB">VB</option><option value="VC">VC</option>
+            <option value="VE">VE</option><option value="VI">VI</option><option value="VR">VR</option>
+            <option value="VT">VT</option><option value="VV">VV</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">CAP</label><input class="form-input" id="centro-cap" placeholder="20100" inputmode="numeric" maxlength="5"></div>
+      </div>
       <div class="form-group"><label class="form-label">Colore</label><input type="color" id="centro-colore" value="#0D9488" style="height:36px;width:60px;border:none;cursor:pointer;border-radius:6px"></div>
     </div>
     <div class="modal-footer">
@@ -1791,9 +1895,10 @@ async function signUp(){
   const cognome         = capitalizeWords(document.getElementById('reg-cognome').value.trim());
   const cf              = document.getElementById('reg-cf').value.trim().toUpperCase();
   const ordineNumero    = document.getElementById('reg-ordine-numero').value.trim();
-  const ordineProvincia = document.getElementById('reg-ordine-provincia').value;
+  const ordineProvincia  = document.getElementById('reg-ordine-provincia').value;
+  const specializzazione = document.getElementById('reg-specializzazione').value;
 
-  if(!email || !password || !nome || !cognome || !cf || !ordineNumero || !ordineProvincia){
+  if(!email || !password || !nome || !cognome || !cf || !ordineNumero || !ordineProvincia || !specializzazione){
     showAuthMsg('Compila tutti i campi obbligatori', 'error'); return;
   }
   const pwdOk = password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) &&
@@ -1815,6 +1920,7 @@ async function signUp(){
       .from('medici')
       .insert({ user_id: userId, email, nome, cognome, codice_fiscale: cf,
                 numero_iscrizione_ordine: ordineNumero, provincia_ordine: ordineProvincia,
+                specializzazione,
                 stato: 'in_attesa' })
       .select('id').single();
 
@@ -2100,7 +2206,11 @@ async function loadCentriFromDB(user){
       id:        c.id,
       nome:      c.nome,
       email:     c.email_segreteria || '',
-      indirizzo: c.indirizzo        || '',
+      via:       c.via       || '',
+      citta:     c.citta     || '',
+      provincia: c.provincia || '',
+      cap:       c.cap       || '',
+      indirizzo: [c.via, [c.cap, c.citta].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', '),
       colore:    c.colore           || '#0D9488',
       attivo:    c.attivo !== false,
       turni:     (c.turni || []).map(t => ({
@@ -2698,12 +2808,19 @@ function downloadQR(){
 async function saveCentro(){
   const nome     = document.getElementById('centro-nome').value.trim();
   const email    = document.getElementById('centro-email').value.trim();
-  const indirizzo= document.getElementById('centro-indirizzo').value.trim();
+  const via      = document.getElementById('centro-via').value.trim();
+  const citta    = document.getElementById('centro-citta').value.trim();
+  const provincia= document.getElementById('centro-provincia').value;
+  const cap      = document.getElementById('centro-cap').value.trim();
   const colore   = document.getElementById('centro-colore').value;
   if(!nome){ showToast('Inserisci il nome del centro'); return; }
-  const resetForm = () => ['centro-nome','centro-email','centro-indirizzo'].forEach(id=>document.getElementById(id).value='');
+  const indirizzoComposto = [via, [cap, citta].filter(Boolean).join(' '), provincia].filter(Boolean).join(', ');
+  const resetForm = () => {
+    ['centro-nome','centro-email','centro-via','centro-citta','centro-cap'].forEach(id=>document.getElementById(id).value='');
+    const prov = document.getElementById('centro-provincia'); if(prov) prov.value='';
+  };
   if(!isOnline()){
-    S.centri.push({ id:Date.now(), nome, email, indirizzo, colore, turni:[], attivo:true });
+    S.centri.push({ id:Date.now(), nome, email, via, citta, provincia, cap, indirizzo: indirizzoComposto, colore, turni:[], attivo:true });
     save(); closeModal('modal-centro'); renderCentri(); populateCentroSelect(); updateStats();
     if(S.agendaView==='month') renderAgenda();
     resetForm(); showToast('Centro aggiunto ✓'); return;
@@ -2714,11 +2831,14 @@ async function saveCentro(){
     const { data: newCentro, error } = await supabaseClient.from('centri').insert({
       medico_id: medico.id, nome,
       email_segreteria: email    || null,
-      indirizzo:        indirizzo|| null,
+      via:       via       || null,
+      citta:     citta     || null,
+      provincia: provincia || null,
+      cap:       cap       || null,
       colore, attivo: true
     }).select('id').single();
     if(error) throw error;
-    S.centri.push({ id: newCentro.id, nome, email, indirizzo, colore, turni:[], attivo:true });
+    S.centri.push({ id: newCentro.id, nome, email, via, citta, provincia, cap, indirizzo: indirizzoComposto, colore, turni:[], attivo:true });
     save(); closeModal('modal-centro'); renderCentri(); populateCentroSelect(); updateStats();
     if(S.agendaView==='month') renderAgenda();
     resetForm(); showToast('Centro aggiunto ✓');
@@ -4613,6 +4733,9 @@ function loadSettings(){
 }
 async function saveSettings(){
   const val=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
+  const _prevNome = S.settings.nomeProf    || '';
+  const _prevCogn = S.settings.cognomeProf || '';
+  const _prevSpec = S.settings.spec        || '';
   S.settings.titolo      = val('setting-titolo');
   S.settings.nomeProf    = capitalizeName(val('setting-nome-prof'));
   S.settings.cognomeProf = capitalizeName(val('setting-cognome-prof'));
@@ -4638,6 +4761,13 @@ async function saveSettings(){
     const key = val('setting-apikey');
     if(key) localStorage.setItem('medidesk_apikey',key); else localStorage.removeItem('medidesk_apikey');
   }
+  const _slugImpactChanged = S.settings.nomeProf !== _prevNome ||
+                             S.settings.cognomeProf !== _prevCogn ||
+                             S.settings.spec !== _prevSpec;
+  if(_slugImpactChanged && !confirm(
+    'Attenzione: modificare nome, cognome, specializzazione o provincia dell\'Ordine potrebbe cambiare il tuo URL pubblico di prenotazione. ' +
+    'Tutti i link già condivisi (biglietti da visita, WhatsApp, social) potrebbero smettere di funzionare.\n\nVuoi procedere comunque?'
+  )) return;
   save(); updateDoctorName(); updateShareLink();
   if(isOnline()){
     try {
@@ -4847,10 +4977,25 @@ function homeSearch(q){
         const nome = [m.titolo, m.nome, m.cognome].filter(Boolean).map(_esc).join(' ');
         const ini  = [m.nome, m.cognome].filter(Boolean).map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'M';
         const av   = m.foto_url ? `<img src="${escapeAttr(m.foto_url)}" alt="">` : ini;
-        const spec = m.specializzazione ? `<div class="home-result-spec">${_esc(m.specializzazione)}</div>` : '';
+        const specs = Array.isArray(m.specializzazioni) && m.specializzazioni.length ? m.specializzazioni : (m.specializzazione ? [m.specializzazione] : []);
+        let specHtml = '';
+        if(specs.length){
+          const visibili = specs.slice(0,2).map(_esc).join(', ');
+          const extra = specs.length > 2 ? ` +${specs.length-2}` : '';
+          specHtml = visibili + extra;
+        }
+        const citta = Array.isArray(m.citta) ? m.citta : [];
+        let cittaHtml = '';
+        if(citta.length){
+          const visibili = citta.slice(0,2).map(_esc).join(', ');
+          const extra = citta.length > 2 ? ` e altre ${citta.length-2} sedi` : '';
+          cittaHtml = visibili + extra;
+        }
+        const sub = [specHtml, cittaHtml].filter(Boolean).join(' · ');
+        const subEl = sub ? `<div class="home-result-spec">${sub}</div>` : '';
         return `<div class="home-result-card" onclick="location.href='?booking&doc=${encodeURIComponent(m.slug)}'">
           <div class="home-result-avatar">${av}</div>
-          <div><div class="home-result-name">${nome}</div>${spec}</div>
+          <div><div class="home-result-name">${nome}</div>${subEl}</div>
         </div>`;
       }).join('');
       res.style.display = 'block';
