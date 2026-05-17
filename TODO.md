@@ -18,6 +18,14 @@
 
 ---
 
+## ✅ Completato — sessione 2026-05-18
+
+### Bug fix prenotazione pubblica
+- [x] Auto-capitalize `bk-nome`/`bk-cognome` al blur nella pagina prenotazione pubblica: estratta `setupCapitalizeListeners()` (con guard `dataset.capListener`) chiamata sia da `init()` che da `showBookingView()`
+- [x] Race condition doppia prenotazione stesso slot: `confirmBooking()` intercetta errore Postgres `23505`, aggiorna `slotOccupati` localmente, ricarica slot freschi dal DB e riporta l'utente allo step 3 con toast esplicativo
+
+---
+
 ## ✅ Completato — sessione 2026-05-17 (notte)
 
 ### Profilo medico — Altre specializzazioni
@@ -176,4 +184,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-17 notte — "Altre specializzazioni" multi-select nel profilo, modifica centro con modale in doppia modalità (crea/aggiorna)*
+*Ultimo aggiornamento: 2026-05-18 — Fix capitalize prenotazione pubblica, gestione race condition slot duplicato (23505)*
