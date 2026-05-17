@@ -20,6 +20,13 @@
 
 ## ✅ Completato — sessione 2026-05-18
 
+### Step 7c — Reminder email 24h prima della visita (Vercel Cron)
+- [x] `api/send-reminders.js`: query appuntamenti domani (Europe/Rome, robusto al cambio ora legale), batch fetch centri+medici, invia via `www.delphi-med.com/api/send-email`, aggiorna `reminder_sent=true` solo in caso di successo
+- [x] `vercel.json`: cron `0 17 * * *` (19:00 CEST / 17:00 UTC)
+- [x] `CRON_SECRET` configurato su Vercel (Production + Development) via CLI
+- [x] Verifica: 401 senza auth, 200 con secret → `{"processed":1,"sent":1,"errors":0,"date":"2026-05-18"}`
+- [x] Fix URL interno: `www.delphi-med.com` (evita redirect 308 che fa cadere l'header Authorization)
+
 ### Step 7b — Email notifica segreteria centro
 - [x] `buildEmailHtml(plainText, headerLabel)`: converte testo plain in HTML con header teal Delphi~Med, escape XSS, footer disclaimer
 - [x] `sendNotificaCentro()`: rimosso placeholder `console.log`/`showToast`, ora chiama `/api/send-email` con header contestuale (Nuova prenotazione / Nuovo appuntamento / Cancellazione)
@@ -136,7 +143,6 @@
 - [ ] Sostituire placeholder `privacy-policy.html` con testo reale
 
 ### Email e notifiche (Step 7)
-- [ ] **Step 7c** — promemoria 24h al paziente (Vercel Cron Jobs)
 - [ ] **Step 7d** — notifiche al medico (3 toggle già in profilo)
 
 ### Step 4.8 — Pulizia e hardening
@@ -189,4 +195,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-18 — Step 7b email segreteria centro attivo, fix capitalize booking pubblico, race condition slot duplicato*
+*Ultimo aggiornamento: 2026-05-18 — Step 7b+7c completati (email segreteria + reminder paziente), CRON_SECRET attivo, fix race condition slot e capitalize booking*
