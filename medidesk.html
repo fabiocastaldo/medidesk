@@ -2592,6 +2592,16 @@ function checkView(){
   }
 }
 
+function setupCapitalizeListeners(){
+  ['setting-nome-prof','setting-cognome-prof','ex-nome','ex-cognome',
+   'bk-nome','bk-cognome','appt-nome','appt-cognome'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el && !el.dataset.capListener){
+      el.addEventListener('blur',()=>{ el.value=capitalizeName(el.value); });
+      el.dataset.capListener='1';
+    }
+  });
+}
 function _populateSpecSelect(id, placeholder){
   const sel = document.getElementById(id); if(!sel) return;
   const opts = SPECIALIZZAZIONI_UFFICIALI.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -2605,12 +2615,7 @@ function init(){
   updateLogoutButtons();
   updateShareLink();
   renderAll();
-  // Capitalizzazione automatica nome/cognome al blur
-  ['setting-nome-prof','setting-cognome-prof','ex-nome','ex-cognome',
-   'bk-nome','bk-cognome','appt-nome','appt-cognome'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.addEventListener('blur',()=>{ el.value=capitalizeName(el.value); });
-  });
+  setupCapitalizeListeners();
   // aggiornamento cross-tab: quando un paziente prenota da un'altra finestra
   window.addEventListener('storage', e=>{
     if(e.key==='medidesk_v2'){ load(); renderAll(); }
@@ -5099,6 +5104,7 @@ function showBookingView(){
   document.getElementById('view-home').style.display   ='none';
   document.getElementById('view-app').style.display    ='none';
   document.getElementById('view-booking').style.display='block';
+  setupCapitalizeListeners();
   bkInit();
 }
 async function bkInit(){
