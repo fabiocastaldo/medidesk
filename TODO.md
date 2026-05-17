@@ -20,6 +20,12 @@
 
 ## ✅ Completato — sessione 2026-05-18
 
+### Step 7b — Email notifica segreteria centro
+- [x] `buildEmailHtml(plainText, headerLabel)`: converte testo plain in HTML con header teal Delphi~Med, escape XSS, footer disclaimer
+- [x] `sendNotificaCentro()`: rimosso placeholder `console.log`/`showToast`, ora chiama `/api/send-email` con header contestuale (Nuova prenotazione / Nuovo appuntamento / Cancellazione)
+- [x] `sendNotificaCentroAnonimo()`: stesso fix per cancellazione pubblica via token
+- [x] I 4 call site esistenti restano invariati (`confirmBooking`, inserimento manuale, ripristino, cancellazione anonima)
+
 ### Bug fix prenotazione pubblica
 - [x] Auto-capitalize `bk-nome`/`bk-cognome` al blur nella pagina prenotazione pubblica: estratta `setupCapitalizeListeners()` (con guard `dataset.capListener`) chiamata sia da `init()` che da `showBookingView()`
 - [x] Race condition doppia prenotazione stesso slot: `confirmBooking()` intercetta errore Postgres `23505`, aggiorna `slotOccupati` localmente, ricarica slot freschi dal DB e riporta l'utente allo step 3 con toast esplicativo
@@ -130,7 +136,6 @@
 - [ ] Sostituire placeholder `privacy-policy.html` con testo reale
 
 ### Email e notifiche (Step 7)
-- [ ] **Step 7b** — notifica email al centro quando arriva una prenotazione
 - [ ] **Step 7c** — promemoria 24h al paziente (Vercel Cron Jobs)
 - [ ] **Step 7d** — notifiche al medico (3 toggle già in profilo)
 
@@ -184,4 +189,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-18 — Fix capitalize prenotazione pubblica, gestione race condition slot duplicato (23505)*
+*Ultimo aggiornamento: 2026-05-18 — Step 7b email segreteria centro attivo, fix capitalize booking pubblico, race condition slot duplicato*
