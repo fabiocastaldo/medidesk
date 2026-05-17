@@ -57,7 +57,7 @@ export default async function handler(req, res) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to:      medico.email,
-          subject: 'Account approvato — Delphi Med',
+          subject: 'Account approvato — Delphi-Med',
           html:    buildApprovalEmail({ nome: medico.nome, cognome: medico.cognome })
         })
       });
@@ -97,18 +97,18 @@ function buildApprovalEmail({ nome, cognome }) {
     <td style="background:#0D9488;padding:32px 40px;text-align:center;">
       <p style="margin:0;font-size:30px;color:#fff;">&#9989;</p>
       <p style="margin:8px 0 0;color:#fff;font-size:20px;font-weight:700;letter-spacing:.3px;">Account approvato</p>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Delphi Med</p>
+      <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Delphi-Med</p>
     </td>
   </tr>
   <tr>
     <td style="padding:36px 40px;">
       <p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${nomeCompleto}</strong>,</p>
       <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 28px;">
-        Il tuo account Delphi Med &egrave; stato approvato.<br>
+        Il tuo account Delphi-Med &egrave; stato approvato.<br>
         Puoi ora accedere alla piattaforma e iniziare a gestire il tuo studio.
       </p>
       <div style="text-align:center;margin-bottom:28px;">
-        <a href="https://delphi-med.com" style="display:inline-block;background:#0D9488;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;">Accedi a Delphi Med</a>
+        <a href="https://delphi-med.com" style="display:inline-block;background:#0D9488;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;">Accedi a Delphi-Med</a>
       </div>
       <p style="font-size:13px;color:#888;text-align:center;margin:0;">
         Oppure copia il link: <a href="https://delphi-med.com" style="color:#0D9488;">https://delphi-med.com</a>
@@ -117,7 +117,7 @@ function buildApprovalEmail({ nome, cognome }) {
   </tr>
   <tr>
     <td style="background:#f8f8f8;border-top:1px solid #eee;padding:18px 40px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da Delphi Med</p>
+      <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da Delphi-Med</p>
     </td>
   </tr>
 </table>
@@ -133,7 +133,7 @@ function htmlPage(title, message) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${esc(title)} — Delphi Med</title>
+  <title>${esc(title)} — Delphi-Med</title>
   <style>
     body{margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
     .card{background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,.1);padding:48px 40px;max-width:480px;width:100%;text-align:center}
@@ -145,7 +145,7 @@ function htmlPage(title, message) {
 </head>
 <body>
   <div class="card">
-    <div class="logo">Delphi Med</div>
+    <div class="logo">Delphi-Med</div>
     <div class="icon">${message.startsWith('&#9989;') ? '&#9989;' : '&#10060;'}</div>
     <h1>${esc(title)}</h1>
     <p>${message.replace(/^&#9989; |^&#10060; /, '')}</p>

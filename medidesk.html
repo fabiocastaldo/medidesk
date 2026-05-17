@@ -1779,12 +1779,24 @@ function updatePasswordStrength(){
   if(label) { label.textContent = lvl.text; label.style.color = lvl.color; }
 }
 
+function capitalizeWords(str){
+  return String(str || '').toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase());
+}
+
+function attachNameCapitalize(){
+  ['reg-nome','reg-cognome'].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('blur', () => { el.value = capitalizeWords(el.value.trim()); });
+  });
+}
+
 async function signUp(){
   const email           = document.getElementById('auth-reg-email').value.trim();
   const password        = document.getElementById('auth-reg-password').value;
   const confirm         = document.getElementById('auth-reg-confirm').value;
-  const nome            = document.getElementById('reg-nome').value.trim();
-  const cognome         = document.getElementById('reg-cognome').value.trim();
+  const nome            = capitalizeWords(document.getElementById('reg-nome').value.trim());
+  const cognome         = capitalizeWords(document.getElementById('reg-cognome').value.trim());
   const cf              = document.getElementById('reg-cf').value.trim().toUpperCase();
   const ordineNumero    = document.getElementById('reg-ordine-numero').value.trim();
   const ordineProvincia = document.getElementById('reg-ordine-provincia').value;
@@ -2494,6 +2506,7 @@ function init(){
   updateLogoutButtons();
   updateShareLink();
   renderAll();
+  attachNameCapitalize();
   // Capitalizzazione automatica nome/cognome al blur
   ['setting-nome-prof','setting-cognome-prof','ex-nome','ex-cognome',
    'bk-nome','bk-cognome','appt-nome','appt-cognome'].forEach(id=>{
