@@ -951,6 +951,7 @@ html.dark .cancel-token-code{color:var(--ink)}
       <div id="view-week">
         <div class="day-tabs" id="day-tabs"></div>
         <div id="appointments-container"></div>
+        <div id="week-legend-container"></div>
       </div>
       <div id="view-month" style="display:none">
         <div class="month-cal" id="month-cal"></div>
@@ -2174,8 +2175,8 @@ async function loadCentriFromDB(user){
       turni:     (c.turni || []).map(t => ({
         id:     t.id,
         giorno: t.giorno,
-        inizio: t.inizio,
-        fine:   t.fine,
+        inizio: (t.inizio || '').substring(0,5),
+        fine:   (t.fine   || '').substring(0,5),
         slot:   t.durata_slot,
         frequenza: t.frequenza_settimane||1,
         dataInizioValidita: t.data_inizio_validita||null,
@@ -2680,7 +2681,7 @@ function showPage(id){
   if(bnItem) bnItem.classList.add('active');
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
-  if(id==='agenda') renderAgenda();
+  if(id==='agenda') setAgendaView('week');
   if(id==='pazienti') renderPazienti();
   if(id==='centri') renderCentri();
   if(id==='profilo'){ loadSettings(); renderTipiAree(); prefillProfiloNome(); }
@@ -3629,6 +3630,33 @@ function renderAgenda(){
     </div>`;
   }).join('');
   renderDayAppointments();
+  renderWeekLegend(days);
+}
+
+function renderWeekLegend(days){
+  const container = document.getElementById('week-legend-container');
+  if(!container) return;
+  const dayStrs = days.map(d=>fmt(d));
+  const weekDayNums = days.map(d=>d.getDay());
+  const allCentriInWeek = new Set();
+  S.centri.filter(c=>c.attivo!==false && c.turni && c.turni.length).forEach(c=>{
+    if(c.turni.some(t=>weekDayNums.includes(t.giorno))) allCentriInWeek.add(String(c.id));
+  });
+  S.appuntamenti.forEach(a=>{
+    if(dayStrs.includes(a.data)) allCentriInWeek.add(String(a.centroId));
+  });
+  if(!allCentriInWeek.size){ container.innerHTML=''; return; }
+  const items = [...allCentriInWeek].map(cid=>{
+    const c=S.centri.find(x=>String(x.id)===String(cid));
+    if(c){
+      const op=c.attivo===false?'0.5':'1';
+      return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}${c.attivo===false?' (disattivato)':''}</span>`;
+    }
+    const apptCentro=S.appuntamenti.find(a=>String(a.centroId)===cid && dayStrs.includes(a.data));
+    const nome=apptCentro?.centroNome;
+    return nome?`<span class="month-legend-item" style="opacity:0.4"><span class="month-legend-dot" style="background:#999"></span>${nome} (eliminato)</span>`:'';
+  }).filter(Boolean).join('');
+  container.innerHTML = items ? `<div class="month-legend">${items}</div>` : '';
 }
 
 function selectDay(ds){ S.selectedDay=ds; renderAgenda(); }
@@ -5209,7 +5237,7 @@ async function bkInit(){
       S.centri = (centriDB||[]).map(c=>({
         id: c.id, nome: c.nome, indirizzo: c.indirizzo||'', colore: c.colore||'#0D9488',
         attivo: true, email: c.email_segreteria||'',
-        turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:t.inizio, fine:t.fine, slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
+        turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:(t.inizio||'').substring(0,5), fine:(t.fine||'').substring(0,5), slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
         giornateSingole: []
       }));
       S.settings.notifNuovaPrenotazione   = m.notifica_nuova_prenotazione   !== false;
@@ -5548,6 +5576,7 @@ async function loadCancelPage(){
     if(appt.cancelled){
       content.innerHTML='<div style="font-size:56px;margin-bottom:16px">✅</div><h2>Già cancellato</h2><p>Questo appuntamento risulta già cancellato.</p>'; return;
     }
+    appt.ora = (appt.ora || '').substring(0,5);
     const apptDate=new Date(appt.data+'T'+appt.ora);
     const diffH=(apptDate-new Date())/3600000;
     if(diffH<24){
