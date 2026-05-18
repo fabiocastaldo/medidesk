@@ -1265,15 +1265,8 @@ html.dark .cancel-token-code{color:var(--ink)}
             <h3>Prenotazione confermata!</h3>
             <p id="bk-success-msg">Il tuo appuntamento è stato registrato.</p>
 
-            <!-- CODICE CANCELLAZIONE -->
-            <div class="cancel-token-box" id="bk-token-box" style="display:none">
-              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;opacity:.7">Il tuo codice di cancellazione</div>
-              <span class="cancel-token-code" id="bk-token-display">—</span>
-              <div style="font-size:11px;margin-top:6px;opacity:.65">Conservalo se desideri cancellare l'appuntamento · Puoi cancellare fino a 24 ore prima della visita</div>
-            </div>
-
-            <!-- EMAIL PLACEHOLDER -->
-            <p style="font-size:12px;color:var(--ink3);margin-top:6px">📧 Riceverai una email di conferma con il link per cancellare l'appuntamento. <em>(Funzione email in arrivo)</em></p>
+            <!-- CONFERMA EMAIL -->
+            <p style="font-size:12px;color:var(--ink3);margin-top:6px">📧 Riceverai una email di conferma con il link per cancellare l'appuntamento.</p>
 
             <!-- AGGIUNGI AL CALENDARIO -->
             <div style="margin-top:20px;text-align:left">
@@ -5472,9 +5465,6 @@ async function confirmBooking(){
     `📅 <strong>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${bk.ora}</strong><br>`+
     `🏥 ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
     `${appt.email?'Riceverai un riepilogo all\'email indicata.':''}`;
-  const tokenBox=document.getElementById('bk-token-box');
-  const tokenDisplay=document.getElementById('bk-token-display');
-  if(tokenBox&&tokenDisplay){ tokenBox.style.display='block'; tokenDisplay.textContent=cancellationToken; }
   bkStep(5);
   await sendNotificaCentro('nuova_prenotazione', appt);
 }
