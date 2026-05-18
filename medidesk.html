@@ -2386,11 +2386,46 @@ function startRealtimeChannel(){
         centroId:   r.centro_id,
         centroNome: _centro ? _centro.nome : '',
         source:     r.source || 'paziente',
-        seen:       r.seen || false
+        seen:       r.seen || false,
+        cancelled:   r.cancelled === true,
+        cancelledAt: r.cancelled_at || null
       });
       save();
       renderDashboard(); updateStats(); renderPending(); renderAgenda();
       showToast('Nuova prenotazione ricevuta');
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'appuntamenti',
+      filter: 'medico_id=eq.' + S.medicoId
+    }, (payload) => {
+      const r = payload.new;
+      console.log('[Realtime] Update appuntamento:', r.id);
+      const local = S.appuntamenti.find(a => String(a.id) === String(r.id));
+      if(!local) return;
+      const wasCancelled = local.cancelled === true;
+      const _centro = S.centri.find(c => String(c.id) === String(r.centro_id));
+      local.nome       = r.nome_paziente     || '';
+      local.cognome    = r.cognome_paziente  || '';
+      local.tel        = r.telefono_paziente || '';
+      local.email      = r.email_paziente    || '';
+      local.tipo       = r.tipo_visita       || '';
+      local.area       = r.area_tematica     || '';
+      local.note       = r.note              || '';
+      local.data       = r.data;
+      local.ora        = (r.ora || '').substring(0, 5);
+      local.centroId   = r.centro_id;
+      local.centroNome = _centro ? _centro.nome : '';
+      local.source     = r.source || 'paziente';
+      local.seen       = r.seen || false;
+      local.cancelled   = r.cancelled === true;
+      local.cancelledAt = r.cancelled_at || null;
+      save();
+      renderDashboard(); updateStats(); renderPending(); renderAgenda();
+      if(r.cancelled === true && !wasCancelled){
+        showToast('Un paziente ha cancellato un appuntamento');
+      }
     })
     .subscribe((status) => {
       console.log('[Realtime] Status:', status);
@@ -4745,21 +4780,26 @@ async function sendNotificaCentro(tipo, appt){
     });
   } catch(e){ console.error('[Delphi~Med] sendNotificaCentro:', e.message); }
 }
-async function sendNotificaCentroAnonimo(appt){
+async function sendNotificaCentroAnonimo(appt, token){
   if(!isOnline()) return;
   try {
-    const {data:med}=await supabaseClient.from('medici').select('notifica_cancellazione').eq('id',appt.medico_id).maybeSingle();
-    if(!med?.notifica_cancellazione) return;
-    const {data:c}=await supabaseClient.from('centri').select('nome,email_segreteria').eq('id',appt.centro_id).maybeSingle();
-    if(!c?.email_segreteria) return;
+    const { data, error } = await supabaseClient.rpc('get_dati_notifica_cancellazione', {
+      p_appt_id: appt.id,
+      p_token:   token
+    });
+    if(error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if(!row) return;
+    if(!row.notifica_cancellazione) return;
+    if(!row.centro_email) return;
     const d=new Date(appt.data+'T12:00:00');
     const paz=`${appt.cognome_paziente} ${appt.nome_paziente}`;
     const subject=`Cancellazione appuntamento — ${paz}`;
-    const body=`Oggetto: ${subject}\n\nGentile Segreteria di ${c.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||'—'}\n\nL'appuntamento è stato cancellato dal paziente.\nLo slot è ora nuovamente disponibile per altre prenotazioni.`;
+    const body=`Oggetto: ${subject}\n\nGentile Segreteria di ${row.centro_nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||'—'}\n\nL'appuntamento è stato cancellato dal paziente.\nLo slot è ora nuovamente disponibile per altre prenotazioni.`;
     await fetch('/api/send-email', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ to: c.email_segreteria, subject, html: buildEmailHtml(body, 'Cancellazione appuntamento') })
+      body: JSON.stringify({ to: row.centro_email, subject, html: buildEmailHtml(body, 'Cancellazione appuntamento') })
     });
   } catch(e){ console.error('[Delphi~Med] sendNotificaCentroAnonimo:',e.message); }
 }
@@ -5547,6 +5587,7 @@ async function loadCancelPage(){
 }
 async function cancelBookingByToken(apptId){
   try {
+    const token = new URLSearchParams(window.location.search).get('cancel');
     const { error }=await supabaseClient.from('appuntamenti')
       .update({ cancelled:true, cancelled_at:new Date().toISOString() }).eq('id',apptId);
     if(error) throw error;
@@ -5557,7 +5598,7 @@ async function cancelBookingByToken(apptId){
        <h2>Appuntamento cancellato</h2>
        <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">Hai liberato uno slot per un altro paziente. Grazie.</p>
        <a href="https://delphi-med.com" class="btn btn-secondary" style="display:inline-block;margin-top:16px;text-decoration:none;padding:12px 32px">Torna alla home</a>`;
-    if(window._cancelApptData) await sendNotificaCentroAnonimo(window._cancelApptData);
+    if(window._cancelApptData && token) await sendNotificaCentroAnonimo(window._cancelApptData, token);
   } catch(e){
     showToast('Errore nella cancellazione: '+e.message);
     console.error('[Delphi~Med] cancelBookingByToken:', e.message);
