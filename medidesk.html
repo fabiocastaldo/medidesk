@@ -2318,8 +2318,10 @@ async function loadAppuntamentiFromDB(user){
         ora:        (a.ora || '').substring(0, 5),
         centroId:   a.centro_id,
         centroNome: _centro ? _centro.nome : (a.centro_nome || ''),
-        source:     a.source || 'medico',
-        seen:       a.seen || false
+        source:      a.source || 'medico',
+        seen:        a.seen || false,
+        cancelled:   a.cancelled === true,
+        cancelledAt: a.cancelled_at || null
       };
     });
     save();
