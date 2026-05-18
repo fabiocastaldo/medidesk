@@ -18,7 +18,33 @@
 
 ---
 
-## ✅ Completato — sessione 2026-05-18
+## ✅ Completato — sessione 2026-05-18 (bug fix + UX cancellazione)
+
+### Bug fix A — Notifiche email segreteria mai inviate
+- [x] `loadMedicoFromDB()`: aggiunge lettura di `notifica_nuova_prenotazione`, `notifica_cancellazione`, `notifica_appuntamento_manuale` dal DB e li scrive in `S.settings.*` — prima i 3 toggle erano sempre `undefined` e il guard in `sendNotificaCentro()` bloccava ogni invio
+- [x] `bkInit()` (flusso pubblico): i 3 flag letti dall'oggetto medico fetchato via `get_medico_pubblico` → `S.settings.notif*` valorizzati anche senza medico loggato
+- [x] UI `loadSettings()`: 3° toggle usa `=== true` (semantica opt-in esplicita, allineata ai default DB)
+
+### Bug fix B — Slot prenotati appaiono come liberi nella pagina pubblica
+- [x] Normalizzazione ora `"HH:MM:SS"` → `"HH:MM"` via `.substring(0,5)` in entrambi i punti che popolano `bk.slotOccupati` (`bkInit` + `confirmBooking` catch `isSlotTaken`) — prima il confronto con `minToTime()` falliva sempre
+
+### Miglioria mail conferma paziente — link cancellazione
+- [x] `api/send-email.js`: aggiunto bottone CTA "Cancella l'appuntamento" con URL `https://delphi-med.com/?cancel=<token>` (via `encodeURIComponent`)
+- [x] Paragrafo persuasivo "Se non puoi venire, ti chiediamo gentilmente di cancellare..." sopra al bottone
+- [x] Rimosso codice di cancellazione in chiaro dalla mail (token resta solo nell'URL del link)
+- [x] Rimossa frase errata "rispondi a questa email per cancellare"
+
+### Miglioria UI notifiche profilo medico
+- [x] Rimosso `<p>` obsoleto "Le email reali verranno attivate allo Step 7 con Resend" (Step 7 completato)
+- [x] Aggiunto hint "💾 Ricorda di salvare il profilo per applicare le modifiche" sotto i 3 toggle
+
+### UX pagina di cancellazione
+- [x] Pagina pre-cancellazione (`loadCancelPage`): "Vuoi cancellare questo appuntamento?" → testo persuasivo "Se non puoi venire..." con stile coerente al tema
+- [x] Pagina post-cancellazione (`cancelBookingByToken`): titolo "Appuntamento cancellato", testo "Hai liberato uno slot per un altro paziente. Grazie.", pulsante "Torna alla home" → `https://delphi-med.com`
+
+---
+
+## ✅ Completato — sessione 2026-05-18 (Step 7b+7c)
 
 ### Step 7c — Reminder email 24h prima della visita (Vercel Cron)
 - [x] `api/send-reminders.js`: query appuntamenti domani (Europe/Rome, robusto al cambio ora legale), batch fetch centri+medici, invia via `www.delphi-med.com/api/send-email`, aggiorna `reminder_sent=true` solo in caso di successo
@@ -195,4 +221,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-18 — Step 7b+7c completati (email segreteria + reminder paziente), CRON_SECRET attivo, fix race condition slot e capitalize booking*
+*Ultimo aggiornamento: 2026-05-18 — Bug fix notifiche email segreteria (toggle non letti dal DB) + bug fix slot occupati (normalizzazione HH:MM) + UX cancellazione (mail con bottone CTA, testo persuasivo, pagina successo con "Torna alla home")*
