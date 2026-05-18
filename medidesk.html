@@ -4841,7 +4841,7 @@ async function sendNotificaCentro(tipo, appt){
   if(tipo==='cancellazione'){
     const paz=`${appt.cognome||appt.cognome_paziente} ${appt.nome||appt.nome_paziente}`;
     subject=`Cancellazione appuntamento — ${paz}`;
-    body=`Oggetto: ${subject}\n\nGentile Segreteria di ${centro.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${dataFmt}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||appt.tipo||'—'}\n\nL'appuntamento è stato cancellato dal paziente in data ${new Date().toLocaleDateString('it-IT')}.\nLo slot è ora nuovamente disponibile per altre prenotazioni.\n\nCordiali saluti,\n${S.settings.titolo||''} ${medico}`;
+    body=`Oggetto: ${subject}\n\nGentile Segreteria di ${centro.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${dataFmt}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||appt.tipo||'—'}\n\nL'appuntamento è stato cancellato dal medico in data ${new Date().toLocaleDateString('it-IT')}.\nLo slot è ora nuovamente disponibile per altre prenotazioni.\n\nCordiali saluti,\n${S.settings.titolo||''} ${medico}`;
   } else {
     subject=`Nuova prenotazione — ${appt.cognome||appt.cognome_paziente} ${appt.nome||appt.nome_paziente}`;
     body=buildMailText(appt);
