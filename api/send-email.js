@@ -69,6 +69,7 @@ export default async function handler(req, res) {
 }
 
 function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione }) {
+  const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
   return `<!DOCTYPE html>
 <html lang="it">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -118,11 +119,11 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
           </p>
         </td></tr>
       </table>
-      <p style="font-size:13px;color:#555;margin:0 0 10px;">Per cancellare l&rsquo;appuntamento usa il seguente codice:</p>
-      <div style="background:#f3f4f6;border-radius:8px;padding:14px 20px;text-align:center;margin-bottom:28px;">
-        <code style="font-family:monospace;font-size:20px;font-weight:700;color:#0D9488;letter-spacing:3px;">${codice_cancellazione}</code>
+      <div style="text-align:center;margin:0 0 28px;">
+        <a href="${cancelUrl}" style="display:inline-block;padding:12px 24px;background:#0D9488;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;">Cancella l&rsquo;appuntamento</a>
+        <div style="font-size:11px;color:#888;margin-top:8px;">Puoi cancellare fino a 24 ore prima della visita</div>
+        <div style="font-size:11px;color:#aaa;margin-top:12px;">Se il pulsante non funziona, usa il codice: <code style="font-family:monospace;font-weight:700;color:#0D9488;letter-spacing:2px;">${codice_cancellazione}</code></div>
       </div>
-      <p style="font-size:12px;color:#999;margin:0;">Conserva questo codice. Per assistenza o per cancellare l&rsquo;appuntamento, rispondi direttamente a questa email.</p>
     </td>
   </tr>
   <tr>
