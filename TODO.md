@@ -16,6 +16,23 @@
 - **Slug univoco** generato automaticamente dal trigger `medici_auto_slug()` con cascata: nome-cognome → +spec → +provincia → +albo → fallback random 3 char.
 - **Deploy**: solo `git push origin master` → Vercel rileva e pubblica automaticamente. NON usare `npx vercel --prod`.
 
+### Funzioni SQL SECURITY DEFINER
+- `generate_unique_slug(nome, cognome, specializzazione, provincia, albo, id)` → genera slug univoco con cascata; usata dal trigger `medici_auto_slug()`
+- `search_medici_pubblici(p_query)` → ricerca pubblica su nome/cognome/specializzazione/specializzazioni[]; ritorna citta[]
+- `get_slot_occupati(p_medico_id)` → slot prenotati del medico; usata da `bkInit` per bloccare slot occupati
+- `get_dati_notifica_cancellazione(p_appt_id, p_token)` → ritorna (notifica_cancellazione, centro_nome, centro_email), autorizzata dal possesso del token di cancellazione
+
+---
+
+## ✅ Completato — sessione 2026-05-18 (notifica cancellazione centro + realtime UPDATE agenda)
+
+### Bug risolti
+
+| Data | Bug | Causa | Fix |
+|------|-----|-------|-----|
+| 18/05 | Email cancellazione centro non partiva | sendNotificaCentroAnonimo faceva SELECT dirette su medici/centri bloccate da RLS in modalità anonima | nuova RPC SECURITY DEFINER get_dati_notifica_cancellazione(appt_id, token) |
+| 18/05 | Agenda medico non aggiornata live alla cancellazione paziente | canale realtime ascoltava solo INSERT | aggiunto handler UPDATE con toast su transizione attivo→cancellato |
+
 ---
 
 ## ✅ Completato — sessione 2026-05-18 (bug fix mapping appuntamenti)
@@ -229,4 +246,31 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-18 — Bug fix critico: appuntamenti cancellati appaiono attivi (mancava mapping cancelled/cancelledAt in loadAppuntamentiFromDB)*
+*Ultimo aggiornamento: 2026-05-18 — Fix notifica cancellazione centro (RPC SECURITY DEFINER) + realtime UPDATE agenda; aggiunto runbook*
+
+---
+
+## 📝 NOTE OPERATIVE / RUNBOOK
+
+Cose che non sono task ma è utile ricordare quando qualcosa va storto o serve fare debug.
+
+### Logs e debugging
+- **Log RPC e query Supabase**: Supabase Dashboard → Database → Logs → Postgres Logs
+- **Log Edge Functions / API Vercel**: Vercel Dashboard → progetto medidesk → Logs
+- **Log invio email Resend**: Resend Dashboard → Logs (vedi delivery, bounce, errori)
+- **Log cron Vercel**: Vercel Dashboard → progetto → Cron Jobs → vedi ultime esecuzioni
+
+### Monitoraggio realtime
+- Console browser medico durante il funzionamento: cerca `[Realtime] Status:`
+  - `SUBSCRIBED` = OK
+  - `CHANNEL_ERROR` o `TIMED_OUT` = problema rete o config
+- Eventi attesi: `[Realtime] Nuova prenotazione: <id>` su INSERT, `[Realtime] Update appuntamento: <id>` su UPDATE
+
+### Switch ora legale/solare per cron
+- 26 ottobre 2026 (CEST → CET): cambiare `vercel.json` da `"0 17 * * *"` a `"0 18 * * *"`
+- Ultima domenica di marzo 2027 (CET → CEST): tornare a `"0 17 * * *"`
+
+### File single-source-of-truth
+- Codice app: `medidesk.html` (tutto in un file)
+- Endpoint API: `api/send-email.js`, `api/approve-doctor.js`, `api/send-reminders.js`
+- Deploy: solo `git push origin master` — MAI `npx vercel --prod`
