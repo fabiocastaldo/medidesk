@@ -2147,6 +2147,9 @@ async function loadMedicoFromDB(user){
       S.settings.youtube     = data.youtube            || '';
       S.settings.facebook    = data.facebook           || '';
       S.settings.foto_url    = data.foto_url           || null;
+      S.settings.notifNuovaPrenotazione   = data.notifica_nuova_prenotazione   !== false;
+      S.settings.notifCancellazione       = data.notifica_cancellazione        !== false;
+      S.settings.notifAppuntamentoManuale = data.notifica_appuntamento_manuale === true;
       save();
       console.log('[Delphi~Med] Profilo medico caricato da DB:', user.email);
     }
@@ -4799,9 +4802,9 @@ function loadSettings(){
   }
   // Notifiche
   const chk=(id,val)=>{ const el=document.getElementById(id); if(el) el.checked=!!val; };
-  chk('notif-nuova-prenotazione', S.settings.notifNuovaPrenotazione!==false);
-  chk('notif-cancellazione',      S.settings.notifCancellazione!==false);
-  chk('notif-appuntamento-manuale', !!S.settings.notifAppuntamentoManuale);
+  chk('notif-nuova-prenotazione',   S.settings.notifNuovaPrenotazione   !== false);
+  chk('notif-cancellazione',        S.settings.notifCancellazione       !== false);
+  chk('notif-appuntamento-manuale', S.settings.notifAppuntamentoManuale === true);
   updateBioCounter();
   renderSlugPreview();
   renderLingue();
@@ -5172,6 +5175,9 @@ async function bkInit(){
         turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:t.inizio, fine:t.fine, slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
         giornateSingole: []
       }));
+      S.settings.notifNuovaPrenotazione   = m.notifica_nuova_prenotazione   !== false;
+      S.settings.notifCancellazione       = m.notifica_cancellazione        !== false;
+      S.settings.notifAppuntamentoManuale = m.notifica_appuntamento_manuale === true;
       const { data: tipiDB } = await supabaseClient
         .from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
       S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
@@ -5179,7 +5185,7 @@ async function bkInit(){
         .from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
       S.areeTematiche = (areeDB||[]).map(r=>r.nome);
       const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: m.id });
-      bk.slotOccupati = (slotDB||[]).map(s=>({ centroId: s.centro_id, data: s.data, ora: s.ora }));
+      bk.slotOccupati = (slotDB||[]).map(s=>({ centroId: s.centro_id, data: s.data, ora: (s.ora||'').substring(0,5) }));
     } catch(e){ console.error('[Delphi~Med] bkInit anon:', e.message); }
   } else {
     bk.medicoId = S.medicoId || null;
@@ -5396,7 +5402,7 @@ async function confirmBooking(){
         bk.slotOccupati.push({ centroId: bk.centroId, data: bk.dateStr, ora: bk.ora });
         try {
           const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: bk.medicoId });
-          if(slotDB) bk.slotOccupati = slotDB.map(s=>({ centroId: s.centro_id, data: s.data, ora: s.ora }));
+          if(slotDB) bk.slotOccupati = slotDB.map(s=>({ centroId: s.centro_id, data: s.data, ora: (s.ora||'').substring(0,5) }));
         } catch(_){}
         showToast(e.message);
         bkStep(3);
