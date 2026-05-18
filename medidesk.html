@@ -5531,7 +5531,10 @@ async function loadCancelPage(){
         ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${appt.ora}<br>
         ${appt.tipo_visita||'Visita'}
       </div>
-      <p>Vuoi cancellare questo appuntamento?</p>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+        Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile:<br>
+        lo slot tornerà subito disponibile per un altro paziente che ne ha bisogno.
+      </p>
       <button class="btn btn-warm" style="width:100%;padding:13px;margin-top:8px;font-size:15px" onclick="cancelBookingByToken('${appt.id}')">Conferma cancellazione</button>
       <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="history.back()">Annulla</button>`;
   } catch(e){
@@ -5548,7 +5551,10 @@ async function cancelBookingByToken(apptId){
     const local=S.appuntamenti.find(a=>String(a.id)===String(apptId));
     if(local){ local.cancelled=true; local.cancelledAt=new Date().toISOString(); save(); }
     document.getElementById('cancel-content').innerHTML=
-      '<div style="font-size:56px;margin-bottom:16px">✅</div><h2>Cancellato</h2><p>Il tuo appuntamento è stato cancellato.<br>Lo slot è nuovamente disponibile per altri pazienti.</p>';
+      `<div style="font-size:56px;margin-bottom:16px">✅</div>
+       <h2>Appuntamento cancellato</h2>
+       <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">Hai liberato uno slot per un altro paziente. Grazie.</p>
+       <a href="https://delphi-med.com" class="btn btn-secondary" style="display:inline-block;margin-top:16px;text-decoration:none;padding:12px 32px">Torna alla home</a>`;
     if(window._cancelApptData) await sendNotificaCentroAnonimo(window._cancelApptData);
   } catch(e){
     showToast('Errore nella cancellazione: '+e.message);

@@ -119,10 +119,11 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
           </p>
         </td></tr>
       </table>
+      <p style="font-size:13px;color:#555;line-height:1.6;text-align:center;margin:24px auto 12px;max-width:480px;">
+        Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile: lo slot torner&agrave; subito disponibile per un altro paziente che ne ha bisogno. Hai tempo fino a 24 ore prima della visita.
+      </p>
       <div style="text-align:center;margin:0 0 28px;">
         <a href="${cancelUrl}" style="display:inline-block;padding:12px 24px;background:#0D9488;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;">Cancella l&rsquo;appuntamento</a>
-        <div style="font-size:11px;color:#888;margin-top:8px;">Puoi cancellare fino a 24 ore prima della visita</div>
-        <div style="font-size:11px;color:#aaa;margin-top:12px;">Se il pulsante non funziona, usa il codice: <code style="font-family:monospace;font-weight:700;color:#0D9488;letter-spacing:2px;">${codice_cancellazione}</code></div>
       </div>
     </td>
   </tr>
