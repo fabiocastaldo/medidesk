@@ -18,6 +18,14 @@
 
 ---
 
+## ✅ Completato — sessione 2026-05-18 (bug fix mapping appuntamenti)
+
+### Bug fix critico — Appuntamenti cancellati appaiono come attivi
+- [x] `loadAppuntamentiFromDB()`: aggiunto mapping di `cancelled: a.cancelled === true` e `cancelledAt: a.cancelled_at || null` — prima questi campi erano omessi, `S.appuntamenti[].cancelled` era sempre `undefined`, il guard `!a.cancelled` passava per tutti gli appuntamenti cancellati (visibili in agenda, slot marcati occupati invece di liberi)
+- [x] `cancellation_token` non mappato: non viene mai letto da `S.appuntamenti[]` (usato solo come variabile locale in `confirmBooking()` e come filtro DB diretto in `loadCancelPage()`)
+
+---
+
 ## ✅ Completato — sessione 2026-05-18 (bug fix + UX cancellazione)
 
 ### Bug fix A — Notifiche email segreteria mai inviate
@@ -221,4 +229,4 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-18 — Bug fix notifiche email segreteria (toggle non letti dal DB) + bug fix slot occupati (normalizzazione HH:MM) + UX cancellazione (mail con bottone CTA, testo persuasivo, pagina successo con "Torna alla home")*
+*Ultimo aggiornamento: 2026-05-18 — Bug fix critico: appuntamenti cancellati appaiono attivi (mancava mapping cancelled/cancelledAt in loadAppuntamentiFromDB)*
