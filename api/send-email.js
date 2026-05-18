@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'RESEND_API_KEY non configurata' });
   }
 
-  const { to, subject, html: rawHtml, paziente_nome, medico_nome, medico_email, centro_nome, data, ora, tipo_visita, codice_cancellazione } = req.body || {};
+  const { to, subject, html: rawHtml, tipo, paziente_nome, medico_nome, medico_email, medico_slug, centro_nome, data, ora, tipo_visita, codice_cancellazione } = req.body || {};
 
   if (!to || typeof to !== 'string') {
     return res.status(400).json({ error: 'Campo to mancante o non valido' });
@@ -26,6 +26,33 @@ export default async function handler(req, res) {
   if (subject && rawHtml) {
     try {
       const { error } = await resend.emails.send({ from: 'noreply@delphi-med.com', to: [to], subject, html: rawHtml });
+      if (error) return res.status(500).json({ error: error.message });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+    return res.status(200).json({ ok: true });
+  }
+
+  // Modalità template: annullamento appuntamento da parte del medico
+  if (tipo === 'cancellazione_medico') {
+    let dataFmtCanc = data || '';
+    try {
+      const d = new Date(data + 'T12:00:00');
+      dataFmtCanc = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (_) {}
+    const subjectCanc = `Appuntamento annullato — ${dataFmtCanc} alle ${ora}`;
+    const htmlCanc = buildHtmlCancellazioneMedico({
+      paziente_nome: esc(paziente_nome),
+      medico_nome:   esc(medico_nome),
+      centro_nome:   esc(centro_nome),
+      dataFmt:       dataFmtCanc,
+      ora:           esc(ora),
+      medico_slug:   medico_slug || ''
+    });
+    const payloadCanc = { from: 'noreply@delphi-med.com', to: [to], subject: subjectCanc, html: htmlCanc };
+    if (medico_email) payloadCanc.reply_to = medico_email;
+    try {
+      const { error } = await resend.emails.send(payloadCanc);
       if (error) return res.status(500).json({ error: error.message });
     } catch (e) {
       return res.status(500).json({ error: e.message });
@@ -66,6 +93,49 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({ ok: true });
+}
+
+function buildHtmlCancellazioneMedico({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, medico_slug }) {
+  const bookingLink = medico_slug ? `https://delphi-med.com/?booking&doc=${encodeURIComponent(medico_slug)}` : '';
+  return `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
+  <tr>
+    <td style="background:#0D9488;padding:32px 40px;text-align:center;">
+      <p style="margin:0;font-size:30px;color:#ffffff;">&#9888;</p>
+      <p style="margin:8px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.3px;">Appuntamento annullato</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:36px 40px;">
+      <p style="font-size:16px;color:#1a1a1a;margin:0 0 20px;">Gentile <strong>${paziente_nome}</strong>,</p>
+      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">
+        la informiamo che l&apos;appuntamento del <strong>${dataFmt}</strong> alle ore <strong>${ora}</strong> presso <strong>${centro_nome}</strong> con il medico <strong>${medico_nome}</strong> &egrave; stato annullato.
+      </p>
+      ${bookingLink
+        ? `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per riprenotare la visita, pu&ograve; contattare direttamente il centro oppure consultare i nuovi orari disponibili:</p>
+           <div style="text-align:center;margin:0 0 28px;">
+             <a href="${bookingLink}" style="display:inline-block;padding:12px 24px;background:#0D9488;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;">Prenota un nuovo appuntamento</a>
+           </div>`
+        : `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">Per riprenotare la visita, pu&ograve; contattare direttamente il centro.</p>`
+      }
+      <p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Ci scusiamo per l&apos;inconveniente.<br><br>Cordiali saluti.</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f8f8f8;border-top:1px solid #eeeeee;padding:18px 40px;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da MediDesk</p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 }
 
 function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione }) {

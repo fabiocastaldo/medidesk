@@ -3539,20 +3539,23 @@ async function saveAppuntamento(){
       note:(document.getElementById('appt-note')||{}).value?.trim()||'',
       source:'medico'
     };
+    const cancellationToken = generateCancellationToken();
+    newAppt.cancellationToken = cancellationToken;
     if(isOnline() && S.medicoId){
       const { data: inserted, error } = await supabaseClient.from('appuntamenti').insert({
-        medico_id:         S.medicoId,
-        centro_id:         A.centroId,
-        data:              A.dateStr,
-        ora:               A.ora,
-        nome_paziente:     nome,
-        cognome_paziente:  cognome,
-        telefono_paziente: newAppt.tel  || null,
-        email_paziente:    newAppt.email|| null,
-        tipo_visita:       newAppt.tipo || null,
-        area_tematica:     newAppt.area || null,
-        note:              newAppt.note || null,
-        source:            'medico'
+        medico_id:          S.medicoId,
+        centro_id:          A.centroId,
+        data:               A.dateStr,
+        ora:                A.ora,
+        nome_paziente:      nome,
+        cognome_paziente:   cognome,
+        telefono_paziente:  newAppt.tel  || null,
+        email_paziente:     newAppt.email|| null,
+        tipo_visita:        newAppt.tipo || null,
+        area_tematica:      newAppt.area || null,
+        note:               newAppt.note || null,
+        source:             'medico',
+        cancellation_token: cancellationToken
       }).select('id').single();
       if(error) throw error;
       newAppt.id = inserted.id;
@@ -3565,6 +3568,25 @@ async function saveAppuntamento(){
     renderAgenda(); renderDashboard(); updateStats();
     showToast('Appuntamento salvato ✓');
     await sendNotificaCentro('appuntamento_manuale', newAppt);
+    if(newAppt.email){
+      const _medSettings = S.settings || {};
+      const _medNome = `${_medSettings.titolo||'Dr.'} ${_medSettings.nomeProf||''} ${_medSettings.cognomeProf||''}`.trim();
+      fetch('/api/send-email', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          to: newAppt.email,
+          paziente_nome: nome+' '+cognome,
+          medico_nome: _medNome,
+          medico_email: _medSettings.email || '',
+          centro_nome: newAppt.centroNome || '',
+          data: A.dateStr,
+          ora: A.ora,
+          tipo_visita: newAppt.tipo || '',
+          codice_cancellazione: cancellationToken
+        })
+      }).catch(e=>console.error('[Delphi~Med] send-email manuale:', e.message));
+    }
   } catch(err){
     console.error('saveAppuntamento error:', err);
     showToast('Errore salvataggio: '+err.message);
@@ -3572,14 +3594,49 @@ async function saveAppuntamento(){
 }
 
 async function deleteAppuntamento(id){
-  if(isOnline()){
-    try { await supabaseClient.from('appuntamenti').delete().eq('id', String(id)); }
-    catch(e){ console.error('[Delphi~Med] deleteAppuntamento:', e.message); }
+  const appt = S.appuntamenti.find(a=>String(a.id)===String(id));
+  if(!appt){ return; }
+  if(appt.cancelled){ showToast('Appuntamento già cancellato'); return; }
+  const dataLabel = formatDate(appt.data);
+  const oraLabel = (appt.ora||'').substring(0,5);
+  if(!confirm(`Sei sicuro di voler cancellare l'appuntamento di ${appt.cognome} ${appt.nome} del ${dataLabel} alle ${oraLabel}?\n\nIl paziente e il centro riceveranno una mail di notifica.`)) return;
+  const cancelledAt = new Date().toISOString();
+  try {
+    if(isOnline() && !String(id).startsWith('local-')){
+      const { error } = await supabaseClient.from('appuntamenti')
+        .update({ cancelled:true, cancelled_at:cancelledAt }).eq('id', String(id));
+      if(error) throw error;
+    }
+    appt.cancelled = true;
+    appt.cancelledAt = cancelledAt;
+    save();
+    renderAgenda(); renderDashboard(); updateStats();
+    showToast('Appuntamento cancellato ✓');
+    await sendNotificaCentro('cancellazione', appt);
+    if(appt.email){
+      const _medSettings = S.settings || {};
+      const _medNome = `${_medSettings.titolo||'Dr.'} ${_medSettings.nomeProf||''} ${_medSettings.cognomeProf||''}`.trim();
+      const _centro = S.centri.find(c=>String(c.id)===String(appt.centroId));
+      fetch('/api/send-email', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          tipo: 'cancellazione_medico',
+          to: appt.email,
+          paziente_nome: `${appt.nome} ${appt.cognome}`,
+          medico_nome: _medNome,
+          medico_email: _medSettings.email || '',
+          medico_slug: _medSettings.slug || '',
+          centro_nome: _centro ? _centro.nome : (appt.centroNome||''),
+          data: appt.data,
+          ora: oraLabel
+        })
+      }).catch(e=>console.error('[Delphi~Med] send-email cancellazione paziente:', e.message));
+    }
+  } catch(err){
+    console.error('deleteAppuntamento error:', err);
+    showToast('Errore: '+err.message);
   }
-  S.appuntamenti = S.appuntamenti.filter(a=>String(a.id)!==String(id));
-  save(); renderAgenda(); renderDashboard(); updateStats(); renderPending();
-  closeModal('modal-appt-detail');
-  showToast('Eliminato');
 }
 
 // ── AGENDA ──
@@ -5792,6 +5849,22 @@ async function saveChiusura(){
     etichetta: etichetta||'Chiusura',
     centri_ids: selCentri
   };
+  // Check conflitti con appuntamenti esistenti
+  const conflitti = S.appuntamenti.filter(a => {
+    if(a.cancelled) return false;
+    if(a.data < inizio || a.data > fine) return false;
+    if(selCentri.length && !selCentri.some(cid => String(cid)===String(a.centroId))) return false;
+    return true;
+  }).sort((a,b)=> (a.data+a.ora).localeCompare(b.data+b.ora));
+  if(conflitti.length){
+    const lista = conflitti.slice(0,10).map(a=>{
+      const oraLbl = (a.ora||'').substring(0,5);
+      return `• ${formatDate(a.data)} ${oraLbl} — ${a.cognome} ${a.nome}`;
+    }).join('\n');
+    const piu = conflitti.length>10 ? `\n…e altri ${conflitti.length-10}` : '';
+    const msg = `Attenzione: ci sono ${conflitti.length} appuntamenti prenotati nel periodo di chiusura:\n\n${lista}${piu}\n\nVuoi salvare comunque la chiusura?\n(Gli appuntamenti NON verranno cancellati automaticamente: dovrai gestirli a mano.)`;
+    if(!confirm(msg)) return;
+  }
   if(isOnline() && S.medicoId){
     try {
       const { data, error } = await supabaseClient.from('chiusure').insert({
@@ -5815,7 +5888,37 @@ async function saveChiusura(){
   const centriAssociati=selCentri.length
     ? S.centri.filter(c=>selCentri.some(id=>String(id)===String(c.id)))
     : S.centri.filter(c=>c.attivo!==false);
-  if(centriAssociati.length) showMailBozzaChiusura(nuova, centriAssociati);
+  if(centriAssociati.length){
+    await inviaMailChiusuraAiCentri(nuova, centriAssociati);
+    showMailBozzaChiusura(nuova, centriAssociati);
+  }
+}
+
+async function inviaMailChiusuraAiCentri(ch, centri){
+  if(!isOnline()) return;
+  const medSettings = S.settings || {};
+  const titolo = medSettings.titolo || 'Dr.';
+  const nomeCompleto = `${titolo} ${medSettings.nomeProf||''} ${medSettings.cognomeProf||''}`.trim();
+  const centriConEmail = centri.filter(c=>c.email && c.email.trim());
+  if(!centriConEmail.length){ return; }
+  const subject = `Comunicazione chiusura studio — ${formatDate(ch.data_inizio)}${ch.data_inizio!==ch.data_fine?' – '+formatDate(ch.data_fine):''}`;
+  let inviate = 0;
+  for(const c of centriConEmail){
+    const body = `Oggetto: ${subject}\n\nGentile Segreteria di ${c.nome},\n\ncomunichiamo che ${nomeCompleto} non sarà disponibile presso il vostro ambulatorio nel seguente periodo:\n\nDal ${formatDate(ch.data_inizio)} al ${formatDate(ch.data_fine)}\nMotivo: ${ch.etichetta||'Chiusura studio'}\n\nDurante questo periodo non saranno accettate prenotazioni.\n\nCordiali saluti,\n${nomeCompleto}`;
+    try {
+      await fetch('/api/send-email', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          to: c.email,
+          subject,
+          html: buildEmailHtml(body, 'Comunicazione chiusura studio')
+        })
+      });
+      inviate++;
+    } catch(e){ console.error('[Delphi~Med] mail chiusura centro:', e.message); }
+  }
+  if(inviate>0) showToast(`Mail inviate a ${inviate} centro/i ✓`);
 }
 
 async function deleteChiusura(id){
