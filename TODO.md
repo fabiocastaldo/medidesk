@@ -24,6 +24,19 @@
 
 ---
 
+## ✅ Completato — sessione 2026-05-18 (legenda settimana + orari + apertura agenda)
+
+### Migliorie UI
+- [x] Legenda centri sotto il calendario settimanale: `renderWeekLegend(days)` popola `#week-legend-container` con i centri che hanno turni nella settimana corrente o appuntamenti registrati; riusa classi CSS `month-legend` già esistenti
+- [x] `showPage('agenda')` chiama `setAgendaView('week')` invece di `renderAgenda()` — elimina il caso in cui lo stato salvato `'ferie'` o `'month'` lasciava `#view-week` visibile ma vuoto
+
+### Bug fix — Normalizzazione orari HH:MM
+- [x] **Pagina cancellazione paziente** (`loadCancelPage`): `appt.ora` normalizzato a HH:MM prima di costruire `apptDate` — fix si propaga a preview HTML e mail al centro via `window._cancelApptData`
+- [x] **Turni medico loggato** (`loadCentriFromDB`): `inizio`/`fine` passano per `.substring(0,5)` nel map dei turni
+- [x] **Turni medico pubblico** (`bkInit`): stessa normalizzazione nel map inline dei centri pubblici
+
+---
+
 ## ✅ Completato — sessione 2026-05-18 (notifica cancellazione centro + realtime UPDATE agenda)
 
 ### Bug risolti
@@ -246,7 +259,7 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-18 — Fix notifica cancellazione centro (RPC SECURITY DEFINER) + realtime UPDATE agenda; aggiunto runbook*
+*Ultimo aggiornamento: 2026-05-18 — Legenda centri vista settimana, apertura agenda su Settimana, normalizzazione orari HH:MM in 3 punti*
 
 ---
 
