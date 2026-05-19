@@ -1124,6 +1124,108 @@ html.dark .cancel-token-code{color:var(--ink)}
 
     </div>
 
+    <!-- STATISTICHE -->
+    <div id="page-statistiche" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Statistiche</div>
+          <div class="page-subtitle">Analisi della tua attività</div>
+        </div>
+      </div>
+
+      <!-- Filtro periodo -->
+      <div class="stats-period-bar">
+        <button class="stats-period-btn active" data-period="30" onclick="setStatsPeriod(30)">Ultimi 30gg</button>
+        <button class="stats-period-btn" data-period="90" onclick="setStatsPeriod(90)">Trimestre</button>
+        <button class="stats-period-btn" data-period="365" onclick="setStatsPeriod(365)">Anno</button>
+        <button class="stats-period-btn" data-period="0" onclick="setStatsPeriod(0)">Tutto</button>
+      </div>
+
+      <!-- Empty state -->
+      <div id="stats-empty" style="display:none;text-align:center;padding:60px 24px;color:var(--ink3)">
+        <div style="font-size:48px;margin-bottom:12px">📊</div>
+        <div style="font-weight:600;margin-bottom:6px">Nessun dato nel periodo selezionato</div>
+        <div style="font-size:14px">Le statistiche appariranno qui non appena avrai degli appuntamenti.</div>
+      </div>
+
+      <!-- Contenuto -->
+      <div id="stats-content">
+        <!-- KPI ROW -->
+        <div class="stats-kpi-row">
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">Visite effettuate</div>
+            <div class="stats-kpi-value" id="kpi-effettuate">—</div>
+            <div class="stats-kpi-delta" id="kpi-effettuate-delta"></div>
+          </div>
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">Cancellate</div>
+            <div class="stats-kpi-value" id="kpi-cancellate">—</div>
+            <div class="stats-kpi-delta" id="kpi-cancellate-rate"></div>
+          </div>
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">Prime visite</div>
+            <div class="stats-kpi-value" id="kpi-prime">—</div>
+            <div class="stats-kpi-delta" id="kpi-prime-pct"></div>
+          </div>
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">Ore lavorate</div>
+            <div class="stats-kpi-value" id="kpi-ore">—</div>
+            <div class="stats-kpi-delta">stima</div>
+          </div>
+        </div>
+
+        <!-- Trend mensile -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <span style="font-weight:600">Andamento mensile</span>
+          </div>
+          <div id="chart-trend" style="padding:8px"></div>
+        </div>
+
+        <!-- Per centro + giorno settimana -->
+        <div class="stats-grid-2">
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Per centro</span></div>
+            <div id="chart-centri" style="padding:8px"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Giorno della settimana</span></div>
+            <div id="chart-dow" style="padding:8px"></div>
+          </div>
+        </div>
+
+        <!-- Fasce orarie + Online vs manuale -->
+        <div class="stats-grid-2">
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Fasce orarie più richieste</span></div>
+            <div id="chart-orari" style="padding:8px"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Origine prenotazioni</span></div>
+            <div id="chart-source" style="padding:8px"></div>
+          </div>
+        </div>
+
+        <!-- Tipo visita + Area -->
+        <div class="stats-grid-2">
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Tipo di visita</span></div>
+            <div id="chart-tipo" style="padding:8px"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Area tematica</span></div>
+            <div id="chart-area" style="padding:8px"></div>
+          </div>
+        </div>
+
+        <!-- Cancellazioni: chi cancella di più -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header"><span style="font-weight:600">Chi cancella di più</span></div>
+          <div id="chart-cancel-source" style="padding:8px"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- IMPOSTAZIONI -->
     <div id="page-impostazioni" class="page">
       <div class="page-header">
