@@ -635,7 +635,8 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
 .stats-kpi-spark svg{width:100%;height:100%;display:block}
 
 /* Bar chart verticale */
-.barchart-svg{width:100%;height:auto;display:block}
+.barchart-svg{width:100%;height:auto;display:block;max-height:280px}
+#chart-trend{max-height:300px;overflow:hidden}
 .barchart-axis-text{font-size:10px;fill:var(--ink3);font-family:'DM Sans',sans-serif}
 .barchart-grid-line{stroke:var(--border);stroke-width:1;stroke-dasharray:2,3;opacity:.6}
 .barchart-bar{fill:var(--accent);transition:opacity .15s;cursor:pointer}
@@ -667,6 +668,20 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
 .heatmap-legend{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px;font-size:11px;color:var(--ink3)}
 .heatmap-legend-scale{display:flex;gap:2px}
 .heatmap-legend-scale span{width:14px;height:14px;border-radius:3px;display:inline-block}
+
+/* Top pazienti */
+.top-paz-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:6px;transition:background .12s;cursor:default}
+.top-paz-row.clickable{cursor:pointer}
+.top-paz-row.clickable:hover{background:var(--bg)}
+.top-paz-row + .top-paz-row{border-top:1px solid var(--border)}
+.top-paz-rank{flex:0 0 32px;font-weight:700;font-size:15px;color:var(--ink3);text-align:center}
+.top-paz-rank.medal{font-size:20px}
+.top-paz-info{flex:1;min-width:0}
+.top-paz-name{font-weight:600;color:var(--ink);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-paz-last{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.top-paz-visits{flex:0 0 auto;text-align:right;font-weight:600;color:var(--accent);font-size:14px}
+.top-paz-visits-label{font-size:10.5px;color:var(--ink3);font-weight:500;display:block;text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+.top-paz-disclaimer{font-size:11px;color:var(--ink3);font-style:italic;padding:8px 8px 0;margin-top:6px;border-top:1px solid var(--border);text-align:center;line-height:1.5}
 
 @media(max-width:768px){
   .donut-wrap{flex-direction:column;gap:12px}
@@ -1276,7 +1291,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
         <!-- Trend mensile -->
         <div class="card" style="margin-bottom:14px">
           <div class="card-header">
-            <span style="font-weight:600">Andamento mensile</span>
+            <span style="font-weight:600">Visite effettuate per mese</span>
           </div>
           <div id="chart-trend" style="padding:8px"></div>
         </div>
@@ -1298,7 +1313,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
           </div>
           <div class="card">
             <div class="card-header"><span style="font-weight:600">Origine prenotazioni</span></div>
-            <div id="chart-source" style="padding:14px"></div>
+            <div id="chart-source" style="padding:8px"></div>
           </div>
         </div>
 
@@ -1318,6 +1333,15 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
         <div class="card" style="margin-bottom:14px">
           <div class="card-header"><span style="font-weight:600">Chi cancella di più</span></div>
           <div id="chart-cancel-source" style="padding:8px"></div>
+        </div>
+
+        <!-- Top pazienti -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <span style="font-weight:600">👥 Pazienti più frequenti</span>
+            <span style="font-size:12px;color:var(--ink3)">ultimi 12 mesi</span>
+          </div>
+          <div id="chart-top-pazienti" style="padding:8px"></div>
         </div>
       </div>
     </div>
@@ -6566,11 +6590,11 @@ function renderStatistiche(){
   const min = totMin%60;
   document.getElementById('kpi-ore').textContent = `${ore}h ${min}m`;
 
-  // Sparkline KPI (ultimi 6 mesi)
-  _renderKpiSpark('spark-effettuate', _seriesMonthly(effettuate, 6), 'var(--accent)');
-  _renderKpiSpark('spark-cancellate', _seriesMonthly(cancellate, 6), '#dc2626');
-  _renderKpiSpark('spark-prime', _seriesMonthly(effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')), 6), '#0EA5E9');
-  _renderKpiSpark('spark-ore', _seriesMonthlyOre(effettuate, 6), '#8B5CF6');
+  // Sparkline KPI (granularità adattiva al periodo)
+  _renderKpiSpark('spark-effettuate', _adaptiveSparkSeries(effettuate), 'var(--accent)');
+  _renderKpiSpark('spark-cancellate', _adaptiveSparkSeries(cancellate), '#dc2626');
+  _renderKpiSpark('spark-prime', _adaptiveSparkSeries(effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima'))), '#0EA5E9');
+  _renderKpiSpark('spark-ore', _adaptiveSparkSeriesOre(effettuate), '#8B5CF6');
 
   _renderInsights(all, effettuate, cancellate, prev, prevEffettuate);
   _renderTrendMensile(effettuate);
@@ -6580,29 +6604,28 @@ function renderStatistiche(){
   _renderTipoVisita(effettuate);
   _renderArea(effettuate);
   _renderCancelSource(cancellate);
+  _renderTopPazienti();
 }
 
 function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
   const box = document.getElementById('stats-insights');
   const list = document.getElementById('stats-insights-list');
   const insights = [];
+  const hasComparison = _statsPeriod > 0;
+  const periodLabel = (_statsPeriod===30 ? 'mese precedente' :
+                       _statsPeriod===90 ? 'trimestre precedente' :
+                       _statsPeriod===365 ? 'anno precedente' : '');
 
   // 1. TREND VOLUME
-  if(_statsPeriod > 0 && prev.length > 0){
+  if(hasComparison && prev.length > 0 && prevEffettuate.length >= 3){
     const delta = effettuate.length - prevEffettuate.length;
-    if(prevEffettuate.length >= 3){
-      const pct = Math.round((delta/prevEffettuate.length)*100);
-      if(pct >= 20){
-        insights.push({
-          icon:'📈',
-          html:`Stai crescendo: <span class="pos">+${delta} visite</span> rispetto al periodo precedente (<span class="pos">+${pct}%</span>). Continua così.`
-        });
-      } else if(pct <= -20){
-        insights.push({
-          icon:'📉',
-          html:`Calo di attività: <span class="neg">${delta} visite</span> rispetto al periodo precedente (<span class="neg">${pct}%</span>). Potrebbe valere la pena rivedere disponibilità o promozione.`
-        });
-      }
+    const pct = Math.round((delta/prevEffettuate.length)*100);
+    if(pct >= 20){
+      insights.push({icon:'📈', html:`Stai crescendo: <span class="pos">+${delta} visite</span> rispetto al ${periodLabel} (<span class="pos">+${pct}%</span>).`});
+    } else if(pct <= -20){
+      insights.push({icon:'📉', html:`Calo di attività: <span class="neg">${delta} visite</span> rispetto al ${periodLabel} (<span class="neg">${pct}%</span>).`});
+    } else if(Math.abs(pct) < 10){
+      insights.push({icon:'➡️', html:`Attività stabile rispetto al ${periodLabel}: <strong>${effettuate.length}</strong> visite contro ${prevEffettuate.length}.`});
     }
   }
 
@@ -6610,37 +6633,28 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
   if(effettuate.length >= 5){
     const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
     const counts = [0,0,0,0,0,0,0];
-    effettuate.forEach(a=>{
-      const d = new Date(a.data + 'T00:00:00');
-      counts[d.getDay()]++;
-    });
+    effettuate.forEach(a=>{ const d = new Date(a.data + 'T00:00:00'); counts[d.getDay()]++; });
     const max = Math.max(...counts);
     const maxIdx = counts.indexOf(max);
     const avg = effettuate.length / counts.filter(c=>c>0).length;
     if(max > 0 && max >= avg * 1.4){
       const pctSopra = Math.round((max/avg - 1) * 100);
-      insights.push({
-        icon:'📅',
-        html:`Il <strong>${days[maxIdx]}</strong> è il tuo giorno più pieno: <strong>${max} visite</strong> nel periodo, il <strong>${pctSopra}%</strong> in più della media.`
-      });
+      insights.push({icon:'📅', html:`Il <strong>${days[maxIdx]}</strong> è il tuo giorno più pieno: <strong>${max} visite</strong>, il <strong>${pctSopra}%</strong> in più della media settimanale.`});
     }
   }
 
-  // 3. FASCIA ORARIA PIÙ RICHIESTA
+  // 3. FASCIA ORARIA
   if(effettuate.length >= 5){
-    const buckets = {
-      '08:00-10:00':0,'10:00-12:00':0,'12:00-14:00':0,
-      '14:00-16:00':0,'16:00-18:00':0,'18:00-20:00':0
-    };
+    const buckets = {'08:00-10:00':0,'10:00-12:00':0,'12:00-14:00':0,'14:00-16:00':0,'16:00-18:00':0,'18:00-20:00':0};
     effettuate.forEach(a=>{
       if(!a.ora) return;
       const h = parseInt(a.ora.substring(0,2));
-      if(h>=8 && h<10) buckets['08:00-10:00']++;
-      else if(h>=10 && h<12) buckets['10:00-12:00']++;
-      else if(h>=12 && h<14) buckets['12:00-14:00']++;
-      else if(h>=14 && h<16) buckets['14:00-16:00']++;
-      else if(h>=16 && h<18) buckets['16:00-18:00']++;
-      else if(h>=18 && h<20) buckets['18:00-20:00']++;
+      if(h>=8&&h<10) buckets['08:00-10:00']++;
+      else if(h>=10&&h<12) buckets['10:00-12:00']++;
+      else if(h>=12&&h<14) buckets['12:00-14:00']++;
+      else if(h>=14&&h<16) buckets['14:00-16:00']++;
+      else if(h>=16&&h<18) buckets['16:00-18:00']++;
+      else if(h>=18&&h<20) buckets['18:00-20:00']++;
     });
     const entries = Object.entries(buckets).filter(([,v])=>v>0);
     if(entries.length){
@@ -6649,97 +6663,131 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
       const tot = entries.reduce((s,[,v])=>s+v,0);
       const pct = Math.round((topCount/tot)*100);
       if(pct >= 35){
-        insights.push({
-          icon:'🕐',
-          html:`La fascia <strong>${topFascia}</strong> concentra il <strong>${pct}%</strong> delle tue visite. Potresti considerare di aprire più slot in quell'orario.`
-        });
+        insights.push({icon:'🕐', html:`La fascia <strong>${topFascia}</strong> è la più richiesta: concentra il <strong>${pct}%</strong> delle visite del periodo.`});
       }
     }
   }
 
-  // 4. CENTRO PRINCIPALE
+  // 4. CENTRO PRINCIPALE con delta
   if(effettuate.length >= 5 && (S.centri||[]).length > 1){
     const counts = {};
-    effettuate.forEach(a=>{
-      counts[a.centroId] = (counts[a.centroId]||0)+1;
-    });
-    const entries = Object.entries(counts);
+    effettuate.forEach(a=>{ counts[a.centroId] = (counts[a.centroId]||0)+1; });
+    const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
     if(entries.length){
-      entries.sort((a,b)=>b[1]-a[1]);
       const [topId, topCount] = entries[0];
       const centro = (S.centri||[]).find(c=>String(c.id)===String(topId));
       if(centro){
         const pct = Math.round((topCount/effettuate.length)*100);
         if(pct >= 50){
-          insights.push({
-            icon:'🏥',
-            html:`<strong>${_esc(centro.nome)}</strong> è il tuo centro principale: il <strong>${pct}%</strong> delle prenotazioni arriva da lì.`
-          });
+          let deltaStr = '';
+          if(hasComparison){
+            const prevTopCount = prevEffettuate.filter(a=>String(a.centroId)===String(topId)).length;
+            const delta = topCount - prevTopCount;
+            if(prevTopCount > 0){
+              const sign = delta>=0?'+':'';
+              const cls = delta>=0?'pos':'neg';
+              deltaStr = ` (<span class="${cls}">${sign}${delta}</span> vs ${periodLabel})`;
+            }
+          }
+          insights.push({icon:'🏥', html:`<strong>${_esc(centro.nome)}</strong> è il tuo centro principale: <strong>${pct}%</strong> delle prenotazioni${deltaStr}.`});
         }
       }
     }
   }
 
-  // 5. TASSO CANCELLAZIONE
+  // 5. TASSO CANCELLAZIONE con delta
   if(all.length >= 10){
     const cancRate = (cancellate.length / all.length) * 100;
+    let deltaStr = '';
+    if(hasComparison && prev.length >= 10){
+      const prevCancRate = (prev.filter(a=>a.cancelled).length / prev.length) * 100;
+      const deltaPp = Math.round(cancRate - prevCancRate);
+      if(Math.abs(deltaPp) >= 3){
+        const sign = deltaPp>=0?'+':'';
+        const cls = deltaPp>=0?'neg':'pos';
+        deltaStr = ` (<span class="${cls}">${sign}${deltaPp} punti</span> vs ${periodLabel})`;
+      }
+    }
     if(cancRate >= 25){
-      insights.push({
-        icon:'⚠️',
-        html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> degli appuntamenti viene cancellato (<strong>${cancellate.length} su ${all.length}</strong>). Vale la pena capire se c'è un pattern: orari, centri o tipi di visita specifici.`
-      });
+      insights.push({icon:'⚠️', html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> (<strong>${cancellate.length} su ${all.length}</strong>)${deltaStr}. Vale la pena capire se c'è un pattern.`});
     } else if(cancRate >= 15 && cancRate < 25){
-      insights.push({
-        icon:'📋',
-        html:`Tasso di cancellazione: <strong>${Math.round(cancRate)}%</strong> nel periodo (${cancellate.length} cancellazioni). Nella media per uno studio attivo.`
-      });
+      insights.push({icon:'📋', html:`Tasso di cancellazione: <strong>${Math.round(cancRate)}%</strong> nel periodo (${cancellate.length} cancellazioni)${deltaStr}.`});
     } else if(cancRate <= 5 && cancellate.length === 0 && all.length >= 15){
-      insights.push({
-        icon:'✨',
-        html:`<span class="pos">Zero cancellazioni</span> nel periodo su ${all.length} appuntamenti. I tuoi pazienti rispettano gli orari.`
-      });
+      insights.push({icon:'✨', html:`<span class="pos">Zero cancellazioni</span> nel periodo su ${all.length} appuntamenti. I tuoi pazienti rispettano gli orari.`});
     }
   }
 
-  // 6. ONLINE VS MANUALE
+  // 6. ONLINE VS MANUALE con delta
   if(effettuate.length >= 5){
     const online = effettuate.filter(a=>a.source==='paziente').length;
     const pctOnline = Math.round((online/effettuate.length)*100);
+    let deltaStr = '';
+    if(hasComparison && prevEffettuate.length >= 5){
+      const prevOnline = prevEffettuate.filter(a=>a.source==='paziente').length;
+      const prevPct = Math.round((prevOnline/prevEffettuate.length)*100);
+      const deltaPp = pctOnline - prevPct;
+      if(Math.abs(deltaPp) >= 5){
+        const sign = deltaPp>=0?'+':'';
+        const cls = deltaPp>=0?'pos':'neg';
+        deltaStr = ` (<span class="${cls}">${sign}${deltaPp} punti</span> vs ${periodLabel})`;
+      }
+    }
     if(pctOnline >= 60){
-      insights.push({
-        icon:'🌐',
-        html:`Il <strong>${pctOnline}%</strong> dei tuoi pazienti prenota online. La tua pagina di prenotazione sta funzionando bene.`
-      });
+      insights.push({icon:'🌐', html:`Il <strong>${pctOnline}%</strong> dei tuoi pazienti prenota online${deltaStr}. La tua pagina di prenotazione funziona.`});
     } else if(pctOnline > 0 && pctOnline <= 15 && (S.appuntamenti||[]).length >= 10){
-      insights.push({
-        icon:'💬',
-        html:`Solo il <strong>${pctOnline}%</strong> delle prenotazioni arriva online. Condividi più spesso il tuo link di prenotazione su WhatsApp o tramite QR code per ridurre il lavoro di centralino.`
-      });
+      insights.push({icon:'💬', html:`Solo il <strong>${pctOnline}%</strong> delle prenotazioni arriva online${deltaStr}. Condividi più spesso il tuo link via WhatsApp o QR.`});
     }
   }
 
-  // 7. PRIME VISITE
+  // 7. PRIME VISITE con delta
   if(effettuate.length >= 10){
     const prime = effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
     const pctPrime = Math.round((prime/effettuate.length)*100);
+    let deltaStr = '';
+    if(hasComparison && prevEffettuate.length >= 10){
+      const prevPrime = prevEffettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+      const prevPct = Math.round((prevPrime/prevEffettuate.length)*100);
+      const deltaPp = pctPrime - prevPct;
+      if(Math.abs(deltaPp) >= 5){
+        const sign = deltaPp>=0?'+':'';
+        const cls = deltaPp>=0?'pos':'neg';
+        deltaStr = ` (<span class="${cls}">${sign}${deltaPp} punti</span> vs ${periodLabel})`;
+      }
+    }
     if(pctPrime >= 50){
-      insights.push({
-        icon:'🆕',
-        html:`Il <strong>${pctPrime}%</strong> delle visite sono prime visite: stai acquisendo molti nuovi pazienti.`
-      });
+      insights.push({icon:'🆕', html:`Il <strong>${pctPrime}%</strong> delle visite sono prime visite${deltaStr}: stai acquisendo molti nuovi pazienti.`});
     } else if(pctPrime <= 15 && prime > 0){
-      insights.push({
-        icon:'🔁',
-        html:`Solo il <strong>${pctPrime}%</strong> sono prime visite: lavori soprattutto su pazienti di ritorno.`
-      });
+      insights.push({icon:'🔁', html:`Solo il <strong>${pctPrime}%</strong> sono prime visite${deltaStr}: lavori soprattutto su pazienti di ritorno.`});
     }
   }
 
-  if(insights.length === 0){
-    box.style.display = 'none';
-    return;
+  // 8. ORE LAVORATE con delta
+  if(hasComparison && effettuate.length >= 5 && prevEffettuate.length >= 5){
+    function calcOre(list){
+      let m = 0;
+      list.forEach(a=>{
+        const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+        let dur = 30;
+        if(centro && centro.turni && centro.turni.length){
+          const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+          if(t && t.durata_slot) dur = t.durata_slot;
+        }
+        m += dur;
+      });
+      return m/60;
+    }
+    const oreNow = calcOre(effettuate);
+    const orePrev = calcOre(prevEffettuate);
+    const deltaOre = Math.round(oreNow - orePrev);
+    if(Math.abs(deltaOre) >= 2 && orePrev > 0){
+      const sign = deltaOre>=0?'+':'';
+      const cls = deltaOre>=0?'pos':'neg';
+      insights.push({icon:'⏱️', html:`Ore lavorate: <strong>${Math.round(oreNow)}h</strong> (<span class="${cls}">${sign}${deltaOre}h</span> vs ${periodLabel}).`});
+    }
   }
-  list.innerHTML = insights.slice(0,5).map(ins=>`
+
+  if(insights.length === 0){ box.style.display = 'none'; return; }
+  list.innerHTML = insights.slice(0,6).map(ins=>`
     <div class="stats-insight-item">
       <div class="stats-insight-icon">${ins.icon}</div>
       <div class="stats-insight-text">${ins.html}</div>
@@ -6813,6 +6861,102 @@ function _seriesMonthlyOre(apps, nMonths){
       if(t && t.durata_slot) dur = t.durata_slot;
     }
     b.value += dur/60;
+  });
+  return buckets;
+}
+
+// ── HELPER: serie adattive per sparkline ──
+function _adaptiveSparkSeries(apps){
+  if(_statsPeriod === 30) return _seriesDaily(apps, 30);
+  if(_statsPeriod === 90) return _seriesWeekly(apps, 13);
+  return _seriesMonthly(apps, 12);
+}
+
+function _adaptiveSparkSeriesOre(apps){
+  if(_statsPeriod === 30) return _seriesDailyOre(apps, 30);
+  if(_statsPeriod === 90) return _seriesWeeklyOre(apps, 13);
+  return _seriesMonthlyOre(apps, 12);
+}
+
+function _seriesDaily(apps, nDays){
+  const now = new Date();
+  const buckets = [];
+  for(let i=nDays-1; i>=0; i--){
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    buckets.push({key, value:0});
+  }
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const b = buckets.find(x=>x.key===a.data);
+    if(b) b.value++;
+  });
+  return buckets;
+}
+
+function _seriesDailyOre(apps, nDays){
+  const series = _seriesDaily([], nDays);
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const b = series.find(x=>x.key===a.data);
+    if(!b) return;
+    const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+    let dur = 30;
+    if(centro && centro.turni && centro.turni.length){
+      const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+      if(t && t.durata_slot) dur = t.durata_slot;
+    }
+    b.value += dur/60;
+  });
+  return series;
+}
+
+function _seriesWeekly(apps, nWeeks){
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;
+  const startOfCurWeek = new Date(now);
+  startOfCurWeek.setDate(startOfCurWeek.getDate() - dow);
+  startOfCurWeek.setHours(0,0,0,0);
+  const buckets = [];
+  for(let i=nWeeks-1; i>=0; i--){
+    const wStart = new Date(startOfCurWeek);
+    wStart.setDate(wStart.getDate() - i*7);
+    buckets.push({key:`W${i}`, start:wStart, value:0});
+  }
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const d = new Date(a.data + 'T00:00:00');
+    for(let i=0; i<buckets.length; i++){
+      const b = buckets[i];
+      const end = new Date(b.start);
+      end.setDate(end.getDate() + 7);
+      if(d >= b.start && d < end){ b.value++; break; }
+    }
+  });
+  return buckets;
+}
+
+function _seriesWeeklyOre(apps, nWeeks){
+  const buckets = _seriesWeekly([], nWeeks);
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const d = new Date(a.data + 'T00:00:00');
+    for(let i=0; i<buckets.length; i++){
+      const b = buckets[i];
+      const end = new Date(b.start);
+      end.setDate(end.getDate() + 7);
+      if(d >= b.start && d < end){
+        const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+        let dur = 30;
+        if(centro && centro.turni && centro.turni.length){
+          const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+          if(t && t.durata_slot) dur = t.durata_slot;
+        }
+        b.value += dur/60;
+        break;
+      }
+    }
   });
   return buckets;
 }
@@ -6951,22 +7095,22 @@ function _renderDonut(containerId, data, centerLabel){
   el.innerHTML = `<div class="donut-wrap">${svg}<div class="donut-legend">${legend}</div></div>`;
 }
 
-// ── ORIGINE PRENOTAZIONI (donut) ──
+// ── ORIGINE PRENOTAZIONI ──
 function _renderOrigine(apps){
   const online = apps.filter(a=>a.source==='paziente').length;
   const manuale = apps.filter(a=>a.source!=='paziente').length;
   const data = [
     { label: '🌐 Online', value: online, color: '#0D9488' },
     { label: '✍️ Manuale', value: manuale, color: '#6366F1' }
-  ].filter(d=>d.value>0);
-  _renderDonut('chart-source', data, 'visite');
+  ];
+  _renderBarList('chart-source', data, {showPct:true});
 }
 
-// ── CHI CANCELLA (donut) ──
+// ── CHI CANCELLA ──
 function _renderCancelSource(cancellate){
   if(!cancellate.length){
-    const el = document.getElementById('chart-cancel-source');
-    if(el) el.innerHTML = '<div class="chart-empty">Nessuna cancellazione nel periodo. 🎉</div>';
+    document.getElementById('chart-cancel-source').innerHTML =
+      '<div class="chart-empty">Nessuna cancellazione nel periodo. 🎉</div>';
     return;
   }
   const online = cancellate.filter(a=>a.source==='paziente').length;
@@ -6974,8 +7118,8 @@ function _renderCancelSource(cancellate){
   const data = [
     { label: '🌐 Da paziente', value: online, color: '#dc2626' },
     { label: '✍️ Da me', value: manuale, color: '#ea580c' }
-  ].filter(d=>d.value>0);
-  _renderDonut('chart-cancel-source', data, 'cancellate');
+  ];
+  _renderBarList('chart-cancel-source', data, {showPct:true});
 }
 
 // ── HEATMAP giorno × fascia oraria ──
@@ -7109,6 +7253,85 @@ function _renderArea(apps){
 }
 
 
+
+// ── TOP PAZIENTI ──
+function _normalizePersona(nome, cognome){
+  const n = (nome||'').toLowerCase().trim().replace(/\s+/g,' ');
+  const c = (cognome||'').toLowerCase().trim().replace(/\s+/g,' ');
+  return `${c}|${n}`;
+}
+
+function _renderTopPazienti(){
+  const el = document.getElementById('chart-top-pazienti');
+  if(!el) return;
+  const SOGLIA_MIN_VISITE = 4;
+  const TOP_N = 10;
+
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setFullYear(cutoff.getFullYear() - 1);
+
+  const filtered = (S.appuntamenti||[]).filter(a=>{
+    if(!a.data || a.cancelled) return false;
+    const d = new Date(a.data + 'T00:00:00');
+    return d >= cutoff && d <= now;
+  });
+
+  const map = new Map();
+  filtered.forEach(a=>{
+    const key = _normalizePersona(a.nome, a.cognome);
+    if(!key || key === '|') return;
+    const dataD = new Date(a.data + 'T00:00:00');
+    const ex = map.get(key);
+    if(ex){
+      ex.count++;
+      if(dataD > ex.lastDate){ ex.lastDate = dataD; ex.displayNome = a.nome; ex.displayCognome = a.cognome; }
+    } else {
+      map.set(key, { key, count:1, lastDate:dataD, displayNome:a.nome, displayCognome:a.cognome });
+    }
+  });
+
+  const sorted = Array.from(map.values())
+    .filter(p => p.count >= SOGLIA_MIN_VISITE)
+    .sort((a,b)=> b.count !== a.count ? b.count - a.count : b.lastDate - a.lastDate)
+    .slice(0, TOP_N);
+
+  if(sorted.length < 3){
+    el.innerHTML = `<div class="chart-empty">Non ci sono ancora pazienti con visite ricorrenti negli ultimi 12 mesi.<br><span style="font-size:11.5px">Servono almeno ${SOGLIA_MIN_VISITE} visite della stessa persona per apparire qui.</span></div>`;
+    return;
+  }
+
+  function findPazienteId(nome, cognome){
+    const key = _normalizePersona(nome, cognome);
+    const p = (S.pazienti||[]).find(x => _normalizePersona(x.nome, x.cognome) === key);
+    return p ? p.id : null;
+  }
+
+  const medals = ['🥇','🥈','🥉'];
+  const rows = sorted.map((p,i)=>{
+    const pid = findPazienteId(p.displayNome, p.displayCognome);
+    const clickable = pid ? 'clickable' : '';
+    const clickAttr = pid ? `onclick="_openPazienteFromStats('${pid}')"` : '';
+    const rank = i < 3 ? medals[i] : `${i+1}°`;
+    const rankCls = i < 3 ? 'top-paz-rank medal' : 'top-paz-rank';
+    const lastFmt = p.lastDate.toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'});
+    return `<div class="top-paz-row ${clickable}" ${clickAttr}>
+      <div class="${rankCls}">${rank}</div>
+      <div class="top-paz-info">
+        <div class="top-paz-name">${_esc(p.displayNome)} ${_esc(p.displayCognome)}</div>
+        <div class="top-paz-last">Ultima visita: ${lastFmt}</div>
+      </div>
+      <div class="top-paz-visits">${p.count}<span class="top-paz-visits-label">visite</span></div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = rows + `<div class="top-paz-disclaimer">Pazienti identificati per nome e cognome. Eventuali errori di trascrizione possono creare duplicati.</div>`;
+}
+
+function _openPazienteFromStats(pid){
+  showPage('pazienti');
+  setTimeout(()=>{ showPazienteDetail(pid); }, 100);
+}
 
 // ── TOAST ──
 function showToast(msg){
