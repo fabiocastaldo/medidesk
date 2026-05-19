@@ -629,6 +629,49 @@ html.dark .cancel-token-code{color:var(--ink)}
 .stats-insight-text .pos{color:#16a34a;font-weight:600}
 .stats-insight-text .neg{color:#dc2626;font-weight:600}
 html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15),rgba(13,148,136,.05));border-color:rgba(13,148,136,.3)}
+
+/* Sparkline nei KPI */
+.stats-kpi-spark{margin-top:10px;height:32px;overflow:hidden}
+.stats-kpi-spark svg{width:100%;height:100%;display:block}
+
+/* Bar chart verticale */
+.barchart-svg{width:100%;height:auto;display:block}
+.barchart-axis-text{font-size:10px;fill:var(--ink3);font-family:'DM Sans',sans-serif}
+.barchart-grid-line{stroke:var(--border);stroke-width:1;stroke-dasharray:2,3;opacity:.6}
+.barchart-bar{fill:var(--accent);transition:opacity .15s;cursor:pointer}
+.barchart-bar:hover{opacity:.7}
+.barchart-value{font-size:11px;font-weight:600;fill:var(--ink);font-family:'DM Sans',sans-serif;text-anchor:middle}
+
+/* Donut */
+.donut-wrap{display:flex;align-items:center;gap:18px;justify-content:center;padding:6px;flex-wrap:wrap}
+.donut-svg{flex:0 0 140px;width:140px;height:140px}
+.donut-legend{display:flex;flex-direction:column;gap:6px;font-size:13px;min-width:140px}
+.donut-legend-row{display:flex;align-items:center;gap:8px;color:var(--ink2)}
+.donut-legend-color{width:10px;height:10px;border-radius:2px;flex:0 0 10px}
+.donut-legend-label{flex:1}
+.donut-legend-value{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.donut-center-value{font-size:22px;font-weight:700;fill:var(--ink);text-anchor:middle;dominant-baseline:middle;font-family:'DM Sans',sans-serif}
+.donut-center-label{font-size:10px;fill:var(--ink3);text-anchor:middle;dominant-baseline:middle;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px}
+
+/* Heatmap */
+.heatmap-wrap{display:flex;flex-direction:column;gap:6px}
+.heatmap-grid{display:grid;gap:3px;align-items:center}
+.heatmap-cell{aspect-ratio:1;border-radius:3px;background:var(--bg);position:relative;cursor:default;transition:transform .12s}
+.heatmap-cell.has-data{cursor:default}
+.heatmap-cell:hover{transform:scale(1.15);z-index:2;outline:2px solid var(--accent);outline-offset:1px}
+.heatmap-label{font-size:11px;color:var(--ink3);font-weight:500;text-align:center}
+.heatmap-row-label{font-size:11px;color:var(--ink3);font-weight:500;text-align:right;padding-right:6px}
+.heatmap-row-total{font-size:11px;color:var(--ink);font-weight:600;text-align:left;padding-left:6px;font-variant-numeric:tabular-nums}
+.heatmap-col-total{font-size:10px;color:var(--ink2);font-weight:600;text-align:center;font-variant-numeric:tabular-nums;margin-top:2px}
+.heatmap-legend{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px;font-size:11px;color:var(--ink3)}
+.heatmap-legend-scale{display:flex;gap:2px}
+.heatmap-legend-scale span{width:14px;height:14px;border-radius:2px;display:inline-block}
+
+@media(max-width:768px){
+  .donut-wrap{flex-direction:column;gap:12px}
+  .donut-svg{flex:0 0 120px;width:120px;height:120px}
+  .heatmap-label,.heatmap-row-label,.heatmap-row-total{font-size:10px}
+}
 </style>
 </head>
 <body>
@@ -1206,21 +1249,25 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
             <div class="stats-kpi-label">Visite effettuate</div>
             <div class="stats-kpi-value" id="kpi-effettuate">—</div>
             <div class="stats-kpi-delta" id="kpi-effettuate-delta"></div>
+            <div class="stats-kpi-spark" id="spark-effettuate"></div>
           </div>
           <div class="stats-kpi-card">
             <div class="stats-kpi-label">Cancellate</div>
             <div class="stats-kpi-value" id="kpi-cancellate">—</div>
             <div class="stats-kpi-delta" id="kpi-cancellate-rate"></div>
+            <div class="stats-kpi-spark" id="spark-cancellate"></div>
           </div>
           <div class="stats-kpi-card">
             <div class="stats-kpi-label">Prime visite</div>
             <div class="stats-kpi-value" id="kpi-prime">—</div>
             <div class="stats-kpi-delta" id="kpi-prime-pct"></div>
+            <div class="stats-kpi-spark" id="spark-prime"></div>
           </div>
           <div class="stats-kpi-card">
             <div class="stats-kpi-label">Ore lavorate</div>
             <div class="stats-kpi-value" id="kpi-ore">—</div>
             <div class="stats-kpi-delta">stima</div>
+            <div class="stats-kpi-spark" id="spark-ore"></div>
           </div>
         </div>
 
@@ -1232,27 +1279,24 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
           <div id="chart-trend" style="padding:8px"></div>
         </div>
 
-        <!-- Per centro + giorno settimana -->
+        <!-- Heatmap giorno × fascia oraria -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <span style="font-weight:600">Quando ricevi (heatmap)</span>
+            <span style="font-size:12px;color:var(--ink3)">giorno × fascia oraria</span>
+          </div>
+          <div id="chart-heatmap" style="padding:14px"></div>
+        </div>
+
+        <!-- Per centro + Origine prenotazioni -->
         <div class="stats-grid-2">
           <div class="card">
             <div class="card-header"><span style="font-weight:600">Per centro</span></div>
             <div id="chart-centri" style="padding:8px"></div>
           </div>
           <div class="card">
-            <div class="card-header"><span style="font-weight:600">Giorno della settimana</span></div>
-            <div id="chart-dow" style="padding:8px"></div>
-          </div>
-        </div>
-
-        <!-- Fasce orarie + Online vs manuale -->
-        <div class="stats-grid-2">
-          <div class="card">
-            <div class="card-header"><span style="font-weight:600">Fasce orarie più richieste</span></div>
-            <div id="chart-orari" style="padding:8px"></div>
-          </div>
-          <div class="card">
             <div class="card-header"><span style="font-weight:600">Origine prenotazioni</span></div>
-            <div id="chart-source" style="padding:8px"></div>
+            <div id="chart-source" style="padding:14px"></div>
           </div>
         </div>
 
@@ -6520,11 +6564,16 @@ function renderStatistiche(){
   const min = totMin%60;
   document.getElementById('kpi-ore').textContent = `${ore}h ${min}m`;
 
+  // Sparkline KPI (ultimi 6 mesi)
+  _renderKpiSpark('spark-effettuate', _seriesMonthly(effettuate, 6), 'var(--accent)');
+  _renderKpiSpark('spark-cancellate', _seriesMonthly(cancellate, 6), '#dc2626');
+  _renderKpiSpark('spark-prime', _seriesMonthly(effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')), 6), '#0EA5E9');
+  _renderKpiSpark('spark-ore', _seriesMonthlyOre(effettuate, 6), '#8B5CF6');
+
   _renderInsights(all, effettuate, cancellate, prev, prevEffettuate);
   _renderTrendMensile(effettuate);
   _renderPerCentro(effettuate);
-  _renderGiornoSettimana(effettuate);
-  _renderFasceOrarie(effettuate);
+  _renderHeatmap(effettuate);
   _renderOrigine(effettuate);
   _renderTipoVisita(effettuate);
   _renderArea(effettuate);
@@ -6724,19 +6773,290 @@ function _renderBarList(containerId, data, opts){
   }).join('');
 }
 
-function _renderTrendMensile(apps){
-  const months = {};
+// ── HELPER: serie mensile ultimi N mesi ──
+function _seriesMonthly(apps, nMonths){
+  const now = new Date();
+  const buckets = [];
+  for(let i=nMonths-1; i>=0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    buckets.push({key, value:0});
+  }
   apps.forEach(a=>{
+    if(!a.data) return;
     const key = a.data.substring(0,7);
-    months[key] = (months[key]||0)+1;
+    const b = buckets.find(x=>x.key===key);
+    if(b) b.value++;
   });
-  const sorted = Object.keys(months).sort();
+  return buckets;
+}
+
+function _seriesMonthlyOre(apps, nMonths){
+  const now = new Date();
+  const buckets = [];
+  for(let i=nMonths-1; i>=0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    buckets.push({key, value:0});
+  }
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const key = a.data.substring(0,7);
+    const b = buckets.find(x=>x.key===key);
+    if(!b) return;
+    const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+    let dur = 30;
+    if(centro && centro.turni && centro.turni.length){
+      const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+      if(t && t.durata_slot) dur = t.durata_slot;
+    }
+    b.value += dur/60;
+  });
+  return buckets;
+}
+
+// ── SPARKLINE ──
+function _renderKpiSpark(containerId, series, color){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(!series || series.length < 2){ el.innerHTML=''; return; }
+  const W = 100, H = 32, pad = 2;
+  const max = Math.max(...series.map(s=>s.value), 1);
+  const step = (W - pad*2) / (series.length - 1);
+  const pts = series.map((s,i)=>{
+    const x = pad + i*step;
+    const y = H - pad - (s.value/max) * (H - pad*2);
+    return [x, y];
+  });
+  const linePath = pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const areaPath = linePath + ` L ${(W-pad).toFixed(1)},${H-pad} L ${pad},${H-pad} Z`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <path d="${areaPath}" fill="${color}" opacity="0.12"/>
+    <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="1.4" fill="${color}"/>`).join('')}
+  </svg>`;
+}
+
+// ── BAR CHART SVG ──
+function _renderTrendMensile(apps){
+  const series = _seriesMonthly(apps, 12);
+  let start = series.findIndex(s=>s.value>0);
+  if(start === -1) start = series.length - 6;
+  if(start < 0) start = 0;
+  if(series.length - start < 6) start = Math.max(0, series.length - 6);
+  const data = series.slice(start);
+  const el = document.getElementById('chart-trend');
+
+  if(data.every(d=>d.value===0)){
+    el.innerHTML = '<div class="chart-empty">Nessun dato disponibile</div>';
+    return;
+  }
+
+  const W = 720, H = 220;
+  const padL = 36, padR = 12, padT = 18, padB = 32;
+  const cw = W - padL - padR;
+  const ch = H - padT - padB;
+  const maxVal = Math.max(...data.map(d=>d.value), 1);
+  const niceMax = _niceTopValue(maxVal);
+  const ticks = 4;
+  const barW = (cw / data.length) * 0.65;
+  const slotW = cw / data.length;
   const labels = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
-  const data = sorted.map(k=>{
-    const [y,m] = k.split('-');
-    return { label: `${labels[parseInt(m)-1]} ${y.substring(2)}`, value: months[k] };
+
+  let svg = `<svg class="barchart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+
+  for(let i=0; i<=ticks; i++){
+    const y = padT + (ch/ticks)*i;
+    const val = Math.round(niceMax - (niceMax/ticks)*i);
+    svg += `<line class="barchart-grid-line" x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}"/>`;
+    svg += `<text class="barchart-axis-text" x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end">${val}</text>`;
+  }
+
+  data.forEach((d,i)=>{
+    const x = padL + slotW*i + (slotW - barW)/2;
+    const h = niceMax > 0 ? (d.value/niceMax)*ch : 0;
+    const y = padT + ch - h;
+    svg += `<rect class="barchart-bar" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3"><title>${d.key}: ${d.value} visite</title></rect>`;
+    if(d.value > 0){
+      svg += `<text class="barchart-value" x="${(x+barW/2).toFixed(1)}" y="${(y-5).toFixed(1)}">${d.value}</text>`;
+    }
+    const [yr, m] = d.key.split('-');
+    svg += `<text class="barchart-axis-text" x="${(x+barW/2).toFixed(1)}" y="${(H-padB+14).toFixed(1)}" text-anchor="middle">${labels[parseInt(m)-1]} '${yr.substring(2)}</text>`;
   });
-  _renderBarList('chart-trend', data);
+
+  svg += `</svg>`;
+  el.innerHTML = svg;
+}
+
+function _niceTopValue(max){
+  if(max <= 5) return 5;
+  if(max <= 10) return 10;
+  if(max <= 20) return 20;
+  if(max <= 50) return 50;
+  if(max <= 100) return 100;
+  const mag = Math.pow(10, Math.floor(Math.log10(max)));
+  return Math.ceil(max/mag) * mag;
+}
+
+// ── DONUT CHART ──
+function _renderDonut(containerId, data, centerLabel){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const total = data.reduce((s,d)=>s+d.value,0);
+  if(total === 0){
+    el.innerHTML = '<div class="chart-empty">Nessun dato disponibile</div>';
+    return;
+  }
+  const size = 140, cx = 70, cy = 70, r = 55, rInner = 38;
+  let acc = 0;
+  const slices = data.map(d=>{
+    const start = (acc/total) * Math.PI * 2 - Math.PI/2;
+    acc += d.value;
+    const end = (acc/total) * Math.PI * 2 - Math.PI/2;
+    return { ...d, start, end };
+  });
+
+  function arc(s, e){
+    if(data.length === 1){
+      return `M ${cx-r},${cy} A ${r},${r} 0 1,1 ${cx+r},${cy} A ${r},${r} 0 1,1 ${cx-r},${cy}
+              M ${cx-rInner},${cy} A ${rInner},${rInner} 0 1,0 ${cx+rInner},${cy} A ${rInner},${rInner} 0 1,0 ${cx-rInner},${cy} Z`;
+    }
+    const x1 = cx + Math.cos(s)*r, y1 = cy + Math.sin(s)*r;
+    const x2 = cx + Math.cos(e)*r, y2 = cy + Math.sin(e)*r;
+    const x3 = cx + Math.cos(e)*rInner, y3 = cy + Math.sin(e)*rInner;
+    const x4 = cx + Math.cos(s)*rInner, y4 = cy + Math.sin(s)*rInner;
+    const large = (e - s) > Math.PI ? 1 : 0;
+    return `M ${x1.toFixed(2)},${y1.toFixed(2)} A ${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} L ${x3.toFixed(2)},${y3.toFixed(2)} A ${rInner},${rInner} 0 ${large},0 ${x4.toFixed(2)},${y4.toFixed(2)} Z`;
+  }
+
+  let svg = `<svg class="donut-svg" viewBox="0 0 ${size} ${size}">`;
+  slices.forEach(s=>{
+    svg += `<path d="${arc(s.start, s.end)}" fill="${s.color||'var(--accent)'}"><title>${_esc(s.label)}: ${s.value} (${Math.round(s.value/total*100)}%)</title></path>`;
+  });
+  svg += `<text class="donut-center-value" x="${cx}" y="${cy-4}">${total}</text>`;
+  svg += `<text class="donut-center-label" x="${cx}" y="${cy+14}">${centerLabel||'totale'}</text>`;
+  svg += `</svg>`;
+
+  const legend = slices.map(s=>{
+    const pct = Math.round(s.value/total*100);
+    return `<div class="donut-legend-row">
+      <span class="donut-legend-color" style="background:${s.color||'var(--accent)'}"></span>
+      <span class="donut-legend-label">${_esc(s.label)}</span>
+      <span class="donut-legend-value">${s.value} (${pct}%)</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="donut-wrap">${svg}<div class="donut-legend">${legend}</div></div>`;
+}
+
+// ── ORIGINE PRENOTAZIONI (donut) ──
+function _renderOrigine(apps){
+  const online = apps.filter(a=>a.source==='paziente').length;
+  const manuale = apps.filter(a=>a.source!=='paziente').length;
+  const data = [
+    { label: '🌐 Online', value: online, color: '#0D9488' },
+    { label: '✍️ Manuale', value: manuale, color: '#6366F1' }
+  ].filter(d=>d.value>0);
+  _renderDonut('chart-source', data, 'visite');
+}
+
+// ── CHI CANCELLA (donut) ──
+function _renderCancelSource(cancellate){
+  if(!cancellate.length){
+    const el = document.getElementById('chart-cancel-source');
+    if(el) el.innerHTML = '<div class="chart-empty">Nessuna cancellazione nel periodo. 🎉</div>';
+    return;
+  }
+  const online = cancellate.filter(a=>a.source==='paziente').length;
+  const manuale = cancellate.filter(a=>a.source!=='paziente').length;
+  const data = [
+    { label: '🌐 Da paziente', value: online, color: '#dc2626' },
+    { label: '✍️ Da me', value: manuale, color: '#ea580c' }
+  ].filter(d=>d.value>0);
+  _renderDonut('chart-cancel-source', data, 'cancellate');
+}
+
+// ── HEATMAP giorno × fascia oraria ──
+function _renderHeatmap(apps){
+  const el = document.getElementById('chart-heatmap');
+  if(!el) return;
+  const days = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+  const fasce = [
+    {key:'08', label:'8-10', from:8, to:10},
+    {key:'10', label:'10-12', from:10, to:12},
+    {key:'12', label:'12-14', from:12, to:14},
+    {key:'14', label:'14-16', from:14, to:16},
+    {key:'16', label:'16-18', from:16, to:18},
+    {key:'18', label:'18-20', from:18, to:20}
+  ];
+
+  const matrix = days.map(()=>fasce.map(()=>0));
+  apps.forEach(a=>{
+    if(!a.data || !a.ora) return;
+    const d = new Date(a.data + 'T00:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    const h = parseInt(a.ora.substring(0,2));
+    const fi = fasce.findIndex(f => h>=f.from && h<f.to);
+    if(fi >= 0) matrix[dow][fi]++;
+  });
+
+  const rowTotals = matrix.map(row => row.reduce((s,v)=>s+v,0));
+  const colTotals = fasce.map((_,fi) => matrix.reduce((s,row)=>s+row[fi],0));
+  const maxCell = Math.max(...matrix.flat(), 1);
+  const total = rowTotals.reduce((s,v)=>s+v,0);
+
+  if(total === 0){
+    el.innerHTML = '<div class="chart-empty">Nessun dato con orario nel periodo</div>';
+    return;
+  }
+
+  function cellColor(v){
+    if(v === 0) return '';
+    const intensity = 0.15 + (v/maxCell) * 0.85;
+    return `background:rgba(13,148,136,${intensity.toFixed(2)})`;
+  }
+  function cellTextColor(v){
+    if(v === 0) return '';
+    return (v/maxCell) > 0.5 ? 'color:#fff;font-weight:600' : 'color:var(--ink);font-weight:600';
+  }
+
+  const gridTemplate = `60px repeat(${fasce.length},1fr) 50px`;
+  let html = '<div class="heatmap-wrap"><div class="heatmap-grid" style="grid-template-columns:'+gridTemplate+'">';
+
+  html += '<div></div>';
+  fasce.forEach(f=>{ html += `<div class="heatmap-label">${f.label}</div>`; });
+  html += '<div class="heatmap-label" style="font-weight:700">tot</div>';
+
+  days.forEach((day,di)=>{
+    html += `<div class="heatmap-row-label">${day}</div>`;
+    fasce.forEach((_,fi)=>{
+      const v = matrix[di][fi];
+      const style = cellColor(v);
+      const txtStyle = cellTextColor(v);
+      const title = v > 0 ? `title="${day} ${fasce[fi].label}: ${v} visite"` : '';
+      html += `<div class="heatmap-cell${v>0?' has-data':''}" style="${style};display:flex;align-items:center;justify-content:center;font-size:11px;${txtStyle}" ${title}>${v>0?v:''}</div>`;
+    });
+    html += `<div class="heatmap-row-total">${rowTotals[di]||''}</div>`;
+  });
+  html += '</div>';
+
+  html += '<div class="heatmap-grid" style="grid-template-columns:'+gridTemplate+'">';
+  html += '<div></div>';
+  colTotals.forEach(t=>{ html += `<div class="heatmap-col-total">${t||''}</div>`; });
+  html += '<div></div></div>';
+
+  html += `<div class="heatmap-legend">
+    <span>meno</span>
+    <span class="heatmap-legend-scale">
+      <span style="background:rgba(13,148,136,0.15)"></span>
+      <span style="background:rgba(13,148,136,0.35)"></span>
+      <span style="background:rgba(13,148,136,0.55)"></span>
+      <span style="background:rgba(13,148,136,0.75)"></span>
+      <span style="background:rgba(13,148,136,1)"></span>
+    </span>
+    <span>più</span>
+  </div></div>`;
+  el.innerHTML = html;
 }
 
 function _renderPerCentro(apps){
@@ -6753,51 +7073,6 @@ function _renderPerCentro(apps){
       return { label, value, color: c && c.colore ? c.colore : 'var(--accent)' };
     });
   _renderBarList('chart-centri', data, {showPct:true});
-}
-
-function _renderGiornoSettimana(apps){
-  const days = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
-  const counts = [0,0,0,0,0,0,0];
-  apps.forEach(a=>{
-    const d = new Date(a.data + 'T00:00:00');
-    let dow = d.getDay();
-    dow = (dow + 6) % 7;
-    counts[dow]++;
-  });
-  const data = days.map((label,i)=>({label, value: counts[i]}));
-  _renderBarList('chart-dow', data);
-}
-
-function _renderFasceOrarie(apps){
-  const buckets = {
-    '08:00-10:00':0,'10:00-12:00':0,'12:00-14:00':0,
-    '14:00-16:00':0,'16:00-18:00':0,'18:00-20:00':0,'Altro':0
-  };
-  apps.forEach(a=>{
-    if(!a.ora) return;
-    const h = parseInt(a.ora.substring(0,2));
-    if(h>=8 && h<10) buckets['08:00-10:00']++;
-    else if(h>=10 && h<12) buckets['10:00-12:00']++;
-    else if(h>=12 && h<14) buckets['12:00-14:00']++;
-    else if(h>=14 && h<16) buckets['14:00-16:00']++;
-    else if(h>=16 && h<18) buckets['16:00-18:00']++;
-    else if(h>=18 && h<20) buckets['18:00-20:00']++;
-    else buckets['Altro']++;
-  });
-  const data = Object.entries(buckets)
-    .filter(([,v])=>v>0)
-    .map(([label,value])=>({label,value}));
-  _renderBarList('chart-orari', data);
-}
-
-function _renderOrigine(apps){
-  const online = apps.filter(a=>a.source==='paziente').length;
-  const manuale = apps.filter(a=>a.source!=='paziente').length;
-  const data = [
-    { label: '🌐 Online', value: online, color: '#0D9488' },
-    { label: '✍️ Manuale', value: manuale, color: '#6366F1' }
-  ];
-  _renderBarList('chart-source', data, {showPct:true});
 }
 
 function _renderTipoVisita(apps){
@@ -6829,20 +7104,7 @@ function _renderArea(apps){
   _renderBarList('chart-area', data, {showPct:true});
 }
 
-function _renderCancelSource(cancellate){
-  if(!cancellate.length){
-    const el = document.getElementById('chart-cancel-source');
-    if(el) el.innerHTML = '<div class="chart-empty">Nessuna cancellazione nel periodo. 🎉</div>';
-    return;
-  }
-  const online = cancellate.filter(a=>a.source==='paziente').length;
-  const manuale = cancellate.filter(a=>a.source!=='paziente').length;
-  const data = [
-    { label: '🌐 Online (paziente)', value: online, color: '#dc2626' },
-    { label: '✍️ Inserito da me', value: manuale, color: '#ea580c' }
-  ];
-  _renderBarList('chart-cancel-source', data, {showPct:true});
-}
+
 
 // ── TOAST ──
 function showToast(msg){
