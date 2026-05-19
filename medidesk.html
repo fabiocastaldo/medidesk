@@ -587,6 +587,108 @@ html.dark .cancel-token-code{color:var(--ink)}
   .home-section+.home-section{border-right:none;border-top:1px solid #e2e8e8;margin-top:28px;padding-top:28px}
   .home-section{padding:0}
 }
+
+/* ── STATISTICHE ── */
+.stats-period-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.stats-period-btn{padding:8px 16px;border:1px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.stats-period-btn:hover{border-color:var(--accent);color:var(--accent)}
+.stats-period-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stats-kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:16px}
+.stats-kpi-label{font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stats-kpi-value{font-size:28px;font-weight:700;color:var(--ink);line-height:1.1}
+.stats-kpi-delta{font-size:12px;color:var(--ink3);margin-top:4px}
+.stats-kpi-delta.up{color:#16a34a}
+.stats-kpi-delta.down{color:#dc2626}
+
+.stats-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+
+.chart-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+.chart-row-label{flex:0 0 110px;color:var(--ink2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-row-bar{flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden;position:relative}
+.chart-row-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+.chart-row-value{flex:0 0 60px;text-align:right;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;font-size:12px}
+
+.chart-empty{text-align:center;color:var(--ink3);font-size:13px;padding:20px}
+
+@media(max-width:768px){
+  .stats-kpi-row{grid-template-columns:repeat(2,1fr)}
+  .stats-grid-2{grid-template-columns:1fr}
+  .stats-kpi-value{font-size:22px}
+  .chart-row-label{flex:0 0 90px;font-size:12px}
+}
+
+.stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.08),rgba(13,148,136,.02));border:1px solid rgba(13,148,136,.2);border-radius:var(--r-md);padding:14px 16px;margin-bottom:20px}
+.stats-insights-header{margin-bottom:10px;color:var(--accent)}
+.stats-insight-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:13.5px;line-height:1.5;color:var(--ink)}
+.stats-insight-item + .stats-insight-item{border-top:1px solid rgba(13,148,136,.1)}
+.stats-insight-icon{flex:0 0 24px;font-size:18px;line-height:1.3}
+.stats-insight-text{flex:1}
+.stats-insight-text strong{color:var(--accent);font-weight:600}
+.stats-insight-text .pos{color:#16a34a;font-weight:600}
+.stats-insight-text .neg{color:#dc2626;font-weight:600}
+html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15),rgba(13,148,136,.05));border-color:rgba(13,148,136,.3)}
+
+/* Sparkline nei KPI */
+.stats-kpi-spark{margin-top:10px;height:32px;overflow:hidden}
+.stats-kpi-spark svg{width:100%;height:100%;display:block}
+
+/* Bar chart verticale */
+.barchart-svg{width:100%;height:auto;display:block;max-height:280px}
+#chart-trend{max-height:300px;overflow:hidden}
+.barchart-axis-text{font-size:10px;fill:var(--ink3);font-family:'DM Sans',sans-serif}
+.barchart-grid-line{stroke:var(--border);stroke-width:1;stroke-dasharray:2,3;opacity:.6}
+.barchart-bar{fill:var(--accent);transition:opacity .15s;cursor:pointer}
+.barchart-bar:hover{opacity:.7}
+.barchart-value{font-size:11px;font-weight:600;fill:var(--ink);font-family:'DM Sans',sans-serif;text-anchor:middle}
+
+/* Donut */
+.donut-wrap{display:flex;align-items:center;gap:18px;justify-content:center;padding:6px;flex-wrap:wrap}
+.donut-svg{flex:0 0 140px;width:140px;height:140px}
+.donut-legend{display:flex;flex-direction:column;gap:6px;font-size:13px;min-width:140px}
+.donut-legend-row{display:flex;align-items:center;gap:8px;color:var(--ink2)}
+.donut-legend-color{width:10px;height:10px;border-radius:2px;flex:0 0 10px}
+.donut-legend-label{flex:1}
+.donut-legend-value{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.donut-center-value{font-size:22px;font-weight:700;fill:var(--ink);text-anchor:middle;dominant-baseline:middle;font-family:'DM Sans',sans-serif}
+.donut-center-label{font-size:10px;fill:var(--ink3);text-anchor:middle;dominant-baseline:middle;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px}
+
+/* Heatmap */
+.heatmap-wrap{display:flex;flex-direction:column;gap:6px;max-width:720px;margin:0 auto}
+.heatmap-intro{font-size:12.5px;color:var(--ink3);text-align:center;margin-bottom:8px;line-height:1.5}
+.heatmap-grid{display:grid;gap:4px;align-items:center}
+.heatmap-cell{height:34px;border-radius:4px;background:var(--bg);position:relative;transition:transform .12s;display:flex;align-items:center;justify-content:center;font-size:12px}
+.heatmap-cell.has-data{cursor:default}
+.heatmap-cell:hover{transform:scale(1.15);z-index:2;outline:2px solid var(--accent);outline-offset:1px}
+.heatmap-label{font-size:11px;color:var(--ink3);font-weight:500;text-align:center;padding-bottom:2px}
+.heatmap-row-label{font-size:11.5px;color:var(--ink2);font-weight:600;text-align:right;padding-right:6px}
+.heatmap-row-total{font-size:11.5px;color:var(--ink);font-weight:600;text-align:left;padding-left:6px;font-variant-numeric:tabular-nums}
+.heatmap-col-total{font-size:10.5px;color:var(--ink2);font-weight:600;text-align:center;font-variant-numeric:tabular-nums;margin-top:4px}
+.heatmap-legend{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px;font-size:11px;color:var(--ink3)}
+.heatmap-legend-scale{display:flex;gap:2px}
+.heatmap-legend-scale span{width:14px;height:14px;border-radius:3px;display:inline-block}
+
+/* Top pazienti */
+.top-paz-row{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:6px;transition:background .12s;cursor:default}
+.top-paz-row.clickable{cursor:pointer}
+.top-paz-row.clickable:hover{background:var(--bg)}
+.top-paz-row + .top-paz-row{border-top:1px solid var(--border)}
+.top-paz-rank{flex:0 0 32px;font-weight:700;font-size:15px;color:var(--ink3);text-align:center}
+.top-paz-rank.medal{font-size:20px}
+.top-paz-info{flex:1;min-width:0}
+.top-paz-name{font-weight:600;color:var(--ink);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-paz-last{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.top-paz-visits{flex:0 0 auto;text-align:right;font-weight:600;color:var(--accent);font-size:14px}
+.top-paz-visits-label{font-size:10.5px;color:var(--ink3);font-weight:500;display:block;text-transform:uppercase;letter-spacing:.3px;margin-top:1px}
+.top-paz-disclaimer{font-size:11px;color:var(--ink3);font-style:italic;padding:8px 8px 0;margin-top:6px;border-top:1px solid var(--border);text-align:center;line-height:1.5}
+
+@media(max-width:768px){
+  .donut-wrap{flex-direction:column;gap:12px}
+  .donut-svg{flex:0 0 120px;width:120px;height:120px}
+  .heatmap-cell{height:28px;font-size:11px}
+  .heatmap-label,.heatmap-row-label,.heatmap-row-total{font-size:10.5px}
+}
 </style>
 </head>
 <body>
@@ -863,6 +965,7 @@ html.dark .cancel-token-code{color:var(--ink)}
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon">👥</span><span>Pazienti</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon">🏥</span><span>Centri</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon">👤</span><span>Profilo</span></div>
+      <div class="nav-item" onclick="showPage('statistiche')"><span class="icon">📊</span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon">⚙️</span><span>Impostazioni</span></div>
     </nav>
     <div class="sidebar-bottom">
@@ -881,7 +984,7 @@ html.dark .cancel-token-code{color:var(--ink)}
         <span id="mobile-doctor">Dr. Mario Rossi</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
-        <button class="mobile-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
+        <button class="mobile-theme-btn" onclick="showPage('statistiche')" title="Statistiche">📊</button>
         <button class="mobile-theme-btn" onclick="showPage('impostazioni')" title="Impostazioni">⚙️</button>
         <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" title="Esci"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
       </div>
@@ -1121,6 +1224,126 @@ html.dark .cancel-token-code{color:var(--ink)}
         </div></div>
       </div>
 
+    </div>
+
+    <!-- STATISTICHE -->
+    <div id="page-statistiche" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Statistiche</div>
+          <div class="page-subtitle">Analisi della tua attività</div>
+        </div>
+      </div>
+
+      <!-- Filtro periodo -->
+      <div class="stats-period-bar">
+        <button class="stats-period-btn active" data-period="30" onclick="setStatsPeriod(30)">Ultimi 30gg</button>
+        <button class="stats-period-btn" data-period="90" onclick="setStatsPeriod(90)">Trimestre</button>
+        <button class="stats-period-btn" data-period="365" onclick="setStatsPeriod(365)">Anno</button>
+        <button class="stats-period-btn" data-period="0" onclick="setStatsPeriod(0)">Tutto</button>
+      </div>
+
+      <!-- Empty state -->
+      <div id="stats-empty" style="display:none;text-align:center;padding:60px 24px;color:var(--ink3)">
+        <div style="font-size:48px;margin-bottom:12px">📊</div>
+        <div style="font-weight:600;margin-bottom:6px">Nessun dato nel periodo selezionato</div>
+        <div style="font-size:14px">Le statistiche appariranno qui non appena avrai degli appuntamenti.</div>
+      </div>
+
+      <!-- Contenuto -->
+      <div id="stats-content">
+        <!-- INSIGHTS -->
+        <div id="stats-insights" class="stats-insights" style="display:none">
+          <div class="stats-insights-header">
+            <span style="font-weight:600;font-size:14px">💡 Cosa dicono i tuoi dati</span>
+          </div>
+          <div id="stats-insights-list"></div>
+        </div>
+
+        <!-- KPI ROW -->
+        <div class="stats-kpi-row">
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">Visite effettuate</div>
+            <div class="stats-kpi-value" id="kpi-effettuate">—</div>
+            <div class="stats-kpi-delta" id="kpi-effettuate-delta"></div>
+            <div class="stats-kpi-spark" id="spark-effettuate"></div>
+          </div>
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">Cancellate</div>
+            <div class="stats-kpi-value" id="kpi-cancellate">—</div>
+            <div class="stats-kpi-delta" id="kpi-cancellate-rate"></div>
+            <div class="stats-kpi-spark" id="spark-cancellate"></div>
+          </div>
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">Prime visite</div>
+            <div class="stats-kpi-value" id="kpi-prime">—</div>
+            <div class="stats-kpi-delta" id="kpi-prime-pct"></div>
+            <div class="stats-kpi-spark" id="spark-prime"></div>
+          </div>
+          <div class="stats-kpi-card">
+            <div class="stats-kpi-label">Ore lavorate</div>
+            <div class="stats-kpi-value" id="kpi-ore">—</div>
+            <div class="stats-kpi-delta">stima</div>
+            <div class="stats-kpi-spark" id="spark-ore"></div>
+          </div>
+        </div>
+
+        <!-- Trend mensile -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <span style="font-weight:600">Visite effettuate per mese</span>
+          </div>
+          <div id="chart-trend" style="padding:8px"></div>
+        </div>
+
+        <!-- Heatmap giorno × fascia oraria -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <span style="font-weight:600">Quando ricevi (heatmap)</span>
+            <span style="font-size:12px;color:var(--ink3)">giorno × fascia oraria</span>
+          </div>
+          <div id="chart-heatmap" style="padding:14px"></div>
+        </div>
+
+        <!-- Per centro + Origine prenotazioni -->
+        <div class="stats-grid-2">
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Per centro</span></div>
+            <div id="chart-centri" style="padding:8px"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Origine prenotazioni</span></div>
+            <div id="chart-source" style="padding:8px"></div>
+          </div>
+        </div>
+
+        <!-- Tipo visita + Area -->
+        <div class="stats-grid-2">
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Tipo di visita</span></div>
+            <div id="chart-tipo" style="padding:8px"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span style="font-weight:600">Area tematica</span></div>
+            <div id="chart-area" style="padding:8px"></div>
+          </div>
+        </div>
+
+        <!-- Cancellazioni: chi cancella di più -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header"><span style="font-weight:600">Cancellate di più</span></div>
+          <div id="chart-cancel-source" style="padding:8px"></div>
+        </div>
+
+        <!-- Top pazienti -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-header">
+            <span style="font-weight:600">👥 Pazienti più frequenti</span>
+            <span style="font-size:12px;color:var(--ink3)">ultimi 12 mesi</span>
+          </div>
+          <div id="chart-top-pazienti" style="padding:8px"></div>
+        </div>
+      </div>
     </div>
 
     <!-- IMPOSTAZIONI -->
@@ -2728,7 +2951,7 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','centri','profilo','impostazioni'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','centri','profilo','statistiche','impostazioni'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
@@ -2743,6 +2966,7 @@ function showPage(id){
   if(id==='centri') renderCentri();
   if(id==='profilo'){ loadSettings(); renderTipiAree(); prefillProfiloNome(); }
   if(id==='dashboard'){ renderDashboard(); renderPending(); }
+  if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
 }
 
@@ -6265,6 +6489,848 @@ function esportaDati(){
     console.error('[Delphi~Med] esportaDati:', e.message);
     showToast('Errore export: '+e.message);
   }
+}
+
+// ── STATISTICHE ──
+let _statsPeriod = 30;
+
+function setStatsPeriod(days){
+  _statsPeriod = days;
+  document.querySelectorAll('.stats-period-btn').forEach(b=>{
+    b.classList.toggle('active', Number(b.dataset.period)===days);
+  });
+  renderStatistiche();
+}
+
+function _statsFilteredAppuntamenti(){
+  const now = new Date();
+  let cutoff = null;
+  if(_statsPeriod > 0){
+    cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - _statsPeriod);
+  }
+  return (S.appuntamenti||[]).filter(a=>{
+    if(!a.data) return false;
+    if(!cutoff) return true;
+    const d = new Date(a.data + 'T00:00:00');
+    return d >= cutoff && d <= now;
+  });
+}
+
+function _statsPreviousPeriodAppuntamenti(){
+  if(_statsPeriod === 0) return [];
+  const now = new Date();
+  const cutoffEnd = new Date(now);
+  cutoffEnd.setDate(cutoffEnd.getDate() - _statsPeriod);
+  const cutoffStart = new Date(cutoffEnd);
+  cutoffStart.setDate(cutoffStart.getDate() - _statsPeriod);
+  return (S.appuntamenti||[]).filter(a=>{
+    if(!a.data) return false;
+    const d = new Date(a.data + 'T00:00:00');
+    return d >= cutoffStart && d < cutoffEnd;
+  });
+}
+
+function renderStatistiche(){
+  const all = _statsFilteredAppuntamenti();
+  const prev = _statsPreviousPeriodAppuntamenti();
+
+  const empty = document.getElementById('stats-empty');
+  const content = document.getElementById('stats-content');
+  if(all.length === 0){
+    empty.style.display = 'block';
+    content.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  const effettuate = all.filter(a=>!a.cancelled);
+  const cancellate = all.filter(a=>a.cancelled);
+  const prevEffettuate = prev.filter(a=>!a.cancelled);
+
+  // KPI: Effettuate + delta
+  document.getElementById('kpi-effettuate').textContent = effettuate.length;
+  const deltaEl = document.getElementById('kpi-effettuate-delta');
+  if(prev.length > 0 && _statsPeriod > 0){
+    const delta = effettuate.length - prevEffettuate.length;
+    const pct = prevEffettuate.length > 0 ? Math.round((delta/prevEffettuate.length)*100) : 0;
+    const sign = delta >= 0 ? '+' : '';
+    deltaEl.textContent = `${sign}${delta} vs periodo precedente (${sign}${pct}%)`;
+    deltaEl.className = 'stats-kpi-delta ' + (delta>=0?'up':'down');
+  } else {
+    deltaEl.textContent = '';
+    deltaEl.className = 'stats-kpi-delta';
+  }
+
+  // KPI: Cancellate
+  document.getElementById('kpi-cancellate').textContent = cancellate.length;
+  const totalForRate = all.length;
+  const cancRate = totalForRate > 0 ? Math.round((cancellate.length/totalForRate)*100) : 0;
+  document.getElementById('kpi-cancellate-rate').textContent = `${cancRate}% del totale`;
+
+  // KPI: Prime visite
+  const prime = effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+  document.getElementById('kpi-prime').textContent = prime;
+  const primePct = effettuate.length > 0 ? Math.round((prime/effettuate.length)*100) : 0;
+  document.getElementById('kpi-prime-pct').textContent = `${primePct}% sul totale visite`;
+
+  // KPI: Ore lavorate
+  let totMin = 0;
+  effettuate.forEach(a=>{
+    const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+    let dur = 30;
+    if(centro && centro.turni && centro.turni.length){
+      const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+      if(t && t.durata_slot) dur = t.durata_slot;
+    }
+    totMin += dur;
+  });
+  const ore = Math.floor(totMin/60);
+  const min = totMin%60;
+  document.getElementById('kpi-ore').textContent = `${ore}h ${min}m`;
+
+  // Sparkline KPI (granularità adattiva al periodo)
+  _renderKpiSpark('spark-effettuate', _adaptiveSparkSeries(effettuate), 'var(--accent)');
+  _renderKpiSpark('spark-cancellate', _adaptiveSparkSeries(cancellate), '#dc2626');
+  _renderKpiSpark('spark-prime', _adaptiveSparkSeries(effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima'))), '#0EA5E9');
+  _renderKpiSpark('spark-ore', _adaptiveSparkSeriesOre(effettuate), '#8B5CF6');
+
+  _renderInsights(all, effettuate, cancellate, prev, prevEffettuate);
+  _renderTrendMensile(effettuate);
+  _renderPerCentro(effettuate);
+  _renderHeatmap(effettuate);
+  _renderOrigine(effettuate);
+  _renderTipoVisita(effettuate);
+  _renderArea(effettuate);
+  _renderCancelSource(cancellate);
+  _renderTopPazienti();
+}
+
+function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
+  const box = document.getElementById('stats-insights');
+  const list = document.getElementById('stats-insights-list');
+  const insights = [];
+  const hasComparison = _statsPeriod > 0;
+  const periodLabel = (_statsPeriod===30 ? 'mese precedente' :
+                       _statsPeriod===90 ? 'trimestre precedente' :
+                       _statsPeriod===365 ? 'anno precedente' : '');
+
+  // 1. TREND VOLUME
+  if(hasComparison && prev.length > 0 && prevEffettuate.length >= 3){
+    const delta = effettuate.length - prevEffettuate.length;
+    const pct = Math.round((delta/prevEffettuate.length)*100);
+    if(pct >= 20){
+      insights.push({icon:'📈', html:`Stai crescendo: <span class="pos">+${delta} visite</span> rispetto al ${periodLabel} (<span class="pos">+${pct}%</span>).`});
+    } else if(pct <= -20){
+      insights.push({icon:'📉', html:`Calo di attività: <span class="neg">${delta} visite</span> rispetto al ${periodLabel} (<span class="neg">${pct}%</span>).`});
+    } else if(Math.abs(pct) < 10){
+      insights.push({icon:'➡️', html:`Attività stabile rispetto al ${periodLabel}: <strong>${effettuate.length}</strong> visite contro ${prevEffettuate.length}.`});
+    }
+  }
+
+  // 2. GIORNO PIÙ PIENO
+  if(effettuate.length >= 5){
+    const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+    const counts = [0,0,0,0,0,0,0];
+    effettuate.forEach(a=>{ const d = new Date(a.data + 'T00:00:00'); counts[d.getDay()]++; });
+    const max = Math.max(...counts);
+    const maxIdx = counts.indexOf(max);
+    const avg = effettuate.length / counts.filter(c=>c>0).length;
+    if(max > 0 && max >= avg * 1.4){
+      const pctSopra = Math.round((max/avg - 1) * 100);
+      insights.push({icon:'📅', html:`Il <strong>${days[maxIdx]}</strong> è il tuo giorno più pieno: <strong>${max} visite</strong>, il <strong>${pctSopra}%</strong> in più della media settimanale.`});
+    }
+  }
+
+  // 3. FASCIA ORARIA
+  if(effettuate.length >= 5){
+    const buckets = {'08:00-10:00':0,'10:00-12:00':0,'12:00-14:00':0,'14:00-16:00':0,'16:00-18:00':0,'18:00-20:00':0};
+    effettuate.forEach(a=>{
+      if(!a.ora) return;
+      const h = parseInt(a.ora.substring(0,2));
+      if(h>=8&&h<10) buckets['08:00-10:00']++;
+      else if(h>=10&&h<12) buckets['10:00-12:00']++;
+      else if(h>=12&&h<14) buckets['12:00-14:00']++;
+      else if(h>=14&&h<16) buckets['14:00-16:00']++;
+      else if(h>=16&&h<18) buckets['16:00-18:00']++;
+      else if(h>=18&&h<20) buckets['18:00-20:00']++;
+    });
+    const entries = Object.entries(buckets).filter(([,v])=>v>0);
+    if(entries.length){
+      entries.sort((a,b)=>b[1]-a[1]);
+      const [topFascia, topCount] = entries[0];
+      const tot = entries.reduce((s,[,v])=>s+v,0);
+      const pct = Math.round((topCount/tot)*100);
+      if(pct >= 35){
+        insights.push({icon:'🕐', html:`La fascia <strong>${topFascia}</strong> è la più richiesta: concentra il <strong>${pct}%</strong> delle visite del periodo.`});
+      }
+    }
+  }
+
+  // 4. CENTRO PRINCIPALE con delta
+  if(effettuate.length >= 5 && (S.centri||[]).length > 1){
+    const counts = {};
+    effettuate.forEach(a=>{ counts[a.centroId] = (counts[a.centroId]||0)+1; });
+    const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    if(entries.length){
+      const [topId, topCount] = entries[0];
+      const centro = (S.centri||[]).find(c=>String(c.id)===String(topId));
+      if(centro){
+        const pct = Math.round((topCount/effettuate.length)*100);
+        if(pct >= 50){
+          let deltaStr = '';
+          if(hasComparison){
+            const prevTopCount = prevEffettuate.filter(a=>String(a.centroId)===String(topId)).length;
+            const delta = topCount - prevTopCount;
+            if(prevTopCount > 0){
+              const sign = delta>=0?'+':'';
+              const cls = delta>=0?'pos':'neg';
+              deltaStr = ` (<span class="${cls}">${sign}${delta}</span> vs ${periodLabel})`;
+            }
+          }
+          insights.push({icon:'🏥', html:`<strong>${_esc(centro.nome)}</strong> è il tuo centro principale: <strong>${pct}%</strong> delle prenotazioni${deltaStr}.`});
+        }
+      }
+    }
+  }
+
+  // 5. TASSO CANCELLAZIONE con delta
+  if(all.length >= 10){
+    const cancRate = (cancellate.length / all.length) * 100;
+    let deltaStr = '';
+    if(hasComparison && prev.length >= 10){
+      const prevCancRate = (prev.filter(a=>a.cancelled).length / prev.length) * 100;
+      const deltaPp = Math.round(cancRate - prevCancRate);
+      if(Math.abs(deltaPp) >= 3){
+        const sign = deltaPp>=0?'+':'';
+        const cls = deltaPp>=0?'neg':'pos';
+        deltaStr = ` (<span class="${cls}">${sign}${deltaPp} punti</span> vs ${periodLabel})`;
+      }
+    }
+    if(cancRate >= 25){
+      insights.push({icon:'⚠️', html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> (<strong>${cancellate.length} su ${all.length}</strong>)${deltaStr}. Vale la pena capire se c'è un pattern.`});
+    } else if(cancRate >= 15 && cancRate < 25){
+      insights.push({icon:'📋', html:`Tasso di cancellazione: <strong>${Math.round(cancRate)}%</strong> nel periodo (${cancellate.length} cancellazioni)${deltaStr}.`});
+    } else if(cancRate <= 5 && cancellate.length === 0 && all.length >= 15){
+      insights.push({icon:'✨', html:`<span class="pos">Zero cancellazioni</span> nel periodo su ${all.length} appuntamenti. I tuoi pazienti rispettano gli orari.`});
+    }
+  }
+
+  // 6. ONLINE VS MANUALE con delta
+  if(effettuate.length >= 5){
+    const online = effettuate.filter(a=>a.source==='paziente').length;
+    const pctOnline = Math.round((online/effettuate.length)*100);
+    let deltaStr = '';
+    if(hasComparison && prevEffettuate.length >= 5){
+      const prevOnline = prevEffettuate.filter(a=>a.source==='paziente').length;
+      const prevPct = Math.round((prevOnline/prevEffettuate.length)*100);
+      const deltaPp = pctOnline - prevPct;
+      if(Math.abs(deltaPp) >= 5){
+        const sign = deltaPp>=0?'+':'';
+        const cls = deltaPp>=0?'pos':'neg';
+        deltaStr = ` (<span class="${cls}">${sign}${deltaPp} punti</span> vs ${periodLabel})`;
+      }
+    }
+    if(pctOnline >= 60){
+      insights.push({icon:'🌐', html:`Il <strong>${pctOnline}%</strong> dei tuoi pazienti prenota online${deltaStr}. La tua pagina di prenotazione funziona.`});
+    } else if(pctOnline > 0 && pctOnline <= 15 && (S.appuntamenti||[]).length >= 10){
+      insights.push({icon:'💬', html:`Solo il <strong>${pctOnline}%</strong> delle prenotazioni arriva online${deltaStr}. Condividi più spesso il tuo link via WhatsApp o QR.`});
+    }
+  }
+
+  // 7. PRIME VISITE con delta
+  if(effettuate.length >= 10){
+    const prime = effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+    const pctPrime = Math.round((prime/effettuate.length)*100);
+    let deltaStr = '';
+    if(hasComparison && prevEffettuate.length >= 10){
+      const prevPrime = prevEffettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+      const prevPct = Math.round((prevPrime/prevEffettuate.length)*100);
+      const deltaPp = pctPrime - prevPct;
+      if(Math.abs(deltaPp) >= 5){
+        const sign = deltaPp>=0?'+':'';
+        const cls = deltaPp>=0?'pos':'neg';
+        deltaStr = ` (<span class="${cls}">${sign}${deltaPp} punti</span> vs ${periodLabel})`;
+      }
+    }
+    if(pctPrime >= 50){
+      insights.push({icon:'🆕', html:`Il <strong>${pctPrime}%</strong> delle visite sono prime visite${deltaStr}: stai acquisendo molti nuovi pazienti.`});
+    } else if(pctPrime <= 15 && prime > 0){
+      insights.push({icon:'🔁', html:`Solo il <strong>${pctPrime}%</strong> sono prime visite${deltaStr}: lavori soprattutto su pazienti di ritorno.`});
+    }
+  }
+
+  // 8. ORE LAVORATE con delta
+  if(hasComparison && effettuate.length >= 5 && prevEffettuate.length >= 5){
+    function calcOre(list){
+      let m = 0;
+      list.forEach(a=>{
+        const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+        let dur = 30;
+        if(centro && centro.turni && centro.turni.length){
+          const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+          if(t && t.durata_slot) dur = t.durata_slot;
+        }
+        m += dur;
+      });
+      return m/60;
+    }
+    const oreNow = calcOre(effettuate);
+    const orePrev = calcOre(prevEffettuate);
+    const deltaOre = Math.round(oreNow - orePrev);
+    if(Math.abs(deltaOre) >= 2 && orePrev > 0){
+      const sign = deltaOre>=0?'+':'';
+      const cls = deltaOre>=0?'pos':'neg';
+      insights.push({icon:'⏱️', html:`Ore lavorate: <strong>${Math.round(oreNow)}h</strong> (<span class="${cls}">${sign}${deltaOre}h</span> vs ${periodLabel}).`});
+    }
+  }
+
+  if(insights.length === 0){ box.style.display = 'none'; return; }
+  list.innerHTML = insights.slice(0,6).map(ins=>`
+    <div class="stats-insight-item">
+      <div class="stats-insight-icon">${ins.icon}</div>
+      <div class="stats-insight-text">${ins.html}</div>
+    </div>
+  `).join('');
+  box.style.display = 'block';
+}
+
+function _esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _renderBarList(containerId, data, opts){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(!data || !data.length){
+    el.innerHTML = '<div class="chart-empty">Nessun dato disponibile</div>';
+    return;
+  }
+  const max = Math.max(...data.map(d=>d.value), 1);
+  const showPct = opts && opts.showPct;
+  const total = data.reduce((s,d)=>s+d.value,0);
+  el.innerHTML = data.map(d=>{
+    const pct = Math.round((d.value/max)*100);
+    const realPct = total > 0 ? Math.round((d.value/total)*100) : 0;
+    const color = d.color || 'var(--accent)';
+    const valLabel = showPct ? `${d.value} (${realPct}%)` : d.value;
+    return `<div class="chart-row">
+      <div class="chart-row-label" title="${_esc(d.label)}">${_esc(d.label)}</div>
+      <div class="chart-row-bar"><div class="chart-row-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="chart-row-value">${valLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── HELPER: serie mensile ultimi N mesi ──
+function _seriesMonthly(apps, nMonths){
+  const now = new Date();
+  const buckets = [];
+  for(let i=nMonths-1; i>=0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    buckets.push({key, value:0});
+  }
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const key = a.data.substring(0,7);
+    const b = buckets.find(x=>x.key===key);
+    if(b) b.value++;
+  });
+  return buckets;
+}
+
+function _seriesMonthlyOre(apps, nMonths){
+  const now = new Date();
+  const buckets = [];
+  for(let i=nMonths-1; i>=0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    buckets.push({key, value:0});
+  }
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const key = a.data.substring(0,7);
+    const b = buckets.find(x=>x.key===key);
+    if(!b) return;
+    const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+    let dur = 30;
+    if(centro && centro.turni && centro.turni.length){
+      const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+      if(t && t.durata_slot) dur = t.durata_slot;
+    }
+    b.value += dur/60;
+  });
+  return buckets;
+}
+
+// ── HELPER: serie adattive per sparkline ──
+function _adaptiveSparkSeries(apps){
+  if(_statsPeriod === 30) return _seriesDaily(apps, 30);
+  if(_statsPeriod === 90) return _seriesWeekly(apps, 13);
+  return _seriesMonthly(apps, 12);
+}
+
+function _adaptiveSparkSeriesOre(apps){
+  if(_statsPeriod === 30) return _seriesDailyOre(apps, 30);
+  if(_statsPeriod === 90) return _seriesWeeklyOre(apps, 13);
+  return _seriesMonthlyOre(apps, 12);
+}
+
+function _seriesDaily(apps, nDays){
+  const now = new Date();
+  const buckets = [];
+  for(let i=nDays-1; i>=0; i--){
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    buckets.push({key, value:0});
+  }
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const b = buckets.find(x=>x.key===a.data);
+    if(b) b.value++;
+  });
+  return buckets;
+}
+
+function _seriesDailyOre(apps, nDays){
+  const series = _seriesDaily([], nDays);
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const b = series.find(x=>x.key===a.data);
+    if(!b) return;
+    const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+    let dur = 30;
+    if(centro && centro.turni && centro.turni.length){
+      const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+      if(t && t.durata_slot) dur = t.durata_slot;
+    }
+    b.value += dur/60;
+  });
+  return series;
+}
+
+function _seriesWeekly(apps, nWeeks){
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;
+  const startOfCurWeek = new Date(now);
+  startOfCurWeek.setDate(startOfCurWeek.getDate() - dow);
+  startOfCurWeek.setHours(0,0,0,0);
+  const buckets = [];
+  for(let i=nWeeks-1; i>=0; i--){
+    const wStart = new Date(startOfCurWeek);
+    wStart.setDate(wStart.getDate() - i*7);
+    buckets.push({key:`W${i}`, start:wStart, value:0});
+  }
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const d = new Date(a.data + 'T00:00:00');
+    for(let i=0; i<buckets.length; i++){
+      const b = buckets[i];
+      const end = new Date(b.start);
+      end.setDate(end.getDate() + 7);
+      if(d >= b.start && d < end){ b.value++; break; }
+    }
+  });
+  return buckets;
+}
+
+function _seriesWeeklyOre(apps, nWeeks){
+  const buckets = _seriesWeekly([], nWeeks);
+  apps.forEach(a=>{
+    if(!a.data) return;
+    const d = new Date(a.data + 'T00:00:00');
+    for(let i=0; i<buckets.length; i++){
+      const b = buckets[i];
+      const end = new Date(b.start);
+      end.setDate(end.getDate() + 7);
+      if(d >= b.start && d < end){
+        const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+        let dur = 30;
+        if(centro && centro.turni && centro.turni.length){
+          const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+          if(t && t.durata_slot) dur = t.durata_slot;
+        }
+        b.value += dur/60;
+        break;
+      }
+    }
+  });
+  return buckets;
+}
+
+// ── SPARKLINE ──
+function _renderKpiSpark(containerId, series, color){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(!series || series.length < 2){ el.innerHTML=''; return; }
+  const W = 100, H = 32, pad = 2;
+  const max = Math.max(...series.map(s=>s.value), 1);
+  const step = (W - pad*2) / (series.length - 1);
+  const pts = series.map((s,i)=>{
+    const x = pad + i*step;
+    const y = H - pad - (s.value/max) * (H - pad*2);
+    return [x, y];
+  });
+  const linePath = pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const areaPath = linePath + ` L ${(W-pad).toFixed(1)},${H-pad} L ${pad},${H-pad} Z`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <path d="${areaPath}" fill="${color}" opacity="0.12"/>
+    <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="1.4" fill="${color}"/>`).join('')}
+  </svg>`;
+}
+
+// ── BAR CHART SVG ──
+function _renderTrendMensile(apps){
+  const series = _seriesMonthly(apps, 12);
+  let start = series.findIndex(s=>s.value>0);
+  if(start === -1) start = series.length - 6;
+  if(start < 0) start = 0;
+  if(series.length - start < 6) start = Math.max(0, series.length - 6);
+  const data = series.slice(start);
+  const el = document.getElementById('chart-trend');
+
+  if(data.every(d=>d.value===0)){
+    el.innerHTML = '<div class="chart-empty">Nessun dato disponibile</div>';
+    return;
+  }
+
+  const W = 720, H = 220;
+  const padL = 36, padR = 12, padT = 18, padB = 32;
+  const cw = W - padL - padR;
+  const ch = H - padT - padB;
+  const maxVal = Math.max(...data.map(d=>d.value), 1);
+  const niceMax = _niceTopValue(maxVal);
+  const ticks = 4;
+  const barW = (cw / data.length) * 0.65;
+  const slotW = cw / data.length;
+  const labels = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+
+  let svg = `<svg class="barchart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+
+  for(let i=0; i<=ticks; i++){
+    const y = padT + (ch/ticks)*i;
+    const val = Math.round(niceMax - (niceMax/ticks)*i);
+    svg += `<line class="barchart-grid-line" x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}"/>`;
+    svg += `<text class="barchart-axis-text" x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end">${val}</text>`;
+  }
+
+  data.forEach((d,i)=>{
+    const x = padL + slotW*i + (slotW - barW)/2;
+    const h = niceMax > 0 ? (d.value/niceMax)*ch : 0;
+    const y = padT + ch - h;
+    svg += `<rect class="barchart-bar" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3"><title>${d.key}: ${d.value} visite</title></rect>`;
+    if(d.value > 0){
+      svg += `<text class="barchart-value" x="${(x+barW/2).toFixed(1)}" y="${(y-5).toFixed(1)}">${d.value}</text>`;
+    }
+    const [yr, m] = d.key.split('-');
+    svg += `<text class="barchart-axis-text" x="${(x+barW/2).toFixed(1)}" y="${(H-padB+14).toFixed(1)}" text-anchor="middle">${labels[parseInt(m)-1]} '${yr.substring(2)}</text>`;
+  });
+
+  svg += `</svg>`;
+  el.innerHTML = svg;
+}
+
+function _niceTopValue(max){
+  if(max <= 5) return 5;
+  if(max <= 10) return 10;
+  if(max <= 20) return 20;
+  if(max <= 50) return 50;
+  if(max <= 100) return 100;
+  const mag = Math.pow(10, Math.floor(Math.log10(max)));
+  return Math.ceil(max/mag) * mag;
+}
+
+// ── DONUT CHART ──
+function _renderDonut(containerId, data, centerLabel){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const total = data.reduce((s,d)=>s+d.value,0);
+  if(total === 0){
+    el.innerHTML = '<div class="chart-empty">Nessun dato disponibile</div>';
+    return;
+  }
+  const size = 140, cx = 70, cy = 70, r = 55, rInner = 38;
+  let acc = 0;
+  const slices = data.map(d=>{
+    const start = (acc/total) * Math.PI * 2 - Math.PI/2;
+    acc += d.value;
+    const end = (acc/total) * Math.PI * 2 - Math.PI/2;
+    return { ...d, start, end };
+  });
+
+  function arc(s, e){
+    if(data.length === 1){
+      return `M ${cx-r},${cy} A ${r},${r} 0 1,1 ${cx+r},${cy} A ${r},${r} 0 1,1 ${cx-r},${cy}
+              M ${cx-rInner},${cy} A ${rInner},${rInner} 0 1,0 ${cx+rInner},${cy} A ${rInner},${rInner} 0 1,0 ${cx-rInner},${cy} Z`;
+    }
+    const x1 = cx + Math.cos(s)*r, y1 = cy + Math.sin(s)*r;
+    const x2 = cx + Math.cos(e)*r, y2 = cy + Math.sin(e)*r;
+    const x3 = cx + Math.cos(e)*rInner, y3 = cy + Math.sin(e)*rInner;
+    const x4 = cx + Math.cos(s)*rInner, y4 = cy + Math.sin(s)*rInner;
+    const large = (e - s) > Math.PI ? 1 : 0;
+    return `M ${x1.toFixed(2)},${y1.toFixed(2)} A ${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} L ${x3.toFixed(2)},${y3.toFixed(2)} A ${rInner},${rInner} 0 ${large},0 ${x4.toFixed(2)},${y4.toFixed(2)} Z`;
+  }
+
+  let svg = `<svg class="donut-svg" viewBox="0 0 ${size} ${size}">`;
+  slices.forEach(s=>{
+    svg += `<path d="${arc(s.start, s.end)}" fill="${s.color||'var(--accent)'}"><title>${_esc(s.label)}: ${s.value} (${Math.round(s.value/total*100)}%)</title></path>`;
+  });
+  svg += `<text class="donut-center-value" x="${cx}" y="${cy-4}">${total}</text>`;
+  svg += `<text class="donut-center-label" x="${cx}" y="${cy+14}">${centerLabel||'totale'}</text>`;
+  svg += `</svg>`;
+
+  const legend = slices.map(s=>{
+    const pct = Math.round(s.value/total*100);
+    return `<div class="donut-legend-row">
+      <span class="donut-legend-color" style="background:${s.color||'var(--accent)'}"></span>
+      <span class="donut-legend-label">${_esc(s.label)}</span>
+      <span class="donut-legend-value">${s.value} (${pct}%)</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="donut-wrap">${svg}<div class="donut-legend">${legend}</div></div>`;
+}
+
+// ── ORIGINE PRENOTAZIONI ──
+function _renderOrigine(apps){
+  const online = apps.filter(a=>a.source==='paziente').length;
+  const manuale = apps.filter(a=>a.source!=='paziente').length;
+  const data = [
+    { label: '🌐 Online', value: online, color: '#0D9488' },
+    { label: '✍️ Manuale', value: manuale, color: '#6366F1' }
+  ];
+  _renderBarList('chart-source', data, {showPct:true});
+}
+
+// ── CHI CANCELLA ──
+function _renderCancelSource(cancellate){
+  if(!cancellate.length){
+    document.getElementById('chart-cancel-source').innerHTML =
+      '<div class="chart-empty">Nessuna cancellazione nel periodo. 🎉</div>';
+    return;
+  }
+  const online = cancellate.filter(a=>a.source==='paziente').length;
+  const manuale = cancellate.filter(a=>a.source!=='paziente').length;
+  const data = [
+    { label: '🌐 Da paziente', value: online, color: '#dc2626' },
+    { label: '✍️ Da me', value: manuale, color: '#ea580c' }
+  ];
+  _renderBarList('chart-cancel-source', data, {showPct:true});
+}
+
+// ── HEATMAP giorno × fascia oraria ──
+function _renderHeatmap(apps){
+  const el = document.getElementById('chart-heatmap');
+  if(!el) return;
+  const days = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+  const fasce = [
+    {key:'08', label:'8-10', from:8, to:10},
+    {key:'10', label:'10-12', from:10, to:12},
+    {key:'12', label:'12-14', from:12, to:14},
+    {key:'14', label:'14-16', from:14, to:16},
+    {key:'16', label:'16-18', from:16, to:18},
+    {key:'18', label:'18-20', from:18, to:20}
+  ];
+
+  const matrix = days.map(()=>fasce.map(()=>0));
+  apps.forEach(a=>{
+    if(!a.data || !a.ora) return;
+    const d = new Date(a.data + 'T00:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    const h = parseInt(a.ora.substring(0,2));
+    const fi = fasce.findIndex(f => h>=f.from && h<f.to);
+    if(fi >= 0) matrix[dow][fi]++;
+  });
+
+  const rowTotals = matrix.map(row => row.reduce((s,v)=>s+v,0));
+  const colTotals = fasce.map((_,fi) => matrix.reduce((s,row)=>s+row[fi],0));
+  const maxCell = Math.max(...matrix.flat(), 1);
+  const total = rowTotals.reduce((s,v)=>s+v,0);
+
+  if(total === 0){
+    el.innerHTML = '<div class="chart-empty">Nessun dato con orario nel periodo</div>';
+    return;
+  }
+
+  function cellColor(v){
+    if(v === 0) return '';
+    const intensity = 0.15 + (v/maxCell) * 0.85;
+    return `background:rgba(13,148,136,${intensity.toFixed(2)})`;
+  }
+  function cellTextColor(v){
+    if(v === 0) return '';
+    return (v/maxCell) > 0.5 ? 'color:#fff;font-weight:600' : 'color:var(--ink);font-weight:600';
+  }
+
+  const gridTemplate = `60px repeat(${fasce.length},1fr) 50px`;
+  let html = '<div class="heatmap-wrap">';
+  html += '<div class="heatmap-intro">Più la cella è scura, più visite ricevi in quel giorno e fascia oraria. I totali sono a destra (per giorno) e in basso (per fascia).</div>';
+  html += '<div class="heatmap-grid" style="grid-template-columns:'+gridTemplate+'">';
+
+  html += '<div></div>';
+  fasce.forEach(f=>{ html += `<div class="heatmap-label">${f.label}</div>`; });
+  html += '<div class="heatmap-label" style="font-weight:700">tot</div>';
+
+  days.forEach((day,di)=>{
+    html += `<div class="heatmap-row-label">${day}</div>`;
+    fasce.forEach((_,fi)=>{
+      const v = matrix[di][fi];
+      const style = cellColor(v);
+      const txtStyle = cellTextColor(v);
+      const title = v > 0 ? `title="${day} ${fasce[fi].label}: ${v} visite"` : '';
+      html += `<div class="heatmap-cell${v>0?' has-data':''}" style="${style};display:flex;align-items:center;justify-content:center;font-size:11px;${txtStyle}" ${title}>${v>0?v:''}</div>`;
+    });
+    html += `<div class="heatmap-row-total">${rowTotals[di]||''}</div>`;
+  });
+  html += '</div>';
+
+  html += '<div class="heatmap-grid" style="grid-template-columns:'+gridTemplate+'">';
+  html += '<div></div>';
+  colTotals.forEach(t=>{ html += `<div class="heatmap-col-total">${t||''}</div>`; });
+  html += '<div></div></div>';
+
+  html += `<div class="heatmap-legend">
+    <span>meno</span>
+    <span class="heatmap-legend-scale">
+      <span style="background:rgba(13,148,136,0.15)"></span>
+      <span style="background:rgba(13,148,136,0.35)"></span>
+      <span style="background:rgba(13,148,136,0.55)"></span>
+      <span style="background:rgba(13,148,136,0.75)"></span>
+      <span style="background:rgba(13,148,136,1)"></span>
+    </span>
+    <span>più</span>
+  </div></div>`;
+  el.innerHTML = html;
+}
+
+function _renderPerCentro(apps){
+  const counts = {};
+  apps.forEach(a=>{
+    const c = (S.centri||[]).find(x=>String(x.id)===String(a.centroId));
+    const name = c ? c.nome : '— sconosciuto —';
+    counts[name] = (counts[name]||0)+1;
+  });
+  const data = Object.entries(counts)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([label,value])=>{
+      const c = (S.centri||[]).find(x=>x.nome===label);
+      return { label, value, color: c && c.colore ? c.colore : 'var(--accent)' };
+    });
+  _renderBarList('chart-centri', data, {showPct:true});
+}
+
+function _renderTipoVisita(apps){
+  const counts = {};
+  apps.forEach(a=>{
+    const t = a.tipo || '— non specificato —';
+    counts[t] = (counts[t]||0)+1;
+  });
+  const data = Object.entries(counts)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([label,value])=>({label,value}));
+  _renderBarList('chart-tipo', data, {showPct:true});
+}
+
+function _renderArea(apps){
+  const counts = {};
+  apps.forEach(a=>{
+    if(!a.area) return;
+    counts[a.area] = (counts[a.area]||0)+1;
+  });
+  if(Object.keys(counts).length === 0){
+    const el = document.getElementById('chart-area');
+    if(el) el.innerHTML = '<div class="chart-empty">Nessuna area tematica assegnata agli appuntamenti del periodo.</div>';
+    return;
+  }
+  const data = Object.entries(counts)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([label,value])=>({label,value}));
+  _renderBarList('chart-area', data, {showPct:true});
+}
+
+
+
+// ── TOP PAZIENTI ──
+function _normalizePersona(nome, cognome){
+  const n = (nome||'').toLowerCase().trim().replace(/\s+/g,' ');
+  const c = (cognome||'').toLowerCase().trim().replace(/\s+/g,' ');
+  return `${c}|${n}`;
+}
+
+function _renderTopPazienti(){
+  const el = document.getElementById('chart-top-pazienti');
+  if(!el) return;
+  const SOGLIA_MIN_VISITE = 4;
+  const TOP_N = 10;
+
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setFullYear(cutoff.getFullYear() - 1);
+
+  const filtered = (S.appuntamenti||[]).filter(a=>{
+    if(!a.data || a.cancelled) return false;
+    const d = new Date(a.data + 'T00:00:00');
+    return d >= cutoff && d <= now;
+  });
+
+  const map = new Map();
+  filtered.forEach(a=>{
+    const key = _normalizePersona(a.nome, a.cognome);
+    if(!key || key === '|') return;
+    const dataD = new Date(a.data + 'T00:00:00');
+    const ex = map.get(key);
+    if(ex){
+      ex.count++;
+      if(dataD > ex.lastDate){ ex.lastDate = dataD; ex.displayNome = a.nome; ex.displayCognome = a.cognome; }
+    } else {
+      map.set(key, { key, count:1, lastDate:dataD, displayNome:a.nome, displayCognome:a.cognome });
+    }
+  });
+
+  const sorted = Array.from(map.values())
+    .filter(p => p.count >= SOGLIA_MIN_VISITE)
+    .sort((a,b)=> b.count !== a.count ? b.count - a.count : b.lastDate - a.lastDate)
+    .slice(0, TOP_N);
+
+  if(sorted.length < 3){
+    el.innerHTML = `<div class="chart-empty">Non ci sono ancora pazienti con visite ricorrenti negli ultimi 12 mesi.<br><span style="font-size:11.5px">Servono almeno ${SOGLIA_MIN_VISITE} visite della stessa persona per apparire qui.</span></div>`;
+    return;
+  }
+
+  function findPazienteId(nome, cognome){
+    const key = _normalizePersona(nome, cognome);
+    const p = (S.pazienti||[]).find(x => _normalizePersona(x.nome, x.cognome) === key);
+    return p ? p.id : null;
+  }
+
+  const medals = ['🥇','🥈','🥉'];
+  const rows = sorted.map((p,i)=>{
+    const pid = findPazienteId(p.displayNome, p.displayCognome);
+    const clickable = pid ? 'clickable' : '';
+    const clickAttr = pid ? `onclick="_openPazienteFromStats('${pid}')"` : '';
+    const rank = i < 3 ? medals[i] : `${i+1}°`;
+    const rankCls = i < 3 ? 'top-paz-rank medal' : 'top-paz-rank';
+    const lastFmt = p.lastDate.toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'});
+    return `<div class="top-paz-row ${clickable}" ${clickAttr}>
+      <div class="${rankCls}">${rank}</div>
+      <div class="top-paz-info">
+        <div class="top-paz-name">${_esc(p.displayNome)} ${_esc(p.displayCognome)}</div>
+        <div class="top-paz-last">Ultima visita: ${lastFmt}</div>
+      </div>
+      <div class="top-paz-visits">${p.count}<span class="top-paz-visits-label">visite</span></div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = rows + `<div class="top-paz-disclaimer">Pazienti identificati per nome e cognome. Eventuali errori di trascrizione possono creare duplicati.</div>`;
+}
+
+function _openPazienteFromStats(pid){
+  showPage('pazienti');
+  setTimeout(()=>{ showPazienteDetail(pid); }, 100);
 }
 
 // ── TOAST ──
