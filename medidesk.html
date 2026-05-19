@@ -1176,6 +1176,32 @@ html.dark .cancel-token-code{color:var(--ink)}
         </div></div>
       </div>
 
+      <div style="margin-bottom:24px">
+        <div class="section-title">Aspetto</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Tema</div>
+              <div class="notif-toggle-desc" id="imp-tema-desc">Caricamento…</div>
+            </div>
+            <button class="btn btn-secondary" onclick="toggleThemeFromImpostazioni()">Cambia tema</button>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div class="section-title">Esporta dati</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Backup completo</div>
+              <div class="notif-toggle-desc">Scarica un file JSON con tutti i tuoi dati: profilo, centri, turni, appuntamenti, pazienti, ferie e tipi di visita. Utile come copia di sicurezza personale o per migrare i dati altrove.</div>
+            </div>
+            <button class="btn btn-secondary" onclick="esportaDati()">📥 Scarica backup</button>
+          </div>
+        </div></div>
+      </div>
+
       <div style="display:flex;justify-content:flex-end;gap:10px">
         <button class="btn btn-primary" onclick="saveImpostazioni()">💾 Salva impostazioni</button>
       </div>
@@ -4872,8 +4898,8 @@ function buildEmailHtml(plainText, headerLabel){
 }
 async function sendNotificaCentro(tipo, appt){
   const toggleMap={
-    nuova_prenotazione: S.settings.notifNuovaPrenotazione,
-    cancellazione:      S.settings.notifCancellazione,
+    nuova_prenotazione:   S.settings.notifNuovaPrenotazione,
+    cancellazione:        S.settings.notifCancellazioneMedico,
     appuntamento_manuale: S.settings.notifAppuntamentoManuale
   };
   if(!toggleMap[tipo]) return;
@@ -6150,6 +6176,7 @@ function renderImpostazioni(){
   chk('imp-notif-cancellazione-medico',    S.settings.notifCancellazioneMedico    !== false);
   chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
+  updateTemaDesc();
 }
 
 async function saveImpostazioni(){
@@ -6186,6 +6213,54 @@ async function saveImpostazioni(){
   }
   if(S.agendaView==='month') renderMonthView();
   else renderDayAppointments();
+}
+
+function updateTemaDesc(){
+  const desc = document.getElementById('imp-tema-desc');
+  if(!desc) return;
+  const isDark = document.documentElement.classList.contains('dark');
+  desc.textContent = isDark ? 'Tema scuro attivo · clicca per passare al tema chiaro' : 'Tema chiaro attivo · clicca per passare al tema scuro';
+}
+
+function toggleThemeFromImpostazioni(){
+  toggleTheme();
+  updateTemaDesc();
+}
+
+function esportaDati(){
+  try {
+    const payload = {
+      _meta: {
+        app: 'Delphi~Med',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        medicoId: S.medicoId || null
+      },
+      settings:      S.settings      || {},
+      centri:        S.centri        || [],
+      appuntamenti:  S.appuntamenti  || [],
+      pazienti:      S.pazienti      || [],
+      chiusure:      S.chiusure      || [],
+      tipiVisita:    S.tipiVisita    || [],
+      areeTematiche: S.areeTematiche || []
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], {type:'application/json'});
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dt = new Date().toISOString().slice(0,10);
+    const slug = (S.settings && S.settings.slug) ? S.settings.slug : 'medico';
+    a.href = url;
+    a.download = `delphi-med-backup-${slug}-${dt}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup scaricato ✓');
+  } catch(e){
+    console.error('[Delphi~Med] esportaDati:', e.message);
+    showToast('Errore export: '+e.message);
+  }
 }
 
 // ── TOAST ──
