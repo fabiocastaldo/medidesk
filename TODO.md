@@ -295,7 +295,7 @@
 
 ---
 
-*Ultimo aggiornamento: 2026-05-18 — Legenda centri vista settimana, apertura agenda su Settimana, normalizzazione orari HH:MM in 3 punti*
+*Ultimo aggiornamento: 2026-05-19 — Sezione Impostazioni completa (toggle auto-salvanti, tema, esporta dati, separazione cancellazione medico/paziente)*
 
 ---
 
