@@ -18,7 +18,7 @@
 
 ### Funzioni SQL SECURITY DEFINER
 - `generate_unique_slug(nome, cognome, specializzazione, provincia, albo, id)` → genera slug univoco con cascata; usata dal trigger `medici_auto_slug()`
-- `search_medici_pubblici(p_query)` → ricerca pubblica su nome/cognome/specializzazione/specializzazioni[]; ritorna citta[]
+- `search_medici_pubblici(p_query)` → ricerca pubblica su nome/cognome/specializzazione/specializzazioni[]; ritorna citta[] — riscritta 18/05 per query multi-token (tokenizzazione sugli spazi, AND tra token, OR tra campi)
 - `get_slot_occupati(p_medico_id)` → slot prenotati del medico; usata da `bkInit` per bloccare slot occupati
 - `get_dati_notifica_cancellazione(p_appt_id, p_token)` → ritorna (notifica_cancellazione, centro_nome, centro_email), autorizzata dal possesso del token di cancellazione
 
@@ -45,6 +45,14 @@
 |------|-----|-------|-----|
 | 18/05 | Email cancellazione centro non partiva | sendNotificaCentroAnonimo faceva SELECT dirette su medici/centri bloccate da RLS in modalità anonima | nuova RPC SECURITY DEFINER get_dati_notifica_cancellazione(appt_id, token) |
 | 18/05 | Agenda medico non aggiornata live alla cancellazione paziente | canale realtime ascoltava solo INSERT | aggiunto handler UPDATE con toast su transizione attivo→cancellato |
+| 18/05 | Email cancellazione centro non partiva (paziente cancella) | sendNotificaCentroAnonimo faceva SELECT dirette su medici/centri bloccate da RLS in modalità anonima | nuova RPC SECURITY DEFINER get_dati_notifica_cancellazione(appt_id, token) |
+| 18/05 | Agenda medico non aggiornata live alla cancellazione paziente | canale realtime ascoltava solo INSERT | aggiunto handler UPDATE con toast su transizione attivo→cancellato |
+| 18/05 | Codice cancellazione mostrato in chiaro al paziente | retaggio iniziale, ridondante visto che esiste il bottone "Cancella" nella mail | rimosso box token dalla schermata conferma + dal template mail in api/send-email.js |
+| 18/05 | Testo mail cancellazione centro diceva "dal paziente" anche se cancellava il medico | sendNotificaCentro aveva il testo errato | corretto in "dal medico" |
+| 18/05 | Appuntamenti cancellati non visibili come tali nella vista Mese | renderMonthView non applicava la classe appt-cancelled né il filtro | uniformato comportamento alla vista Settimana con badge "Cancellato" e barrato |
+| 18/05 | Ricerca medici pubblica non funzionava con stringhe miste ("fabio c") | la RPC search_medici_pubblici cercava il pattern intero in un singolo campo | riscritta con tokenizzazione sugli spazi e AND tra token / OR tra campi |
+| 18/05 | Conflitti ferie ↔ appuntamenti non segnalati | nessun controllo in saveChiusura | confirm() che elenca i conflitti prima di salvare |
+| 18/05 | Eliminazione appuntamenti era hard-delete (rischio cancellazioni accidentali) | DELETE fisico dal DB | passato a soft-delete con cancelled=true, allineato al flusso paziente |
 
 ---
 
@@ -147,6 +155,7 @@
 - [x] Wipe totale dati eseguito (tabelle svuotate, si riparte da zero)
 - [x] `centri`: rimosso campo `indirizzo`, aggiunti `via`, `citta`, `provincia`, `cap`
 - [x] `medici`: aggiunti `specializzazione` (TEXT), `specializzazioni` (TEXT[]), `slug`
+- [x] `medici`: aggiunti `notifica_cancellazione_medico` (bool, default true), `nascondi_cancellati` (bool, default false) — 18/05
 - [x] Funzione SQL `generate_unique_slug()` con cascata estesa (SECURITY DEFINER)
 - [x] Trigger `medici_auto_slug()` BEFORE INSERT/UPDATE: genera slug e mantiene `specializzazioni[]` coerente
 - [x] Funzione `search_medici_pubblici(p_query)`: cerca su nome/cognome/specializzazione/specializzazioni[], ritorna citta[]
@@ -191,6 +200,33 @@
 - [x] Mittente: `noreply@delphi-med.com`
 - [x] `api/send-email.js` con modalità generica `{to, subject, html}`
 - [x] `SUPABASE_SERVICE_ROLE_KEY` configurata in Vercel
+
+---
+
+## ✅ FEATURE COMPLETATE OGGI (18 maggio 2026)
+
+**Sezione Impostazioni** (branch feat/impostazioni → master)
+- Nuova pagina dedicata accanto a Profilo, con icona ⚙️ in sidebar desktop e top-bar mobile
+- 5 toggle: nuova prenotazione online, cancellazione paziente, cancellazione medico (nuovo), appuntamento manuale, nascondi cancellati (nuovo, persistente)
+- Sezione Aspetto: toggle tema scuro uniforme con gli altri
+- Sezione Esporta dati: download backup JSON completo (profilo + centri + turni + appuntamenti + pazienti + visite + chiusure + tipi_visita + aree_tematiche)
+- Auto-save su ogni toggle, niente bottone Salva
+- Toggle "Cancellazione medico" separato dal toggle paziente: ora la mail al centro su cancellazione del medico è governata da notifica_cancellazione_medico
+
+**Notifiche email espansive**
+- Inserimento manuale appuntamento → mail anche al paziente (oltre al centro)
+- Cancellazione manuale appuntamento → mail al paziente + mail al centro
+- Cancellazione manuale → ora richiede conferma con preview di paziente, data, ora
+- Ferie → invio automatico mail ai centri con email_segreteria
+- Nuovo template lato server: cancellazione_medico in api/send-email.js
+
+**Nuove RPC SQL aggiunte a Supabase**
+- get_dati_notifica_cancellazione(p_appt_id, p_token) — già listata nella sezione SQL del riassunto
+- search_medici_pubblici(p_query) — riscritta per gestire query multi-token
+
+**Nuove colonne aggiunte alla tabella medici**
+- notifica_cancellazione_medico BOOLEAN DEFAULT TRUE
+- nascondi_cancellati BOOLEAN DEFAULT FALSE
 
 ---
 
@@ -287,3 +323,37 @@ Cose che non sono task ma è utile ricordare quando qualcosa va storto o serve f
 - Codice app: `medidesk.html` (tutto in un file)
 - Endpoint API: `api/send-email.js`, `api/approve-doctor.js`, `api/send-reminders.js`
 - Deploy: solo `git push origin master` — MAI `npx vercel --prod`
+
+### Skin / palette colori personalizzabili (futuro)
+
+Idea: il medico può scegliere il colore primario/secondario dell'app tra alcune palette predefinite.
+
+Decisioni di design già prese:
+- Opzione A scelta: palette predefinite curate (es. "Verde clinico" default, "Blu professionale", "Viola neuro", "Bordeaux", "Grigio minimal"), no color picker libero per evitare accoppiamenti illeggibili
+- Implementazione: sovrascrittura delle CSS variables (--accent, --accent2) a runtime via document.documentElement.style.setProperty()
+- Persistenza: 2 colonne nuove sulla tabella medici (accent_color, accent2_color)
+- Posizione UI: sezione "Aspetto" in Impostazioni, sotto il toggle tema scuro
+
+Quando rilasciare: dopo Step 8 (AI inbound) e Step 9 (Stripe). Tenere come materiale per mail di marketing/engagement ("Personalizza il tuo Delphi~Med!").
+
+Costo stimato: ~60 righe codice, 1-2 ore di lavoro.
+
+### Area Account (futuro, dopo Stripe)
+
+Funzionalità core da implementare:
+- Gestione abbonamento collegata a Step 9/Stripe: piano attivo, prossimo rinnovo, storico pagamenti, fatture scaricabili, cambio metodo di pagamento, upgrade/downgrade, pausa abbonamento
+- Eliminazione profilo con doppia conferma (digitare email o password)
+- Backup dati proattivo PRIMA dell'eliminazione (è già implementato Esporta dati, va integrato nel flusso)
+- Cambio email account
+- Cambio password
+- Sessioni attive con logout da tutti i dispositivi
+- Export dati GDPR-compliant (già parzialmente coperto da Esporta dati)
+- Possibilità di "pausa account" come alternativa all'eliminazione
+
+Decisioni importanti su "elimina profilo":
+- GDPR richiede eliminazione effettiva, ma fatture e dati sanitari hanno periodi minimi di conservazione (10 anni)
+- Probabile soft-delete di 30 giorni con possibilità di ripristino, poi cancellazione fisica
+- Per i dati dei pazienti serve flusso di export PDF prima dell'eliminazione (responsabilità del medico come titolare del trattamento)
+- Non basta un checkbox di conferma: digitare l'email o inserire la password
+
+Quando affrontare: dopo Step 9/Stripe. Senza gestione abbonamento attiva, mezza Area Account non avrebbe nulla da mostrare.
