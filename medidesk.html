@@ -1181,10 +1181,10 @@ html.dark .cancel-token-code{color:var(--ink)}
         <div class="card"><div class="card-body">
           <div class="notif-toggle-row">
             <div class="notif-toggle-info">
-              <div class="notif-toggle-label">Tema</div>
-              <div class="notif-toggle-desc" id="imp-tema-desc">Caricamento…</div>
+              <div class="notif-toggle-label">Tema scuro</div>
+              <div class="notif-toggle-desc">Attiva per usare l'interfaccia in modalità scura. Lo sfondo diventa nero/grigio scuro e il testo chiaro.</div>
             </div>
-            <button class="btn btn-secondary" onclick="toggleThemeFromImpostazioni()">Cambia tema</button>
+            <label class="toggle-switch"><input type="checkbox" id="imp-tema-scuro"><span class="toggle-slider"></span></label>
           </div>
         </div></div>
       </div>
@@ -6176,7 +6176,14 @@ function renderImpostazioni(){
   chk('imp-notif-cancellazione-medico',    S.settings.notifCancellazioneMedico    !== false);
   chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
-  updateTemaDesc();
+  const temaEl = document.getElementById('imp-tema-scuro');
+  if(temaEl){
+    temaEl.checked = document.documentElement.classList.contains('dark');
+    temaEl.onchange = () => {
+      toggleTheme();
+      showToast('✓ Tema aggiornato');
+    };
+  }
 }
 
 async function saveImpostazione(toggleId){
@@ -6222,18 +6229,6 @@ async function saveImpostazione(toggleId){
   } else {
     showToast('✓ Salvato (offline)');
   }
-}
-
-function updateTemaDesc(){
-  const desc = document.getElementById('imp-tema-desc');
-  if(!desc) return;
-  const isDark = document.documentElement.classList.contains('dark');
-  desc.textContent = isDark ? 'Tema scuro attivo · clicca per passare al tema chiaro' : 'Tema chiaro attivo · clicca per passare al tema scuro';
-}
-
-function toggleThemeFromImpostazioni(){
-  toggleTheme();
-  updateTemaDesc();
 }
 
 function esportaDati(){
