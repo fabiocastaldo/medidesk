@@ -24,6 +24,24 @@
 
 ---
 
+## ✅ Completato — sessione 2026-05-19 (Sezione Statistiche)
+
+### Nuova pagina Statistiche (branch feat/statistiche → master, merge commit 790a599)
+- [x] Voce 📊 in sidebar desktop (sopra Impostazioni) e in top-bar mobile (sostituisce toggle tema rimosso, già presente in Impostazioni)
+- [x] Filtro periodo: Ultimi 30gg / Trimestre / Anno / Tutto
+- [x] 4 KPI card: Visite effettuate, Cancellate, Prime visite, Ore lavorate (stima da `durata_slot`)
+- [x] Sparkline adattiva in ogni KPI: giornaliera (30gg), settimanale (trimestre), mensile (anno/tutto)
+- [x] Bar chart SVG verticale "Visite effettuate per mese" con asse Y, griglia e label
+- [x] Heatmap giorno×fascia oraria (CSS grid, scala teal, totali riga/colonna, intro esplicativa)
+- [x] Grafici bar list: Per centro (colore centro), Tipo di visita, Area tematica
+- [x] Grafici bar list: Origine prenotazioni (online vs manuale), Cancellate di più (paziente vs medico)
+- [x] Box insights automatici (💡) con 8 regole: trend volume, giorno più pieno, fascia oraria, centro principale, tasso cancellazione, online vs manuale, prime visite, ore lavorate — tutte con confronto vs periodo precedente (delta punti percentuali / visite / ore)
+- [x] Card "👥 Pazienti più frequenti": top 10 ultimi 12 mesi fissi, soglia 4 visite, medaglie 🥇🥈🥉, click apre scheda paziente (`showPazienteDetail`)
+- [x] CSS responsive: KPI 2×2 su mobile, stats-grid-2 a colonna singola, heatmap celle più piccole
+- [x] Zero query DB aggiuntive — tutto calcolato lato client da `S.appuntamenti`
+
+---
+
 ## ✅ Completato — sessione 2026-05-18 (legenda settimana + orari + apertura agenda)
 
 ### Migliorie UI
@@ -279,7 +297,7 @@
 - [ ] Multi-medico / studio associato
 - [ ] Calendario Google / iCal sync
 - [ ] Import pazienti da CSV
-- [ ] Statistiche avanzate (trend, revenue, pazienti nuovi vs ricorrenti)
+- [x] ~~Statistiche avanzate (trend, revenue, pazienti nuovi vs ricorrenti)~~ → completato 2026-05-19
 - [ ] Template referti personalizzabili
 - [ ] Firma digitale referti PDF
 
@@ -291,11 +309,11 @@
 - **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
 - **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
 - **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: nessuno — tutto su `master`
+- **Branch attivo**: nessuno — tutto su `master` (feat/statistiche mergiato e rimosso 2026-05-19)
 
 ---
 
-*Ultimo aggiornamento: 2026-05-19 — Sezione Impostazioni completa (toggle auto-salvanti, tema, esporta dati, separazione cancellazione medico/paziente)*
+*Ultimo aggiornamento: 2026-05-19 — Sezione Statistiche completa (KPI + sparkline, heatmap, insights con delta, top pazienti) mergiata su master*
 
 ---
 
