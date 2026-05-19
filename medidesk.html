@@ -863,6 +863,7 @@ html.dark .cancel-token-code{color:var(--ink)}
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon">👥</span><span>Pazienti</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon">🏥</span><span>Centri</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon">👤</span><span>Profilo</span></div>
+      <div class="nav-item" onclick="showPage('statistiche')"><span class="icon">📊</span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon">⚙️</span><span>Impostazioni</span></div>
     </nav>
     <div class="sidebar-bottom">
@@ -881,7 +882,7 @@ html.dark .cancel-token-code{color:var(--ink)}
         <span id="mobile-doctor">Dr. Mario Rossi</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
-        <button class="mobile-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
+        <button class="mobile-theme-btn" onclick="showPage('statistiche')" title="Statistiche">📊</button>
         <button class="mobile-theme-btn" onclick="showPage('impostazioni')" title="Impostazioni">⚙️</button>
         <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" title="Esci"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
       </div>
