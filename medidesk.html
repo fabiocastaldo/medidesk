@@ -654,23 +654,25 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
 .donut-center-label{font-size:10px;fill:var(--ink3);text-anchor:middle;dominant-baseline:middle;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:.5px}
 
 /* Heatmap */
-.heatmap-wrap{display:flex;flex-direction:column;gap:6px}
-.heatmap-grid{display:grid;gap:3px;align-items:center}
-.heatmap-cell{aspect-ratio:1;border-radius:3px;background:var(--bg);position:relative;cursor:default;transition:transform .12s}
+.heatmap-wrap{display:flex;flex-direction:column;gap:6px;max-width:720px;margin:0 auto}
+.heatmap-intro{font-size:12.5px;color:var(--ink3);text-align:center;margin-bottom:8px;line-height:1.5}
+.heatmap-grid{display:grid;gap:4px;align-items:center}
+.heatmap-cell{height:34px;border-radius:4px;background:var(--bg);position:relative;transition:transform .12s;display:flex;align-items:center;justify-content:center;font-size:12px}
 .heatmap-cell.has-data{cursor:default}
 .heatmap-cell:hover{transform:scale(1.15);z-index:2;outline:2px solid var(--accent);outline-offset:1px}
-.heatmap-label{font-size:11px;color:var(--ink3);font-weight:500;text-align:center}
-.heatmap-row-label{font-size:11px;color:var(--ink3);font-weight:500;text-align:right;padding-right:6px}
-.heatmap-row-total{font-size:11px;color:var(--ink);font-weight:600;text-align:left;padding-left:6px;font-variant-numeric:tabular-nums}
-.heatmap-col-total{font-size:10px;color:var(--ink2);font-weight:600;text-align:center;font-variant-numeric:tabular-nums;margin-top:2px}
+.heatmap-label{font-size:11px;color:var(--ink3);font-weight:500;text-align:center;padding-bottom:2px}
+.heatmap-row-label{font-size:11.5px;color:var(--ink2);font-weight:600;text-align:right;padding-right:6px}
+.heatmap-row-total{font-size:11.5px;color:var(--ink);font-weight:600;text-align:left;padding-left:6px;font-variant-numeric:tabular-nums}
+.heatmap-col-total{font-size:10.5px;color:var(--ink2);font-weight:600;text-align:center;font-variant-numeric:tabular-nums;margin-top:4px}
 .heatmap-legend{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px;font-size:11px;color:var(--ink3)}
 .heatmap-legend-scale{display:flex;gap:2px}
-.heatmap-legend-scale span{width:14px;height:14px;border-radius:2px;display:inline-block}
+.heatmap-legend-scale span{width:14px;height:14px;border-radius:3px;display:inline-block}
 
 @media(max-width:768px){
   .donut-wrap{flex-direction:column;gap:12px}
   .donut-svg{flex:0 0 120px;width:120px;height:120px}
-  .heatmap-label,.heatmap-row-label,.heatmap-row-total{font-size:10px}
+  .heatmap-cell{height:28px;font-size:11px}
+  .heatmap-label,.heatmap-row-label,.heatmap-row-total{font-size:10.5px}
 }
 </style>
 </head>
@@ -7021,7 +7023,9 @@ function _renderHeatmap(apps){
   }
 
   const gridTemplate = `60px repeat(${fasce.length},1fr) 50px`;
-  let html = '<div class="heatmap-wrap"><div class="heatmap-grid" style="grid-template-columns:'+gridTemplate+'">';
+  let html = '<div class="heatmap-wrap">';
+  html += '<div class="heatmap-intro">Più la cella è scura, più visite ricevi in quel giorno e fascia oraria. I totali sono a destra (per giorno) e in basso (per fascia).</div>';
+  html += '<div class="heatmap-grid" style="grid-template-columns:'+gridTemplate+'">';
 
   html += '<div></div>';
   fasce.forEach(f=>{ html += `<div class="heatmap-label">${f.label}</div>`; });
