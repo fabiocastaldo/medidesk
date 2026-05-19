@@ -1202,9 +1202,6 @@ html.dark .cancel-token-code{color:var(--ink)}
         </div></div>
       </div>
 
-      <div style="display:flex;justify-content:flex-end;gap:10px">
-        <button class="btn btn-primary" onclick="saveImpostazioni()">💾 Salva impostazioni</button>
-      </div>
     </div>
   </main>
 
@@ -6169,7 +6166,10 @@ function toggleCentroGroup(gid){
 function renderImpostazioni(){
   const chk = (id, val) => {
     const el = document.getElementById(id);
-    if(el) el.checked = !!val;
+    if(el){
+      el.checked = !!val;
+      el.onchange = () => saveImpostazione(id);
+    }
   };
   chk('imp-notif-nuova-prenotazione',      S.settings.notifNuovaPrenotazione      !== false);
   chk('imp-notif-cancellazione',           S.settings.notifCancellazione          !== false);
@@ -6179,40 +6179,49 @@ function renderImpostazioni(){
   updateTemaDesc();
 }
 
-async function saveImpostazioni(){
-  const chkVal = id => {
-    const el = document.getElementById(id);
-    return el ? el.checked : false;
+async function saveImpostazione(toggleId){
+  const el = document.getElementById(toggleId);
+  if(!el) return;
+  const newVal = el.checked;
+  const mapping = {
+    'imp-notif-nuova-prenotazione':   { key: 'notifNuovaPrenotazione',   col: 'notifica_nuova_prenotazione' },
+    'imp-notif-cancellazione':        { key: 'notifCancellazione',       col: 'notifica_cancellazione' },
+    'imp-notif-cancellazione-medico': { key: 'notifCancellazioneMedico', col: 'notifica_cancellazione_medico' },
+    'imp-notif-appuntamento-manuale': { key: 'notifAppuntamentoManuale', col: 'notifica_appuntamento_manuale' },
+    'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' }
   };
-  S.settings.notifNuovaPrenotazione      = chkVal('imp-notif-nuova-prenotazione');
-  S.settings.notifCancellazione          = chkVal('imp-notif-cancellazione');
-  S.settings.notifCancellazioneMedico    = chkVal('imp-notif-cancellazione-medico');
-  S.settings.notifAppuntamentoManuale    = chkVal('imp-notif-appuntamento-manuale');
-  S.settings.nascondiCancellati          = chkVal('imp-nascondi-cancellati');
+  const m = mapping[toggleId];
+  if(!m){ console.warn('[Delphi~Med] saveImpostazione: toggle sconosciuto', toggleId); return; }
+  const prevVal = S.settings[m.key];
+  S.settings[m.key] = newVal;
   save();
+  if(m.key === 'nascondiCancellati'){
+    if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !newVal;
+    if(S.agendaView==='month') renderMonthView();
+    else renderDayAppointments();
+  }
   if(isOnline() && S.medicoId){
     try {
-      const { error } = await supabaseClient.from('medici').update({
-        notifica_nuova_prenotazione:    S.settings.notifNuovaPrenotazione,
-        notifica_cancellazione:         S.settings.notifCancellazione,
-        notifica_cancellazione_medico:  S.settings.notifCancellazioneMedico,
-        notifica_appuntamento_manuale:  S.settings.notifAppuntamentoManuale,
-        nascondi_cancellati:            S.settings.nascondiCancellati
-      }).eq('id', S.medicoId);
+      const { error } = await supabaseClient.from('medici')
+        .update({ [m.col]: newVal })
+        .eq('id', S.medicoId);
       if(error) throw error;
-      showToast('Impostazioni salvate ✓');
+      showToast('✓ Salvato');
     } catch(e){
-      console.error('[Delphi~Med] saveImpostazioni:', e.message);
-      showToast('Errore nel salvataggio: '+e.message);
+      console.error('[Delphi~Med] saveImpostazione:', e.message);
+      S.settings[m.key] = prevVal;
+      save();
+      el.checked = !!prevVal;
+      if(m.key === 'nascondiCancellati'){
+        if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !prevVal;
+        if(S.agendaView==='month') renderMonthView();
+        else renderDayAppointments();
+      }
+      showToast('Errore salvataggio: '+e.message);
     }
   } else {
-    showToast('Impostazioni salvate localmente');
+    showToast('✓ Salvato (offline)');
   }
-  if(typeof _mostraCancellati !== 'undefined'){
-    _mostraCancellati = !S.settings.nascondiCancellati;
-  }
-  if(S.agendaView==='month') renderMonthView();
-  else renderDayAppointments();
 }
 
 function updateTemaDesc(){
