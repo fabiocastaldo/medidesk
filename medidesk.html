@@ -6630,17 +6630,22 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
   }
 
   // 5. TASSO CANCELLAZIONE
-  if(all.length >= 5){
+  if(all.length >= 10){
     const cancRate = (cancellate.length / all.length) * 100;
-    if(cancRate >= 20){
+    if(cancRate >= 25){
       insights.push({
         icon:'⚠️',
-        html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> degli appuntamenti viene cancellato. Verifica che i promemoria 24h siano attivi.`
+        html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> degli appuntamenti viene cancellato (<strong>${cancellate.length} su ${all.length}</strong>). Vale la pena capire se c'è un pattern: orari, centri o tipi di visita specifici.`
       });
-    } else if(cancRate <= 5 && cancellate.length === 0 && all.length >= 10){
+    } else if(cancRate >= 15 && cancRate < 25){
+      insights.push({
+        icon:'📋',
+        html:`Tasso di cancellazione: <strong>${Math.round(cancRate)}%</strong> nel periodo (${cancellate.length} cancellazioni). Nella media per uno studio attivo.`
+      });
+    } else if(cancRate <= 5 && cancellate.length === 0 && all.length >= 15){
       insights.push({
         icon:'✨',
-        html:`<span class="pos">Zero cancellazioni</span> nel periodo. I tuoi pazienti rispettano gli appuntamenti.`
+        html:`<span class="pos">Zero cancellazioni</span> nel periodo su ${all.length} appuntamenti. I tuoi pazienti rispettano gli orari.`
       });
     }
   }
