@@ -526,7 +526,7 @@ html.dark .cancel-token-code{color:var(--ink)}
 .notif-toggle-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .notif-toggle-row:last-child{border-bottom:none}
 .notif-toggle-info{flex:1}
-.notif-toggle-label{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.notif-toggle-label,.notif-toggle-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
 .notif-toggle-desc{font-size:12px;color:var(--ink3);line-height:1.4}
 .toggle-switch{position:relative;display:inline-flex;align-items:center;cursor:pointer;flex-shrink:0;margin-top:2px}
 .toggle-switch input{opacity:0;width:0;height:0;position:absolute}
@@ -863,6 +863,7 @@ html.dark .cancel-token-code{color:var(--ink)}
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon">👥</span><span>Pazienti</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon">🏥</span><span>Centri</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon">👤</span><span>Profilo</span></div>
+      <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon">⚙️</span><span>Impostazioni</span></div>
     </nav>
     <div class="sidebar-bottom">
       <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
@@ -881,6 +882,7 @@ html.dark .cancel-token-code{color:var(--ink)}
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <button class="mobile-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
+        <button class="mobile-theme-btn" onclick="showPage('impostazioni')" title="Impostazioni">⚙️</button>
         <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" title="Esci"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
       </div>
     </header>
@@ -1119,7 +1121,15 @@ html.dark .cancel-token-code{color:var(--ink)}
         </div></div>
       </div>
 
-      <div style="margin-top:24px">
+    </div>
+
+    <!-- IMPOSTAZIONI -->
+    <div id="page-impostazioni" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Impostazioni</div><div class="page-subtitle">Notifiche, aspetto e dati</div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
         <div class="section-title">Notifiche email ai centri</div>
         <div class="card"><div class="card-body">
           <div class="notif-toggle-row">
@@ -1127,26 +1137,47 @@ html.dark .cancel-token-code{color:var(--ink)}
               <div class="notif-toggle-label">Nuova prenotazione online</div>
               <div class="notif-toggle-desc">La segreteria viene avvisata quando un paziente prenota dalla pagina pubblica</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="notif-nuova-prenotazione" checked><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="imp-notif-nuova-prenotazione"><span class="toggle-slider"></span></label>
           </div>
           <div class="notif-toggle-row">
             <div class="notif-toggle-info">
-              <div class="notif-toggle-label">Cancellazione prenotazione paziente</div>
+              <div class="notif-toggle-label">Cancellazione da parte del paziente</div>
               <div class="notif-toggle-desc">La segreteria viene avvisata quando un paziente cancella la propria prenotazione</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="notif-cancellazione" checked><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="imp-notif-cancellazione"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Cancellazione da parte tua</div>
+              <div class="notif-toggle-desc">La segreteria viene avvisata quando sei tu a cancellare un appuntamento</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-notif-cancellazione-medico"><span class="toggle-slider"></span></label>
           </div>
           <div class="notif-toggle-row">
             <div class="notif-toggle-info">
               <div class="notif-toggle-label">Appuntamento inserito manualmente</div>
               <div class="notif-toggle-desc">Attiva se vuoi avvisare la segreteria anche quando inserisci tu stesso un appuntamento</div>
             </div>
-            <label class="toggle-switch"><input type="checkbox" id="notif-appuntamento-manuale"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" id="imp-notif-appuntamento-manuale"><span class="toggle-slider"></span></label>
           </div>
-          <p style="font-size:12px;color:var(--ink3);margin-top:16px;padding-top:12px;border-top:1px solid var(--border);text-align:center">
-            💾 Ricorda di salvare il profilo per applicare le modifiche
-          </p>
         </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div class="section-title">Visualizzazione agenda</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Nascondi prenotazioni cancellate</div>
+              <div class="notif-toggle-desc">Le prenotazioni cancellate non compaiono di default in agenda</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-nascondi-cancellati"><span class="toggle-slider"></span></label>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button class="btn btn-primary" onclick="saveImpostazioni()">💾 Salva impostazioni</button>
       </div>
     </div>
   </main>
@@ -2146,6 +2177,9 @@ async function loadMedicoFromDB(user){
       S.settings.notifNuovaPrenotazione   = data.notifica_nuova_prenotazione   !== false;
       S.settings.notifCancellazione       = data.notifica_cancellazione        !== false;
       S.settings.notifAppuntamentoManuale = data.notifica_appuntamento_manuale === true;
+      S.settings.notifCancellazioneMedico = data.notifica_cancellazione_medico !== false;
+      S.settings.nascondiCancellati       = data.nascondi_cancellati           === true;
+      if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
       save();
       console.log('[Delphi~Med] Profilo medico caricato da DB:', user.email);
     }
@@ -2671,7 +2705,7 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','centri','profilo'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','centri','profilo','impostazioni'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
@@ -2686,6 +2720,7 @@ function showPage(id){
   if(id==='centri') renderCentri();
   if(id==='profilo'){ loadSettings(); renderTipiAree(); prefillProfiloNome(); }
   if(id==='dashboard'){ renderDashboard(); renderPending(); }
+  if(id==='impostazioni') renderImpostazioni();
 }
 
 // ── MODALS ──
@@ -3907,10 +3942,20 @@ function openAppuntamentoFromAgenda(){
 
 var _mostraCancellati = false;
 function toggleMostraCancellati(){
-  _mostraCancellati=!_mostraCancellati;
-  const btn=document.getElementById('btn-mostra-cancellati');
-  if(btn) btn.textContent=_mostraCancellati?'Nascondi cancellati':'Mostra cancellati';
-  renderDayAppointments();
+  _mostraCancellati = !_mostraCancellati;
+  S.settings.nascondiCancellati = !_mostraCancellati;
+  save();
+  if(isOnline() && S.medicoId){
+    supabaseClient.from('medici').update({
+      nascondi_cancellati: S.settings.nascondiCancellati
+    }).eq('id', S.medicoId).then(({error})=>{
+      if(error) console.error('[Delphi~Med] update nascondi_cancellati:', error.message);
+    });
+  }
+  const btn = document.getElementById('btn-mostra-cancellati');
+  if(btn) btn.textContent = _mostraCancellati ? 'Nascondi cancellati' : 'Mostra cancellati';
+  if(S.agendaView==='month') renderMonthView();
+  else renderDayAppointments();
 }
 function renderDayAppointments(){
   const container = document.getElementById('appointments-container');
@@ -4922,11 +4967,6 @@ function loadSettings(){
   } else {
     fld('setting-apikey', localStorage.getItem('medidesk_apikey'));
   }
-  // Notifiche
-  const chk=(id,val)=>{ const el=document.getElementById(id); if(el) el.checked=!!val; };
-  chk('notif-nuova-prenotazione',   S.settings.notifNuovaPrenotazione   !== false);
-  chk('notif-cancellazione',        S.settings.notifCancellazione       !== false);
-  chk('notif-appuntamento-manuale', S.settings.notifAppuntamentoManuale === true);
   updateBioCounter();
   renderSlugPreview();
   renderLingue();
@@ -4958,10 +4998,6 @@ async function saveSettings(){
   S.settings.instagram   = val('setting-instagram');
   S.settings.youtube     = val('setting-youtube');
   S.settings.facebook    = val('setting-facebook');
-  const chkVal=id=>{ const el=document.getElementById(id); return el?el.checked:false; };
-  S.settings.notifNuovaPrenotazione   = chkVal('notif-nuova-prenotazione');
-  S.settings.notifCancellazione       = chkVal('notif-cancellazione');
-  S.settings.notifAppuntamentoManuale = chkVal('notif-appuntamento-manuale');
   if(!ANTHROPIC_KEY_RUNTIME){
     const key = val('setting-apikey');
     if(key) localStorage.setItem('medidesk_apikey',key); else localStorage.removeItem('medidesk_apikey');
@@ -5300,6 +5336,9 @@ async function bkInit(){
       S.settings.notifNuovaPrenotazione   = m.notifica_nuova_prenotazione   !== false;
       S.settings.notifCancellazione       = m.notifica_cancellazione        !== false;
       S.settings.notifAppuntamentoManuale = m.notifica_appuntamento_manuale === true;
+      S.settings.notifCancellazioneMedico = m.notifica_cancellazione_medico !== false;
+      S.settings.nascondiCancellati       = m.nascondi_cancellati           === true;
+      if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
       const { data: tipiDB } = await supabaseClient
         .from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
       S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
@@ -6098,6 +6137,55 @@ function toggleCentroGroup(gid){
   const isOpen=body.style.display!=='none';
   body.style.display=isOpen?'none':'block';
   if(chev) chev.textContent=isOpen?'▸':'▾';
+}
+
+// ── IMPOSTAZIONI ──
+function renderImpostazioni(){
+  const chk = (id, val) => {
+    const el = document.getElementById(id);
+    if(el) el.checked = !!val;
+  };
+  chk('imp-notif-nuova-prenotazione',      S.settings.notifNuovaPrenotazione      !== false);
+  chk('imp-notif-cancellazione',           S.settings.notifCancellazione          !== false);
+  chk('imp-notif-cancellazione-medico',    S.settings.notifCancellazioneMedico    !== false);
+  chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
+  chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
+}
+
+async function saveImpostazioni(){
+  const chkVal = id => {
+    const el = document.getElementById(id);
+    return el ? el.checked : false;
+  };
+  S.settings.notifNuovaPrenotazione      = chkVal('imp-notif-nuova-prenotazione');
+  S.settings.notifCancellazione          = chkVal('imp-notif-cancellazione');
+  S.settings.notifCancellazioneMedico    = chkVal('imp-notif-cancellazione-medico');
+  S.settings.notifAppuntamentoManuale    = chkVal('imp-notif-appuntamento-manuale');
+  S.settings.nascondiCancellati          = chkVal('imp-nascondi-cancellati');
+  save();
+  if(isOnline() && S.medicoId){
+    try {
+      const { error } = await supabaseClient.from('medici').update({
+        notifica_nuova_prenotazione:    S.settings.notifNuovaPrenotazione,
+        notifica_cancellazione:         S.settings.notifCancellazione,
+        notifica_cancellazione_medico:  S.settings.notifCancellazioneMedico,
+        notifica_appuntamento_manuale:  S.settings.notifAppuntamentoManuale,
+        nascondi_cancellati:            S.settings.nascondiCancellati
+      }).eq('id', S.medicoId);
+      if(error) throw error;
+      showToast('Impostazioni salvate ✓');
+    } catch(e){
+      console.error('[Delphi~Med] saveImpostazioni:', e.message);
+      showToast('Errore nel salvataggio: '+e.message);
+    }
+  } else {
+    showToast('Impostazioni salvate localmente');
+  }
+  if(typeof _mostraCancellati !== 'undefined'){
+    _mostraCancellati = !S.settings.nascondiCancellati;
+  }
+  if(S.agendaView==='month') renderMonthView();
+  else renderDayAppointments();
 }
 
 // ── TOAST ──
