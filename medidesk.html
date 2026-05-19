@@ -2862,7 +2862,7 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','centri','profilo','impostazioni'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','centri','profilo','statistiche','impostazioni'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
@@ -2877,6 +2877,7 @@ function showPage(id){
   if(id==='centri') renderCentri();
   if(id==='profilo'){ loadSettings(); renderTipiAree(); prefillProfiloNome(); }
   if(id==='dashboard'){ renderDashboard(); renderPending(); }
+  if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
 }
 
@@ -6399,6 +6400,262 @@ function esportaDati(){
     console.error('[Delphi~Med] esportaDati:', e.message);
     showToast('Errore export: '+e.message);
   }
+}
+
+// ── STATISTICHE ──
+let _statsPeriod = 30;
+
+function setStatsPeriod(days){
+  _statsPeriod = days;
+  document.querySelectorAll('.stats-period-btn').forEach(b=>{
+    b.classList.toggle('active', Number(b.dataset.period)===days);
+  });
+  renderStatistiche();
+}
+
+function _statsFilteredAppuntamenti(){
+  const now = new Date();
+  let cutoff = null;
+  if(_statsPeriod > 0){
+    cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - _statsPeriod);
+  }
+  return (S.appuntamenti||[]).filter(a=>{
+    if(!a.data) return false;
+    if(!cutoff) return true;
+    const d = new Date(a.data + 'T00:00:00');
+    return d >= cutoff && d <= now;
+  });
+}
+
+function _statsPreviousPeriodAppuntamenti(){
+  if(_statsPeriod === 0) return [];
+  const now = new Date();
+  const cutoffEnd = new Date(now);
+  cutoffEnd.setDate(cutoffEnd.getDate() - _statsPeriod);
+  const cutoffStart = new Date(cutoffEnd);
+  cutoffStart.setDate(cutoffStart.getDate() - _statsPeriod);
+  return (S.appuntamenti||[]).filter(a=>{
+    if(!a.data) return false;
+    const d = new Date(a.data + 'T00:00:00');
+    return d >= cutoffStart && d < cutoffEnd;
+  });
+}
+
+function renderStatistiche(){
+  const all = _statsFilteredAppuntamenti();
+  const prev = _statsPreviousPeriodAppuntamenti();
+
+  const empty = document.getElementById('stats-empty');
+  const content = document.getElementById('stats-content');
+  if(all.length === 0){
+    empty.style.display = 'block';
+    content.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  const effettuate = all.filter(a=>!a.cancelled);
+  const cancellate = all.filter(a=>a.cancelled);
+  const prevEffettuate = prev.filter(a=>!a.cancelled);
+
+  // KPI: Effettuate + delta
+  document.getElementById('kpi-effettuate').textContent = effettuate.length;
+  const deltaEl = document.getElementById('kpi-effettuate-delta');
+  if(prev.length > 0 && _statsPeriod > 0){
+    const delta = effettuate.length - prevEffettuate.length;
+    const pct = prevEffettuate.length > 0 ? Math.round((delta/prevEffettuate.length)*100) : 0;
+    const sign = delta >= 0 ? '+' : '';
+    deltaEl.textContent = `${sign}${delta} vs periodo precedente (${sign}${pct}%)`;
+    deltaEl.className = 'stats-kpi-delta ' + (delta>=0?'up':'down');
+  } else {
+    deltaEl.textContent = '';
+    deltaEl.className = 'stats-kpi-delta';
+  }
+
+  // KPI: Cancellate
+  document.getElementById('kpi-cancellate').textContent = cancellate.length;
+  const totalForRate = all.length;
+  const cancRate = totalForRate > 0 ? Math.round((cancellate.length/totalForRate)*100) : 0;
+  document.getElementById('kpi-cancellate-rate').textContent = `${cancRate}% del totale`;
+
+  // KPI: Prime visite
+  const prime = effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+  document.getElementById('kpi-prime').textContent = prime;
+  const primePct = effettuate.length > 0 ? Math.round((prime/effettuate.length)*100) : 0;
+  document.getElementById('kpi-prime-pct').textContent = `${primePct}% sul totale visite`;
+
+  // KPI: Ore lavorate
+  let totMin = 0;
+  effettuate.forEach(a=>{
+    const centro = (S.centri||[]).find(c=>String(c.id)===String(a.centroId));
+    let dur = 30;
+    if(centro && centro.turni && centro.turni.length){
+      const t = centro.turni.find(x=>x.durata_slot) || centro.turni[0];
+      if(t && t.durata_slot) dur = t.durata_slot;
+    }
+    totMin += dur;
+  });
+  const ore = Math.floor(totMin/60);
+  const min = totMin%60;
+  document.getElementById('kpi-ore').textContent = `${ore}h ${min}m`;
+
+  _renderTrendMensile(effettuate);
+  _renderPerCentro(effettuate);
+  _renderGiornoSettimana(effettuate);
+  _renderFasceOrarie(effettuate);
+  _renderOrigine(effettuate);
+  _renderTipoVisita(effettuate);
+  _renderArea(effettuate);
+  _renderCancelSource(cancellate);
+}
+
+function _esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _renderBarList(containerId, data, opts){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(!data || !data.length){
+    el.innerHTML = '<div class="chart-empty">Nessun dato disponibile</div>';
+    return;
+  }
+  const max = Math.max(...data.map(d=>d.value), 1);
+  const showPct = opts && opts.showPct;
+  const total = data.reduce((s,d)=>s+d.value,0);
+  el.innerHTML = data.map(d=>{
+    const pct = Math.round((d.value/max)*100);
+    const realPct = total > 0 ? Math.round((d.value/total)*100) : 0;
+    const color = d.color || 'var(--accent)';
+    const valLabel = showPct ? `${d.value} (${realPct}%)` : d.value;
+    return `<div class="chart-row">
+      <div class="chart-row-label" title="${_esc(d.label)}">${_esc(d.label)}</div>
+      <div class="chart-row-bar"><div class="chart-row-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="chart-row-value">${valLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+function _renderTrendMensile(apps){
+  const months = {};
+  apps.forEach(a=>{
+    const key = a.data.substring(0,7);
+    months[key] = (months[key]||0)+1;
+  });
+  const sorted = Object.keys(months).sort();
+  const labels = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  const data = sorted.map(k=>{
+    const [y,m] = k.split('-');
+    return { label: `${labels[parseInt(m)-1]} ${y.substring(2)}`, value: months[k] };
+  });
+  _renderBarList('chart-trend', data);
+}
+
+function _renderPerCentro(apps){
+  const counts = {};
+  apps.forEach(a=>{
+    const c = (S.centri||[]).find(x=>String(x.id)===String(a.centroId));
+    const name = c ? c.nome : '— sconosciuto —';
+    counts[name] = (counts[name]||0)+1;
+  });
+  const data = Object.entries(counts)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([label,value])=>{
+      const c = (S.centri||[]).find(x=>x.nome===label);
+      return { label, value, color: c && c.colore ? c.colore : 'var(--accent)' };
+    });
+  _renderBarList('chart-centri', data, {showPct:true});
+}
+
+function _renderGiornoSettimana(apps){
+  const days = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+  const counts = [0,0,0,0,0,0,0];
+  apps.forEach(a=>{
+    const d = new Date(a.data + 'T00:00:00');
+    let dow = d.getDay();
+    dow = (dow + 6) % 7;
+    counts[dow]++;
+  });
+  const data = days.map((label,i)=>({label, value: counts[i]}));
+  _renderBarList('chart-dow', data);
+}
+
+function _renderFasceOrarie(apps){
+  const buckets = {
+    '08:00-10:00':0,'10:00-12:00':0,'12:00-14:00':0,
+    '14:00-16:00':0,'16:00-18:00':0,'18:00-20:00':0,'Altro':0
+  };
+  apps.forEach(a=>{
+    if(!a.ora) return;
+    const h = parseInt(a.ora.substring(0,2));
+    if(h>=8 && h<10) buckets['08:00-10:00']++;
+    else if(h>=10 && h<12) buckets['10:00-12:00']++;
+    else if(h>=12 && h<14) buckets['12:00-14:00']++;
+    else if(h>=14 && h<16) buckets['14:00-16:00']++;
+    else if(h>=16 && h<18) buckets['16:00-18:00']++;
+    else if(h>=18 && h<20) buckets['18:00-20:00']++;
+    else buckets['Altro']++;
+  });
+  const data = Object.entries(buckets)
+    .filter(([,v])=>v>0)
+    .map(([label,value])=>({label,value}));
+  _renderBarList('chart-orari', data);
+}
+
+function _renderOrigine(apps){
+  const online = apps.filter(a=>a.source==='paziente').length;
+  const manuale = apps.filter(a=>a.source!=='paziente').length;
+  const data = [
+    { label: '🌐 Online', value: online, color: '#0D9488' },
+    { label: '✍️ Manuale', value: manuale, color: '#6366F1' }
+  ];
+  _renderBarList('chart-source', data, {showPct:true});
+}
+
+function _renderTipoVisita(apps){
+  const counts = {};
+  apps.forEach(a=>{
+    const t = a.tipo || '— non specificato —';
+    counts[t] = (counts[t]||0)+1;
+  });
+  const data = Object.entries(counts)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([label,value])=>({label,value}));
+  _renderBarList('chart-tipo', data, {showPct:true});
+}
+
+function _renderArea(apps){
+  const counts = {};
+  apps.forEach(a=>{
+    if(!a.area) return;
+    counts[a.area] = (counts[a.area]||0)+1;
+  });
+  if(Object.keys(counts).length === 0){
+    const el = document.getElementById('chart-area');
+    if(el) el.innerHTML = '<div class="chart-empty">Nessuna area tematica assegnata agli appuntamenti del periodo.</div>';
+    return;
+  }
+  const data = Object.entries(counts)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([label,value])=>({label,value}));
+  _renderBarList('chart-area', data, {showPct:true});
+}
+
+function _renderCancelSource(cancellate){
+  if(!cancellate.length){
+    const el = document.getElementById('chart-cancel-source');
+    if(el) el.innerHTML = '<div class="chart-empty">Nessuna cancellazione nel periodo. 🎉</div>';
+    return;
+  }
+  const online = cancellate.filter(a=>a.source==='paziente').length;
+  const manuale = cancellate.filter(a=>a.source!=='paziente').length;
+  const data = [
+    { label: '🌐 Online (paziente)', value: online, color: '#dc2626' },
+    { label: '✍️ Inserito da me', value: manuale, color: '#ea580c' }
+  ];
+  _renderBarList('chart-cancel-source', data, {showPct:true});
 }
 
 // ── TOAST ──
