@@ -618,6 +618,17 @@ html.dark .cancel-token-code{color:var(--ink)}
   .stats-kpi-value{font-size:22px}
   .chart-row-label{flex:0 0 90px;font-size:12px}
 }
+
+.stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.08),rgba(13,148,136,.02));border:1px solid rgba(13,148,136,.2);border-radius:var(--r-md);padding:14px 16px;margin-bottom:20px}
+.stats-insights-header{margin-bottom:10px;color:var(--accent)}
+.stats-insight-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:13.5px;line-height:1.5;color:var(--ink)}
+.stats-insight-item + .stats-insight-item{border-top:1px solid rgba(13,148,136,.1)}
+.stats-insight-icon{flex:0 0 24px;font-size:18px;line-height:1.3}
+.stats-insight-text{flex:1}
+.stats-insight-text strong{color:var(--accent);font-weight:600}
+.stats-insight-text .pos{color:#16a34a;font-weight:600}
+.stats-insight-text .neg{color:#dc2626;font-weight:600}
+html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15),rgba(13,148,136,.05));border-color:rgba(13,148,136,.3)}
 </style>
 </head>
 <body>
@@ -1181,6 +1192,14 @@ html.dark .cancel-token-code{color:var(--ink)}
 
       <!-- Contenuto -->
       <div id="stats-content">
+        <!-- INSIGHTS -->
+        <div id="stats-insights" class="stats-insights" style="display:none">
+          <div class="stats-insights-header">
+            <span style="font-weight:600;font-size:14px">💡 Cosa dicono i tuoi dati</span>
+          </div>
+          <div id="stats-insights-list"></div>
+        </div>
+
         <!-- KPI ROW -->
         <div class="stats-kpi-row">
           <div class="stats-kpi-card">
@@ -6501,6 +6520,7 @@ function renderStatistiche(){
   const min = totMin%60;
   document.getElementById('kpi-ore').textContent = `${ore}h ${min}m`;
 
+  _renderInsights(all, effettuate, cancellate, prev, prevEffettuate);
   _renderTrendMensile(effettuate);
   _renderPerCentro(effettuate);
   _renderGiornoSettimana(effettuate);
@@ -6509,6 +6529,167 @@ function renderStatistiche(){
   _renderTipoVisita(effettuate);
   _renderArea(effettuate);
   _renderCancelSource(cancellate);
+}
+
+function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
+  const box = document.getElementById('stats-insights');
+  const list = document.getElementById('stats-insights-list');
+  const insights = [];
+
+  // 1. TREND VOLUME
+  if(_statsPeriod > 0 && prev.length > 0){
+    const delta = effettuate.length - prevEffettuate.length;
+    if(prevEffettuate.length >= 3){
+      const pct = Math.round((delta/prevEffettuate.length)*100);
+      if(pct >= 20){
+        insights.push({
+          icon:'📈',
+          html:`Stai crescendo: <span class="pos">+${delta} visite</span> rispetto al periodo precedente (<span class="pos">+${pct}%</span>). Continua così.`
+        });
+      } else if(pct <= -20){
+        insights.push({
+          icon:'📉',
+          html:`Calo di attività: <span class="neg">${delta} visite</span> rispetto al periodo precedente (<span class="neg">${pct}%</span>). Potrebbe valere la pena rivedere disponibilità o promozione.`
+        });
+      }
+    }
+  }
+
+  // 2. GIORNO PIÙ PIENO
+  if(effettuate.length >= 5){
+    const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+    const counts = [0,0,0,0,0,0,0];
+    effettuate.forEach(a=>{
+      const d = new Date(a.data + 'T00:00:00');
+      counts[d.getDay()]++;
+    });
+    const max = Math.max(...counts);
+    const maxIdx = counts.indexOf(max);
+    const avg = effettuate.length / counts.filter(c=>c>0).length;
+    if(max > 0 && max >= avg * 1.4){
+      const pctSopra = Math.round((max/avg - 1) * 100);
+      insights.push({
+        icon:'📅',
+        html:`Il <strong>${days[maxIdx]}</strong> è il tuo giorno più pieno: <strong>${max} visite</strong> nel periodo, il <strong>${pctSopra}%</strong> in più della media.`
+      });
+    }
+  }
+
+  // 3. FASCIA ORARIA PIÙ RICHIESTA
+  if(effettuate.length >= 5){
+    const buckets = {
+      '08:00-10:00':0,'10:00-12:00':0,'12:00-14:00':0,
+      '14:00-16:00':0,'16:00-18:00':0,'18:00-20:00':0
+    };
+    effettuate.forEach(a=>{
+      if(!a.ora) return;
+      const h = parseInt(a.ora.substring(0,2));
+      if(h>=8 && h<10) buckets['08:00-10:00']++;
+      else if(h>=10 && h<12) buckets['10:00-12:00']++;
+      else if(h>=12 && h<14) buckets['12:00-14:00']++;
+      else if(h>=14 && h<16) buckets['14:00-16:00']++;
+      else if(h>=16 && h<18) buckets['16:00-18:00']++;
+      else if(h>=18 && h<20) buckets['18:00-20:00']++;
+    });
+    const entries = Object.entries(buckets).filter(([,v])=>v>0);
+    if(entries.length){
+      entries.sort((a,b)=>b[1]-a[1]);
+      const [topFascia, topCount] = entries[0];
+      const tot = entries.reduce((s,[,v])=>s+v,0);
+      const pct = Math.round((topCount/tot)*100);
+      if(pct >= 35){
+        insights.push({
+          icon:'🕐',
+          html:`La fascia <strong>${topFascia}</strong> concentra il <strong>${pct}%</strong> delle tue visite. Potresti considerare di aprire più slot in quell'orario.`
+        });
+      }
+    }
+  }
+
+  // 4. CENTRO PRINCIPALE
+  if(effettuate.length >= 5 && (S.centri||[]).length > 1){
+    const counts = {};
+    effettuate.forEach(a=>{
+      counts[a.centroId] = (counts[a.centroId]||0)+1;
+    });
+    const entries = Object.entries(counts);
+    if(entries.length){
+      entries.sort((a,b)=>b[1]-a[1]);
+      const [topId, topCount] = entries[0];
+      const centro = (S.centri||[]).find(c=>String(c.id)===String(topId));
+      if(centro){
+        const pct = Math.round((topCount/effettuate.length)*100);
+        if(pct >= 50){
+          insights.push({
+            icon:'🏥',
+            html:`<strong>${_esc(centro.nome)}</strong> è il tuo centro principale: il <strong>${pct}%</strong> delle prenotazioni arriva da lì.`
+          });
+        }
+      }
+    }
+  }
+
+  // 5. TASSO CANCELLAZIONE
+  if(all.length >= 5){
+    const cancRate = (cancellate.length / all.length) * 100;
+    if(cancRate >= 20){
+      insights.push({
+        icon:'⚠️',
+        html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> degli appuntamenti viene cancellato. Verifica che i promemoria 24h siano attivi.`
+      });
+    } else if(cancRate <= 5 && cancellate.length === 0 && all.length >= 10){
+      insights.push({
+        icon:'✨',
+        html:`<span class="pos">Zero cancellazioni</span> nel periodo. I tuoi pazienti rispettano gli appuntamenti.`
+      });
+    }
+  }
+
+  // 6. ONLINE VS MANUALE
+  if(effettuate.length >= 5){
+    const online = effettuate.filter(a=>a.source==='paziente').length;
+    const pctOnline = Math.round((online/effettuate.length)*100);
+    if(pctOnline >= 60){
+      insights.push({
+        icon:'🌐',
+        html:`Il <strong>${pctOnline}%</strong> dei tuoi pazienti prenota online. La tua pagina di prenotazione sta funzionando bene.`
+      });
+    } else if(pctOnline > 0 && pctOnline <= 15 && (S.appuntamenti||[]).length >= 10){
+      insights.push({
+        icon:'💬',
+        html:`Solo il <strong>${pctOnline}%</strong> delle prenotazioni arriva online. Condividi più spesso il tuo link di prenotazione su WhatsApp o tramite QR code per ridurre il lavoro di centralino.`
+      });
+    }
+  }
+
+  // 7. PRIME VISITE
+  if(effettuate.length >= 10){
+    const prime = effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+    const pctPrime = Math.round((prime/effettuate.length)*100);
+    if(pctPrime >= 50){
+      insights.push({
+        icon:'🆕',
+        html:`Il <strong>${pctPrime}%</strong> delle visite sono prime visite: stai acquisendo molti nuovi pazienti.`
+      });
+    } else if(pctPrime <= 15 && prime > 0){
+      insights.push({
+        icon:'🔁',
+        html:`Solo il <strong>${pctPrime}%</strong> sono prime visite: lavori soprattutto su pazienti di ritorno.`
+      });
+    }
+  }
+
+  if(insights.length === 0){
+    box.style.display = 'none';
+    return;
+  }
+  list.innerHTML = insights.slice(0,5).map(ins=>`
+    <div class="stats-insight-item">
+      <div class="stats-insight-icon">${ins.icon}</div>
+      <div class="stats-insight-text">${ins.html}</div>
+    </div>
+  `).join('');
+  box.style.display = 'block';
 }
 
 function _esc(s){
