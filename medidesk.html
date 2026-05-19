@@ -587,6 +587,37 @@ html.dark .cancel-token-code{color:var(--ink)}
   .home-section+.home-section{border-right:none;border-top:1px solid #e2e8e8;margin-top:28px;padding-top:28px}
   .home-section{padding:0}
 }
+
+/* ── STATISTICHE ── */
+.stats-period-bar{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.stats-period-btn{padding:8px 16px;border:1px solid var(--border);background:var(--surface);color:var(--ink2);border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.stats-period-btn:hover{border-color:var(--accent);color:var(--accent)}
+.stats-period-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stats-kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:16px}
+.stats-kpi-label{font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stats-kpi-value{font-size:28px;font-weight:700;color:var(--ink);line-height:1.1}
+.stats-kpi-delta{font-size:12px;color:var(--ink3);margin-top:4px}
+.stats-kpi-delta.up{color:#16a34a}
+.stats-kpi-delta.down{color:#dc2626}
+
+.stats-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+
+.chart-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+.chart-row-label{flex:0 0 110px;color:var(--ink2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-row-bar{flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden;position:relative}
+.chart-row-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+.chart-row-value{flex:0 0 60px;text-align:right;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;font-size:12px}
+
+.chart-empty{text-align:center;color:var(--ink3);font-size:13px;padding:20px}
+
+@media(max-width:768px){
+  .stats-kpi-row{grid-template-columns:repeat(2,1fr)}
+  .stats-grid-2{grid-template-columns:1fr}
+  .stats-kpi-value{font-size:22px}
+  .chart-row-label{flex:0 0 90px;font-size:12px}
+}
 </style>
 </head>
 <body>
