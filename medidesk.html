@@ -3937,7 +3937,8 @@ async function saveAppuntamento(){
           data: A.dateStr,
           ora: A.ora,
           tipo_visita: newAppt.tipo || '',
-          codice_cancellazione: cancellationToken
+          codice_cancellazione: cancellationToken,
+          appt_id: newAppt.id || ''
         })
       }).catch(e=>console.error('[Delphi~Med] send-email manuale:', e.message));
     }
@@ -5899,7 +5900,7 @@ async function confirmBooking(){
       console.log('[Booking] INSERT OK, id:', inserted.id);
       if(appt.email){
         const _ec=S.centri.find(c=>String(c.id)===String(bk.centroId));
-        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:appt.email,paziente_nome:nome+' '+cognome,medico_nome:bk.medicoNome||document.getElementById('bk-doctor-name').textContent,medico_email:bk.medicoEmail||'',centro_nome:_ec?_ec.nome:(bk._centroData?bk._centroData.nome:''),centro_indirizzo:bk._centroData?bk._centroData.indirizzo||'':'',data:bk.dateStr,ora:bk.ora,tipo_visita:appt.tipo||'',codice_cancellazione:cancellationToken})}).catch(e=>console.error('[Delphi~Med] send-email:',e.message));
+        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:appt.email,paziente_nome:nome+' '+cognome,medico_nome:bk.medicoNome||document.getElementById('bk-doctor-name').textContent,medico_email:bk.medicoEmail||'',centro_nome:_ec?_ec.nome:(bk._centroData?bk._centroData.nome:''),centro_indirizzo:bk._centroData?bk._centroData.indirizzo||'':'',data:bk.dateStr,ora:bk.ora,tipo_visita:appt.tipo||'',codice_cancellazione:cancellationToken,appt_id:appt.id||''})}).catch(e=>console.error('[Delphi~Med] send-email:',e.message));
       }
     } catch(e){
       console.error('[Delphi~Med] confirmBooking INSERT:', e.message);

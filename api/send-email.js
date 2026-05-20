@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'RESEND_API_KEY non configurata' });
   }
 
-  const { to, subject, html: rawHtml, tipo, paziente_nome, medico_nome, medico_email, medico_slug, centro_nome, centro_indirizzo, data, ora, tipo_visita, codice_cancellazione } = req.body || {};
+  const { to, subject, html: rawHtml, tipo, paziente_nome, medico_nome, medico_email, medico_slug, centro_nome, centro_indirizzo, data, ora, tipo_visita, codice_cancellazione, appt_id } = req.body || {};
 
   if (!to || typeof to !== 'string') {
     return res.status(400).json({ error: 'Campo to mancante o non valido' });
@@ -97,7 +97,8 @@ export default async function handler(req, res) {
     data:                 data || '',
     ora:                  esc(ora),
     tipo_visita:          esc(tipo_visita) || '&mdash;',
-    codice_cancellazione: esc(codice_cancellazione)
+    codice_cancellazione: esc(codice_cancellazione),
+    appt_id:              appt_id || ''
   });
 
   const emailPayload = {
@@ -161,8 +162,8 @@ function buildHtmlCancellazioneMedico({ paziente_nome, medico_nome, centro_nome,
 </html>`;
 }
 
-function buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome }) {
-  if (!data || !ora) return { googleUrl: '', outlookUrl: '', icsDataUrl: '' };
+function buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome, appt_id, codice_cancellazione }) {
+  if (!data || !ora) return { googleUrl: '', icsUrl: '' };
   const [y, m, d] = data.split('-');
   const [hh, mm] = (ora || '00:00').split(':');
   const dtStart = `${y}${m}${d}T${hh}${mm}00`;
@@ -175,41 +176,27 @@ function buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_no
   const details = medico_nome ? `Appuntamento con ${medico_nome}` : 'Visita medica';
 
   const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dtStart}/${dtEnd}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
-  const outlookUrl = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${y}-${m}-${d}T${hh}:${mm}:00&enddt=${y}-${m}-${d}T${endH}:${endM}:00&body=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
 
-  const icsLines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Delphi~Med//IT',
-    'BEGIN:VEVENT',
-    `UID:${y}${m}${d}${hh}${mm}@delphi-med.com`,
-    `DTSTART;TZID=Europe/Rome:${dtStart}`,
-    `DTEND;TZID=Europe/Rome:${dtEnd}`,
-    `SUMMARY:${title}`,
-    `DESCRIPTION:${details}`,
-    location ? `LOCATION:${location}` : null,
-    'END:VEVENT',
-    'END:VCALENDAR'
-  ].filter(Boolean).join('\r\n');
-  const icsDataUrl = 'data:text/calendar;base64,' + Buffer.from(icsLines).toString('base64');
+  const icsUrl = (appt_id && codice_cancellazione)
+    ? `https://delphi-med.com/api/ics?id=${encodeURIComponent(appt_id)}&token=${encodeURIComponent(codice_cancellazione)}`
+    : '';
 
-  return { googleUrl, outlookUrl, icsDataUrl };
+  return { googleUrl, icsUrl };
 }
 
-function buildHtml({ paziente_nome, medico_nome, centro_nome, centro_indirizzo, dataFmt, data, ora, tipo_visita, codice_cancellazione }) {
+function buildHtml({ paziente_nome, medico_nome, centro_nome, centro_indirizzo, dataFmt, data, ora, tipo_visita, codice_cancellazione, appt_id }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
-  const { googleUrl, outlookUrl, icsDataUrl } = buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome });
-  const calSection = (googleUrl) ? `
+  const { googleUrl, icsUrl } = buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome, appt_id, codice_cancellazione });
+  const btnStyle = 'display:inline-block;padding:8px 14px;background:#f0fdfb;border:1px solid #ccece9;border-radius:6px;text-decoration:none;color:#0D9488;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;';
+  const calSection = googleUrl ? `
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
         <tr><td>
           <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#999;margin:0 0 10px;">Aggiungi al calendario</p>
-          <table cellpadding="0" cellspacing="4">
-            <tr>
-              <td><a href="${googleUrl}" target="_blank" style="display:inline-block;padding:8px 14px;background:#f0fdfb;border:1px solid #ccece9;border-radius:6px;text-decoration:none;color:#0D9488;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Google Calendar</a></td>
-              <td><a href="${icsDataUrl}" download="visita_medica.ics" style="display:inline-block;padding:8px 14px;background:#f0fdfb;border:1px solid #ccece9;border-radius:6px;text-decoration:none;color:#0D9488;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Apple Calendar</a></td>
-              <td><a href="${outlookUrl}" target="_blank" style="display:inline-block;padding:8px 14px;background:#f0fdfb;border:1px solid #ccece9;border-radius:6px;text-decoration:none;color:#0D9488;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">Outlook</a></td>
-            </tr>
-          </table>
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="padding-right:8px;"><a href="${googleUrl}" target="_blank" style="${btnStyle}">Google Calendar</a></td>
+            ${icsUrl ? `<td style="padding-right:8px;"><a href="${icsUrl}" style="${btnStyle}">Apple Calendar</a></td>
+            <td><a href="${icsUrl}" style="${btnStyle}">Calendario Outlook</a></td>` : ''}
+          </tr></table>
         </td></tr>
       </table>` : '';
   return `<!DOCTYPE html>
