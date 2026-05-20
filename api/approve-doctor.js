@@ -44,7 +44,7 @@ export default async function handler(req, res) {
   try {
     const rows = await patchResponse.json();
     medico = Array.isArray(rows) ? rows[0] : rows;
-    console.log('[approve-doctor] dati medico recuperati:', JSON.stringify(medico));
+    console.log('[approve-doctor] dati medico recuperati:', !!medico);
   } catch (e) {
     console.error('[approve-doctor] errore parsing risposta PATCH:', e.message);
   }
@@ -62,7 +62,7 @@ export default async function handler(req, res) {
         })
       });
       if (emailRes.ok) {
-        console.log('[approve-doctor] email di approvazione inviata a:', medico.email);
+        console.log('[approve-doctor] email di approvazione inviata');
       } else {
         const errBody = await emailRes.text().catch(() => '');
         console.error('[approve-doctor] send-email ha risposto con errore HTTP', emailRes.status, errBody);

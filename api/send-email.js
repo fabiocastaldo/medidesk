@@ -1,5 +1,21 @@
 import { Resend } from 'resend';
 
+// A.5: rate limiting in-memory (20 req/ora per IP)
+const emailRateMap = new Map();
+const EMAIL_RATE_LIMIT = 20;
+const EMAIL_RATE_WINDOW_MS = 60 * 60 * 1000;
+function checkEmailRateLimit(ip) {
+  const now = Date.now();
+  const entry = emailRateMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    emailRateMap.set(ip, { count: 1, resetAt: now + EMAIL_RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= EMAIL_RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
 function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -18,6 +34,11 @@ export default async function handler(req, res) {
 
   if (!to || typeof to !== 'string') {
     return res.status(400).json({ error: 'Campo to mancante o non valido' });
+  }
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  if (!checkEmailRateLimit(ip)) {
+    return res.status(429).json({ error: 'Troppe richieste. Riprova più tardi.' });
   }
 
   const resend = new Resend(apiKey);
@@ -190,7 +211,7 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
         </td></tr>
       </table>
       <p style="font-size:13px;color:#555;line-height:1.6;text-align:center;margin:24px auto 12px;max-width:480px;">
-        Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile: lo slot torner&agrave; subito disponibile per un altro paziente che ne ha bisogno. Hai tempo fino a 24 ore prima della visita.
+        Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile: lo slot torner&agrave; subito disponibile per un altro paziente che ne ha bisogno. Hai tempo fino a 2 ore prima della visita.
       </p>
       <div style="text-align:center;margin:0 0 28px;">
         <a href="${cancelUrl}" style="display:inline-block;padding:12px 24px;background:#0D9488;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;">Cancella l&rsquo;appuntamento</a>
