@@ -248,6 +248,25 @@
 
 ---
 
+## ✅ Completato — sessione 2026-05-20 (Batch B — Privacy, consenso, diritti GDPR)
+
+Branch `feat/privacy-ux` → `master` (merge commit `29d571e`)
+SQL `batch-b-migrations.sql` eseguito in Supabase SQL Editor.
+
+- [x] **B.1** Drop `medici.codice_fiscale`: rimosso da form registrazione, `signUp()`, INSERT, email admin approvazione
+- [x] **B.2** Campo note prenotazione: textarea → input "Recapito alternativo o orari preferiti" + microcopy
+- [x] **B.3** Toggle "Estrai CF dai referti" (default OFF) in Profilo → Preferenze AI; prompt AI condizionale
+- [x] **B.4** Form prenotazione pubblica: informativa breve + 2 checkbox consenso art. 6 + art. 9 GDPR; `consenso_base_at`/`consenso_health_at` su DB
+- [x] **B.5** Modal eliminazione paziente: avviso conservazione, pulsante Esporta ZIP, Elimina + audit log
+- [x] **B.6** Modal eliminazione account 3-step (conteggi → backup → conferma); soft-delete 30gg su `medici.deleted_at`; banner countdown + Annulla eliminazione
+- [x] **B.7** Tabella `audit_log` con RLS (SELECT+INSERT-only per il medico); helper `auditLog()`
+- [x] **B.8** Soglia conservazione configurabile (default 10 anni) in Impostazioni; modal avviso legale al cambio
+- [x] **B.9** Check archivio scaduto post-login: badge ⚠️ sidebar, banner modale ogni 7gg, pagina "Manutenzione archivio" con lista/esporta/elimina massivo
+
+**TODO futuro**: cron job giornaliero per hard-delete dei medici con `deletion_scheduled_at < NOW()` (DELETE su medici, pazienti, visite, appuntamenti, centri, turni, chiusure + storage fotoreferti/).
+
+---
+
 ## ✅ Completato — sessione 2026-05-20 (Batch C — Backup ZIP + pulizia localStorage)
 
 Branch `feat/backup-zip` → `master` (merge commit `88325f9`)
@@ -343,11 +362,11 @@ Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Securi
 - **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
 - **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
 - **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip mergiati e rimossi 2026-05-20)
+- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip + feat/privacy-ux mergiati e rimossi 2026-05-20)
 
 ---
 
-*Ultimo aggiornamento: 2026-05-20 — Batch C (backup ZIP, export singolo paziente, pulizia localStorage, online-first) mergiato su master*
+*Ultimo aggiornamento: 2026-05-20 — Batch B (privacy GDPR: drop CF medico, consensi prenotazione, modal eliminazione paziente/account, audit_log, soglia conservazione, archivio scaduto) mergiato su master*
 
 ---
 
