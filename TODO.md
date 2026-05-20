@@ -279,6 +279,10 @@ Branch `feat/security-hardening` → `master` (merge commit `837e273`)
 - [ ] Sostituire placeholder `termini-di-servizio.html` con testo reale
 - [ ] Sostituire placeholder `privacy-policy.html` con testo reale
 
+### Privacy & GDPR
+
+Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Security in 5 fasi (Hardening tecnico → Sub-responsabili → Documentazione interna → Documenti pubblici → Stripe)
+
 ### Email e notifiche (Step 7)
 - [ ] **Step 7d** — notifiche al medico (3 toggle già in profilo)
 
@@ -286,11 +290,9 @@ Branch `feat/security-hardening` → `master` (merge commit `837e273`)
 - [ ] Rimuovere `save()` / `load()` da localStorage dove non più necessario
 - [ ] Loading states / skeleton UI durante le fetch DB
 - [ ] Toast errori Supabase più descrittivi
-- [ ] Rimuovere `console.log` di debug in produzione
 
 ### Sicurezza — debiti tecnici tracciati
 - [ ] Verificare copertura RLS completa (medico non legge dati di altri medici)
-- [ ] **Rate limiting su prenotazione pubblica anon** (RPC `book_appointment_safe`) — implementare prima del primo medico paying
 - [ ] Scadenza sessione Supabase: gestire refresh automatico
 - [ ] **Referrer-Policy `no-referrer` specifica per `/?cancel=*`** via Vercel Middleware (Edge function) che intercetta la richiesta e aggiunge l'header solo se la querystring contiene `cancel=`. Non urgente: la policy globale `strict-origin-when-cross-origin` già protegge il token.
 
@@ -300,7 +302,6 @@ Branch `feat/security-hardening` → `master` (merge commit `837e273`)
 
 ### Prodotto
 - [ ] Logo grafico Delphi~Med
-- [ ] **Step 8** — indirizzo email personale medico + agente AI che legge mail centri
 - [ ] **Step 9** — pagamenti Stripe (abbonamenti mensili ~19-29€/mese)
 - [ ] **Step 10** — PWA + Capacitor per app store iOS/Android
 
@@ -395,3 +396,11 @@ Decisioni importanti su "elimina profilo":
 - Non basta un checkbox di conferma: digitare l'email o inserire la password
 
 Quando affrontare: dopo Step 9/Stripe. Senza gestione abbonamento attiva, mezza Area Account non avrebbe nulla da mostrare.
+
+---
+
+## 🗂️ NON PRIORITARIO — Da valutare in futuro
+
+- [ ] **Step 8** — indirizzo email personale medico + agente AI che legge mail centri
+
+  Originariamente concepito come gestione email automatica via AI per estrarre prenotazioni da segreterie centri. Non urgente, da rivalutare in futuro se emergerà bisogno reale.
