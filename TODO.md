@@ -6,7 +6,7 @@
 - **Strumento del medico, non marketplace.** Delphi~Med è un'agenda digitale personale per il medico specialista libero professionista: gestisce appuntamenti, pazienti e studio in più ambulatori. Non è una piattaforma pubblica di ricerca medici.
 - **No recensioni pubbliche.** Il profilo del medico esiste per la pagina di prenotazione condivisa direttamente ai pazienti (link/WhatsApp/QR). La home pubblica ha una barra di ricerca per nome/specializzazione, ma l'acquisizione parte sempre dal medico.
 - **Single-file HTML.** Nessun build system, nessun framework: tutto in `medidesk.html` per massima portabilità e semplicità di deployment.
-- **Offline-first con sync Supabase.** Lo stato vive in `localStorage` (`medidesk_v2`) e viene sincronizzato su Supabase quando online.
+- **Online-first con Supabase.** I dati clinici (pazienti, appuntamenti, visite) vivono su Supabase e vengono letti direttamente dal DB. `localStorage` è usato solo per preferenze UI (tema, ecc.) — non più per dati clinici. *(Batch C — 2026-05-20: rimossa persistenza localStorage per dati clinici, rimosse chiavi legacy `medidesk_v2` e `medidesk_apikey`)*
 - **Pricing futuro**: ~19-29€/mese.
 
 ### Scelte tecniche principali
@@ -248,6 +248,19 @@
 
 ---
 
+## ✅ Completato — sessione 2026-05-20 (Batch C — Backup ZIP + pulizia localStorage)
+
+Branch `feat/backup-zip` → `master` (merge commit `88325f9`)
+
+- [x] Backup ZIP completo: CSV pazienti (`pazienti.csv`), CSV appuntamenti (`appuntamenti.csv`), CSV visite (`visite.csv`)
+- [x] Cartella referti rinominata in modo leggibile (`referti/`) + `LEGGIMI.html` di orientamento nell'archivio
+- [x] Export singolo paziente (scheda PDF-like + storico visite) — funzione base per Batch B
+- [x] Pulizia localStorage: rimossi tutti i salvataggi di dati clinici (pazienti, appuntamenti, visite) da `save()` / `load()`
+- [x] Rimozione chiavi legacy `medidesk_v2` e `medidesk_apikey` da localStorage
+- [x] App online-first: localStorage ora usato solo per preferenze UI (tema scuro, ecc.)
+
+---
+
 ## ✅ Completato — sessione 2026-05-20 (Batch A — Sicurezza tecnica)
 
 Branch `feat/security-hardening` → `master` (merge commit `837e273`)
@@ -287,7 +300,7 @@ Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Securi
 - [ ] **Step 7d** — notifiche al medico (3 toggle già in profilo)
 
 ### Step 4.8 — Pulizia e hardening
-- [ ] Rimuovere `save()` / `load()` da localStorage dove non più necessario
+- [x] ~~Rimuovere `save()` / `load()` da localStorage dove non più necessario~~ → completato Batch C 2026-05-20
 - [ ] Loading states / skeleton UI durante le fetch DB
 - [ ] Toast errori Supabase più descrittivi
 
@@ -330,11 +343,11 @@ Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Securi
 - **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
 - **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
 - **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening mergiato e rimosso 2026-05-20)
+- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip mergiati e rimossi 2026-05-20)
 
 ---
 
-*Ultimo aggiornamento: 2026-05-20 — Batch A sicurezza (XSS escape, security headers, auth /api/analyze, rate limiting, token UUID, deadline cancellazione 2h) mergiato su master*
+*Ultimo aggiornamento: 2026-05-20 — Batch C (backup ZIP, export singolo paziente, pulizia localStorage, online-first) mergiato su master*
 
 ---
 
