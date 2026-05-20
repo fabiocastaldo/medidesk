@@ -2269,7 +2269,7 @@ async function signIn(){
       return;
     }
 
-    console.log('[Delphi~Med] signIn: successo, utente:', data.session.user.email);
+    console.log('[Delphi~Med] signIn: successo');
     showAppView();
   } catch(e) {
     setAuthLoading(false);
@@ -2298,7 +2298,7 @@ function checkSession(){
     return;
   }
   supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('[Delphi~Med] onAuthStateChange:', event, session?.user?.email ?? 'no session', '_isRegistering:', _isRegistering);
+    console.log('[Delphi~Med] onAuthStateChange:', event, '_isRegistering:', _isRegistering);
     if(_isRegistering){
       // Durante la registrazione ignoriamo SIGNED_IN e SIGNED_OUT.
       // Quando arriva il SIGNED_OUT atteso (dopo signOut() in signUp), resettiamo il flag
@@ -2379,7 +2379,7 @@ async function ensureMedicoRecord(user){
       .from('medici').select('id').eq('user_id', user.id).maybeSingle();
     if(error) throw error;
     if(!data){
-      console.log('[Delphi~Med] Primo login: creo record medico per', user.email);
+      console.log('[Delphi~Med] Primo login: creo record medico');
       const { data: newMedico, error: insErr } = await supabaseClient
         .from('medici').insert({ user_id: user.id, email: user.email }).select('id').single();
       if(insErr) throw insErr;
@@ -2427,7 +2427,7 @@ async function loadMedicoFromDB(user){
       S.settings.nascondiCancellati       = data.nascondi_cancellati           === true;
       if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
       save();
-      console.log('[Delphi~Med] Profilo medico caricato da DB:', user.email);
+      console.log('[Delphi~Med] Profilo medico caricato da DB');
     }
   } catch(e){ console.error('[Delphi~Med] loadMedicoFromDB:', e.message); }
 }
@@ -3485,7 +3485,9 @@ function populateTipiVisitaSelects(){
   });
 }
 
-function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+function escapeHtml(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function escapeAttr(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+async function getAuthJwt(){ try{ const {data:{session}}=await supabaseClient.auth.getSession(); return session?.access_token||''; }catch{ return ''; } }
 
 // ── SLOT LOGIC ──
 function getSlots(centro, dateStr){
@@ -4220,13 +4222,13 @@ function renderDayAppointments(){
     const centroColore = centro ? centro.colore : '#999';
     const centroOpacity = centro && centro.attivo===false ? '0.5' : '1';
     const cancelledClass = a.cancelled ? ' appt-cancelled' : '';
-    return `<div class="appt-card${cancelledClass}" onclick="showApptDetail('${a.id}')">
-      <div class="appt-time">${a.ora}</div>
+    return `<div class="appt-card${cancelledClass}" onclick="showApptDetail('${escapeAttr(a.id)}')">
+      <div class="appt-time">${escapeHtml(a.ora)}</div>
       <div class="appt-info">
-        <div class="appt-patient">${a.cognome} ${a.nome}${a.cancelled?'<span class="badge-cancelled" style="font-size:10px;padding:1px 5px">Cancellato</span>':''}</div>
-        <div class="appt-detail">${a.tipo||'Visita'}${a.area?' · '+a.area:''}${isOnlineAppt?' · 🌐 Online':''} ${a.note?'· '+a.note:''}</div>
+        <div class="appt-patient">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}${a.cancelled?'<span class="badge-cancelled" style="font-size:10px;padding:1px 5px">Cancellato</span>':''}</div>
+        <div class="appt-detail">${escapeHtml(a.tipo||'Visita')}${a.area?' · '+escapeHtml(a.area):''}${isOnlineAppt?' · 🌐 Online':''} ${a.note?'· '+escapeHtml(a.note):''}</div>
       </div>
-      ${centroNomeDisplay?`<div class="appt-centro" style="background:${centroColore}22;color:${centroColore};opacity:${centroOpacity}">${centroNomeDisplay}</div>`:''}
+      ${centroNomeDisplay?`<div class="appt-centro" style="background:${escapeAttr(centroColore)}22;color:${escapeAttr(centroColore)};opacity:${centroOpacity}">${escapeHtml(centroNomeDisplay)}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -4239,20 +4241,20 @@ function showApptDetail(id){
   const cancelledBadge = a.cancelled ? `<span class="badge-cancelled">Cancellato</span>` : '';
   document.getElementById('modal-appt-detail-body').innerHTML=`
     <div class="extracted-fields">
-      <div class="field-row"><span class="field-key">Paziente</span><span class="field-val">${a.cognome} ${a.nome}${cancelledBadge}</span></div>
-      <div class="field-row"><span class="field-key">Data</span><span class="field-val">${formatDate(a.data)} alle ${a.ora}</span></div>
-      <div class="field-row"><span class="field-key">Centro</span><span class="field-val">${_centroNomeDetail}</span></div>
-      <div class="field-row"><span class="field-key">Tipo visita</span><span class="field-val">${a.tipo||'—'}</span></div>
-      ${a.area?`<div class="field-row"><span class="field-key">Area</span><span class="field-val">${a.area}</span></div>`:''}
-      <div class="field-row"><span class="field-key">Note</span><span class="field-val">${a.note||'—'}</span></div>
-      ${a.tel?`<div class="field-row"><span class="field-key">Telefono</span><span class="field-val">${a.tel}</span></div>`:''}
-      ${a.email?`<div class="field-row"><span class="field-key">Email</span><span class="field-val">${a.email}</span></div>`:''}
+      <div class="field-row"><span class="field-key">Paziente</span><span class="field-val">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}${cancelledBadge}</span></div>
+      <div class="field-row"><span class="field-key">Data</span><span class="field-val">${formatDate(a.data)} alle ${escapeHtml(a.ora)}</span></div>
+      <div class="field-row"><span class="field-key">Centro</span><span class="field-val">${escapeHtml(_centroNomeDetail)}</span></div>
+      <div class="field-row"><span class="field-key">Tipo visita</span><span class="field-val">${escapeHtml(a.tipo||'—')}</span></div>
+      ${a.area?`<div class="field-row"><span class="field-key">Area</span><span class="field-val">${escapeHtml(a.area)}</span></div>`:''}
+      <div class="field-row"><span class="field-key">Note</span><span class="field-val">${escapeHtml(a.note||'—')}</span></div>
+      ${a.tel?`<div class="field-row"><span class="field-key">Telefono</span><span class="field-val">${escapeHtml(a.tel)}</span></div>`:''}
+      ${a.email?`<div class="field-row"><span class="field-key">Email</span><span class="field-val">${escapeHtml(a.email)}</span></div>`:''}
       ${a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val">🌐 Prenotazione online</span></div>`:''}
-      ${centro&&centro.email?`<div class="field-row"><span class="field-key">Email centro</span><span class="field-val">${centro.email}</span></div>`:''}
+      ${centro&&centro.email?`<div class="field-row"><span class="field-key">Email centro</span><span class="field-val">${escapeHtml(centro.email)}</span></div>`:''}
       ${a.cancelled?`<div class="field-row"><span class="field-key">Cancellato il</span><span class="field-val">${a.cancelledAt?new Date(a.cancelledAt).toLocaleDateString('it-IT'):'—'}</span></div>`:''}
       ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
     </div>
-    ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${id}')">Ripristina appuntamento</button>`:''}`;
+    ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${escapeAttr(id)}')">Ripristina appuntamento</button>`:''}`;
   document.getElementById('btn-delete-appt').onclick = ()=>deleteAppuntamento(id);
   openModal('modal-appt-detail');
 }
@@ -4343,10 +4345,10 @@ function renderPending(){
     const centro=S.centri.find(c=>String(c.id)===String(a.centroId));
     return `<div class="pending-card">
       <div class="pending-info">
-        <div class="pending-name">${a.cognome} ${a.nome}</div>
-        <div class="pending-detail">${formatDate(a.data)} alle ${a.ora} — ${centro?centro.nome:'?'} — ${a.tipo||'Visita'}</div>
+        <div class="pending-name">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</div>
+        <div class="pending-detail">${formatDate(a.data)} alle ${escapeHtml(a.ora)} — ${centro?escapeHtml(centro.nome):'?'} — ${escapeHtml(a.tipo||'Visita')}</div>
       </div>
-      <button class="btn btn-sm btn-primary" onclick="markSeen('${a.id}')">✓ Visto</button>
+      <button class="btn btn-sm btn-primary" onclick="markSeen('${escapeAttr(a.id)}')">✓ Visto</button>
     </div>`;
   }).join('');
 }
@@ -4363,16 +4365,14 @@ async function markSeen(id){
   renderPending();
 }
 
-function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
 function _buildVisitaHTML(paz, v, i){
   var pid=String(paz.id), vid=String(v.id);
   var h='<div class="visita-item">';
   // ── Header (sempre visibile, click per espandere)
   h+='<div class="visita-header" onclick="toggleV(\'vv-'+pid+'-'+i+'\')">';
   h+='<div>';
-  h+='<div class="visita-date">📋 '+_esc(v.data||'N/A')+'</div>';
-  h+='<div style="font-size:12px;color:var(--ink3)">'+_esc(v.luogo||'')+'</div>';
+  h+='<div class="visita-date">📋 '+escapeHtml(v.data||'N/A')+'</div>';
+  h+='<div style="font-size:12px;color:var(--ink3)">'+escapeHtml(v.luogo||'')+'</div>';
   h+='</div>';
   h+='<div style="display:flex;align-items:center;gap:6px">';
   h+='<button type="button" class="btn-del-visita" style="color:var(--warm);background:none;border:none;padding:10px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;flex-shrink:0"';
@@ -4383,7 +4383,7 @@ function _buildVisitaHTML(paz, v, i){
   h+='</div>';
   // ── Body collassabile: solo testo clinico e foto
   h+='<div class="visita-body" id="vv-'+pid+'-'+i+'" style="display:none">';
-  h+=_esc(v.clinica||'—');
+  h+=escapeHtml(v.clinica||'—');
   if(v.foto_url){
     var n=getFotoPaths(v.foto_url).length;
     h+='<div style="margin-top:10px;white-space:normal">';
@@ -4403,21 +4403,21 @@ function showPazienteDetail(id){
   const visite=p.visite||[];
   document.getElementById('modal-paziente-body').innerHTML=`
     <div class="extracted-fields" style="margin-bottom:16px">
-      <div class="field-row"><span class="field-key">Nome</span><span class="field-val">${p.nome} ${p.cognome}</span></div>
-      ${p.nascita?`<div class="field-row"><span class="field-key">Data nascita</span><span class="field-val">${p.nascita}</span></div>`:''}
-      ${p.cf?`<div class="field-row"><span class="field-key">Cod. Fiscale</span><span class="field-val">${p.cf}</span></div>`:''}
+      <div class="field-row"><span class="field-key">Nome</span><span class="field-val">${escapeHtml(p.nome)} ${escapeHtml(p.cognome)}</span></div>
+      ${p.nascita?`<div class="field-row"><span class="field-key">Data nascita</span><span class="field-val">${escapeHtml(p.nascita)}</span></div>`:''}
+      ${p.cf?`<div class="field-row"><span class="field-key">Cod. Fiscale</span><span class="field-val">${escapeHtml(p.cf)}</span></div>`:''}
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
     <div class="section-title">${visite.length} ${visite.length===1?'visita':'visite'}</div>
     ${visite.map((v,i)=>_buildVisitaHTML(p,v,i)).join('')}
     ${visite.length>=2?`
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <button class="btn btn-secondary" onclick="sintetizzaStoria('${id}')" id="btn-storia-${id}">✦ Sintetizza storia clinica (${visite.length} visite)</button>
+      <button class="btn btn-secondary" onclick="sintetizzaStoria('${escapeAttr(id)}')" id="btn-storia-${escapeAttr(id)}">✦ Sintetizza storia clinica (${visite.length} visite)</button>
     </div>
-    <div id="storia-container-${id}"></div>`:''}
+    <div id="storia-container-${escapeAttr(id)}"></div>`:''}
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${id}')">+ Carica visita</button>
-      <button type="button" class="btn btn-secondary btn-del-paz" style="color:var(--warm);min-height:44px;padding:10px 16px" data-pazid="${id}" data-action="delete-paziente">🗑 Elimina paziente</button>
+      <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${escapeAttr(id)}')">+ Carica visita</button>
+      <button type="button" class="btn btn-secondary btn-del-paz" style="color:var(--warm);min-height:44px;padding:10px 16px" data-pazid="${escapeAttr(id)}" data-action="delete-paziente">🗑 Elimina paziente</button>
     </div>`;
   openModal('modal-paziente');
 }
@@ -4587,10 +4587,11 @@ ${visiteTesto}
 
 Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
 
+  const _jwt1=await getAuthJwt();
   try{
     const res=await fetch('/api/analyze',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt1},
       body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:2000})
     });
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
@@ -4849,9 +4850,10 @@ Il campo nome/cognome/CF non serve, è già noto.`;
     }));
     contentBlocks.push({ type: 'text', text: prompt });
 
+    const _jwt2 = await getAuthJwt();
     const res = await fetch('/api/analyze', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt2 },
       body: JSON.stringify({ messages: [{ role: 'user', content: contentBlocks }], max_tokens: 2000 })
     });
     if(!res.ok){
@@ -5494,20 +5496,20 @@ function homeSearch(q){
         return;
       }
       res.innerHTML = data.map(m => {
-        const nome = [m.titolo, m.nome, m.cognome].filter(Boolean).map(_esc).join(' ');
+        const nome = [m.titolo, m.nome, m.cognome].filter(Boolean).map(escapeHtml).join(' ');
         const ini  = [m.nome, m.cognome].filter(Boolean).map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'M';
         const av   = m.foto_url ? `<img src="${escapeAttr(m.foto_url)}" alt="">` : ini;
         const specs = Array.isArray(m.specializzazioni) && m.specializzazioni.length ? m.specializzazioni : (m.specializzazione ? [m.specializzazione] : []);
         let specHtml = '';
         if(specs.length){
-          const visibili = specs.slice(0,2).map(_esc).join(', ');
+          const visibili = specs.slice(0,2).map(escapeHtml).join(', ');
           const extra = specs.length > 2 ? ` +${specs.length-2}` : '';
           specHtml = visibili + extra;
         }
         const citta = Array.isArray(m.citta) ? m.citta : [];
         let cittaHtml = '';
         if(citta.length){
-          const visibili = citta.slice(0,2).map(_esc).join(', ');
+          const visibili = citta.slice(0,2).map(escapeHtml).join(', ');
           const extra = citta.length > 2 ? ` e altre ${citta.length-2} sedi` : '';
           cittaHtml = visibili + extra;
         }
@@ -5551,7 +5553,7 @@ async function bkInit(){
       document.getElementById('bk-doctor-spec').textContent = m.specializzazione || '';
       const avatarEl = document.getElementById('bk-avatar-display');
       const ini = fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
-      if(m.foto_url){ avatarEl.innerHTML = `<img src="${m.foto_url}" alt="${fullName}">`; }
+      if(m.foto_url){ avatarEl.innerHTML = `<img src="${escapeAttr(m.foto_url)}" alt="${escapeAttr(fullName)}">`; }
       else { avatarEl.textContent = ini; }
       const bioEl = document.getElementById('bk-hero-bio');
       if(bioEl){ if(m.bio){ bioEl.textContent=m.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
@@ -5738,10 +5740,7 @@ function bkSelectSlot(ora){
 }
 
 function generateCancellationToken(){
-  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let t='';
-  for(let i=0;i<8;i++){ if(i===4) t+='-'; t+=chars[Math.floor(Math.random()*chars.length)]; }
-  return t;
+  return crypto.randomUUID();
 }
 
 async function confirmBooking(){
@@ -5764,7 +5763,7 @@ async function confirmBooking(){
   };
   console.log('[Booking] supabaseClient:', !!supabaseClient);
   console.log('[Booking] medico_id:', bk.medicoId);
-  console.log('[Booking] dati appuntamento:', { data: bk.dateStr, ora: bk.ora, centroId: bk.centroId, nome, cognome });
+  console.log('[Booking] dati appuntamento:', { data: bk.dateStr, ora: bk.ora, centroId: bk.centroId });
   if(isOnline() && bk.medicoId){
     const btn = document.getElementById('bk-confirm-btn');
     if(btn){ btn.disabled = true; btn.textContent = 'Invio in corso…'; }
@@ -5922,8 +5921,8 @@ async function loadCancelPage(){
     appt.ora = (appt.ora || '').substring(0,5);
     const apptDate=new Date(appt.data+'T'+appt.ora);
     const diffH=(apptDate-new Date())/3600000;
-    if(diffH<24){
-      content.innerHTML='<div style="font-size:56px;margin-bottom:16px">⏰</div><h2>Termine scaduto</h2><p>Non è più possibile cancellare questo appuntamento online.<br>Contatta direttamente il centro.</p>'; return;
+    if(diffH<2){
+      content.innerHTML='<div style="font-size:56px;margin-bottom:16px">⏰</div><h2>Termine scaduto</h2><p>Non è più possibile cancellare questo appuntamento online (la cancellazione è consentita fino a 2 ore prima dell\'orario fissato).<br><br>Per disdire l\'appuntamento, contatta direttamente il centro o lo studio del medico.</p>'; return;
     }
     const d=new Date(appt.data+'T12:00:00');
     window._cancelApptData=appt;
@@ -5931,15 +5930,15 @@ async function loadCancelPage(){
       <div style="font-size:56px;margin-bottom:16px">📅</div>
       <h2>Cancellazione appuntamento</h2>
       <div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin:16px 0;text-align:left;font-size:13px;color:var(--ink2);line-height:1.8">
-        <strong>${appt.cognome_paziente} ${appt.nome_paziente}</strong><br>
-        ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${appt.ora}<br>
-        ${appt.tipo_visita||'Visita'}
+        <strong>${escapeHtml(appt.cognome_paziente)} ${escapeHtml(appt.nome_paziente)}</strong><br>
+        ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${escapeHtml(appt.ora)}<br>
+        ${escapeHtml(appt.tipo_visita||'Visita')}
       </div>
       <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
         Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile:<br>
         lo slot tornerà subito disponibile per un altro paziente che ne ha bisogno.
       </p>
-      <button class="btn btn-warm" style="width:100%;padding:13px;margin-top:8px;font-size:15px" onclick="cancelBookingByToken('${appt.id}')">Conferma cancellazione</button>
+      <button class="btn btn-warm" style="width:100%;padding:13px;margin-top:8px;font-size:15px" onclick="cancelBookingByToken('${escapeAttr(appt.id)}')">Conferma cancellazione</button>
       <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="history.back()">Annulla</button>`;
   } catch(e){
     loading.style.display='none'; content.style.display='block';
@@ -6689,7 +6688,7 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
               deltaStr = ` (<span class="${cls}">${sign}${delta}</span> vs ${periodLabel})`;
             }
           }
-          insights.push({icon:'🏥', html:`<strong>${_esc(centro.nome)}</strong> è il tuo centro principale: <strong>${pct}%</strong> delle prenotazioni${deltaStr}.`});
+          insights.push({icon:'🏥', html:`<strong>${escapeHtml(centro.nome)}</strong> è il tuo centro principale: <strong>${pct}%</strong> delle prenotazioni${deltaStr}.`});
         }
       }
     }
@@ -6796,10 +6795,6 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
   box.style.display = 'block';
 }
 
-function _esc(s){
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 function _renderBarList(containerId, data, opts){
   const el = document.getElementById(containerId);
   if(!el) return;
@@ -6816,7 +6811,7 @@ function _renderBarList(containerId, data, opts){
     const color = d.color || 'var(--accent)';
     const valLabel = showPct ? `${d.value} (${realPct}%)` : d.value;
     return `<div class="chart-row">
-      <div class="chart-row-label" title="${_esc(d.label)}">${_esc(d.label)}</div>
+      <div class="chart-row-label" title="${escapeAttr(d.label)}">${escapeHtml(d.label)}</div>
       <div class="chart-row-bar"><div class="chart-row-bar-fill" style="width:${pct}%;background:${color}"></div></div>
       <div class="chart-row-value">${valLabel}</div>
     </div>`;
@@ -7077,7 +7072,7 @@ function _renderDonut(containerId, data, centerLabel){
 
   let svg = `<svg class="donut-svg" viewBox="0 0 ${size} ${size}">`;
   slices.forEach(s=>{
-    svg += `<path d="${arc(s.start, s.end)}" fill="${s.color||'var(--accent)'}"><title>${_esc(s.label)}: ${s.value} (${Math.round(s.value/total*100)}%)</title></path>`;
+    svg += `<path d="${arc(s.start, s.end)}" fill="${s.color||'var(--accent)'}"><title>${escapeHtml(s.label)}: ${s.value} (${Math.round(s.value/total*100)}%)</title></path>`;
   });
   svg += `<text class="donut-center-value" x="${cx}" y="${cy-4}">${total}</text>`;
   svg += `<text class="donut-center-label" x="${cx}" y="${cy+14}">${centerLabel||'totale'}</text>`;
@@ -7087,7 +7082,7 @@ function _renderDonut(containerId, data, centerLabel){
     const pct = Math.round(s.value/total*100);
     return `<div class="donut-legend-row">
       <span class="donut-legend-color" style="background:${s.color||'var(--accent)'}"></span>
-      <span class="donut-legend-label">${_esc(s.label)}</span>
+      <span class="donut-legend-label">${escapeHtml(s.label)}</span>
       <span class="donut-legend-value">${s.value} (${pct}%)</span>
     </div>`;
   }).join('');
@@ -7318,7 +7313,7 @@ function _renderTopPazienti(){
     return `<div class="top-paz-row ${clickable}" ${clickAttr}>
       <div class="${rankCls}">${rank}</div>
       <div class="top-paz-info">
-        <div class="top-paz-name">${_esc(p.displayNome)} ${_esc(p.displayCognome)}</div>
+        <div class="top-paz-name">${escapeHtml(p.displayNome)} ${escapeHtml(p.displayCognome)}</div>
         <div class="top-paz-last">Ultima visita: ${lastFmt}</div>
       </div>
       <div class="top-paz-visits">${p.count}<span class="top-paz-visits-label">visite</span></div>
