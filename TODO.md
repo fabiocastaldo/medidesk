@@ -248,6 +248,25 @@
 
 ---
 
+## ✅ Completato — sessione 2026-05-20 (Batch A — Sicurezza tecnica)
+
+Branch `feat/security-hardening` → `master` (merge commit `837e273`)
+
+- [x] `escapeHtml` e `escapeAttr` robuste (coprono `&<>"'`), definizioni `_esc` rimosse
+- [x] Tutti gli `innerHTML` con dati DB/utente sanitizzati: `renderDayAppointments`, `showApptDetail`, `renderPending`, `showPazienteDetail`, `_buildVisitaHTML`, `homeSearch`, `bkInit`, `loadCancelPage`
+- [x] Security headers in `vercel.json`: CSP (jsdelivr, Stripe, fonts, vercel.live), HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy
+- [x] `/api/analyze` protetto da JWT Supabase + check `medico.stato='approvato'` (401/403)
+- [x] `getAuthJwt()` helper + Authorization header su entrambe le chiamate `/api/analyze`
+- [x] Rate limiting in-memory su `/api/send-email` (20 req/ora) e `/api/analyze` (10 req/ora + Supabase RPC)
+- [x] `batch-a-migrations.sql`: DDL per tabella `rate_limits` + RPC `check_rate_limit` (da eseguire in Supabase SQL Editor)
+- [x] PII rimosso da tutti i `console.log` (`medidesk.html` + `api/approve-doctor.js`)
+- [x] `generateCancellationToken()` → `crypto.randomUUID()` (UUID v4 crittograficamente sicuro)
+- [x] Deadline cancellazione: 24h → 2h prima dell'appuntamento (check + messaggio + testo email)
+
+**⚠️ Azione manuale ancora pendente**: eseguire `batch-a-migrations.sql` nel SQL Editor di Supabase per attivare il rate limiting persistente su `/api/analyze`. Senza questo, il rate limiting funziona solo in-memory (fail-open, non bloccante).
+
+---
+
 ## ⚠️ Problemi aperti (noti, non ancora risolti)
 
 *(nessun problema aperto noto al momento)*
@@ -269,10 +288,11 @@
 - [ ] Toast errori Supabase più descrittivi
 - [ ] Rimuovere `console.log` di debug in produzione
 
-### Sicurezza
+### Sicurezza — debiti tecnici tracciati
 - [ ] Verificare copertura RLS completa (medico non legge dati di altri medici)
-- [ ] Rate limiting sulla policy anon INSERT appuntamenti
+- [ ] **Rate limiting su prenotazione pubblica anon** (RPC `book_appointment_safe`) — implementare prima del primo medico paying
 - [ ] Scadenza sessione Supabase: gestire refresh automatico
+- [ ] **Referrer-Policy `no-referrer` specifica per `/?cancel=*`** via Vercel Middleware (Edge function) che intercetta la richiesta e aggiunge l'header solo se la querystring contiene `cancel=`. Non urgente: la policy globale `strict-origin-when-cross-origin` già protegge il token.
 
 ---
 
@@ -309,11 +329,11 @@
 - **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
 - **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
 - **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: nessuno — tutto su `master` (feat/statistiche mergiato e rimosso 2026-05-19)
+- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening mergiato e rimosso 2026-05-20)
 
 ---
 
-*Ultimo aggiornamento: 2026-05-19 — Sezione Statistiche completa (KPI + sparkline, heatmap, insights con delta, top pazienti) mergiata su master*
+*Ultimo aggiornamento: 2026-05-20 — Batch A sicurezza (XSS escape, security headers, auth /api/analyze, rate limiting, token UUID, deadline cancellazione 2h) mergiato su master*
 
 ---
 
