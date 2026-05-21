@@ -6003,7 +6003,7 @@ function bkAddToOutlook(){
   const subject=encodeURIComponent('Visita medica');
   const loc=encodeURIComponent(c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}`:'');
   const body=encodeURIComponent('Prenotazione confermata con '+document.getElementById('bk-doctor-name').textContent);
-  window.open(`https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${subject}&startdt=${dtStart}&enddt=${dtEnd}&body=${body}&location=${loc}`,'_blank');
+  window.open(`https://outlook.live.com/owa/?path=/calendar/action/compose&rru=addevent&subject=${subject}&startdt=${dtStart}&enddt=${dtEnd}&body=${body}&location=${loc}`,'_blank');
 }
 
 // ── PAGINA CANCELLAZIONE ──

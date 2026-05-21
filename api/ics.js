@@ -22,18 +22,18 @@ export default async function handler(req, res) {
   let appt;
   try {
     const r = await fetch(
-      `${base}/appuntamenti?id=eq.${encodeURIComponent(id)}&cancellation_token=eq.${encodeURIComponent(token)}&select=id,data,ora,centro_id`,
+      `${base}/appuntamenti?id=eq.${encodeURIComponent(id)}&cancellation_token=eq.${encodeURIComponent(token)}&select=id,data,ora,centro_id,medico_id`,
       { headers }
     );
     const rows = await r.json();
     appt = Array.isArray(rows) ? rows[0] : null;
-  } catch (e) {
+  } catch (_) {
     return res.status(500).send('Errore DB');
   }
 
   if (!appt) return res.status(404).send('Appuntamento non trovato');
 
-  // Fetch centro for location
+  // Fetch centro for LOCATION
   let location = '';
   if (appt.centro_id) {
     try {
@@ -50,14 +50,37 @@ export default async function handler(req, res) {
     } catch (_) {}
   }
 
-  // Build ICS
-  const [y, m, d] = (appt.data || '').split('-');
+  // Fetch medico for DESCRIPTION
+  let medicoNome = '';
+  if (appt.medico_id) {
+    try {
+      const r = await fetch(
+        `${base}/medici?id=eq.${encodeURIComponent(appt.medico_id)}&select=titolo,nome,cognome`,
+        { headers }
+      );
+      const rows = await r.json();
+      const m = Array.isArray(rows) ? rows[0] : null;
+      if (m) medicoNome = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
+    } catch (_) {}
+  }
+
+  // Build ICS dates — local Italian time treated as UTC (Z suffix)
+  const [y, mo, d] = (appt.data || '').split('-');
   const [hh, mm] = (appt.ora || '00:00').substring(0, 5).split(':');
-  const dtStart = `${y}${m}${d}T${hh}${mm}00`;
+  const dtStart = `${y}${mo}${d}T${hh}${mm}00Z`;
   const totalMin = parseInt(hh) * 60 + parseInt(mm) + 30;
   const endH = String(Math.floor(totalMin / 60)).padStart(2, '0');
   const endM = String(totalMin % 60).padStart(2, '0');
-  const dtEnd = `${y}${m}${d}T${endH}${endM}00`;
+  const dtEnd = `${y}${mo}${d}T${endH}${endM}00Z`;
+
+  // DTSTAMP: current UTC moment
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const dtstamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+
+  const description = medicoNome
+    ? esc('Prenotazione confermata con ' + medicoNome)
+    : 'Visita medica';
 
   const lines = [
     'BEGIN:VCALENDAR',
@@ -65,16 +88,18 @@ export default async function handler(req, res) {
     'PRODID:-//Delphi~Med//IT',
     'BEGIN:VEVENT',
     `UID:${id}@delphi-med.com`,
-    `DTSTART;TZID=Europe/Rome:${dtStart}`,
-    `DTEND;TZID=Europe/Rome:${dtEnd}`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
     'SUMMARY:Visita medica',
+    `DESCRIPTION:${description}`,
     location ? `LOCATION:${esc(location)}` : null,
     'END:VEVENT',
     'END:VCALENDAR'
   ].filter(Boolean).join('\r\n');
 
   res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="visita_medica.ics"');
+  res.setHeader('Content-Disposition', 'attachment; filename="appuntamento.ics"');
   res.setHeader('Cache-Control', 'no-store');
   return res.status(200).send(lines);
 }
