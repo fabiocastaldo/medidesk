@@ -339,6 +339,14 @@ SQL `batch-d-migrations.sql` eseguito in Supabase SQL Editor (DROP CF da pazient
 - [ ] Manutenzione archivio: valutare se integrarla nella futura sezione Notifiche
 - [ ] Modal eliminazione paziente/account: aggiungere reminder "verifica anche altri archivi"
 
+### Batch Statistiche (rimandato post-feedback uso reale)
+
+Implementare solo dopo che un medico in uso reale ne esprime l'esigenza, oppure quando si farà il batch "Statistiche avanzate" già pianificato (drill-down, export PDF, range custom). Questa sezione è il sottoinsieme minimo iniziale; "Statistiche avanzate" è il batch grande successivo.
+
+- [ ] **Toggle "top 10 pazienti frequenti"** in Impostazioni (default OFF). Metrica: numero appuntamenti per paziente nell'ultimo anno. Fonte dati: tabella `appuntamenti` (NON `visite`).
+- [ ] **Multi-giorno selezione nel modal turni** (creazione massiva, turni indipendenti dopo). Già presente in pianificazione precedente, spostato qui in attesa di feedback uso reale.
+- [ ] **Tematiche ad alta ricorrenza** (sempre attiva, no toggle). Mostra aree tematiche dove i pazienti tornano più volte (es. "Ginocchio: 3 visite/paziente"). Da definire al momento dell'implementazione: metrica esatta (media visite/paziente o conteggio pazienti con N+ visite), sorgente (`aree_tematiche` o `tipi_visita`), finestra temporale, posizione UI (dashboard card o sezione Statistiche dedicata).
+
 ### Contenuti legali
 - [ ] Sostituire placeholder `termini-di-servizio.html` con testo reale
 - [ ] Sostituire placeholder `privacy-policy.html` con testo reale
