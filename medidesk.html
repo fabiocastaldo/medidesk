@@ -1153,7 +1153,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
           <!-- Bio -->
           <div class="form-group">
             <label class="form-label">Bio breve <span style="font-weight:400;color:var(--ink3)">(max 500 caratteri)</span></label>
-            <textarea class="form-textarea" id="setting-bio" maxlength="500" style="min-height:80px" placeholder="Es. Cardiologo specializzato in aritmie, 15 anni di esperienza..." oninput="updateBioCounter()"></textarea>
+            <textarea class="form-textarea" id="setting-bio" maxlength="500" style="min-height:80px" placeholder="Es. Cardiologo specializzato in aritmie, 15 anni di esperienza..." oninput="updateBioCounter()" onblur="this.value=capitalizeSentences(this.value.trim());updateBioCounter()"></textarea>
             <div class="bio-counter" id="bio-counter">0 / 500</div>
           </div>
           <div class="form-row">
@@ -1164,7 +1164,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
             <label class="form-label">Lingue parlate</label>
             <div id="lingue-list" class="tag-editor" style="margin-bottom:8px"></div>
             <div style="display:flex;gap:8px">
-              <input class="form-input" id="new-lingua" placeholder="es. Inglese" style="flex:1" onkeydown="if(event.key==='Enter')addLingua()">
+              <input class="form-input" id="new-lingua" placeholder="es. Inglese" style="flex:1" onkeydown="if(event.key==='Enter')addLingua()" onblur="this.value=capitalizeWords(this.value.trim())">
               <button class="btn btn-secondary" onclick="addLingua()">+ Aggiungi</button>
             </div>
           </div>
@@ -1723,7 +1723,10 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Nome del centro</label><input class="form-input" id="centro-nome" placeholder="Poliambulatorio Milano Centro" onblur="this.value=capitalizeWords(this.value.trim())"></div>
       <div class="form-group"><label class="form-label">Email segreteria</label><input class="form-input" id="centro-email" type="email" placeholder="segreteria@centro.it"></div>
-      <div class="form-group"><label class="form-label">Via / Piazza</label><input class="form-input" id="centro-via" placeholder="Via Roma 12" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+      <div style="display:grid;grid-template-columns:3fr 1fr;gap:8px">
+        <div class="form-group"><label class="form-label">Via / Piazza</label><input class="form-input" id="centro-via" placeholder="Via Roma" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+        <div class="form-group"><label class="form-label">Civico</label><input class="form-input" id="centro-civico" placeholder="12"></div>
+      </div>
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px">
         <div class="form-group"><label class="form-label">Città</label><input class="form-input" id="centro-citta" placeholder="Milano" onblur="this.value=capitalizeWords(this.value.trim())"></div>
         <div class="form-group"><label class="form-label">Provincia</label>
@@ -2206,6 +2209,13 @@ function updatePasswordStrength(){
 
 function capitalizeWords(str){
   return String(str || '').toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase());
+}
+function todayLocalISO(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function capitalizeSentences(str){
+  return String(str || '').replace(/(^|[.!?]\s+)(\p{L})/gu, (_, p, l) => p + l.toUpperCase());
 }
 
 async function signUp(){
@@ -3236,7 +3246,7 @@ function downloadQR(){
 
 // ── CENTRI ──
 function resetCentroForm(){
-  ['centro-nome','centro-email','centro-via','centro-citta','centro-cap'].forEach(id=>{
+  ['centro-nome','centro-email','centro-via','centro-civico','centro-citta','centro-cap'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   const prov=document.getElementById('centro-provincia'); if(prov) prov.value='';
@@ -3277,12 +3287,14 @@ async function saveCentro(){
   const nome     = document.getElementById('centro-nome').value.trim();
   const email    = document.getElementById('centro-email').value.trim();
   const via      = document.getElementById('centro-via').value.trim();
+  const civico   = document.getElementById('centro-civico').value.trim();
+  const viaCompleta = [via, civico].filter(Boolean).join(' ');
   const citta    = document.getElementById('centro-citta').value.trim();
   const provincia= document.getElementById('centro-provincia').value;
   const cap      = document.getElementById('centro-cap').value.trim();
   const colore   = document.getElementById('centro-colore').value;
   if(!nome){ showToast('Inserisci il nome del centro'); return; }
-  const indirizzoComposto = [via, [cap, citta].filter(Boolean).join(' '), provincia].filter(Boolean).join(', ');
+  const indirizzoComposto = [viaCompleta, [cap, citta].filter(Boolean).join(' '), provincia].filter(Boolean).join(', ');
   const _afterSave = (isEdit) => {
     _centroEditId = null;
     closeModal('modal-centro');
@@ -3295,13 +3307,13 @@ async function saveCentro(){
     // UPDATE
     const c = S.centri.find(x=>String(x.id)===String(_centroEditId));
     if(!c){ showToast('Centro non trovato'); return; }
-    Object.assign(c, { nome, email, via, citta, provincia, cap, indirizzo: indirizzoComposto, colore });
+    Object.assign(c, { nome, email, via: viaCompleta, citta, provincia, cap, indirizzo: indirizzoComposto, colore });
     if(isOnline()){
       try {
         const { error } = await supabaseClient.from('centri').update({
           nome,
           email_segreteria: email    || null,
-          via:      via      || null,
+          via:      viaCompleta || null,
           citta:    citta    || null,
           provincia:provincia|| null,
           cap:      cap      || null,
@@ -3317,7 +3329,7 @@ async function saveCentro(){
   }
   // INSERT
   if(!isOnline()){
-    S.centri.push({ id:Date.now(), nome, email, via, citta, provincia, cap, indirizzo: indirizzoComposto, colore, turni:[], attivo:true });
+    S.centri.push({ id:Date.now(), nome, email, via: viaCompleta, citta, provincia, cap, indirizzo: indirizzoComposto, colore, turni:[], attivo:true });
     save(); _afterSave(false); return;
   }
   try {
@@ -3325,15 +3337,15 @@ async function saveCentro(){
     const { data: medico }   = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     const { data: newCentro, error } = await supabaseClient.from('centri').insert({
       medico_id: medico.id, nome,
-      email_segreteria: email    || null,
-      via:       via       || null,
+      email_segreteria: email       || null,
+      via:       viaCompleta || null,
       citta:     citta     || null,
       provincia: provincia || null,
       cap:       cap       || null,
       colore, attivo: true
     }).select('id').single();
     if(error) throw error;
-    S.centri.push({ id: newCentro.id, nome, email, via, citta, provincia, cap, indirizzo: indirizzoComposto, colore, turni:[], attivo:true });
+    S.centri.push({ id: newCentro.id, nome, email, via: viaCompleta, citta, provincia, cap, indirizzo: indirizzoComposto, colore, turni:[], attivo:true });
     save(); _afterSave(false);
   } catch(e){
     console.error('[Delphi~Med] saveCentro:', e.message);
@@ -3366,7 +3378,7 @@ function renderCentri(){
 }
 
 function renderCentroCard(c, isActive){
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = todayLocalISO();
   const freqLabel = {1:'Settimanale',2:'Ogni 2 settimane',3:'Ogni 3 settimane',4:'Mensile'};
   const turniHtml = (c.turni&&c.turni.length) ? `
     <div class="turni-list">
@@ -3436,7 +3448,7 @@ function openAddTurno(centroId){
   const c = S.centri.find(x=>String(x.id)===String(centroId));
   document.getElementById('turno-centro-label').textContent = c?c.nome:'';
   document.getElementById('turno-frequenza').value = '1';
-  document.getElementById('turno-inizio-validita').value = new Date().toISOString().split('T')[0];
+  document.getElementById('turno-inizio-validita').value = todayLocalISO();
   document.getElementById('turno-fine-validita').value = '';
   openModal('modal-turno');
 }
@@ -3517,7 +3529,7 @@ function confirmTerminaTurno(centroId, idx){
   const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
   const turno = c.turni[idx]; if(!turno) return;
   _terminaTurnoState = { centroId, idx };
-  document.getElementById('termina-turno-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('termina-turno-data').value = todayLocalISO();
   document.getElementById('termina-turno-error').textContent = '';
   openModal('modal-termina-turno');
 }
@@ -3558,7 +3570,7 @@ async function saveTerminaTurno(){
     document.getElementById('conferma-termina-titolo').textContent =
       `Attenzione: ${n} appuntament${n===1?'o':'i'} prenotat${n===1?'o':'i'}`;
     document.getElementById('conferma-termina-testo').textContent =
-      `Hai ${n} appuntamento${n===1?'':'i'} già prenotat${n===1?'o':'i'} che cadranno dopo il ${dataFmt}:`;
+      `Hai ${n} appuntamento${n===1?'':'i'} già prenotat${n===1?'o':'i'} che ${n===1?'cadrà':'cadranno'} dopo il ${dataFmt}:`;
     const shown = conflitti.slice(0, 10);
     const extra = n - shown.length;
     let listaHtml = shown.map(a=>
@@ -5650,7 +5662,7 @@ function renderLingue(){
 function addLingua(){
   const inp=document.getElementById('new-lingua'); const v=inp.value.trim(); if(!v) return;
   if((S.settings.lingue||[]).some(l=>l.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
-  S.settings.lingue.push(v); inp.value=''; save(); renderLingue(); showToast('Aggiunta ✓');
+  S.settings.lingue.push(capitalizeWords(v)); inp.value=''; save(); renderLingue(); showToast('Aggiunta ✓');
   syncLingueToDB();
 }
 function removeLingua(idx){ S.settings.lingue.splice(idx,1); save(); renderLingue(); syncLingueToDB(); }
@@ -6679,7 +6691,7 @@ async function generateFullBackupZip(){
   if(progressEl){ progressEl.style.display = 'block'; progressEl.textContent = 'Preparazione backup…'; }
 
   const zip = new JSZip();
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayLocalISO();
   const folderName = `delphi-med-backup-${today}`;
   const root = zip.folder(folderName);
 
@@ -6867,7 +6879,7 @@ async function exportSinglePazienteZip(pazienteId){
   if(!p){ showToast('Paziente non trovato'); return null; }
 
   const zip = new JSZip();
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayLocalISO();
   const safeCognome = (p.cognome||'paziente').replace(/[^a-zA-Z0-9_-]/g, '_');
   const safeNome = (p.nome||'').replace(/[^a-zA-Z0-9_-]/g, '_');
   const folderName = `${safeCognome}_${safeNome}_${today}`;
@@ -6952,7 +6964,7 @@ function esportaDati(){
     const blob = new Blob([json], {type:'application/json'});
     const url  = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    const dt = new Date().toISOString().slice(0,10);
+    const dt = todayLocalISO();
     const slug = (S.settings && S.settings.slug) ? S.settings.slug : 'medico';
     a.href = url;
     a.download = `delphi-med-backup-${slug}-${dt}.json`;
@@ -7826,7 +7838,7 @@ function computeAccountCounts(){
   const nPazienti = S.pazienti.length;
   const nVisite = S.pazienti.reduce((s, p) => s + (p.visite||[]).length, 0);
   const nReferti = S.pazienti.reduce((s, p) => s + (p.visite||[]).filter(v => v.foto_url).length, 0);
-  const todayISO = new Date().toISOString().slice(0,10);
+  const todayISO = todayLocalISO();
   const nAppuntamentiFuturi = (S.appuntamenti||[]).filter(a => !a.cancelled && (a.data||'') >= todayISO).length;
   return { nPazienti, nVisite, nReferti, nAppuntamentiFuturi };
 }
