@@ -305,6 +305,21 @@ Branch `feat/security-hardening` → `master` (merge commit `837e273`)
 
 ---
 
+## ✅ Completato — sessione 2026-05-20 (Batch D — UI cleanup + minimizzazione GDPR)
+
+Branch `feat/ui-cleanup` (in attesa di merge su master dopo test utente)
+SQL `batch-d-migrations.sql` da eseguire in Supabase SQL Editor PRIMA del merge.
+
+- [x] **D.6** Rimozione totale CF paziente: drop `pazienti.cf` + `medici.estrai_cf_referti`, rimosso da scheda paziente, prompt AI, form nuova visita, backup ZIP (pazienti.csv, visite.csv), export singolo, ricerca
+- [x] **D.6** Toggle "Estrai CF dai referti" rimosso da Profilo → Preferenze AI (intera sezione rimossa)
+- [x] **D.5** Campo "Recapito alternativo" rimosso dal form pubblico; `note:''` in confirmBooking(); backward compat OK
+- [x] **D.1** Frase "Hai tempo fino a 2 ore prima" rimossa dall'email di conferma; link cancellazione mantente
+- [x] **D.2** Sezione "Aggiungi al calendario" aggiunta all'email di conferma (Google Calendar, Apple Calendar, Outlook); ICS generato server-side con TZID:Europe/Rome; emoji rimossi anche dallo Step 5 web
+- [x] **D.3** Placeholder note appuntamento (lato medico) con esempi organizzativi
+- [x] **D.4** Pulsante toggle tema (🌙/☀️) rimosso dalla sidebar desktop; toggle in Impostazioni → Aspetto invariato
+
+---
+
 ## 🔜 Prossime priorità
 
 ### Contenuti legali

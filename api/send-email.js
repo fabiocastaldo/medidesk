@@ -30,7 +30,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'RESEND_API_KEY non configurata' });
   }
 
-  const { to, subject, html: rawHtml, tipo, paziente_nome, medico_nome, medico_email, medico_slug, centro_nome, data, ora, tipo_visita, codice_cancellazione } = req.body || {};
+  const { to, subject, html: rawHtml, tipo, paziente_nome, medico_nome, medico_email, medico_slug, centro_nome, centro_indirizzo, data, ora, tipo_visita, codice_cancellazione, appt_id } = req.body || {};
 
   if (!to || typeof to !== 'string') {
     return res.status(400).json({ error: 'Campo to mancante o non valido' });
@@ -88,14 +88,20 @@ export default async function handler(req, res) {
     dataFmt = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   } catch (_) {}
 
+  const icsHost = (req.headers['x-forwarded-host'] || req.headers.host || 'delphi-med.com').split(',')[0].trim();
+
   const html = buildHtml({
-    paziente_nome:       esc(paziente_nome),
-    medico_nome:         esc(medico_nome),
-    centro_nome:         esc(centro_nome),
-    dataFmt:             esc(dataFmt),
-    ora:                 esc(ora),
-    tipo_visita:         esc(tipo_visita) || '&mdash;',
-    codice_cancellazione: esc(codice_cancellazione)
+    paziente_nome:        esc(paziente_nome),
+    medico_nome:          esc(medico_nome),
+    centro_nome:          esc(centro_nome),
+    centro_indirizzo:     centro_indirizzo || '',
+    dataFmt:              esc(dataFmt),
+    data:                 data || '',
+    ora:                  esc(ora),
+    tipo_visita:          esc(tipo_visita) || '&mdash;',
+    codice_cancellazione: esc(codice_cancellazione),
+    appt_id:              appt_id || '',
+    icsHost
   });
 
   const emailPayload = {
@@ -159,8 +165,44 @@ function buildHtmlCancellazioneMedico({ paziente_nome, medico_nome, centro_nome,
 </html>`;
 }
 
-function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione }) {
+function buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome, appt_id, codice_cancellazione, icsHost }) {
+  if (!data || !ora) return { googleUrl: '', icsUrl: '' };
+  const [y, m, d] = data.split('-');
+  const [hh, mm] = (ora || '00:00').split(':');
+  const dtCompact = `${y}${m}${d}T${hh}${mm}00`;
+  const totalMin = parseInt(hh) * 60 + parseInt(mm) + 30;
+  const endH = String(Math.floor(totalMin / 60)).padStart(2, '0');
+  const endM = String(totalMin % 60).padStart(2, '0');
+  const dtCompactEnd = `${y}${m}${d}T${endH}${endM}00`;
+  const location = [centro_nome, centro_indirizzo].filter(Boolean).join(', ');
+  const title = 'Visita medica';
+  const details = medico_nome ? `Appuntamento con ${medico_nome}` : 'Visita medica';
+
+  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dtCompact}Z/${dtCompactEnd}Z&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+
+  const host = icsHost || 'delphi-med.com';
+  const icsUrl = (appt_id && codice_cancellazione)
+    ? `https://${host}/api/ics?id=${encodeURIComponent(appt_id)}&token=${encodeURIComponent(codice_cancellazione)}`
+    : '';
+
+  return { googleUrl, icsUrl };
+}
+
+function buildHtml({ paziente_nome, medico_nome, centro_nome, centro_indirizzo, dataFmt, data, ora, tipo_visita, codice_cancellazione, appt_id, icsHost }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
+  const { googleUrl, icsUrl } = buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome, appt_id, codice_cancellazione, icsHost });
+  const btnStyle = 'display:inline-block;padding:8px 14px;background:#f0fdfb;border:1px solid #ccece9;border-radius:6px;text-decoration:none;color:#0D9488;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;';
+  const calSection = googleUrl ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+        <tr><td>
+          <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#999;margin:0 0 10px;">Aggiungi al calendario</p>
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="padding-right:8px;"><a href="${googleUrl}" target="_blank" style="${btnStyle}">Google Calendar</a></td>
+            ${icsUrl ? `<td style="padding-right:8px;"><a href="${icsUrl}" style="${btnStyle}">Apple Calendar</a></td>
+            <td><a href="${icsUrl}" style="${btnStyle}">Calendario Outlook</a></td>` : ''}
+          </tr></table>
+        </td></tr>
+      </table>` : '';
   return `<!DOCTYPE html>
 <html lang="it">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -203,6 +245,7 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
           </table>
         </td></tr>
       </table>
+      ${calSection}
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;margin-bottom:28px;">
         <tr><td style="padding:14px 18px;">
           <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
@@ -211,7 +254,7 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
         </td></tr>
       </table>
       <p style="font-size:13px;color:#555;line-height:1.6;text-align:center;margin:24px auto 12px;max-width:480px;">
-        Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile: lo slot torner&agrave; subito disponibile per un altro paziente che ne ha bisogno. Hai tempo fino a 2 ore prima della visita.
+        Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile: lo slot torner&agrave; subito disponibile per un altro paziente che ne ha bisogno.
       </p>
       <div style="text-align:center;margin:0 0 28px;">
         <a href="${cancelUrl}" style="display:inline-block;padding:12px 24px;background:#0D9488;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;">Cancella l&rsquo;appuntamento</a>

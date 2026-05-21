@@ -969,7 +969,6 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
     <div class="sidebar-bottom">
       <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
       <button class="sidebar-logout" id="sidebar-logout-btn" onclick="signOut()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Esci</button>
-      <button class="btn-theme-toggle" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span><span class="icon-light"> Tema scuro</span><span class="icon-dark"> Tema chiaro</span></button>
     </div>
   </aside>
 
@@ -1079,7 +1078,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
       <div class="search-bar">
         <div class="search-input-wrap">
           <span class="sicon">🔍</span>
-          <input class="search-input" id="search-pazienti" placeholder="Cerca per nome, cognome o codice fiscale..." oninput="renderPazienti()">
+          <input class="search-input" id="search-pazienti" placeholder="Cerca per nome o cognome..." oninput="renderPazienti()">
         </div>
       </div>
       <div id="pazienti-list"></div>
@@ -1216,18 +1215,6 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
         </div></div>
       </div>
 
-      <div style="margin-top:24px">
-        <div class="section-title">Preferenze AI</div>
-        <div class="card"><div class="card-body">
-          <div class="notif-toggle-row">
-            <div class="notif-toggle-info">
-              <div class="notif-toggle-label">Estrai CF dai referti</div>
-              <div class="notif-toggle-desc">Se disattivato (default), l'AI ignora il codice fiscale nel referto e lascia quel campo vuoto. Raccomandato per minimizzazione dei dati.</div>
-            </div>
-            <label class="toggle-switch"><input type="checkbox" id="setting-estrai-cf" onchange="saveSettings()"><span class="toggle-slider"></span></label>
-          </div>
-        </div></div>
-      </div>
 
     </div>
 
@@ -1565,12 +1552,6 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
             <label class="form-label">Area tematica (opzionale)</label>
             <select class="form-select" id="bk-area"></select>
           </div>
-          <div class="form-group">
-            <label class="form-label">Recapito alternativo o orari preferiti <span style="font-weight:400;color:var(--ink3)">(opzionale)</span></label>
-            <input class="form-input" id="bk-note" placeholder="Es. preferisco essere richiamato dopo le 18, oppure +39...">
-            <div style="font-size:12px;color:var(--ink3);margin-top:4px">Per informazioni cliniche, contatta direttamente lo studio</div>
-          </div>
-
           <div class="consent-box" style="background:var(--surface2);padding:14px;border-radius:8px;margin:16px 0;font-size:13px">
             <p style="margin:0 0 10px 0"><strong>Informativa breve</strong></p>
             <p style="margin:0 0 8px 0">I dati che inserisci (nome, cognome, email, telefono, recapito) sono raccolti da <strong>Delphi~Med</strong> per la gestione del tuo appuntamento, per conto del medico che gestisce questa agenda.</p>
@@ -1603,9 +1584,9 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
             <div style="margin-top:20px;text-align:left">
               <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:8px">Aggiungi al calendario</div>
               <div class="cal-add-btns">
-                <button class="cal-add-btn" onclick="bkAddToGoogleCal()">📅 Google Calendar</button>
-                <button class="cal-add-btn" onclick="bkAddToIcal()">🍎 Apple / iCal</button>
-                <button class="cal-add-btn" onclick="bkAddToOutlook()">📆 Outlook</button>
+                <button class="cal-add-btn" onclick="bkAddToGoogleCal()">Google Calendar</button>
+                <button class="cal-add-btn" onclick="bkAddToIcal()">Apple Calendar</button>
+                <button class="cal-add-btn" onclick="bkAddToOutlook()">Outlook</button>
               </div>
             </div>
 
@@ -1731,7 +1712,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
           <label class="form-label">Area tematica (opzionale)</label>
           <select class="form-select" id="appt-area"></select>
         </div>
-        <div class="form-group"><label class="form-label">Note</label><textarea class="form-textarea" id="appt-note"></textarea></div>
+        <div class="form-group"><label class="form-label">Note</label><textarea class="form-textarea" id="appt-note" placeholder="Informazioni organizzative utili al paziente"></textarea></div>
         <div style="margin-top:12px">
           <div class="section-title">Notifica centro</div>
           <div id="mail-preview-appt" class="mail-preview" style="display:none"></div>
@@ -1913,7 +1894,6 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
             <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" style="flex:1"></div>
-            <div class="field-row" id="row-ex-cf"><span class="field-key">Cod. Fiscale</span><input class="form-input" id="ex-cf" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1"></div>
           </div>
@@ -2506,7 +2486,6 @@ async function loadMedicoFromDB(user){
       S.settings.notifAppuntamentoManuale = data.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = data.notifica_cancellazione_medico !== false;
       S.settings.nascondiCancellati       = data.nascondi_cancellati           === true;
-      S.settings.estraiCfReferti         = data.estrai_cf_referti            === true;
       S.settings.sogliaConservazione     = data.soglia_conservazione_anni    || 10;
       if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
       if(data.deleted_at){
@@ -2601,12 +2580,12 @@ async function loadPazientiFromDB(user){
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient.from('pazienti')
-      .select('id, nome, cognome, codice_fiscale, data_nascita')
+      .select('id, nome, cognome, data_nascita')
       .eq('medico_id', medico.id).order('cognome').order('nome');
     if(error) throw error;
     S.pazienti = (data || []).map(p => ({
       id: p.id, nome: p.nome||'', cognome: p.cognome||'',
-      cf: p.codice_fiscale||'', nascita: p.data_nascita||'', visite: []
+      nascita: p.data_nascita||'', visite: []
     }));
     save();
     console.log('[Delphi~Med] Pazienti caricati da DB:', S.pazienti.length);
@@ -3025,6 +3004,30 @@ function init(){
   updateShareLink();
   renderAll();
   setupCapitalizeListeners();
+  setupChipDelegation();
+}
+
+function setupChipDelegation(){
+  const bind = (containerId, handler) => {
+    const el = document.getElementById(containerId);
+    if(el && !el._chipDelegated){ el._chipDelegated = true; el.addEventListener('click', handler); }
+  };
+  bind('lingue-list', e => {
+    const btn = e.target.closest('.chip-remove-lingue'); if(!btn) return;
+    removeLingua(parseInt(btn.dataset.idx, 10));
+  });
+  bind('spec-altre-list', e => {
+    const btn = e.target.closest('.chip-remove-spec'); if(!btn) return;
+    removeSpecAltra(btn.dataset.spec);
+  });
+  bind('tipi-visita-list', e => {
+    const btn = e.target.closest('.chip-remove-tipo'); if(!btn) return;
+    removeTipoVisita(parseInt(btn.dataset.idx, 10));
+  });
+  bind('aree-list', e => {
+    const btn = e.target.closest('.chip-remove-area'); if(!btn) return;
+    removeArea(parseInt(btn.dataset.idx, 10));
+  });
 }
 
 function renderAll(){
@@ -3954,10 +3957,12 @@ async function saveAppuntamento(){
           medico_nome: _medNome,
           medico_email: _medSettings.email || '',
           centro_nome: newAppt.centroNome || '',
+          centro_indirizzo: _aCentro ? _aCentro.indirizzo || '' : '',
           data: A.dateStr,
           ora: A.ora,
           tipo_visita: newAppt.tipo || '',
-          codice_cancellazione: cancellationToken
+          codice_cancellazione: cancellationToken,
+          appt_id: newAppt.id || ''
         })
       }).catch(e=>console.error('[Delphi~Med] send-email manuale:', e.message));
     }
@@ -4495,7 +4500,6 @@ function showPazienteDetail(id){
     <div class="extracted-fields" style="margin-bottom:16px">
       <div class="field-row"><span class="field-key">Nome</span><span class="field-val">${escapeHtml(p.nome)} ${escapeHtml(p.cognome)}</span></div>
       ${p.nascita?`<div class="field-row"><span class="field-key">Data nascita</span><span class="field-val">${escapeHtml(p.nascita)}</span></div>`:''}
-      ${p.cf?`<div class="field-row"><span class="field-key">Cod. Fiscale</span><span class="field-val">${escapeHtml(p.cf)}</span></div>`:''}
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
     <div class="section-title">${visite.length} ${visite.length===1?'visita':'visite'}</div>
@@ -4673,7 +4677,6 @@ function downloadStoriaPDF(pazId){
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
     doc.text('Nome: '+paz.nome+' '+paz.cognome, margin, y); y+=5;
     if(paz.nascita){ doc.text('Data di nascita: '+paz.nascita, margin, y); y+=5; }
-    if(paz.cf){ doc.text('Codice Fiscale: '+paz.cf, margin, y); y+=5; }
     y+=3;
     doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=8;
     doc.setFont('helvetica','bold'); doc.setFontSize(11);
@@ -4795,7 +4798,7 @@ function renderVisitaSearchResults(){
   const resEl = document.getElementById('visita-search-results');
   if(!q){ resEl.innerHTML = ''; return; }
   const matches = S.pazienti.filter(p=>
-    `${p.nome} ${p.cognome} ${p.cf||''}`.toLowerCase().includes(q)
+    `${p.nome} ${p.cognome}`.toLowerCase().includes(q)
   ).slice(0,8);
   if(!matches.length){
     resEl.innerHTML = '<div style="padding:10px;color:var(--ink3);font-size:12px">Nessun paziente trovato</div>';
@@ -4829,14 +4832,14 @@ async function visitaSelectFromAppt(apptId){
         const { data: newPaz, error } = await supabaseClient.from('pazienti')
           .insert({ medico_id: medico.id, nome: a.nome, cognome: a.cognome }).select('id').single();
         if(error) throw error;
-        paz = { id: newPaz.id, nome: a.nome, cognome: a.cognome, cf:'', nascita:'', visite:[] };
+        paz = { id: newPaz.id, nome: a.nome, cognome: a.cognome, nascita:'', visite:[] };
         console.log('[Delphi~Med] Paziente creato da appuntamento:', { id: newPaz.id });
       } catch(e){
         console.error('[Delphi~Med] visitaSelectFromAppt:', e.message);
-        paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, cf:'', nascita:'', visite:[] };
+        paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, nascita:'', visite:[] };
       }
     } else {
-      paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, cf:'', nascita:'', visite:[] };
+      paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, nascita:'', visite:[] };
     }
     S.pazienti.unshift(paz);
     save();
@@ -4866,16 +4869,15 @@ function goToVisitaUpload(paziente, appt){
     infoEl.innerHTML = `
       <div class="confirm-row"><span class="confirm-key">Paziente</span><span><strong>${paziente.cognome} ${paziente.nome}</strong></span></div>
       ${appt ? `<div class="confirm-row"><span class="confirm-key">Appuntamento</span><span>${formatDate(appt.data)} ore ${appt.ora}</span></div>` : ''}
-      ${paziente.cf ? `<div class="confirm-row"><span class="confirm-key">CF</span><span>${paziente.cf}</span></div>` : ''}
     `;
     // Nascondi i campi anagrafici (già noti) ma li lascio editabili nascosti
-    ['row-ex-nome','row-ex-cognome','row-ex-nascita','row-ex-cf'].forEach(id=>{
+    ['row-ex-nome','row-ex-cognome','row-ex-nascita'].forEach(id=>{
       const el = document.getElementById(id);
       if(el) el.style.display = 'none';
     });
   } else {
     infoEl.innerHTML = `<div style="font-size:13px;color:var(--ink2)">📋 Nuovo paziente — i dati anagrafici verranno estratti dal referto</div>`;
-    ['row-ex-nome','row-ex-cognome','row-ex-nascita','row-ex-cf'].forEach(id=>{
+    ['row-ex-nome','row-ex-cognome','row-ex-nascita'].forEach(id=>{
       const el = document.getElementById(id);
       if(el) el.style.display = 'flex';
     });
@@ -4908,7 +4910,7 @@ function resetVisitaUpload(){
   });
   const sb = document.getElementById('btn-salva-visita');
   if(sb) sb.style.display='none';
-  ['ex-nome','ex-cognome','ex-nascita','ex-cf','ex-data-visita','ex-luogo','ex-clinica'].forEach(id=>{
+  ['ex-nome','ex-cognome','ex-nascita','ex-data-visita','ex-luogo','ex-clinica'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value='';
   });
@@ -4948,10 +4950,6 @@ async function handleRefertoUpload(input){
 
     let prompt;
     if(isNew){
-      const estraiCf = S.settings.estraiCfReferti === true;
-      const cfLine = estraiCf
-        ? '  "codice_fiscale": "CF se presente, altrimenti vuoto",'
-        : '  "codice_fiscale": "",';
       prompt = `Sei un assistente medico. Analizza ${multiLabel} e produci una sintesi clinica concisa ma completa.
 
 ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
@@ -4959,12 +4957,10 @@ ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero 
   "nome": "nome del paziente",
   "cognome": "cognome del paziente",
   "data_nascita": "gg/mm/aaaa o vuoto",
-${cfLine}
   "data_visita": "gg/mm/aaaa della visita",
   "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
   "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
 }`;
-      if(!estraiCf) prompt += '\n\nNon estrarre il codice fiscale: il campo "codice_fiscale" deve essere sempre stringa vuota.';
     } else {
       const paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
       prompt = `Sei un assistente medico. Il paziente è: ${paz ? paz.cognome+' '+paz.nome : 'noto'}.
@@ -4976,7 +4972,7 @@ Rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
   "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
   "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
 }
-Il campo nome/cognome/CF non serve, è già noto.`;
+Il campo nome/cognome non serve, è già noto.`;
     }
 
     const contentBlocks = fileContents.map(fc => ({
@@ -5003,7 +4999,6 @@ Il campo nome/cognome/CF non serve, è già noto.`;
       document.getElementById('ex-nome').value = p.nome||'';
       document.getElementById('ex-cognome').value = p.cognome||'';
       document.getElementById('ex-nascita').value = p.data_nascita||'';
-      document.getElementById('ex-cf').value = p.codice_fiscale||'';
     }
     if(p.data_visita) document.getElementById('ex-data-visita').value = p.data_visita;
     if(p.luogo) document.getElementById('ex-luogo').value = p.luogo;
@@ -5044,19 +5039,18 @@ async function saveVisita(){
       const nome = capitalizeName(document.getElementById('ex-nome').value.trim());
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return; }
-      const cf = document.getElementById('ex-cf')?.value.trim() || '';
       const nascita = document.getElementById('ex-nascita').value.trim();
-      paz = S.pazienti.find(p=>(cf&&p.cf===cf)||(p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase()));
+      paz = S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
       if(!paz){
         if(isOnline() && S.medicoId){
           const { data: newPaz, error } = await supabaseClient.from('pazienti').insert({
             medico_id: S.medicoId, nome, cognome,
-            codice_fiscale: cf || null, data_nascita: nascita || null
+            data_nascita: nascita || null
           }).select('id').single();
           if(error) throw error;
-          paz = { id: newPaz.id, nome, cognome, cf, nascita, visite:[] };
+          paz = { id: newPaz.id, nome, cognome, nascita, visite:[] };
         } else {
-          paz = { id: Date.now(), nome, cognome, cf, nascita, visite:[] };
+          paz = { id: Date.now(), nome, cognome, nascita, visite:[] };
         }
         S.pazienti.unshift(paz);
         showToast('Nuovo paziente e visita salvati ✓');
@@ -5349,7 +5343,6 @@ function loadSettings(){
   renderLingue();
   renderSpecAltre();
   renderFotoProfilo();
-  chk('setting-estrai-cf', S.settings.estraiCfReferti);
 }
 async function saveSettings(){
   const val=id=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
@@ -5376,7 +5369,6 @@ async function saveSettings(){
   S.settings.instagram   = val('setting-instagram');
   S.settings.youtube     = val('setting-youtube');
   S.settings.facebook    = val('setting-facebook');
-  S.settings.estraiCfReferti = document.getElementById('setting-estrai-cf')?.checked === true;
   const _slugImpactChanged = S.settings.nomeProf !== _prevNome ||
                              S.settings.cognomeProf !== _prevCogn ||
                              S.settings.spec !== _prevSpec;
@@ -5415,7 +5407,6 @@ async function saveSettings(){
         notifica_nuova_prenotazione:   S.settings.notifNuovaPrenotazione,
         notifica_cancellazione:        S.settings.notifCancellazione,
         notifica_appuntamento_manuale: S.settings.notifAppuntamentoManuale,
-        estrai_cf_referti: S.settings.estraiCfReferti === true
       }).eq('user_id', user.id);
       if(error) throw error;
       showToast('Salvato ✓');
@@ -5537,7 +5528,7 @@ async function removeFotoProfilo(){
 function renderLingue(){
   const el=document.getElementById('lingue-list'); if(!el) return;
   el.innerHTML=(S.settings.lingue||[]).map((l,i)=>
-    `<span class="tag-chip">${l}<button class="tag-chip-x" onclick="removeLingua(${i})" title="Rimuovi">✕</button></span>`
+    `<span class="tag-chip">${l}<button class="tag-chip-x chip-remove-lingue" data-idx="${i}" title="Rimuovi">✕</button></span>`
   ).join('');
 }
 function addLingua(){
@@ -5562,7 +5553,7 @@ function renderSpecAltre(){
   const sel  = document.getElementById('setting-spec-altre-select'); if(!sel) return;
   const specPrinc = (document.getElementById('setting-spec')||{}).value || S.settings.spec || '';
   list.innerHTML = (S.settings.specAltre||[]).map(s =>
-    `<span class="tag-chip">${s}<button class="tag-chip-x" onclick="removeSpecAltra(${JSON.stringify(s)})" title="Rimuovi">✕</button></span>`
+    `<span class="tag-chip">${s}<button class="tag-chip-x chip-remove-spec" data-spec="${escapeAttr(s)}" title="Rimuovi">✕</button></span>`
   ).join('');
   const used = new Set([...(S.settings.specAltre||[]), specPrinc].filter(Boolean));
   sel.innerHTML = '<option value="">+ Aggiungi specializzazione…</option>' +
@@ -5888,7 +5879,7 @@ async function confirmBooking(){
     email:document.getElementById('bk-email').value.trim(),
     tipo:document.getElementById('bk-tipo').value.trim()||'Prima visita',
     area:document.getElementById('bk-area').value.trim(),
-    note:document.getElementById('bk-note').value.trim(),
+    note:'',
     data:bk.dateStr, ora:bk.ora,
     centroId:bk.centroId, source:'paziente', seen:false,
     cancellationToken, cancelled:false
@@ -5933,7 +5924,7 @@ async function confirmBooking(){
       console.log('[Booking] INSERT OK, id:', inserted.id);
       if(appt.email){
         const _ec=S.centri.find(c=>String(c.id)===String(bk.centroId));
-        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:appt.email,paziente_nome:nome+' '+cognome,medico_nome:bk.medicoNome||document.getElementById('bk-doctor-name').textContent,medico_email:bk.medicoEmail||'',centro_nome:_ec?_ec.nome:'',data:bk.dateStr,ora:bk.ora,tipo_visita:appt.tipo||'',codice_cancellazione:cancellationToken})}).catch(e=>console.error('[Delphi~Med] send-email:',e.message));
+        fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:appt.email,paziente_nome:nome+' '+cognome,medico_nome:bk.medicoNome||document.getElementById('bk-doctor-name').textContent,medico_email:bk.medicoEmail||'',centro_nome:_ec?_ec.nome:(bk._centroData?bk._centroData.nome:''),centro_indirizzo:bk._centroData?bk._centroData.indirizzo||'':'',data:bk.dateStr,ora:bk.ora,tipo_visita:appt.tipo||'',codice_cancellazione:cancellationToken,appt_id:appt.id||''})}).catch(e=>console.error('[Delphi~Med] send-email:',e.message));
       }
     } catch(e){
       console.error('[Delphi~Med] confirmBooking INSERT:', e.message);
@@ -5991,7 +5982,7 @@ function bkAddToGoogleCal(){
   const title=encodeURIComponent('Visita medica');
   const loc=encodeURIComponent(c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}`:'');
   const det=encodeURIComponent('Prenotazione confermata con '+document.getElementById('bk-doctor-name').textContent);
-  window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dtStart}/${dtEnd}&details=${det}&location=${loc}`,'_blank');
+  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dtStart}Z/${dtEnd}Z&details=${det}&location=${loc}`,'_blank');
 }
 function bkAddToIcal(){
   const dt=_bkCalDates(); if(!dt) return;
@@ -6005,14 +5996,12 @@ function bkAddToIcal(){
   const link=document.createElement('a'); link.href=url; link.download='visita_medica.ics'; link.click(); URL.revokeObjectURL(url);
 }
 function bkAddToOutlook(){
-  const dt=_bkCalDates(); if(!dt) return;
-  const c=bk._centroData;
-  const dtStart=`${dt.y}-${dt.m}-${dt.dd}T${dt.hh}:${dt.mm}:00`;
-  const dtEnd=`${dt.y}-${dt.m}-${dt.dd}T${dt.endH}:${dt.endM}:00`;
-  const subject=encodeURIComponent('Visita medica');
-  const loc=encodeURIComponent(c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}`:'');
-  const body=encodeURIComponent('Prenotazione confermata con '+document.getElementById('bk-doctor-name').textContent);
-  window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${subject}&startdt=${dtStart}&enddt=${dtEnd}&body=${body}&location=${loc}`,'_blank');
+  const a=_bkLastAppt;
+  if(a && a.id && a.cancellationToken){
+    window.open(`${window.location.origin}/api/ics?id=${encodeURIComponent(a.id)}&token=${encodeURIComponent(a.cancellationToken)}`,'_blank');
+  } else {
+    bkAddToIcal();
+  }
 }
 
 // ── PAGINA CANCELLAZIONE ──
@@ -6102,7 +6091,7 @@ async function cancelBookingByToken(apptId){
 
 function bkReset(){
   bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),medicoId:null,medicoEmail:'',medicoNome:'',slotOccupati:[],_centroData:null};
-  ['bk-nome','bk-cognome','bk-tel','bk-email','bk-tipo','bk-note'].forEach(id=>document.getElementById(id).value='');
+  ['bk-nome','bk-cognome','bk-tel','bk-email','bk-tipo'].forEach(id=>document.getElementById(id).value='');
   ['bk-consent-base','bk-consent-health'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=false; });
   bkInit();
 }
@@ -6113,13 +6102,13 @@ function renderTipiAree(){
   if(tEl){
     tEl.innerHTML = S.tipiVisita.map((t,i)=>{
       const isDefault = TIPI_DEFAULT.includes(t);
-      return `<span class="tag-chip ${isDefault?'tag-default':''}">${t}${!isDefault?`<button class="tag-chip-x" onclick="removeTipoVisita(${i})" title="Rimuovi">✕</button>`:''}</span>`;
+      return `<span class="tag-chip ${isDefault?'tag-default':''}">${t}${!isDefault?`<button class="tag-chip-x chip-remove-tipo" data-idx="${i}" title="Rimuovi">✕</button>`:''}</span>`;
     }).join('');
   }
   const aEl = document.getElementById('aree-list');
   if(aEl){
     aEl.innerHTML = S.areeTematiche.map((a,i)=>
-      `<span class="tag-chip">${a}<button class="tag-chip-x" onclick="removeArea(${i})" title="Rimuovi">✕</button></span>`
+      `<span class="tag-chip">${a}<button class="tag-chip-x chip-remove-area" data-idx="${i}" title="Rimuovi">✕</button></span>`
     ).join('');
   }
 }
@@ -6442,7 +6431,7 @@ function renderPazienti(){
   const el=document.getElementById('pazienti-list'); if(!el) return;
   const q=(document.getElementById('search-pazienti')?.value||'').toLowerCase();
   let list=S.pazienti;
-  if(q) list=list.filter(p=>`${p.nome} ${p.cognome} ${p.cf}`.toLowerCase().includes(q));
+  if(q) list=list.filter(p=>`${p.nome} ${p.cognome}`.toLowerCase().includes(q));
   if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>'; return; }
   // Se c'è una ricerca attiva, mostra piatto come prima
   if(q){
@@ -6501,7 +6490,7 @@ function _renderPazientiCards(list){
       <div class="paziente-avatar">${initials.toUpperCase()}</div>
       <div class="paziente-info">
         <div class="paziente-name">${p.cognome} ${p.nome}</div>
-        <div class="paziente-meta">${p.nascita?'Nato/a il '+p.nascita:''} ${p.cf?'· CF: '+p.cf:''}</div>
+        <div class="paziente-meta">${p.nascita?'Nato/a il '+p.nascita:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span style="font-size:12px;color:var(--accent);font-weight:500">${n} ${n===1?'visita':'visite'}</span>
@@ -6650,8 +6639,8 @@ async function generateFullBackupZip(){
 
   // ── 2. CSV pazienti
   root.file('pazienti.csv', csvBuild(
-    ['ID', 'Nome', 'Cognome', 'Data nascita', 'Codice fiscale', 'N. visite'],
-    S.pazienti.map(p => [p.id, p.nome||'', p.cognome||'', p.nascita||'', p.cf||'', (p.visite||[]).length])
+    ['ID', 'Nome', 'Cognome', 'Data nascita', 'N. visite'],
+    S.pazienti.map(p => [p.id, p.nome||'', p.cognome||'', p.nascita||'', (p.visite||[]).length])
   ));
 
   // ── 3. CSV appuntamenti
@@ -6673,14 +6662,14 @@ async function generateFullBackupZip(){
   S.pazienti.forEach(p => {
     (p.visite||[]).forEach(v => {
       visiteRows.push([
-        p.cognome||'', p.nome||'', p.cf||'', p.nascita||'',
+        p.cognome||'', p.nome||'', p.nascita||'',
         v.data||'', v.luogo||'',
         (v.clinica||'').replace(/\n/g, ' \\n ')
       ]);
     });
   });
   root.file('visite.csv', csvBuild(
-    ['Cognome paziente', 'Nome paziente', 'CF', 'Data nascita', 'Data visita', 'Luogo', 'Contenuto clinico'],
+    ['Cognome paziente', 'Nome paziente', 'Data nascita', 'Data visita', 'Luogo', 'Contenuto clinico'],
     visiteRows
   ));
 
@@ -6819,7 +6808,6 @@ h1{color:#0a8074}h2{border-bottom:1px solid #ccc;padding-bottom:4px;margin-top:3
 <h1>Documentazione paziente</h1>
 <p><strong>${escapeHtml(p.cognome||'')} ${escapeHtml(p.nome||'')}</strong></p>
 ${p.nascita ? `<p>Data di nascita: ${escapeHtml(p.nascita)}</p>` : ''}
-${p.cf ? `<p>Codice fiscale: ${escapeHtml(p.cf)}</p>` : ''}
 <h2>Cronologia clinica (${visite.length} visite)</h2>
 ${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(v => `
 <div class="visita">
