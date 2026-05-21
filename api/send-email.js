@@ -191,6 +191,7 @@ function buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_no
 function buildHtml({ paziente_nome, medico_nome, centro_nome, centro_indirizzo, dataFmt, data, ora, tipo_visita, codice_cancellazione, appt_id, icsHost }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
   const { googleUrl, icsUrl } = buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome, appt_id, codice_cancellazione, icsHost });
+  const webcalUrl = icsUrl ? icsUrl.replace(/^https?:\/\//, 'webcal://') : '';
   const btnStyle = 'display:inline-block;padding:8px 14px;background:#f0fdfb;border:1px solid #ccece9;border-radius:6px;text-decoration:none;color:#0D9488;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;';
   const calSection = googleUrl ? `
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
@@ -198,8 +199,7 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, centro_indirizzo, 
           <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#999;margin:0 0 10px;">Aggiungi al calendario</p>
           <table cellpadding="0" cellspacing="0"><tr>
             <td style="padding-right:8px;"><a href="${googleUrl}" target="_blank" style="${btnStyle}">Google Calendar</a></td>
-            ${icsUrl ? `<td style="padding-right:8px;"><a href="${icsUrl}" style="${btnStyle}">Apple Calendar</a></td>
-            <td><a href="${icsUrl}" style="${btnStyle}">Calendario Outlook</a></td>` : ''}
+            ${webcalUrl ? `<td><a href="${webcalUrl}" style="${btnStyle}">Apple Calendar</a></td>` : ''}
           </tr></table>
         </td></tr>
       </table>` : '';

@@ -1586,7 +1586,6 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
               <div class="cal-add-btns">
                 <button class="cal-add-btn" onclick="bkAddToGoogleCal()">Google Calendar</button>
                 <button class="cal-add-btn" onclick="bkAddToIcal()">Apple Calendar</button>
-                <button class="cal-add-btn" onclick="bkAddToOutlook()">Outlook</button>
               </div>
             </div>
 
@@ -5985,6 +5984,12 @@ function bkAddToGoogleCal(){
   window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dtStart}Z/${dtEnd}Z&details=${det}&location=${loc}`,'_blank');
 }
 function bkAddToIcal(){
+  const a=_bkLastAppt;
+  if(a && a.id && a.cancellationToken){
+    window.open(`webcal://${window.location.host}/api/ics?id=${encodeURIComponent(a.id)}&token=${encodeURIComponent(a.cancellationToken)}`,'_blank');
+    return;
+  }
+  // Fallback blob per sessioni offline
   const dt=_bkCalDates(); if(!dt) return;
   const c=bk._centroData;
   const dtStart=`${dt.y}${dt.m}${dt.dd}T${dt.hh}${dt.mm}00`;
@@ -5993,15 +5998,7 @@ function bkAddToIcal(){
   const ics=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//DelphiMed//IT\r\nBEGIN:VEVENT\r\nUID:${Date.now()}@delphimed\r\nDTSTART:${dtStart}\r\nDTEND:${dtEnd}\r\nSUMMARY:Visita medica\r\nLOCATION:${loc}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
   const blob=new Blob([ics],{type:'text/calendar'});
   const url=URL.createObjectURL(blob);
-  const link=document.createElement('a'); link.href=url; link.download='visita_medica.ics'; link.click(); URL.revokeObjectURL(url);
-}
-function bkAddToOutlook(){
-  const a=_bkLastAppt;
-  if(a && a.id && a.cancellationToken){
-    window.open(`${window.location.origin}/api/ics?id=${encodeURIComponent(a.id)}&token=${encodeURIComponent(a.cancellationToken)}`,'_blank');
-  } else {
-    bkAddToIcal();
-  }
+  const link=document.createElement('a'); link.href=url; link.download='appuntamento.ics'; link.click(); URL.revokeObjectURL(url);
 }
 
 // ── PAGINA CANCELLAZIONE ──
