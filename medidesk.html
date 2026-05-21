@@ -7948,6 +7948,12 @@ function showToast(msg){
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
 }
+
+// Popola i select specializzazione subito al caricamento pagina (DOM già pronto,
+// script in fondo all'HTML) — necessario per il form registrazione (utenti non loggati)
+// dove init() non viene mai chiamata. Idempotente: init() li richiama senza problemi.
+_populateSpecSelect('reg-specializzazione', '— seleziona —');
+_populateSpecSelect('setting-spec', '— seleziona —');
 </script>
 </body>
 </html>
