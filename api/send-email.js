@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { buildICS } from '../lib/ics-builder.js';
 
 // A.5: rate limiting in-memory (20 req/ora per IP)
 const emailRateMap = new Map();
@@ -111,6 +112,16 @@ export default async function handler(req, res) {
     html
   };
   if (medico_email) emailPayload.reply_to = medico_email;
+
+  if (appt_id && data && ora) {
+    const icsLocation = [centro_nome, centro_indirizzo].filter(Boolean).join(', ');
+    const icsContent = buildICS({ apptId: appt_id, data, ora, medicoNome: medico_nome || '', location: icsLocation });
+    emailPayload.attachments = [{
+      filename: 'appuntamento.ics',
+      content: Buffer.from(icsContent).toString('base64'),
+      contentType: 'text/calendar; charset=utf-8'
+    }];
+  }
 
   try {
     const { error } = await resend.emails.send(emailPayload);
