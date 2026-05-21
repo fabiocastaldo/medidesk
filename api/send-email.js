@@ -163,30 +163,34 @@ function buildHtmlCancellazioneMedico({ paziente_nome, medico_nome, centro_nome,
 }
 
 function buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome, appt_id, codice_cancellazione }) {
-  if (!data || !ora) return { googleUrl: '', icsUrl: '' };
+  if (!data || !ora) return { googleUrl: '', outlookUrl: '', icsUrl: '' };
   const [y, m, d] = data.split('-');
   const [hh, mm] = (ora || '00:00').split(':');
-  const dtStart = `${y}${m}${d}T${hh}${mm}00`;
+  const dtCompact = `${y}${m}${d}T${hh}${mm}00`;
   const totalMin = parseInt(hh) * 60 + parseInt(mm) + 30;
   const endH = String(Math.floor(totalMin / 60)).padStart(2, '0');
   const endM = String(totalMin % 60).padStart(2, '0');
-  const dtEnd = `${y}${m}${d}T${endH}${endM}00`;
+  const dtCompactEnd = `${y}${m}${d}T${endH}${endM}00`;
+  const dtIso = `${y}-${m}-${d}T${hh}:${mm}:00`;
+  const dtIsoEnd = `${y}-${m}-${d}T${endH}:${endM}:00`;
   const location = [centro_nome, centro_indirizzo].filter(Boolean).join(', ');
   const title = 'Visita medica';
   const details = medico_nome ? `Appuntamento con ${medico_nome}` : 'Visita medica';
 
-  const googleUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dtStart}/${dtEnd}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dtCompact}Z/${dtCompactEnd}Z&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+
+  const outlookUrl = `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${encodeURIComponent(title)}&startdt=${encodeURIComponent(dtIso)}&enddt=${encodeURIComponent(dtIsoEnd)}&body=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
 
   const icsUrl = (appt_id && codice_cancellazione)
     ? `https://delphi-med.com/api/ics?id=${encodeURIComponent(appt_id)}&token=${encodeURIComponent(codice_cancellazione)}`
     : '';
 
-  return { googleUrl, icsUrl };
+  return { googleUrl, outlookUrl, icsUrl };
 }
 
 function buildHtml({ paziente_nome, medico_nome, centro_nome, centro_indirizzo, dataFmt, data, ora, tipo_visita, codice_cancellazione, appt_id }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
-  const { googleUrl, icsUrl } = buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome, appt_id, codice_cancellazione });
+  const { googleUrl, outlookUrl, icsUrl } = buildCalendarUrls({ data, ora, centro_nome, centro_indirizzo, medico_nome, appt_id, codice_cancellazione });
   const btnStyle = 'display:inline-block;padding:8px 14px;background:#f0fdfb;border:1px solid #ccece9;border-radius:6px;text-decoration:none;color:#0D9488;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;';
   const calSection = googleUrl ? `
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
@@ -194,8 +198,8 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, centro_indirizzo, 
           <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#999;margin:0 0 10px;">Aggiungi al calendario</p>
           <table cellpadding="0" cellspacing="0"><tr>
             <td style="padding-right:8px;"><a href="${googleUrl}" target="_blank" style="${btnStyle}">Google Calendar</a></td>
-            ${icsUrl ? `<td style="padding-right:8px;"><a href="${icsUrl}" style="${btnStyle}">Apple Calendar</a></td>
-            <td><a href="${icsUrl}" style="${btnStyle}">Calendario Outlook</a></td>` : ''}
+            ${icsUrl ? `<td style="padding-right:8px;"><a href="${icsUrl}" style="${btnStyle}">Apple Calendar</a></td>` : ''}
+            <td><a href="${outlookUrl}" target="_blank" style="${btnStyle}">Calendario Outlook</a></td>
           </tr></table>
         </td></tr>
       </table>` : '';

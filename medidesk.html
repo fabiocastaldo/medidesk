@@ -1712,7 +1712,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
           <label class="form-label">Area tematica (opzionale)</label>
           <select class="form-select" id="appt-area"></select>
         </div>
-        <div class="form-group"><label class="form-label">Note</label><textarea class="form-textarea" id="appt-note" placeholder="Informazioni organizzative utili al paziente. Es. portare esami precedenti, presentarsi 10 min prima, fascia oraria di arrivo flessibile..."></textarea></div>
+        <div class="form-group"><label class="form-label">Note</label><textarea class="form-textarea" id="appt-note" placeholder="Informazioni organizzative utili al paziente"></textarea></div>
         <div style="margin-top:12px">
           <div class="section-title">Notifica centro</div>
           <div id="mail-preview-appt" class="mail-preview" style="display:none"></div>
@@ -5982,7 +5982,7 @@ function bkAddToGoogleCal(){
   const title=encodeURIComponent('Visita medica');
   const loc=encodeURIComponent(c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}`:'');
   const det=encodeURIComponent('Prenotazione confermata con '+document.getElementById('bk-doctor-name').textContent);
-  window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dtStart}/${dtEnd}&details=${det}&location=${loc}`,'_blank');
+  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dtStart}Z/${dtEnd}Z&details=${det}&location=${loc}`,'_blank');
 }
 function bkAddToIcal(){
   const dt=_bkCalDates(); if(!dt) return;
@@ -6003,7 +6003,7 @@ function bkAddToOutlook(){
   const subject=encodeURIComponent('Visita medica');
   const loc=encodeURIComponent(c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}`:'');
   const body=encodeURIComponent('Prenotazione confermata con '+document.getElementById('bk-doctor-name').textContent);
-  window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${subject}&startdt=${dtStart}&enddt=${dtEnd}&body=${body}&location=${loc}`,'_blank');
+  window.open(`https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=${subject}&startdt=${dtStart}&enddt=${dtEnd}&body=${body}&location=${loc}`,'_blank');
 }
 
 // ── PAGINA CANCELLAZIONE ──
