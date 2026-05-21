@@ -331,7 +331,7 @@ SQL `batch-d-migrations.sql` eseguito in Supabase SQL Editor (DROP CF da pazient
 - [ ] Logica aggiunta lingue/specializzazioni: invertire — premi "Aggiungi" e poi selezioni dalla dropdown invece di scrivere a mano
 
 ### Prodotto — roadmap media priorità
-- [ ] **Funzionalità "Aggiungi al calendario"** da ridisegnare in batch dedicato. Rimossa in feat/ui-cleanup-v2 perché l'esperienza mobile non era soddisfacente (selettore browser iOS, webcal:// problemi, link Outlook redirect Microsoft). Approccio alternativo da valutare: allegato .ics come attachment Resend con test approfondito su iOS Mail, Gmail iOS, Outlook iOS prima del rilascio. Endpoint `/api/ics` e `lib/ics-builder.js` già nel codebase pronti per riuso.
+- [ ] **Aggiungi al calendario** — funzionalità da ridisegnare. Rimossa in Batch D rifiniture perché l'esperienza mobile non era soddisfacente (selettore browser iOS, webcal:// problemi, link Outlook redirect Microsoft). Considerare allegato .ics testato a fondo su iOS Mail, Gmail iOS, Outlook iOS. Implementare solo dopo esperienza one-tap mobile verificata. Endpoint `/api/ics` e `lib/ics-builder.js` già nel codebase pronti per riuso.
 - [ ] Area Account dedicata: dati abbonamento, fatture, cambio email/password (insieme a FASE 5 Stripe)
 - [ ] Statistiche avanzate: tasso ritorno per area tematica, drill-down per centro, export PDF
 - [ ] Sezione Notifiche centralizzata: raggruppa avvisi (turni in scadenza, soglia conservazione, aggiornamenti policy)
