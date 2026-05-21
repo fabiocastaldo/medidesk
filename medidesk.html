@@ -2015,6 +2015,47 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
   </div>
 </div>
 
+<!-- MODAL TERMINA TURNO DAL -->
+<div class="modal-overlay" id="modal-termina-turno">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">Termina turno dal...</span>
+      <button class="modal-close" onclick="closeModal('modal-termina-turno')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Termina con effetto dal</label>
+        <input type="date" class="form-input" id="termina-turno-data">
+        <div style="font-size:12px;color:var(--ink3);margin-top:6px">Il turno smetterà di generare nuovi slot prenotabili da questa data in poi. Gli appuntamenti già prenotati restano in agenda.</div>
+        <div id="termina-turno-error" style="font-size:12px;color:var(--warm);margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-termina-turno')">Annulla</button>
+      <button class="btn btn-primary" onclick="saveTerminaTurno()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFERMA TERMINA TURNO (warning appuntamenti esistenti) -->
+<div class="modal-overlay" id="modal-conferma-termina-turno">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title" id="conferma-termina-titolo">Attenzione</span>
+      <button class="modal-close" onclick="closeModal('modal-conferma-termina-turno')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="conferma-termina-testo" style="margin:0 0 12px;font-size:14px;color:var(--ink)"></p>
+      <div id="conferma-termina-lista" style="font-size:13px;color:var(--ink2);margin-bottom:14px;max-height:200px;overflow-y:auto;background:var(--surface2);border-radius:6px;padding:10px 14px"></div>
+      <p style="margin:0;font-size:13px;color:var(--ink2)">Questi appuntamenti resteranno in agenda e dovranno essere gestiti manualmente (riassegnati a un altro turno, cancellati, o riprenotati a una data anteriore).</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-conferma-termina-turno')">Annulla</button>
+      <button class="btn btn-warm" onclick="procediTerminaTurno()">Procedi comunque</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GIORNATA SINGOLA -->
 <div class="modal-overlay" id="modal-giornata-singola">
   <div class="modal">
@@ -2086,6 +2127,7 @@ var _giornataSingolaTargetId = null;
 var _bkLastAppt = null;
 var _lpTimer = null;
 var _pendingDeleteTurno = null;
+var _terminaTurnoState = null;
 
 // ── SUPABASE ──
 let supabaseClient = null;
@@ -3336,6 +3378,7 @@ function renderCentroCard(c, isActive){
         const fineStr = t.dataFineValidita ? ` · fino al ${formatDate(t.dataFineValidita)}` : '';
         return `<div class="turno-row" style="${scaduto?'opacity:.5':''}">
           <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min${freqStr}${inizioStr}${fineStr}${scaduto?' <span class="badge-inactive">Scaduto</span>':''}</span>
+          ${isActive && !scaduto?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})">📅</button>`:''}
           ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
         </div>`;
       }).join('')}
@@ -3469,6 +3512,95 @@ async function deleteTurno(centroId, idx){
     showToast('Errore: ' + e.message);
   }
 }
+// ── TERMINA TURNO DAL ──
+function confirmTerminaTurno(centroId, idx){
+  const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
+  const turno = c.turni[idx]; if(!turno) return;
+  _terminaTurnoState = { centroId, idx };
+  document.getElementById('termina-turno-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('termina-turno-error').textContent = '';
+  openModal('modal-termina-turno');
+}
+
+async function saveTerminaTurno(){
+  if(!_terminaTurnoState) return;
+  const { centroId, idx } = _terminaTurnoState;
+  const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
+  const turno = c.turni[idx]; if(!turno) return;
+  const dataFine = document.getElementById('termina-turno-data').value;
+  const errEl = document.getElementById('termina-turno-error');
+  if(!dataFine){ errEl.textContent = 'Seleziona una data.'; return; }
+  if(turno.dataInizioValidita && dataFine < turno.dataInizioValidita){
+    errEl.textContent = `La data di cessazione deve essere successiva al ${formatDate(turno.dataInizioValidita)} (data inizio validità).`;
+    return;
+  }
+  errEl.textContent = '';
+  if(!isOnline()){
+    turno.dataFineValidita = dataFine;
+    save(); renderCentri(); renderAgenda();
+    showToast('Turno terminato (offline)');
+    closeModal('modal-termina-turno');
+    _terminaTurnoState = null;
+    return;
+  }
+  // Cerca conflitti in S.appuntamenti (già in memoria)
+  const conflitti = S.appuntamenti.filter(a => {
+    if(a.cancelled) return false;
+    if(String(a.centroId) !== String(c.id)) return false;
+    if(a.data <= dataFine) return false;
+    if(new Date(a.data + 'T12:00:00').getDay() !== turno.giorno) return false;
+    if(a.ora < turno.inizio || a.ora >= turno.fine) return false;
+    return true;
+  });
+  if(conflitti.length > 0){
+    const n = conflitti.length;
+    const dataFmt = formatDate(dataFine);
+    document.getElementById('conferma-termina-titolo').textContent =
+      `Attenzione: ${n} appuntament${n===1?'o':'i'} prenotat${n===1?'o':'i'}`;
+    document.getElementById('conferma-termina-testo').textContent =
+      `Hai ${n} appuntamento${n===1?'':'i'} già prenotat${n===1?'o':'i'} che cadranno dopo il ${dataFmt}:`;
+    const shown = conflitti.slice(0, 10);
+    const extra = n - shown.length;
+    let listaHtml = shown.map(a=>
+      `<div>• ${formatDate(a.data)} ${a.ora} — ${escapeHtml(a.nome)} ${escapeHtml(a.cognome)}</div>`
+    ).join('');
+    if(extra > 0) listaHtml += `<div style="color:var(--ink3)">...e altri ${extra}</div>`;
+    document.getElementById('conferma-termina-lista').innerHTML = listaHtml;
+    openModal('modal-conferma-termina-turno');
+  } else {
+    await _applicaTerminaTurno(centroId, idx, dataFine);
+  }
+}
+
+async function procediTerminaTurno(){
+  if(!_terminaTurnoState) return;
+  const { centroId, idx } = _terminaTurnoState;
+  const dataFine = document.getElementById('termina-turno-data').value;
+  closeModal('modal-conferma-termina-turno');
+  await _applicaTerminaTurno(centroId, idx, dataFine);
+}
+
+async function _applicaTerminaTurno(centroId, idx, dataFine){
+  const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
+  const turno = c.turni[idx]; if(!turno) return;
+  try {
+    if(turno.id){
+      const { error } = await supabaseClient.from('turni')
+        .update({ data_fine_validita: dataFine }).eq('id', turno.id);
+      if(error) throw error;
+    }
+    turno.dataFineValidita = dataFine;
+    save(); renderCentri(); renderAgenda();
+    showToast(`Turno terminato dal ${formatDate(dataFine)} ✓`);
+    await auditLog('turno_terminato', 'turno', turno.id, { centro_id: c.id, data_fine_validita: dataFine });
+    closeModal('modal-termina-turno');
+    _terminaTurnoState = null;
+  } catch(e){
+    console.error('[Delphi~Med] terminaTurno:', e.message);
+    showToast('Errore: ' + e.message);
+  }
+}
+
 // ── GIORNATE SINGOLE ──
 function openGiornataSingola(centroId){
   _giornataSingolaTargetId=centroId;
