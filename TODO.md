@@ -331,6 +331,7 @@ SQL `batch-d-migrations.sql` eseguito in Supabase SQL Editor (DROP CF da pazient
 - [ ] Logica aggiunta lingue/specializzazioni: invertire — premi "Aggiungi" e poi selezioni dalla dropdown invece di scrivere a mano
 
 ### Prodotto — roadmap media priorità
+- [ ] **Funzionalità "Aggiungi al calendario"** da ridisegnare in batch dedicato. Rimossa in feat/ui-cleanup-v2 perché l'esperienza mobile non era soddisfacente (selettore browser iOS, webcal:// problemi, link Outlook redirect Microsoft). Approccio alternativo da valutare: allegato .ics come attachment Resend con test approfondito su iOS Mail, Gmail iOS, Outlook iOS prima del rilascio. Endpoint `/api/ics` e `lib/ics-builder.js` già nel codebase pronti per riuso.
 - [ ] Area Account dedicata: dati abbonamento, fatture, cambio email/password (insieme a FASE 5 Stripe)
 - [ ] Statistiche avanzate: tasso ritorno per area tematica, drill-down per centro, export PDF
 - [ ] Sezione Notifiche centralizzata: raggruppa avvisi (turni in scadenza, soglia conservazione, aggiornamenti policy)
@@ -393,11 +394,11 @@ Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Securi
 - **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
 - **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
 - **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip + feat/privacy-ux mergiati 2026-05-20; feat/ui-cleanup mergiato 2026-05-21)
+- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip + feat/privacy-ux mergiati 2026-05-20; feat/ui-cleanup mergiato 2026-05-21; feat/ui-cleanup-v2 mergiato 2026-05-21)
 
 ---
 
-*Ultimo aggiornamento: 2026-05-21 — Batch D (UI cleanup + minimizzazione GDPR: drop CF paziente, endpoint ICS calendario, fix chip, fix salvataggio profilo) mergiato su master*
+*Ultimo aggiornamento: 2026-05-21 — Batch D chiuso: feat/ui-cleanup-v2 mergiato su master (rimozione completa funzionalità "Aggiungi al calendario" da mail e Step 5; endpoint /api/ics e lib/ics-builder.js nel codebase per riuso futuro)*
 
 ---
 
