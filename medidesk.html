@@ -3004,6 +3004,30 @@ function init(){
   updateShareLink();
   renderAll();
   setupCapitalizeListeners();
+  setupChipDelegation();
+}
+
+function setupChipDelegation(){
+  const bind = (containerId, handler) => {
+    const el = document.getElementById(containerId);
+    if(el && !el._chipDelegated){ el._chipDelegated = true; el.addEventListener('click', handler); }
+  };
+  bind('lingue-list', e => {
+    const btn = e.target.closest('.chip-remove-lingue'); if(!btn) return;
+    removeLingua(parseInt(btn.dataset.idx, 10));
+  });
+  bind('spec-altre-list', e => {
+    const btn = e.target.closest('.chip-remove-spec'); if(!btn) return;
+    removeSpecAltra(btn.dataset.spec);
+  });
+  bind('tipi-visita-list', e => {
+    const btn = e.target.closest('.chip-remove-tipo'); if(!btn) return;
+    removeTipoVisita(parseInt(btn.dataset.idx, 10));
+  });
+  bind('aree-list', e => {
+    const btn = e.target.closest('.chip-remove-area'); if(!btn) return;
+    removeArea(parseInt(btn.dataset.idx, 10));
+  });
 }
 
 function renderAll(){
@@ -5504,7 +5528,7 @@ async function removeFotoProfilo(){
 function renderLingue(){
   const el=document.getElementById('lingue-list'); if(!el) return;
   el.innerHTML=(S.settings.lingue||[]).map((l,i)=>
-    `<span class="tag-chip">${l}<button class="tag-chip-x" onclick="removeLingua(${i})" title="Rimuovi">✕</button></span>`
+    `<span class="tag-chip">${l}<button class="tag-chip-x chip-remove-lingue" data-idx="${i}" title="Rimuovi">✕</button></span>`
   ).join('');
 }
 function addLingua(){
@@ -5529,7 +5553,7 @@ function renderSpecAltre(){
   const sel  = document.getElementById('setting-spec-altre-select'); if(!sel) return;
   const specPrinc = (document.getElementById('setting-spec')||{}).value || S.settings.spec || '';
   list.innerHTML = (S.settings.specAltre||[]).map(s =>
-    `<span class="tag-chip">${s}<button class="tag-chip-x" onclick="removeSpecAltra(${JSON.stringify(s)})" title="Rimuovi">✕</button></span>`
+    `<span class="tag-chip">${s}<button class="tag-chip-x chip-remove-spec" data-spec="${escapeAttr(s)}" title="Rimuovi">✕</button></span>`
   ).join('');
   const used = new Set([...(S.settings.specAltre||[]), specPrinc].filter(Boolean));
   sel.innerHTML = '<option value="">+ Aggiungi specializzazione…</option>' +
@@ -6080,13 +6104,13 @@ function renderTipiAree(){
   if(tEl){
     tEl.innerHTML = S.tipiVisita.map((t,i)=>{
       const isDefault = TIPI_DEFAULT.includes(t);
-      return `<span class="tag-chip ${isDefault?'tag-default':''}">${t}${!isDefault?`<button class="tag-chip-x" onclick="removeTipoVisita(${i})" title="Rimuovi">✕</button>`:''}</span>`;
+      return `<span class="tag-chip ${isDefault?'tag-default':''}">${t}${!isDefault?`<button class="tag-chip-x chip-remove-tipo" data-idx="${i}" title="Rimuovi">✕</button>`:''}</span>`;
     }).join('');
   }
   const aEl = document.getElementById('aree-list');
   if(aEl){
     aEl.innerHTML = S.areeTematiche.map((a,i)=>
-      `<span class="tag-chip">${a}<button class="tag-chip-x" onclick="removeArea(${i})" title="Rimuovi">✕</button></span>`
+      `<span class="tag-chip">${a}<button class="tag-chip-x chip-remove-area" data-idx="${i}" title="Rimuovi">✕</button></span>`
     ).join('');
   }
 }
