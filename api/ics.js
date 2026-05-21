@@ -1,6 +1,4 @@
-function esc(s) {
-  return String(s || '').replace(/[\\;,]/g, c => '\\' + c);
-}
+import { buildICS } from '../lib/ics-builder.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
@@ -50,7 +48,7 @@ export default async function handler(req, res) {
     } catch (_) {}
   }
 
-  // Fetch medico for DESCRIPTION
+  // Fetch medico for SUMMARY/DESCRIPTION
   let medicoNome = '';
   if (appt.medico_id) {
     try {
@@ -64,42 +62,10 @@ export default async function handler(req, res) {
     } catch (_) {}
   }
 
-  // Build ICS dates — local Italian time treated as UTC (Z suffix)
-  const [y, mo, d] = (appt.data || '').split('-');
-  const [hh, mm] = (appt.ora || '00:00').substring(0, 5).split(':');
-  const dtStart = `${y}${mo}${d}T${hh}${mm}00Z`;
-  const totalMin = parseInt(hh) * 60 + parseInt(mm) + 30;
-  const endH = String(Math.floor(totalMin / 60)).padStart(2, '0');
-  const endM = String(totalMin % 60).padStart(2, '0');
-  const dtEnd = `${y}${mo}${d}T${endH}${endM}00Z`;
-
-  // DTSTAMP: current UTC moment
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const dtstamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth()+1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
-
-  const description = medicoNome
-    ? esc('Prenotazione confermata con ' + medicoNome)
-    : 'Visita medica';
-
-  const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Delphi~Med//IT',
-    'BEGIN:VEVENT',
-    `UID:${id}@delphi-med.com`,
-    `DTSTAMP:${dtstamp}`,
-    `DTSTART:${dtStart}`,
-    `DTEND:${dtEnd}`,
-    'SUMMARY:Visita medica',
-    `DESCRIPTION:${description}`,
-    location ? `LOCATION:${esc(location)}` : null,
-    'END:VEVENT',
-    'END:VCALENDAR'
-  ].filter(Boolean).join('\r\n');
+  const ics = buildICS({ apptId: appt.id, data: appt.data, ora: appt.ora, medicoNome, location });
 
   res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="appuntamento.ics"');
   res.setHeader('Cache-Control', 'no-store');
-  return res.status(200).send(lines);
+  return res.status(200).send(ics);
 }
