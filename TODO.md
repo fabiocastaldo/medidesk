@@ -305,22 +305,38 @@ Branch `feat/security-hardening` → `master` (merge commit `837e273`)
 
 ---
 
-## ✅ Completato — sessione 2026-05-20 (Batch D — UI cleanup + minimizzazione GDPR)
+## ✅ Completato — 21 maggio 2026 (Batch D — UI cleanup + minimizzazione GDPR)
 
-Branch `feat/ui-cleanup` (in attesa di merge su master dopo test utente)
-SQL `batch-d-migrations.sql` da eseguire in Supabase SQL Editor PRIMA del merge.
+Branch `feat/ui-cleanup` → `master` (merge commit `8e68850`)
+SQL `batch-d-migrations.sql` eseguito in Supabase SQL Editor (DROP CF da pazienti e medici).
 
 - [x] **D.6** Rimozione totale CF paziente: drop `pazienti.cf` + `medici.estrai_cf_referti`, rimosso da scheda paziente, prompt AI, form nuova visita, backup ZIP (pazienti.csv, visite.csv), export singolo, ricerca
 - [x] **D.6** Toggle "Estrai CF dai referti" rimosso da Profilo → Preferenze AI (intera sezione rimossa)
-- [x] **D.5** Campo "Recapito alternativo" rimosso dal form pubblico; `note:''` in confirmBooking(); backward compat OK
-- [x] **D.1** Frase "Hai tempo fino a 2 ore prima" rimossa dall'email di conferma; link cancellazione mantente
-- [x] **D.2** Sezione "Aggiungi al calendario" aggiunta all'email di conferma (Google Calendar, Apple Calendar, Outlook); ICS generato server-side con TZID:Europe/Rome; emoji rimossi anche dallo Step 5 web
-- [x] **D.3** Placeholder note appuntamento (lato medico) con esempi organizzativi
-- [x] **D.4** Pulsante toggle tema (🌙/☀️) rimosso dalla sidebar desktop; toggle in Impostazioni → Aspetto invariato
+- [x] **D.5** Campo "Recapito alternativo" rimosso dal form pubblico; `note:''` in `confirmBooking()`; backward compat OK
+- [x] **D.1** Frase "Hai tempo fino a 2 ore prima" rimossa dall'email di conferma; link cancellazione mantenuto
+- [x] **D.2** Sezione "Aggiungi al calendario" in email di conferma: Google Calendar (link nativo), Apple Calendar e Outlook (download `.ics` via `/api/ics`); endpoint ICS con autenticazione via cancellation_token; URL ICS dinamica dall'host della request (preview → preview, prod → prod)
+- [x] **D.2** Bottoni Step 5 web: emoji rimossi, Outlook usa endpoint `/api/ics` con `window.location.origin` (stesso comportamento Apple Calendar); Google Calendar con link nativo corretto (`calendar.google.com`)
+- [x] **D.3** Placeholder note appuntamento (lato medico): testo breve "Informazioni organizzative utili al paziente"
+- [x] **D.4** Pulsante toggle tema (🌙/☀️) rimosso dalla sidebar desktop; toggle resta in Impostazioni → Aspetto
+- [x] **Fix** Salvataggio profilo: rimosso `estrai_cf_referti` da `saveSettings()` (causava 400 Bad Request dopo DROP colonna)
+- [x] **Fix** Chip rimovibili (lingue, spec, tipi visita, aree): event delegation con `data-*` attribute — elimina SyntaxError su nomi con apostrofi o virgolette
 
 ---
 
 ## 🔜 Prossime priorità
+
+### UX / Profilo medico
+- [ ] Slug deve cambiare automaticamente quando cambia la specializzazione principale (con warning già esistente)
+- [ ] N° iscrizione albo: prendere automaticamente dalla scheda FNOMCeO (da valutare fattibilità API/scraping)
+- [ ] Logica aggiunta lingue/specializzazioni: invertire — premi "Aggiungi" e poi selezioni dalla dropdown invece di scrivere a mano
+
+### Prodotto — roadmap media priorità
+- [ ] Area Account dedicata: dati abbonamento, fatture, cambio email/password (insieme a FASE 5 Stripe)
+- [ ] Statistiche avanzate: tasso ritorno per area tematica, drill-down per centro, export PDF
+- [ ] Sezione Notifiche centralizzata: raggruppa avvisi (turni in scadenza, soglia conservazione, aggiornamenti policy)
+- [ ] Mobile refactor: bottom sheet espandibile con Dashboard/Agenda/Pazienti/Profilo fissi + scroll-up per le altre sezioni
+- [ ] Manutenzione archivio: valutare se integrarla nella futura sezione Notifiche
+- [ ] Modal eliminazione paziente/account: aggiungere reminder "verifica anche altri archivi"
 
 ### Contenuti legali
 - [ ] Sostituire placeholder `termini-di-servizio.html` con testo reale
@@ -377,11 +393,11 @@ Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Securi
 - **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
 - **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
 - **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip + feat/privacy-ux mergiati e rimossi 2026-05-20)
+- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip + feat/privacy-ux mergiati 2026-05-20; feat/ui-cleanup mergiato 2026-05-21)
 
 ---
 
-*Ultimo aggiornamento: 2026-05-20 — Batch B (privacy GDPR: drop CF medico, consensi prenotazione, modal eliminazione paziente/account, audit_log, soglia conservazione, archivio scaduto) mergiato su master*
+*Ultimo aggiornamento: 2026-05-21 — Batch D (UI cleanup + minimizzazione GDPR: drop CF paziente, endpoint ICS calendario, fix chip, fix salvataggio profilo) mergiato su master*
 
 ---
 
