@@ -5996,14 +5996,12 @@ function bkAddToIcal(){
   const link=document.createElement('a'); link.href=url; link.download='visita_medica.ics'; link.click(); URL.revokeObjectURL(url);
 }
 function bkAddToOutlook(){
-  const dt=_bkCalDates(); if(!dt) return;
-  const c=bk._centroData;
-  const dtStart=`${dt.y}-${dt.m}-${dt.dd}T${dt.hh}:${dt.mm}:00`;
-  const dtEnd=`${dt.y}-${dt.m}-${dt.dd}T${dt.endH}:${dt.endM}:00`;
-  const subject=encodeURIComponent('Visita medica');
-  const loc=encodeURIComponent(c?`${c.nome}${c.indirizzo?', '+c.indirizzo:''}`:'');
-  const body=encodeURIComponent('Prenotazione confermata con '+document.getElementById('bk-doctor-name').textContent);
-  window.open(`https://outlook.live.com/owa/?path=/calendar/action/compose&rru=addevent&subject=${subject}&startdt=${dtStart}&enddt=${dtEnd}&body=${body}&location=${loc}`,'_blank');
+  const a=_bkLastAppt;
+  if(a && a.id && a.cancellationToken){
+    window.open(`${window.location.origin}/api/ics?id=${encodeURIComponent(a.id)}&token=${encodeURIComponent(a.cancellationToken)}`,'_blank');
+  } else {
+    bkAddToIcal();
+  }
 }
 
 // ── PAGINA CANCELLAZIONE ──
