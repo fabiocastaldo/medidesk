@@ -301,7 +301,23 @@ Branch `feat/security-hardening` → `master` (merge commit `837e273`)
 
 ## ⚠️ Problemi aperti (noti, non ancora risolti)
 
-*(nessun problema aperto noto al momento)*
+### Vercel preview automatici non più attivi
+Dal 22/05/2026 sera Vercel non triggera più preview automatici per branch feature. Workaround attuale: trigger manuale (Create Deployment) o apertura PR su GitHub.
+
+Da investigare quando ci si torna sopra:
+- Settings → Usage (siamo vicini ai limiti quota?)
+- Settings → Git (impostazioni "Preview Deployments for all branches", "Ignored Build Step")
+- Cercare opzione tipo "Deploy all branches automatically"
+
+### CRON_SECRET solo su Development
+La env var `CRON_SECRET` è configurata solo su environment "Development" di Vercel, **NON su Production né Preview**.
+
+Conseguenza: l'endpoint `/api/send-reminders` è raggiungibile pubblicamente senza autenticazione. Funziona correttamente per il cron Vercel scheduled, ma chiunque può chiamarlo via curl.
+
+Da decidere prima di andare in produzione con medici reali:
+- Impostare `CRON_SECRET` anche su Production + configurare header nei cron Vercel
+- Aggiungere rate limiting basico sull'endpoint
+- Oppure accettare il rischio (l'endpoint ha side effects controllati)
 
 ---
 
@@ -323,7 +339,37 @@ SQL `batch-d-migrations.sql` eseguito in Supabase SQL Editor (DROP CF da pazient
 
 ---
 
+## 🔴 Verifiche operative — DA FARE APPENA POSSIBILE
+
+### Test recupero password
+
+Flusso "Password dimenticata" mai testato funzionalmente. È un percorso "utente non autenticato" che ha già fatto emergere bug in passato (vedi caso #reg-specializzazione di settimana scorsa).
+
+Da verificare:
+- [ ] Click "Password dimenticata" sulla home → form richiesta reset con campo email
+- [ ] Submit → ricezione email reset con link Supabase
+- [ ] Click sul link nella mail → pagina di nuova password
+- [ ] Submit nuova password → conferma
+- [ ] Login con nuova password
+- [ ] Console pulita in tutti i passaggi
+- [ ] Verificare anche su mobile (es. iOS Safari)
+- [ ] Verificare token reset ha scadenza ragionevole
+- [ ] Verificare comportamento se l'email inserita non esiste in DB (non deve rivelare se l'utente esiste o no, per security)
+
+**Priorità: alta.** Va fatto prima della prima registrazione vera in produzione.
+
+---
+
 ## 🔜 Prossime priorità
+
+### Debt minor — Batch E Task 2 (non bloccanti)
+
+Da risolvere in un mini-fix futuro quando si rientrerà su Batch E:
+
+1. **Plurale stentato banner ed email**: stringa "1 turno/i ricorrente/i" è brutta. Usare ternario singolare/plurale. File: `medidesk.html` (banner template) e `api/send-reminders.js` (email template + subject)
+2. **Log mancante "soglia 60d" in Vercel logs**: anche quando email per soglia 60d partono (verificato in Test A), il log `[turni-scadenza] soglia 60d: ...` non appare mai. Mostra solo righe per soglia 30d. Bug di osservabilità minore, zero impatto funzionale. File: `api/send-reminders.js`, funzione `processScadenzaSoglia`
+
+**Priorità: bassa.** Fare quando si torna su Batch E o in un mini-fix dedicato.
 
 ### UX / Profilo medico
 - [ ] Slug deve cambiare automaticamente quando cambia la specializzazione principale (con warning già esistente)
