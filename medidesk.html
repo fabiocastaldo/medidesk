@@ -2491,6 +2491,7 @@ async function saveNewPassword(){
     } catch(_){}
     showToast('Password aggiornata con successo!');
     document.getElementById('auth-tabs').style.display = '';
+    _inPasswordRecovery = false;
     await supabaseClient.auth.signOut();
     // onAuthStateChange SIGNED_OUT gestirà il cambio di vista
   } catch(e){
@@ -2507,7 +2508,7 @@ function checkSession(){
     return;
   }
   supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('[Delphi~Med] onAuthStateChange:', event, '_isRegistering:', _isRegistering);
+    console.log('[Delphi~Med] onAuthStateChange:', event, '_isRegistering:', _isRegistering, '_inPasswordRecovery:', _inPasswordRecovery);
     if(_isRegistering){
       // Durante la registrazione ignoriamo SIGNED_IN e SIGNED_OUT.
       // Quando arriva il SIGNED_OUT atteso (dopo signOut() in signUp), resettiamo il flag
@@ -2521,12 +2522,15 @@ function checkSession(){
       return;
     }
     if(event === 'PASSWORD_RECOVERY'){
+      _inPasswordRecovery = true;
       showPasswordRecoveryView();
       return;
     }
     if(event === 'INITIAL_SESSION'){
+      if(_inPasswordRecovery){ return; }
       if(session){ showAppView(); } else { showAuthView(); }
     } else if(event === 'SIGNED_IN'){
+      if(_inPasswordRecovery){ return; }
       showAppView();
     } else if(event === 'SIGNED_OUT'){
       _appInitialized = false;
@@ -2545,6 +2549,7 @@ function showAuthView(){
 }
 
 function showLoginView(tab){
+  _inPasswordRecovery = false;
   document.getElementById('view-home').style.display = 'none';
   document.getElementById('view-auth').style.display = 'flex';
   document.getElementById('auth-tabs').style.display = '';
@@ -2553,6 +2558,7 @@ function showLoginView(tab){
 
 let _appInitialized = false;
 let _isRegistering = false;
+let _inPasswordRecovery = false;
 let _pollingInterval = null;
 let _realtimeChannel = null;
 async function showAppView(){
