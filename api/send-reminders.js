@@ -1,7 +1,12 @@
 export default async function handler(req, res) {
-  // Auth: CRON_SECRET se configurato, altrimenti aperto (solo per test dev)
+  // Auth: CRON_SECRET obbligatorio. Vercel Cron lo inietta automaticamente
+  // come header Authorization: Bearer <CRON_SECRET> nelle chiamate scheduled.
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && req.headers['authorization'] !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    console.error('[send-reminders] CRON_SECRET non configurato');
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
+  if (req.headers['authorization'] !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
