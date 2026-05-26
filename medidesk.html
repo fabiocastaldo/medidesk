@@ -462,6 +462,8 @@ html.dark #view-auth{background:linear-gradient(135deg,#051212 0%,#0A1A1A 60%,#0
 .pwd-strength-bar{height:4px;background:var(--border);border-radius:2px;margin:8px 0 3px}
 #pwd-strength-fill{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
 #pwd-strength-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;min-height:15px;margin-bottom:5px}
+#pwd-strength-fill-r{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
+#pwd-strength-label-r{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;min-height:15px;margin-bottom:5px}
 .pwd-criteria{margin:0;padding:0;list-style:none}
 .pwd-criteria li{font-size:12px;color:var(--ink3);padding:2px 0;transition:color .15s}
 .pwd-criteria li::before{content:'✕  ';color:#ef4444;font-weight:700}
@@ -950,6 +952,29 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
       </div>
       <button class="auth-btn" onclick="resetPassword()">Invia link reset</button>
       <button class="auth-link" onclick="switchAuthTab('login')">← Torna al login</button>
+    </div>
+
+    <!-- IMPOSTA NUOVA PASSWORD (completamento recupero account) -->
+    <div class="auth-panel" id="auth-panel-password-recovery">
+      <p style="font-size:13px;color:var(--ink2);line-height:1.6;margin:0 0 18px;text-align:center">Stai completando il recupero password. Inserisci una nuova password sicura per accedere nuovamente al tuo account.</p>
+      <div class="auth-field">
+        <label>Nuova password</label>
+        <input type="password" id="recovery-pwd" placeholder="••••••••" autocomplete="new-password" minlength="8" oninput="updatePasswordStrengthRecovery()">
+        <div class="pwd-strength-bar"><div id="pwd-strength-fill-r"></div></div>
+        <div id="pwd-strength-label-r"></div>
+        <ul class="pwd-criteria">
+          <li id="crit-r-len">Almeno 8 caratteri</li>
+          <li id="crit-r-upper">Almeno una lettera maiuscola</li>
+          <li id="crit-r-lower">Almeno una lettera minuscola</li>
+          <li id="crit-r-num">Almeno un numero</li>
+          <li id="crit-r-special">Almeno un carattere speciale (!@#$%...)</li>
+        </ul>
+      </div>
+      <div class="auth-field">
+        <label>Conferma password</label>
+        <input type="password" id="recovery-pwd-confirm" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="auth-btn" id="recovery-save-btn" onclick="saveNewPassword()">Salva nuova password</button>
     </div>
   </div>
 </div>
@@ -2397,6 +2422,84 @@ async function resetPassword(){
   showAuthMsg('Link di reset inviato! Controlla la tua email.', 'success');
 }
 
+function showPasswordRecoveryView(){
+  document.getElementById('view-home').style.display    = 'none';
+  document.getElementById('view-auth').style.display    = 'flex';
+  document.getElementById('view-app').style.display     = 'none';
+  document.getElementById('view-booking').style.display = 'none';
+  document.getElementById('auth-tabs').style.display    = 'none';
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('auth-panel-password-recovery').classList.add('active');
+  const pwdEl = document.getElementById('recovery-pwd');
+  if(pwdEl){ pwdEl.value = ''; updatePasswordStrengthRecovery(); }
+  const confirmEl = document.getElementById('recovery-pwd-confirm');
+  if(confirmEl) confirmEl.value = '';
+  clearAuthMsg();
+}
+
+function updatePasswordStrengthRecovery(){
+  const pwd = document.getElementById('recovery-pwd')?.value || '';
+  const criteria = {
+    len:     pwd.length >= 8,
+    upper:   /[A-Z]/.test(pwd),
+    lower:   /[a-z]/.test(pwd),
+    num:     /[0-9]/.test(pwd),
+    special: /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(pwd)
+  };
+  Object.keys(criteria).forEach(k => {
+    const el = document.getElementById('crit-r-' + k);
+    if(el) el.classList.toggle('met', criteria[k]);
+  });
+  const met   = Object.values(criteria).filter(Boolean).length;
+  const fill  = document.getElementById('pwd-strength-fill-r');
+  const label = document.getElementById('pwd-strength-label-r');
+  if(!pwd.length){
+    if(fill)  { fill.style.width = '0'; fill.style.background = ''; }
+    if(label) { label.textContent = ''; label.style.color = ''; }
+    return;
+  }
+  const levels = [
+    { max: 2, w: '25%',  color: '#ef4444', text: 'Debole' },
+    { max: 4, w: '60%',  color: '#f59e0b', text: 'Media'  },
+    { max: 5, w: '100%', color: '#22c55e', text: 'Forte'  }
+  ];
+  const lvl = levels.find(l => met <= l.max);
+  if(fill)  { fill.style.width = lvl.w; fill.style.background = lvl.color; }
+  if(label) { label.textContent = lvl.text; label.style.color = lvl.color; }
+}
+
+async function saveNewPassword(){
+  if(!isOnline()){ showToast('Connessione richiesta per cambiare password'); return; }
+  const pwd     = document.getElementById('recovery-pwd').value;
+  const confirm = document.getElementById('recovery-pwd-confirm').value;
+  if(pwd !== confirm){ showAuthMsg('Le password non coincidono', 'error'); return; }
+  if(pwd.length < 8){ showAuthMsg('La password deve essere di almeno 8 caratteri', 'error'); return; }
+  const pwdOk = /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd) && /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(pwd);
+  if(!pwdOk){ showAuthMsg('La password non soddisfa tutti i criteri richiesti', 'error'); return; }
+  const btn = document.getElementById('recovery-save-btn');
+  if(btn) btn.disabled = true;
+  try {
+    const { error } = await supabaseClient.auth.updateUser({ password: pwd });
+    if(error){
+      showAuthMsg(translateAuthError(error.message), 'error');
+      if(btn) btn.disabled = false;
+      return;
+    }
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if(user) await auditLog('password_recovery_completata', 'medico', user.id, {});
+    } catch(_){}
+    showToast('Password aggiornata con successo!');
+    document.getElementById('auth-tabs').style.display = '';
+    await supabaseClient.auth.signOut();
+    // onAuthStateChange SIGNED_OUT gestirà il cambio di vista
+  } catch(e){
+    console.error('[Delphi~Med] saveNewPassword:', e);
+    showAuthMsg('Errore nel salvataggio', 'error');
+    if(btn) btn.disabled = false;
+  }
+}
+
 function checkSession(){
   console.log('[Delphi~Med] checkSession() avviata, isOnline:', isOnline());
   if(!isOnline()){
@@ -2415,6 +2518,10 @@ function checkSession(){
       } else {
         console.log('[Delphi~Med] Evento ignorato perché siamo in fase di registrazione');
       }
+      return;
+    }
+    if(event === 'PASSWORD_RECOVERY'){
+      showPasswordRecoveryView();
       return;
     }
     if(event === 'INITIAL_SESSION'){
@@ -2440,6 +2547,7 @@ function showAuthView(){
 function showLoginView(tab){
   document.getElementById('view-home').style.display = 'none';
   document.getElementById('view-auth').style.display = 'flex';
+  document.getElementById('auth-tabs').style.display = '';
   if(tab) switchAuthTab(tab);
 }
 
