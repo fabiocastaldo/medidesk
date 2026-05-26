@@ -332,7 +332,7 @@ function buildScadenzaHtml({ medico, turni, giorni }) {
     <td style="padding:36px 40px;">
       <p style="font-size:16px;color:#1a1a1a;margin:0 0 12px;">Ciao <strong>${esc(nomeCompleto)}</strong>,</p>
       <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">
-        questo è un promemoria automatico: hai <strong>${n} turno${n !== 1 ? '/i' : ''} ricorrente${n !== 1 ? '/i' : ''}</strong> in scadenza tra <strong>${giorni} giorni</strong>.
+        questo è un promemoria automatico: hai <strong>${n} turn${n === 1 ? 'o' : 'i'} ricorrent${n === 1 ? 'e' : 'i'}</strong> in scadenza tra <strong>${giorni} giorni</strong>.
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdfb;border:1px solid #ccece9;border-radius:8px;margin-bottom:24px;">
         <tr><td style="padding:20px 24px;">

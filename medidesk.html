@@ -8183,12 +8183,12 @@ function checkTurniInScadenza(){
   let html = '';
   if(nUrgenti > 0){
     html = `<div class="banner-scadenza urgente">
-      <span>⚠️ Hai ${nUrgenti} turno/i in scadenza nei prossimi 30 giorni. <button class="banner-scadenza-link" onclick="goToTurniScadenza()">Vai ai turni</button></span>
+      <span>⚠️ Hai ${nUrgenti} turn${nUrgenti === 1 ? 'o' : 'i'} in scadenza nei prossimi 30 giorni. <button class="banner-scadenza-link" onclick="goToTurniScadenza()">Vai ai turni</button></span>
       <button class="banner-scadenza-close" onclick="dismissBannerScadenza()" title="Chiudi">✕</button>
     </div>`;
   } else if(nPromemoria > 0){
     html = `<div class="banner-scadenza promemoria">
-      <span>ℹ️ Hai ${nPromemoria} turno/i in scadenza nei prossimi 60 giorni. <button class="banner-scadenza-link" onclick="goToTurniScadenza()">Vai ai turni</button></span>
+      <span>ℹ️ Hai ${nPromemoria} turn${nPromemoria === 1 ? 'o' : 'i'} in scadenza nei prossimi 60 giorni. <button class="banner-scadenza-link" onclick="goToTurniScadenza()">Vai ai turni</button></span>
       <button class="banner-scadenza-close" onclick="dismissBannerScadenza()" title="Chiudi">✕</button>
     </div>`;
   }
