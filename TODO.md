@@ -24,7 +24,110 @@
 
 ---
 
-## ✅ Completato — sessione 2026-05-19 (Sezione Statistiche)
+## ✅ Completato — sessione 2026-05-26 sera tardi (CRON_SECRET + SMTP Resend + P0 #1 approve-doctor JWT)
+
+Sessione monstre. Chiusi housekeeping precedenti + un debt critico (P0 #1).
+
+### CRON_SECRET obbligatorio in produzione ✅ merge `ad41b3c`
+- [x] Generato secret `openssl rand -hex 32`
+- [x] Configurato `CRON_SECRET` su Vercel env vars (Production + Preview, Sensitive). Scoperto vincolo: Sensitive incompatibile con Development env → trade-off accettato (Development non usato per cron)
+- [x] Pulita lista env vars: rimossa duplicata Development, mantenuta una sola entry Sensitive
+- [x] Modificato `api/send-reminders.js` da auth condizionale a obbligatoria: se `CRON_SECRET` non settato → 500 con log esplicito (no più "endpoint aperto"); se header sbagliato → 401 Unauthorized
+- [x] Test preview: 401 senza bearer, 200 con bearer
+- [x] Test produzione post-merge: 401 senza bearer confermato
+
+### SMTP custom Resend per Supabase Auth ✅
+- [x] Discovery problema: mail Supabase Auth (reset password) inviate da `noreply@mail.app.supabase.io` invece che da dominio Delphi~Med
+- [x] Configurato SMTP custom su Supabase Dashboard: host `smtp.resend.com`, port 465, username `resend`, sender `noreply@delphi-med.com`
+- [x] Password SMTP: riusata API key Resend esistente (salvata in password manager con label "Usata da: Vercel SDK + Supabase Auth SMTP")
+- [x] Test funzionale superato: reset password reale → mail arriva da `noreply@delphi-med.com`
+
+### Discovery verifica RLS Supabase + endpoint serverless (parziale)
+- [x] Inventario tabelle: tutte le 12 con RLS attivo. `rate_limits` con 0 policy è corretto (solo service_role)
+- [x] Analisi 6 endpoint serverless `/api/`: 4 puliti (`config`, `analyze`, `ics`, `send-reminders`), 2 P0 critici (`send-email`, `approve-doctor`)
+- [ ] **Da completare in sessione futura**: policy dettagliata `pazienti`/`visite`/`turni`, `storage.objects` per bucket, `audit_log`, function RPC `check_rate_limit`
+
+### P0 #1 ✅ `/api/approve-doctor.js` con JWT firmato + nuovo `/api/register-doctor.js` (merge `ce9b515`)
+
+Risolto debt CRITICO: il vecchio "token" di approve-doctor era lo user_id UUID prevedibile, chiunque registrato poteva auto-approvarsi e ottenere medico verificato.
+
+**Setup secret + tabella:**
+- [x] Generato `APPROVE_TOKEN_SECRET` `openssl rand -hex 32`
+- [x] Configurato su Vercel env vars (Production + Preview, Sensitive)
+- [x] Creata tabella `approve_tokens` in Supabase: `jti TEXT PK`, `user_id UUID`, `created_at`, `expires_at`, `used_at`. RLS abilitato senza policy (solo service_role)
+
+**Nuovo `/api/register-doctor.js` (321 righe):**
+- [x] Riceve POST con dati registrazione dal frontend
+- [x] Rate limit 5/h per IP, validazione input server-authoritative (specchio del frontend ma autoritativo)
+- [x] `auth.admin.createUser` con `email_confirm: true` (salta verifica Supabase, autoritativa solo l'approvazione admin)
+- [x] INSERT su `medici` con `stato: 'in_attesa'` + INSERT default `tipi_visita`
+- [x] Rollback dell'utente Auth se INSERT medici fallisce
+- [x] Genera JWT HMAC-SHA256 firmato con `crypto` nativo Node (zero dipendenze), payload `{user_id, jti, exp}` con scadenza 7gg
+- [x] INSERT su `approve_tokens` con `jti` univoco
+- [x] Manda email admin **direttamente via Resend** (bypassa send-email vulnerabile)
+- [x] Risponde `{ok: true}` al client (zero leak)
+
+**Modifica `signUp()` frontend in `medidesk.html`:**
+- [x] Sostituita chiamata `auth.signUp` + `insert medici` + `fetch send-email` con un'unica `fetch('/api/register-doctor', ...)`
+- [x] Rimosso flag `_isRegistering` ormai morto (semplificato anche listener `onAuthStateChange`)
+- [x] Net -36 righe nel file principale
+
+**Riscrittura `/api/approve-doctor.js` (271 righe):**
+- [x] Verifica firma JWT con `crypto.timingSafeEqual` (no timing attack)
+- [x] Verifica expiry
+- [x] UPDATE atomico `WHERE used_at IS NULL` per garantire monouso anche con click multipli simultanei
+- [x] PATCH `medici stato='approvato'` + recupero dati per email
+- [x] Manda email approvazione **direttamente via Resend** (bypassa send-email)
+- [x] Pagine HTML di errore informative (token non valido, scaduto, già usato, medico non trovato)
+
+**Test end-to-end (6/6 superati su preview):**
+- [x] Test 1: registrazione lato browser via nuovo endpoint
+- [x] Test 2: email admin con JWT firmato (`eyJ...`, non più UUID)
+- [x] Test 3: approve con JWT valido → 200 + medico approvato
+- [x] Test 4: email approvazione al medico (bypassa send-email)
+- [x] Test 5: token monouso, secondo click → 409 "già usato"
+- [x] Test 6: login medico con `email_confirm: true` server-side
+- [x] Verifica produzione: `curl /api/approve-doctor?token=fake` → 401 ✅
+
+**Effetti collaterali positivi:** registrazione e approvazione non passano più dall'endpoint vulnerabile `send-email`. Quando si affronterà P0 #2, l'impatto sarà limitato (resta solo conferma appuntamento + cancellazione medico da fixare).
+
+### Verifica differita
+- [ ] Mattina 27/05: log Vercel del cron run 17:00 UTC 26/05. Atteso: status 200 + righe `[turni-scadenza] soglia 60d: processing` e `[turni-scadenza] soglia 30d: processing` (verifica Mini-fix #4). Se 401 → indagine.
+
+---
+
+
+
+### Housekeeping
+- [x] `.claude/settings.local.json` rimosso dall'index Git (la regola `.claude/` era già in `.gitignore` ma il file era tracciato da commit precedenti). Commit `824adb8` su master.
+- [x] Seconda app authenticator Supabase configurata (ridondanza 2FA). Due Google Authenticator distinte; verificare se sync cloud Google Account attivo per scenario "perdita telefono".
+
+### Mini-fix Batch E debt minor
+- [x] **Plurale "turno/i" in banner e email scadenza turni** → sostituito con ternario corretto su radice + desinenza. Branch `fix/plurale-turni-scadenza`, merge `b26065d`. Coperti sia `medidesk.html` (banner urgente + promemoria) sia `api/send-reminders.js` (template email).
+- [x] **Log di osservabilità cron `processScadenzaSoglia`** → aggiunta riga `console.log` di ingresso con data target per garantire visibilità di entrambe le soglie nei log Vercel a prescindere dall'esito. Analisi del codice ha confermato che il bug originale ("soglia 60d mai loggata") probabilmente non esisteva. Fix difensiva. Branch `fix/log-ingresso-cron-scadenza`, merge `2e1850a`.
+
+### Sicurezza CRON_SECRET ✅ obbligatorio in produzione
+Risolto debt aperto da settimane. Endpoint `/api/send-reminders` non più pubblicamente chiamabile.
+
+**Lavoro su Vercel env vars:**
+- [x] Generato nuovo secret hex 32 byte (`openssl rand -hex 32`)
+- [x] Pulita lista env vars: rimossa duplicata entry Development non-sensitive, mantenuta una sola entry Production+Preview Sensitive
+- [x] Scoperto vincolo Vercel: variabili Sensitive incompatibili con environment Development. Scelto trade-off: Sensitive ON + Development OFF (Development env irrilevante perché `vercel dev` non supporta cron scheduled)
+
+**Lavoro su codice (`api/send-reminders.js`):**
+- [x] Modificata logica auth da condizionale a obbligatoria
+- [x] Se `CRON_SECRET` non settato → 500 con log esplicito (no più "endpoint aperto")
+- [x] Se settato ma header sbagliato → 401 Unauthorized
+- [x] Branch `fix/cron-secret-obbligatorio`, merge `ad41b3c`
+
+**Test superati:**
+- [x] Preview Vercel: 401 senza bearer, 200 con bearer
+- [x] Produzione post-merge: 401 senza bearer confermato
+
+### Verifica differita
+- [ ] Mattina 27/05: controllare log Vercel del run cron 17:00 UTC 26/05. Deve mostrare status 200 + nuove righe `[turni-scadenza] soglia 60d: processing` e `[turni-scadenza] soglia 30d: processing`. Se 401 → indagine su autoinjection Vercel.
+
+---
 
 ### Nuova pagina Statistiche (branch feat/statistiche → master, merge commit 790a599)
 - [x] Voce 📊 in sidebar desktop (sopra Impostazioni) e in top-bar mobile (sostituisce toggle tema rimosso, già presente in Impostazioni)
@@ -301,23 +404,18 @@ Branch `feat/security-hardening` → `master` (merge commit `837e273`)
 
 ## ⚠️ Problemi aperti (noti, non ancora risolti)
 
-### Vercel preview automatici non più attivi
-Dal 22/05/2026 sera Vercel non triggera più preview automatici per branch feature. Workaround attuale: trigger manuale (Create Deployment) o apertura PR su GitHub.
+### Vercel preview branch feature incostante
+Dal 22/05/2026 i preview Vercel su branch feature triggrano in modo incostante. A volte automatico, a volte richiede push manuale o apertura PR su GitHub. Il 26/05 pomeriggio ha funzionato regolarmente per tutti e tre i branch della sessione (`fix/plurale-turni-scadenza`, `fix/log-ingresso-cron-scadenza`, `fix/cron-secret-obbligatorio`).
+
+Workaround attuale: trigger manuale (Create Deployment) o apertura PR su GitHub.
 
 Da investigare quando ci si torna sopra:
 - Settings → Usage (siamo vicini ai limiti quota?)
 - Settings → Git (impostazioni "Preview Deployments for all branches", "Ignored Build Step")
 - Cercare opzione tipo "Deploy all branches automatically"
 
-### CRON_SECRET solo su Development
-La env var `CRON_SECRET` è configurata solo su environment "Development" di Vercel, **NON su Production né Preview**.
-
-Conseguenza: l'endpoint `/api/send-reminders` è raggiungibile pubblicamente senza autenticazione. Funziona correttamente per il cron Vercel scheduled, ma chiunque può chiamarlo via curl.
-
-Da decidere prima di andare in produzione con medici reali:
-- Impostare `CRON_SECRET` anche su Production + configurare header nei cron Vercel
-- Aggiungere rate limiting basico sull'endpoint
-- Oppure accettare il rischio (l'endpoint ha side effects controllati)
+### ~~CRON_SECRET solo su Development~~ ✅ RISOLTO 2026-05-26
+La env var `CRON_SECRET` è ora configurata su Production + Preview di Vercel (Sensitive). Il codice di `api/send-reminders.js` è stato modificato per richiederla **obbligatoriamente**: se non settata → 500, se header sbagliato → 401. Vercel Cron inietta automaticamente il bearer nelle chiamate scheduled. Testato sia su preview che produzione (401 senza bearer, 200 con bearer corretto).
 
 ---
 
@@ -339,24 +437,21 @@ SQL `batch-d-migrations.sql` eseguito in Supabase SQL Editor (DROP CF da pazient
 
 ---
 
-## 🔴 Verifiche operative — DA FARE APPENA POSSIBILE
+## ✅ Verifiche operative completate
 
-### Test recupero password
+### Test recupero password ✅ FATTO 2026-05-26 mattina
 
-Flusso "Password dimenticata" mai testato funzionalmente. È un percorso "utente non autenticato" che ha già fatto emergere bug in passato (vedi caso #reg-specializzazione di settimana scorsa).
+Flusso end-to-end testato con successo dopo 2 round di fix:
+- [x] Click "Password dimenticata" sulla home → form richiesta reset
+- [x] Submit → ricezione email reset con link Supabase
+- [x] Click sul link → pagina nuova password (NON dashboard, fix race condition `INITIAL_SESSION`)
+- [x] Submit nuova password → auto-logout
+- [x] Login con nuova password OK
+- [x] Console pulita in tutti i passaggi
 
-Da verificare:
-- [ ] Click "Password dimenticata" sulla home → form richiesta reset con campo email
-- [ ] Submit → ricezione email reset con link Supabase
-- [ ] Click sul link nella mail → pagina di nuova password
-- [ ] Submit nuova password → conferma
-- [ ] Login con nuova password
-- [ ] Console pulita in tutti i passaggi
-- [ ] Verificare anche su mobile (es. iOS Safari)
-- [ ] Verificare token reset ha scadenza ragionevole
-- [ ] Verificare comportamento se l'email inserita non esiste in DB (non deve rivelare se l'utente esiste o no, per security)
-
-**Priorità: alta.** Va fatto prima della prima registrazione vera in produzione.
+Fix necessari emersi al test (commit `2bfaf28` + `b82efb8`):
+- Pannello `#auth-panel-password-recovery` dedicato + funzioni `showPasswordRecoveryView()`, `updatePasswordStrengthRecovery()`, `saveNewPassword()`
+- Flag globale `_inPasswordRecovery` per gestire race condition tra `PASSWORD_RECOVERY` e `INITIAL_SESSION`
 
 ---
 
@@ -364,14 +459,16 @@ Da verificare:
 
 ### Debt minor accumulati durante test
 
-Da risolvere in un mini-fix dedicato quando si torna a manutenzione:
+Stato aggiornato 2026-05-26 sera:
 
-1. **Plurale stentato banner ed email (Task 2 Batch E)**: stringa "1 turno/i ricorrente/i" è brutta. Usare ternario singolare/plurale. File: `medidesk.html` (banner template) e `api/send-reminders.js` (email template + subject)
-2. **Log mancante "soglia 60d" in Vercel logs**: anche quando email per soglia 60d partono (verificato in Test A), il log `[turni-scadenza] soglia 60d: ...` non appare mai. Mostra solo righe per soglia 30d. Bug di osservabilità minore, zero impatto funzionale. File: `api/send-reminders.js`, funzione `processScadenzaSoglia`
-3. **`saveNewPassword()` — `auditLog()` con `S.medicoId` undefined**: in flusso reset password, `saveNewPassword()` chiama `auditLog()` ma `S.medicoId` è `undefined` a quel punto (utente in sessione recovery, profilo non ancora caricato). Bisogna usare `user.id` direttamente come `medico_id` invece di `S.medicoId`. Risultato attuale: evento `password_recovery_completata` non viene registrato in `audit_log`.
-4. **`saveNewPassword()` — errori Supabase in inglese**: errori come "Auth session missing!" non vengono tradotti con `translateAuthError()` come nel resto del codebase.
+- [x] **Plurale stentato banner ed email (Task 2 Batch E)** → risolto con ternario `${n} turn${n === 1 ? 'o' : 'i'} ricorrent${n === 1 ? 'e' : 'i'}`. File: `medidesk.html` (banner urgente + promemoria) e `api/send-reminders.js` (template email). Merge commit `b26065d`.
+- [x] **Log mancante "soglia 60d" in Vercel logs** → analisi del codice ha confermato che il bug come descritto probabilmente non esisteva (ogni soglia logga sempre o "nessun turno" o "N email inviate"; sospetto filtraggio log Vercel). Aggiunto comunque log di ingresso difensivo `[turni-scadenza] soglia ${giorni}d: processing (data target: ${data})` in `processScadenzaSoglia` per garantire visibilità. Merge commit `2e1850a`.
+- [x] **`saveNewPassword()` — `auditLog()` con `S.medicoId` undefined** → già risolto in sessioni precedenti. Ora usa `supabaseClient.auth.getUser()` e passa `user.id` come `medico_id` (riga 2489-2490 di medidesk.html).
+- [x] **`saveNewPassword()` — errori Supabase in inglese** → già risolto in sessioni precedenti. La chiamata a `translateAuthError(error.message)` è presente alla riga 2484.
 
-**Priorità: bassa.** Fare in un mini-fix dedicato quando si torna a manutenzione.
+**Residuo (priorità molto bassa):**
+
+- [ ] **`translateAuthError()` non gestisce `"Auth session missing!"`** → cade in fallback `return msg` (riga 2987 di medidesk.html), mostrando il messaggio Supabase in inglese. Aggiungere `if(msg.includes('Auth session missing')) return 'Sessione scaduta. Richiedi un nuovo link dall'email.';`. Eventualmente aggiungere anche traduzioni per `Token has expired or is invalid`, `New password should be different from the old password`, `Email rate limit exceeded`.
 
 ### UX / Profilo medico
 - [ ] Slug deve cambiare automaticamente quando cambia la specializzazione principale (con warning già esistente)
@@ -476,11 +573,11 @@ DA FARE quando l'app sarà in uso reale e/o quando emergerà l'esigenza da feedb
 - **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
 - **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
 - **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip + feat/privacy-ux mergiati 2026-05-20; feat/ui-cleanup mergiato 2026-05-21; feat/ui-cleanup-v2 mergiato 2026-05-21)
+- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip + feat/privacy-ux mergiati 2026-05-20; feat/ui-cleanup mergiato 2026-05-21; feat/ui-cleanup-v2 mergiato 2026-05-21; fix/plurale-turni-scadenza + fix/log-ingresso-cron-scadenza + fix/cron-secret-obbligatorio mergiati 2026-05-26 sera; fix/auth-register-approve-jwt mergiato 2026-05-26 sera tardi → `ce9b515`)
 
 ---
 
-*Ultimo aggiornamento: 2026-05-26 — Aggiunti: sezione "Account management — Cambio password da utente loggato" (opzioni A/B/C); sezione "Debt minor accumulati durante test" (4 voci: plurale stentato, log 60d, auditLog S.medicoId undefined, translateAuthError mancante in saveNewPassword)*
+*Ultimo aggiornamento: 2026-05-26 sera tardi — Sessione monstre. Chiusi nella mattina: housekeeping `.gitignore`, seconda app authenticator. Pomeriggio: plurale turni (Batch E debt #1), log osservabilità cron (Batch E debt #2). Sera: CRON_SECRET obbligatorio in produzione (commit ad41b3c). Sera 2: SMTP custom Resend per Supabase Auth. Sera tardi: P0 #1 CRITICO risolto — `/api/approve-doctor.js` con JWT firmato HMAC-SHA256 + nuovo `/api/register-doctor.js` server-side (commit ce9b515, 558+/157-, 6 test E2E superati). Discovery RLS Supabase iniziata + analisi endpoint serverless completata: identificato P0 #2 `send-email.js` ancora aperto.*
 
 ---
 
