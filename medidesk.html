@@ -2274,55 +2274,32 @@ async function signUp(){
 
   setAuthLoading(true);
   try {
-    _isRegistering = true;
-    const { data: authData, error: authErr } = await supabaseClient.auth.signUp({ email, password });
-    if(authErr){ setAuthLoading(false); showAuthMsg(translateAuthError(authErr.message), 'error'); return; }
+    const res = await fetch('/api/register-doctor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, nome, cognome, ordineNumero, ordineProvincia, specializzazione })
+    });
+    const data = await res.json().catch(() => ({}));
 
-    const userId = authData?.user?.id;
-    if(!userId){ setAuthLoading(false); showAuthMsg('Errore durante la registrazione. Riprova.', 'error'); return; }
-
-    const { data: newMedico, error: insErr } = await supabaseClient
-      .from('medici')
-      .insert({ user_id: userId, email, nome, cognome,
-                numero_iscrizione_ordine: ordineNumero, provincia_ordine: ordineProvincia,
-                specializzazione,
-                stato: 'in_attesa' })
-      .select('id').single();
-
-    if(insErr){
-      console.error('[Delphi~Med] signUp: errore insert medici', insErr.message);
-    } else if(newMedico?.id){
-      await supabaseClient.from('tipi_visita').insert([
-        { medico_id: newMedico.id, nome: 'Prima visita', is_default: true },
-        { medico_id: newMedico.id, nome: 'Controllo',    is_default: true }
-      ]);
+    if(!res.ok){
+      setAuthLoading(false);
+      if(res.status === 409){
+        showAuthMsg('Email già registrata. Usa un altro indirizzo o accedi.', 'error');
+      } else if(res.status === 429){
+        showAuthMsg('Troppi tentativi. Riprova tra un\'ora.', 'error');
+      } else if(res.status === 400){
+        showAuthMsg(data.error || 'Dati non validi', 'error');
+      } else {
+        showAuthMsg(data.error || 'Errore durante la registrazione. Riprova.', 'error');
+      }
+      return;
     }
 
-    const approveLink = `https://delphi-med.com/api/approve-doctor?token=${userId}`;
-    try {
-      await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: 'fb.castaldo@gmail.com',
-          subject: 'Nuova registrazione medico — Delphi~Med',
-          html: buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordineProvincia, approveLink })
-        })
-      });
-    } catch(emailErr){
-      console.error('[Delphi~Med] signUp: errore invio email admin', emailErr.message);
-    }
-
-    await supabaseClient.auth.signOut();
     setAuthLoading(false);
     document.getElementById('reg-form-content').style.display = 'none';
     document.getElementById('reg-success-box').style.display  = 'block';
     clearAuthMsg();
-    // NB: NON resettare _isRegistering qui. Il listener onAuthStateChange lo resetterà
-    // quando riceve SIGNED_OUT, dopo aver evitato di chiamare showAuthView().
-    // NB: NON chiamare showAuthView() qui: resetterebbe la vista e nasconderebbe il box di successo.
   } catch(e){
-    _isRegistering = false;
     setAuthLoading(false);
     showAuthMsg('Errore di rete: ' + e.message, 'error');
   }
@@ -2508,19 +2485,7 @@ function checkSession(){
     return;
   }
   supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('[Delphi~Med] onAuthStateChange:', event, '_isRegistering:', _isRegistering, '_inPasswordRecovery:', _inPasswordRecovery);
-    if(_isRegistering){
-      // Durante la registrazione ignoriamo SIGNED_IN e SIGNED_OUT.
-      // Quando arriva il SIGNED_OUT atteso (dopo signOut() in signUp), resettiamo il flag
-      // così le future interazioni dell'utente tornano gestite normalmente.
-      if(event === 'SIGNED_OUT'){
-        _isRegistering = false;
-        console.log('[Delphi~Med] SIGNED_OUT post-registrazione: flag resettato, box successo preservato');
-      } else {
-        console.log('[Delphi~Med] Evento ignorato perché siamo in fase di registrazione');
-      }
-      return;
-    }
+    console.log('[Delphi~Med] onAuthStateChange:', event, '_inPasswordRecovery:', _inPasswordRecovery);
     if(event === 'PASSWORD_RECOVERY'){
       _inPasswordRecovery = true;
       showPasswordRecoveryView();
@@ -2557,7 +2522,6 @@ function showLoginView(tab){
 }
 
 let _appInitialized = false;
-let _isRegistering = false;
 let _inPasswordRecovery = false;
 let _pollingInterval = null;
 let _realtimeChannel = null;
