@@ -123,6 +123,7 @@ async function checkTurniScadenza(base, headers) {
 }
 
 async function processScadenzaSoglia(base, headers, { giorni, data, campo }) {
+  console.log(`[turni-scadenza] soglia ${giorni}d: processing (data target: ${data})`);
   // a) Query turni per la data-soglia non ancora notificati
   let turni;
   try {
