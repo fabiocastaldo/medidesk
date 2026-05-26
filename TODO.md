@@ -362,14 +362,16 @@ Da verificare:
 
 ## 🔜 Prossime priorità
 
-### Debt minor — Batch E Task 2 (non bloccanti)
+### Debt minor accumulati durante test
 
-Da risolvere in un mini-fix futuro quando si rientrerà su Batch E:
+Da risolvere in un mini-fix dedicato quando si torna a manutenzione:
 
-1. **Plurale stentato banner ed email**: stringa "1 turno/i ricorrente/i" è brutta. Usare ternario singolare/plurale. File: `medidesk.html` (banner template) e `api/send-reminders.js` (email template + subject)
+1. **Plurale stentato banner ed email (Task 2 Batch E)**: stringa "1 turno/i ricorrente/i" è brutta. Usare ternario singolare/plurale. File: `medidesk.html` (banner template) e `api/send-reminders.js` (email template + subject)
 2. **Log mancante "soglia 60d" in Vercel logs**: anche quando email per soglia 60d partono (verificato in Test A), il log `[turni-scadenza] soglia 60d: ...` non appare mai. Mostra solo righe per soglia 30d. Bug di osservabilità minore, zero impatto funzionale. File: `api/send-reminders.js`, funzione `processScadenzaSoglia`
+3. **`saveNewPassword()` — `auditLog()` con `S.medicoId` undefined**: in flusso reset password, `saveNewPassword()` chiama `auditLog()` ma `S.medicoId` è `undefined` a quel punto (utente in sessione recovery, profilo non ancora caricato). Bisogna usare `user.id` direttamente come `medico_id` invece di `S.medicoId`. Risultato attuale: evento `password_recovery_completata` non viene registrato in `audit_log`.
+4. **`saveNewPassword()` — errori Supabase in inglese**: errori come "Auth session missing!" non vengono tradotti con `translateAuthError()` come nel resto del codebase.
 
-**Priorità: bassa.** Fare quando si torna su Batch E o in un mini-fix dedicato.
+**Priorità: bassa.** Fare in un mini-fix dedicato quando si torna a manutenzione.
 
 ### UX / Profilo medico
 - [ ] Slug deve cambiare automaticamente quando cambia la specializzazione principale (con warning già esistente)
@@ -414,6 +416,32 @@ Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Securi
 - [ ] Scadenza sessione Supabase: gestire refresh automatico
 - [ ] **Referrer-Policy `no-referrer` specifica per `/?cancel=*`** via Vercel Middleware (Edge function) che intercetta la richiesta e aggiunge l'header solo se la querystring contiene `cancel=`. Non urgente: la policy globale `strict-origin-when-cross-origin` già protegge il token.
 
+### Account management — Cambio password da utente loggato — DA IMPLEMENTARE
+
+Attualmente l'utente che vuole cambiare la propria password deve fare logout e usare la procedura "Password dimenticata?" (flusso reset password tramite email, già implementato e funzionante).
+
+DA FARE quando l'app sarà in uso reale e/o quando emergerà l'esigenza da feedback medici:
+
+**Opzione A (minima — implementare subito):**
+- Aggiungere nota informativa in Impostazioni → Profilo: "Per cambiare la tua password, fai logout e usa 'Password dimenticata?' dal form di accesso."
+- Costo: 1 minuto, solo HTML/CSS
+
+**Opzione B (intermedia):**
+- Bottone "Cambia password" in Impostazioni → Profilo che richiama `resetPassword(email_corrente)` direttamente, riusando il flusso email-based esistente
+- Pro: UX simile a un cambio password "vero" ma riusa tutto il codice già scritto
+- Costo: ~10 righe di codice + test
+- Mail Supabase può essere riusata o personalizzata via Supabase Dashboard → Authentication → Email Templates → "Reset Password"
+
+**Opzione C (completa — futura, quando ci saranno molti medici):**
+- Modale dedicato "Cambia password" con 3 campi: password attuale + nuova + conferma
+- Riautenticazione via `signInWithPassword()` per validare la password attuale prima di cambiarla
+- `updateUser({password})` per applicare il cambio
+- Decisione UX: forzare logout post-cambio o restare loggato?
+- `audit_log` dedicato: `action='password_cambiata'`
+- Costo: ~50 righe, test funzionali, ~1 ora di lavoro
+
+**Priorità: bassa**, finché un medico in uso reale non chiede il flusso diretto in-app.
+
 ---
 
 ## 📅 Da fare in seguito
@@ -452,7 +480,7 @@ Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Securi
 
 ---
 
-*Ultimo aggiornamento: 2026-05-21 — Batch D chiuso: feat/ui-cleanup-v2 mergiato su master (rimozione completa funzionalità "Aggiungi al calendario" da mail e Step 5; endpoint /api/ics e lib/ics-builder.js nel codebase per riuso futuro)*
+*Ultimo aggiornamento: 2026-05-26 — Aggiunti: sezione "Account management — Cambio password da utente loggato" (opzioni A/B/C); sezione "Debt minor accumulati durante test" (4 voci: plurale stentato, log 60d, auditLog S.medicoId undefined, translateAuthError mancante in saveNewPassword)*
 
 ---
 
