@@ -5,6 +5,7 @@
       "schedule": "0 17 * * *"
     }
   ],
+  "regions": ["fra1"],
   "headers": [
     {
       "source": "/(.*)",
