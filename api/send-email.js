@@ -212,7 +212,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
   let centro = {};
   try {
     const r = await fetch(
-      `${base}/centri?id=eq.${encodeURIComponent(appt.centro_id)}&select=id,nome,email`,
+      `${base}/centri?id=eq.${encodeURIComponent(appt.centro_id)}&select=id,nome,email_segreteria`,
       { headers }
     );
     if (r.ok) { const rows = await r.json(); centro = rows?.[0] || {}; }
@@ -231,7 +231,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     medicoEmail:       medico.email || null,
     medicoSlug:        medico.slug || null,
     centroNome:        centro.nome || '',
-    centroEmail:       centro.email || null
+    centroEmail:       centro.email_segreteria || null
   };
 }
 
@@ -271,7 +271,7 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
   let centro;
   try {
     const r = await fetch(
-      `${base}/centri?id=eq.${encodeURIComponent(centroId)}&select=id,nome,email,medico_id`,
+      `${base}/centri?id=eq.${encodeURIComponent(centroId)}&select=id,nome,email_segreteria,medico_id`,
       { headers }
     );
     if (!r.ok) throw new Error(`status ${r.status}`);
@@ -284,7 +284,7 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
   if (!centro) return { ok: false, status: 404, error: 'Centro non trovato' };
   // Check c
   if (centro.medico_id !== userId) return { ok: false, status: 403, error: 'Accesso non autorizzato al centro' };
-  if (!centro.email) return { ok: false, status: 400, error: 'Il centro non ha un indirizzo email configurato' };
+  if (!centro.email_segreteria) return { ok: false, status: 400, error: 'Il centro non ha un indirizzo email di segreteria configurato' };
 
   return {
     ok: true,
@@ -292,7 +292,7 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
     dataFine:    chiusura.data_fine,
     etichetta:   chiusura.etichetta || null,
     centroNome:  centro.nome,
-    centroEmail: centro.email
+    centroEmail: centro.email_segreteria
   };
 }
 
