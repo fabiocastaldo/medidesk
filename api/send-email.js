@@ -224,7 +224,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     emailPaziente:     appt.email_paziente,
     pazienteNome:      [appt.nome_paziente, appt.cognome_paziente].filter(Boolean).join(' '),
     data:              appt.data,
-    ora:               appt.ora,
+    ora:               (appt.ora || '').substring(0, 5),
     tipoVisita:        appt.tipo_visita,
     cancellationToken: appt.cancellation_token,
     medicoNome:        [medico.titolo, medico.nome, medico.cognome].filter(Boolean).join(' ') || 'il medico',
