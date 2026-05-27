@@ -1,3 +1,5 @@
+import { Resend } from 'resend';
+
 export default async function handler(req, res) {
   // Auth: CRON_SECRET obbligatorio. Vercel Cron lo inietta automaticamente
   // come header Authorization: Bearer <CRON_SECRET> nelle chiamate scheduled.
@@ -12,9 +14,15 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const resendApiKey = process.env.RESEND_API_KEY;
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({ error: 'Supabase env vars missing' });
   }
+  if (!resendApiKey) {
+    console.error('[send-reminders] RESEND_API_KEY non configurato');
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
+  const resend = new Resend(resendApiKey);
 
   const tomorrow = getTomorrowRome();
   const base    = `${supabaseUrl}/rest/v1`;
@@ -62,7 +70,7 @@ export default async function handler(req, res) {
     if (medicoIds.length) {
       try {
         const r = await fetch(
-          `${base}/medici?id=in.(${medicoIds.join(',')})&select=id,titolo,nome,cognome`,
+          `${base}/medici?id=in.(${medicoIds.join(',')})&select=id,titolo,nome,cognome,email`,
           { headers }
         );
         const rows = await r.json();
@@ -84,15 +92,14 @@ export default async function handler(req, res) {
       const html    = buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora: appt.ora, tipoVisita: appt.tipo_visita, centroNome: centro.nome, centroIndirizzo });
 
       try {
-        const emailRes = await fetch('https://www.delphi-med.com/api/send-email', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ to: appt.email_paziente, subject, html })
+        const { error: emailErr } = await resend.emails.send({
+          from:     'noreply@delphi-med.com',
+          to:       [appt.email_paziente],
+          subject,
+          html,
+          ...(medico.email ? { reply_to: medico.email } : {})
         });
-        if (!emailRes.ok) {
-          const errBody = await emailRes.text().catch(() => '');
-          throw new Error(`send-email ${emailRes.status}: ${errBody}`);
-        }
+        if (emailErr) throw new Error(emailErr.message);
         // Marca come inviato solo se l'email è andata a buon fine
         await fetch(`${base}/appuntamenti?id=eq.${appt.id}`, {
           method:  'PATCH',
@@ -109,25 +116,25 @@ export default async function handler(req, res) {
   }
 
   // 4. Notifiche turni in scadenza (60gg e 30gg)
-  await checkTurniScadenza(base, headers);
+  await checkTurniScadenza(base, headers, resend);
 
   return res.status(200).json({ processed: appointments.length, sent, errors, date: tomorrow });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
 
-async function checkTurniScadenza(base, headers) {
+async function checkTurniScadenza(base, headers, resend) {
   const todayUTC = getTodayUTC();
   const soglie = [
     { giorni: 60, data: addDaysToDateStr(todayUTC, 60), campo: 'notified_60d_at' },
     { giorni: 30, data: addDaysToDateStr(todayUTC, 30), campo: 'notified_30d_at' },
   ];
   for (const soglia of soglie) {
-    await processScadenzaSoglia(base, headers, soglia);
+    await processScadenzaSoglia(base, headers, soglia, resend);
   }
 }
 
-async function processScadenzaSoglia(base, headers, { giorni, data, campo }) {
+async function processScadenzaSoglia(base, headers, { giorni, data, campo }, resend) {
   console.log(`[turni-scadenza] soglia ${giorni}d: processing (data target: ${data})`);
   // a) Query turni per la data-soglia non ancora notificati
   let turni;
@@ -205,15 +212,13 @@ async function processScadenzaSoglia(base, headers, { giorni, data, campo }) {
     const html = buildScadenzaHtml({ medico, turni: medicoTurni, giorni });
 
     try {
-      const emailRes = await fetch('https://www.delphi-med.com/api/send-email', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ to: medico.email, subject, html })
+      const { error: emailErr } = await resend.emails.send({
+        from:    'noreply@delphi-med.com',
+        to:      [medico.email],
+        subject,
+        html
       });
-      if (!emailRes.ok) {
-        const errBody = await emailRes.text().catch(() => '');
-        throw new Error(`send-email ${emailRes.status}: ${errBody}`);
-      }
+      if (emailErr) throw new Error(emailErr.message);
 
       // Aggiorna notified_Xd_at solo se email OK
       const ids = medicoTurni.map(t => t.id);
