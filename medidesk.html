@@ -7993,13 +7993,15 @@ async function confirmDeleteAccount(){
       const { data: { user } } = await supabaseClient.auth.getUser();
       if(user){
         const deletionAt = new Date(Date.now() + 30*24*60*60*1000).toISOString();
-        await supabaseClient.from('medici').update({ deleted_at: ts, deletion_scheduled_at: deletionAt }).eq('id', S.medicoId);
-        fetch('/api/send-email', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ to: user.email, subject: 'Account Delphi~Med — eliminazione programmata',
-            html: `<p>Hai avviato la procedura di eliminazione del tuo account Delphi~Med.</p>
-                   <p>I tuoi dati saranno eliminati definitivamente tra 30 giorni.</p>
-                   <p>Se hai cambiato idea, accedi e usa il pulsante "Annulla eliminazione".</p>` })
+        // Email PRIMA dell'update deleted_at (il backend rifiuta medici con deleted_at valorizzato)
+        const _jwt = await getAuthJwt();
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
+          body: JSON.stringify({ tipo: 'account_eliminazione' })
         }).catch(()=>{});
+        // Poi marca l'eliminazione programmata
+        await supabaseClient.from('medici').update({ deleted_at: ts, deletion_scheduled_at: deletionAt }).eq('id', S.medicoId);
       }
     } catch(e){ console.error('[Delphi~Med] confirmDeleteAccount:', e.message); }
   }
