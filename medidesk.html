@@ -4203,23 +4203,14 @@ async function deleteAppuntamento(id){
     renderAgenda(); renderDashboard(); updateStats();
     showToast('Appuntamento cancellato ✓');
     await sendNotificaCentro('cancellazione', appt);
-    if(appt.email){
-      const _medSettings = S.settings || {};
-      const _medNome = `${_medSettings.titolo||'Dr.'} ${_medSettings.nomeProf||''} ${_medSettings.cognomeProf||''}`.trim();
-      const _centro = S.centri.find(c=>String(c.id)===String(appt.centroId));
+    if(appt.email && isOnline() && !String(id).startsWith('local-') && S.medicoId){
+      const _jwt = await getAuthJwt();
       fetch('/api/send-email', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
         body: JSON.stringify({
-          tipo: 'cancellazione_medico',
-          to: appt.email,
-          paziente_nome: `${appt.nome} ${appt.cognome}`,
-          medico_nome: _medNome,
-          medico_email: _medSettings.email || '',
-          medico_slug: _medSettings.slug || '',
-          centro_nome: _centro ? _centro.nome : (appt.centroNome||''),
-          data: appt.data,
-          ora: oraLabel
+          tipo: 'cancellazione_paziente',
+          appt_id: appt.id
         })
       }).catch(e=>console.error('[Delphi~Med] send-email cancellazione paziente:', e.message));
     }
