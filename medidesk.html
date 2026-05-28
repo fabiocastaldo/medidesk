@@ -6448,24 +6448,21 @@ async function saveChiusura(){
 }
 
 async function inviaMailChiusuraAiCentri(ch, centri){
-  if(!isOnline()) return;
-  const medSettings = S.settings || {};
-  const titolo = medSettings.titolo || 'Dr.';
-  const nomeCompleto = `${titolo} ${medSettings.nomeProf||''} ${medSettings.cognomeProf||''}`.trim();
+  if(!isOnline() || !S.medicoId) return;
+  if(!ch.id || String(ch.id).startsWith('local-')) return;
   const centriConEmail = centri.filter(c=>c.email && c.email.trim());
   if(!centriConEmail.length){ return; }
-  const subject = `Comunicazione chiusura studio — ${formatDate(ch.data_inizio)}${ch.data_inizio!==ch.data_fine?' – '+formatDate(ch.data_fine):''}`;
+  const _jwt = await getAuthJwt();
   let inviate = 0;
   for(const c of centriConEmail){
-    const body = `Oggetto: ${subject}\n\nGentile Segreteria di ${c.nome},\n\ncomunichiamo che ${nomeCompleto} non sarà disponibile presso il vostro ambulatorio nel seguente periodo:\n\nDal ${formatDate(ch.data_inizio)} al ${formatDate(ch.data_fine)}\nMotivo: ${ch.etichetta||'Chiusura studio'}\n\nDurante questo periodo non saranno accettate prenotazioni.\n\nCordiali saluti,\n${nomeCompleto}`;
     try {
       await fetch('/api/send-email', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
         body: JSON.stringify({
-          to: c.email,
-          subject,
-          html: buildEmailHtml(body, 'Comunicazione chiusura studio')
+          tipo: 'chiusura_studio_centro',
+          chiusura_id: ch.id,
+          centro_id: c.id
         })
       });
       inviate++;
