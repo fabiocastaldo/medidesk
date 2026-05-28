@@ -8232,16 +8232,27 @@ async function confirmDeleteArchivioScaduto(){
     n_visite: pazList.reduce((s,p) => s + (p.visite||[]).length, 0),
     pazienti_ids: pazIds
   });
+  let errors = 0;
   for(const p of pazList){
     const fotoPaths = (p.visite||[]).flatMap(v => getFotoPaths(v.foto_url));
-    if(fotoPaths.length) await supabaseClient.storage.from('fotoreferti').remove(fotoPaths).catch(()=>{});
-    await supabaseClient.from('pazienti').delete().eq('id', p.id).catch(()=>{});
+    if(fotoPaths.length){
+      const { error: stErr } = await supabaseClient.storage.from('fotoreferti').remove(fotoPaths);
+      if(stErr){ console.error('[Delphi~Med] storage remove fail:', stErr); errors++; }
+    }
+    const { error: vErr } = await supabaseClient.from('visite').delete().eq('paziente_id', p.id);
+    if(vErr){ console.error('[Delphi~Med] delete visite fail:', vErr); errors++; continue; }
+    const { error: pErr } = await supabaseClient.from('pazienti').delete().eq('id', p.id);
+    if(pErr){ console.error('[Delphi~Med] delete paziente fail:', pErr); errors++; }
   }
   S.pazienti = S.pazienti.filter(p => !pazIds.includes(String(p.id)));
   save(); renderPazienti(); updateStats();
   checkArchivioScaduto();
   renderArchivioPage();
-  showToast(`${checked.length} pazient${checked.length===1?'e':'i'} eliminat${checked.length===1?'o':'i'} ✓`);
+  if(errors){
+    showToast(`Eliminazione completata con ${errors} error${errors===1?'e':'i'}. Vedi console.`);
+  } else {
+    showToast(`${checked.length} pazient${checked.length===1?'e':'i'} eliminat${checked.length===1?'o':'i'} ✓`);
+  }
 }
 
 // ── TOAST ──
