@@ -5505,25 +5505,16 @@ async function sendNotificaCentro(tipo, appt){
 async function sendNotificaCentroAnonimo(appt, token){
   if(!isOnline()) return;
   try {
-    const { data, error } = await supabaseClient.rpc('get_dati_notifica_cancellazione', {
-      p_appt_id: appt.id,
-      p_token:   token
-    });
-    if(error) throw error;
-    const row = Array.isArray(data) ? data[0] : data;
-    if(!row) return;
-    if(!row.notifica_cancellazione) return;
-    if(!row.centro_email) return;
-    const d=new Date(appt.data+'T12:00:00');
-    const paz=`${appt.cognome_paziente} ${appt.nome_paziente}`;
-    const subject=`Cancellazione appuntamento — ${paz}`;
-    const body=`Oggetto: ${subject}\n\nGentile Segreteria di ${row.centro_nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||'—'}\n\nL'appuntamento è stato cancellato dal paziente.\nLo slot è ora nuovamente disponibile per altre prenotazioni.`;
     await fetch('/api/send-email', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ to: row.centro_email, subject, html: buildEmailHtml(body, 'Cancellazione appuntamento') })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo: 'cancellazione_centro_anon',
+        cancellation_token: token,
+        appt_id: appt.id
+      })
     });
-  } catch(e){ console.error('[Delphi~Med] sendNotificaCentroAnonimo:',e.message); }
+  } catch(e){ console.error('[Delphi~Med] sendNotificaCentroAnonimo:', e.message); }
 }
 
 async function prefillProfiloNome(){
