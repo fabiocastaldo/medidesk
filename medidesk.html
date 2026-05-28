@@ -8054,6 +8054,13 @@ async function changeSogliaConservazione(newValue){
 
 // ── ARCHIVIO SCADUTO ──
 function checkArchivioScaduto(){
+  function toIso(s){
+    if(!s) return null;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+    return null;
+  }
   const soglia = S.settings.sogliaConservazione || 10;
   const limitDate = new Date();
   limitDate.setFullYear(limitDate.getFullYear() - soglia);
@@ -8061,7 +8068,7 @@ function checkArchivioScaduto(){
   const pazientiScaduti = S.pazienti.filter(p => {
     const visite = p.visite || [];
     if(!visite.length) return false;
-    const ultima = visite.map(v => v.data).filter(Boolean).sort().reverse()[0];
+    const ultima = visite.map(v => toIso(v.data)).filter(Boolean).sort().reverse()[0];
     return ultima && ultima < limitISO;
   });
   const totaleVisite = pazientiScaduti.reduce((s, p) => s + (p.visite||[]).length, 0);
