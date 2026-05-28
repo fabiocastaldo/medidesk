@@ -5459,27 +5459,18 @@ async function sendNotificaCentro(tipo, appt){
   if(!toggleMap[tipo]) return;
   const centro=S.centri.find(c=>String(c.id)===String(appt.centroId||appt.centro_id));
   if(!centro||!centro.email) return;
-  const medico=getFullName();
-  const d=new Date(appt.data+'T12:00:00');
-  const dataFmt=d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  let subject, body;
-  if(tipo==='cancellazione'){
-    const paz=`${appt.cognome||appt.cognome_paziente} ${appt.nome||appt.nome_paziente}`;
-    subject=`Cancellazione appuntamento — ${paz}`;
-    body=`Oggetto: ${subject}\n\nGentile Segreteria di ${centro.nome},\n\nsi comunica la cancellazione del seguente appuntamento:\n\nPaziente: ${paz}\nData: ${dataFmt}\nOra: ${appt.ora}\nTipo visita: ${appt.tipo_visita||appt.tipo||'—'}\n\nL'appuntamento è stato cancellato dal medico in data ${new Date().toLocaleDateString('it-IT')}.\nLo slot è ora nuovamente disponibile per altre prenotazioni.\n\nCordiali saluti,\n${S.settings.titolo||''} ${medico}`;
-  } else {
-    subject=`Nuova prenotazione — ${appt.cognome||appt.cognome_paziente} ${appt.nome||appt.nome_paziente}`;
-    body=buildMailText(appt);
-  }
-  if(!isOnline()) return;
+  if(!isOnline() || !S.medicoId) return;
+  if(!appt.id) return;
   try {
-    const headerLabel = tipo==='cancellazione' ? 'Cancellazione appuntamento'
-                      : tipo==='appuntamento_manuale' ? 'Nuovo appuntamento'
-                      : 'Nuova prenotazione';
+    const _jwt = await getAuthJwt();
     await fetch('/api/send-email', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ to: centro.email, subject, html: buildEmailHtml(body, headerLabel) })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
+      body: JSON.stringify({
+        tipo: 'notifica_centro_evento',
+        appt_id: appt.id,
+        evento: tipo
+      })
     });
   } catch(e){ console.error('[Delphi~Med] sendNotificaCentro:', e.message); }
 }
@@ -6154,7 +6145,7 @@ async function confirmBooking(){
     `🏥 ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
     `${appt.email?'Riceverai un riepilogo all\'email indicata.':''}`;
   bkStep(5);
-  await sendNotificaCentro('nuova_prenotazione', appt);
+  // NOTA: notifica al centro nel flusso anon gestita dal backend in conferma_appt_anon (#5)
 }
 
 // ── PAGINA CANCELLAZIONE ──
