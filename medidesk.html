@@ -4997,7 +4997,7 @@ function renderVisitaPazienti(){
   if(!cont) return;
 
   // Trova appuntamenti del giorno
-  const appts = S.appuntamenti.filter(a=>a.data===dataFilter).sort((a,b)=>a.ora.localeCompare(b.ora));
+  const appts = S.appuntamenti.filter(a=>a.data===dataFilter && !a.cancelled).sort((a,b)=>a.ora.localeCompare(b.ora));
 
   if(!appts.length){
     cont.innerHTML = '<div style="padding:14px;text-align:center;color:var(--ink3);font-size:13px;background:var(--surface2);border-radius:8px">Nessun appuntamento in questa data</div>';
