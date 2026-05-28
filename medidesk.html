@@ -3804,7 +3804,7 @@ function escapeAttr(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,
 async function getAuthJwt(){ try{ const {data:{session}}=await supabaseClient.auth.getSession(); return session?.access_token||''; }catch{ return ''; } }
 
 // ── SLOT LOGIC ──
-function getSlots(centro, dateStr){
+function getSlots(centro, dateStr, escludiPassati=false){
   if(isChiusura(dateStr, centro.id)) return [];
   const d = new Date(dateStr+'T12:00:00');
   const dow = d.getDay();
@@ -3839,7 +3839,15 @@ function getSlots(centro, dateStr){
   const takenBk = (bk.slotOccupati||[])
     .filter(s=>s.data===dateStr && String(s.centroId)===String(centro.id))
     .map(s=>s.ora);
-  return slots.filter(s=>!taken.includes(s) && !takenBk.includes(s));
+  let _result = slots.filter(s=>!taken.includes(s) && !takenBk.includes(s));
+  if(escludiPassati){
+    const _oggiStr = new Date().toLocaleDateString('en-CA');
+    if(dateStr === _oggiStr){
+      const _ora = new Date(); const _nowMin = _ora.getHours()*60 + _ora.getMinutes();
+      _result = _result.filter(s => timeToMin(s) > _nowMin);
+    }
+  }
+  return _result;
 }
 
 function timeToMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
@@ -6019,7 +6027,7 @@ function bkSelectDate(ds){
   bk.dateStr=ds;
   renderBkCal();
   const centro=S.centri.find(c=>String(c.id)===String(bk.centroId));
-  const slots=getSlots(centro,ds);
+  const slots=getSlots(centro,ds,true);
   const d=new Date(ds+'T12:00:00');
   document.getElementById('bk-selected-date-label').textContent=
     d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
