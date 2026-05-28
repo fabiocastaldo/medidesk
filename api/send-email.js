@@ -203,7 +203,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
   let medico = {};
   try {
     const r = await fetch(
-      `${base}/medici?id=eq.${encodeURIComponent(appt.medico_id)}&select=id,titolo,nome,cognome,email,slug`,
+      `${base}/medici?id=eq.${encodeURIComponent(appt.medico_id)}&select=id,titolo,nome,cognome,email,slug,notifica_nuova_prenotazione`,
       { headers }
     );
     if (r.ok) { const rows = await r.json(); medico = rows?.[0] || {}; }
@@ -231,7 +231,8 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     medicoEmail:       medico.email || null,
     medicoSlug:        medico.slug || null,
     centroNome:        centro.nome || '',
-    centroEmail:       centro.email_segreteria || null
+    centroEmail:       centro.email_segreteria || null,
+    notificaNuovaPrenotazione: medico.notifica_nuova_prenotazione !== false
   };
 }
 
@@ -380,6 +381,38 @@ export default async function handler(req, res) {
     medicoIdAudit = appt.apptMedicoId;
     targetType    = 'appuntamento';
     targetId      = authCtx.apptIdFromToken;
+
+    // Notifica al centro (best-effort, soft-fail): solo se il medico ha il toggle attivo
+    // e il centro ha email. Sostituisce la chiamata frontend rimossa da confirmBooking (#3).
+    if (appt.notificaNuovaPrenotazione && appt.centroEmail) {
+      try {
+        const htmlCentro = buildHtmlNotificaCentro({
+          evento: 'nuova_prenotazione',
+          paziente_nome: esc(appt.pazienteNome),
+          data_fmt: esc(dataFmt),
+          ora: esc(appt.ora),
+          tipo_visita: esc(appt.tipoVisita),
+          medico_nome: esc(appt.medicoNome),
+          centro_nome: esc(appt.centroNome)
+        });
+        const centroPayload = {
+          from: 'noreply@delphi-med.com',
+          to: [appt.centroEmail],
+          subject: `Nuova prenotazione — ${appt.pazienteNome}, ${dataFmt}`,
+          html: htmlCentro
+        };
+        if (appt.medicoEmail) centroPayload.reply_to = appt.medicoEmail;
+        const { data: cData, error: cErr } = await resend.emails.send(centroPayload);
+        if (cErr) {
+          console.error('[send-email] notifica centro anon error:', cErr.message);
+        } else {
+          console.log('[send-email] notifica centro anon inviata', { to: appt.centroEmail, resend_id: cData?.id });
+          await auditLog(base, dbHeaders, appt.apptMedicoId, 'notifica_centro_evento', 'appuntamento', authCtx.apptIdFromToken, 'email_token', appt.centroEmail, cData?.id);
+        }
+      } catch (e) {
+        console.error('[send-email] notifica centro anon exception:', e.message);
+      }
+    }
 
   } else if (tipo === 'conferma_appt_medico') {
     const { appt_id } = body;
