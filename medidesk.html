@@ -4123,11 +4123,11 @@ async function saveAppuntamento(){
     const cognome=capitalizeName(document.getElementById('appt-cognome').value.trim());
     if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
     if(!A.centroId||!A.dateStr||!A.ora){ showToast('Completa la selezione'); return; }
-    // Avviso data nel passato (confronto solo-data: una visita di oggi a orario gia trascorso e legittima)
+    // Blocco data nel passato (confronto solo-data: una visita di oggi a orario gia trascorso resta consentita)
     const _oggiStr = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD' in ora locale
     if(A.dateStr < _oggiStr){
-      const [_y,_m,_d] = A.dateStr.split('-');
-      if(!confirm(`Attenzione: stai creando un appuntamento in una data passata (${_d}/${_m}/${_y}). Vuoi continuare?`)) return;
+      showToast('Non puoi creare un appuntamento in una data passata');
+      return;
     }
     const tipoEl=document.getElementById('appt-tipo');
     const areaEl=document.getElementById('appt-area');
