@@ -5444,12 +5444,7 @@ function toggleTheme(){
 }
 
 // ── NOTIFICHE EMAIL ──
-function buildEmailHtml(plainText, headerLabel){
-  const escaped = plainText
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\n/g,'<br>');
-  return `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;line-height:1.6;max-width:600px;margin:0 auto;padding:24px;background:#fafafa"><div style="background:#0D9488;color:#fff;padding:14px 20px;border-radius:8px 8px 0 0;font-weight:600;font-size:16px">Delphi~Med · ${headerLabel}</div><div style="background:#fff;padding:24px 20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;white-space:normal">${escaped}</div><div style="font-size:11px;color:#888;text-align:center;margin-top:16px">Email automatica inviata da Delphi~Med · Non rispondere a questo indirizzo</div></body></html>`;
-}
+
 async function sendNotificaCentro(tipo, appt){
   const toggleMap={
     nuova_prenotazione:   S.settings.notifNuovaPrenotazione,
