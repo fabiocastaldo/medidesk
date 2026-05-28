@@ -7963,12 +7963,15 @@ async function confirmDeleteAccount(){
       if(user){
         const deletionAt = new Date(Date.now() + 30*24*60*60*1000).toISOString();
         // Email PRIMA dell'update deleted_at (il backend rifiuta medici con deleted_at valorizzato)
+        // e AWAITED prima di signOut (altrimenti signOut invalida la sessione -> 401)
         const _jwt = await getAuthJwt();
-        fetch('/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
-          body: JSON.stringify({ tipo: 'account_eliminazione' })
-        }).catch(()=>{});
+        try {
+          await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
+            body: JSON.stringify({ tipo: 'account_eliminazione' })
+          });
+        } catch(_){ /* email soft-fail: l'eliminazione procede comunque */ }
         // Poi marca l'eliminazione programmata
         await supabaseClient.from('medici').update({ deleted_at: ts, deletion_scheduled_at: deletionAt }).eq('id', S.medicoId);
       }
