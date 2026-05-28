@@ -479,7 +479,7 @@ export default async function handler(req, res) {
   } else if (tipo === 'chiusura_studio_centro') {
     const { chiusura_id, centro_id } = body;
     if (!chiusura_id || !centro_id) return res.status(400).json({ error: 'chiusura_id e centro_id obbligatori' });
-    const ch = await lookupChiusura(chiusura_id, centro_id, authCtx.userId, supabaseUrl, serviceKey);
+    const ch = await lookupChiusura(chiusura_id, centro_id, authCtx.medicoId, supabaseUrl, serviceKey);
     if (!ch.ok) return res.status(ch.status).json({ error: ch.error });
     const dataInizioFmt = formatDateIt(ch.dataInizio);
     const dataFineFmt   = formatDateIt(ch.dataFine);
