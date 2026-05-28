@@ -4166,26 +4166,16 @@ async function saveAppuntamento(){
     renderAgenda(); renderDashboard(); updateStats();
     showToast('Appuntamento salvato ✓');
     await sendNotificaCentro('appuntamento_manuale', newAppt);
-    if(newAppt.email){
-      const _medSettings = S.settings || {};
-      const _medNome = `${_medSettings.titolo||'Dr.'} ${_medSettings.nomeProf||''} ${_medSettings.cognomeProf||''}`.trim();
+    if(newAppt.email && isOnline() && S.medicoId){
+      const _jwt = await getAuthJwt();
       fetch('/api/send-email', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
         body: JSON.stringify({
-          to: newAppt.email,
-          paziente_nome: nome+' '+cognome,
-          medico_nome: _medNome,
-          medico_email: _medSettings.email || '',
-          centro_nome: newAppt.centroNome || '',
-          centro_indirizzo: _aCentro ? _aCentro.indirizzo || '' : '',
-          data: A.dateStr,
-          ora: A.ora,
-          tipo_visita: newAppt.tipo || '',
-          codice_cancellazione: cancellationToken,
-          appt_id: newAppt.id || ''
+          tipo: 'conferma_appt_medico',
+          appt_id: newAppt.id
         })
-      }).catch(e=>console.error('[Delphi~Med] send-email manuale:', e.message));
+      }).catch(e=>console.error('[Delphi~Med] send-email conferma manuale:', e.message));
     }
   } catch(err){
     console.error('saveAppuntamento error:', err);
