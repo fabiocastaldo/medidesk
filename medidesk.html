@@ -1900,20 +1900,17 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
 
         <div class="confirm-box" id="visita-paziente-info" style="margin-bottom:16px"></div>
 
-        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Fotografa o seleziona il referto, poi avvia l'analisi AI quando vuoi.</p>
+        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Fotografa o seleziona il referto e salvalo nel fascicolo. La sintesi clinica si genera quando vuoi, dal fascicolo del paziente.</p>
         <div class="upload-area" onclick="document.getElementById('referto-input').click()">
           <div class="uicon">📸</div>
           <strong>Clicca per selezionare o fotografare</strong>
-          <p>Uno o più file (JPG, PNG, PDF) — sintesi unificata, su richiesta</p>
+          <p>Uno o più file (JPG, PNG, PDF)</p>
         </div>
         <input type="file" id="referto-input" accept="image/*,application/pdf" style="display:none" multiple onchange="handleRefertoSelect(this)">
         <div id="referto-preview" style="display:none;margin-top:12px"></div>
-        <button class="btn btn-primary" id="btn-analizza-ai" style="display:none;margin-top:12px" onclick="analizzaReferti()">🤖 Analizza referto con AI</button>
-        <div id="ai-status" style="display:none" class="ai-processing"><div class="spinner"></div><span>Analisi AI in corso…</span></div>
-        <div id="ai-error" style="display:none;background:var(--warm-light);border:1px solid #e8c8b0;border-radius:8px;padding:12px 14px;margin-top:12px;font-size:13px;color:var(--warm)"></div>
 
         <div id="extracted-data" style="display:none;margin-top:16px">
-          <div class="section-title">Dati estratti — verifica e correggi</div>
+          <div class="section-title">Dettagli visita</div>
           <div class="extracted-fields">
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
@@ -1922,7 +1919,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
             <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1"></div>
           </div>
           <div class="form-group" style="margin-top:14px">
-            <label class="form-label">Sintesi clinica (riassunto AI)</label>
+            <label class="form-label">Note (opzionale)</label>
             <textarea class="form-textarea" id="ex-clinica" style="min-height:140px"></textarea>
           </div>
         </div>
@@ -4721,6 +4718,9 @@ function showPazienteDetail(id){
   const p=S.pazienti.find(x=>String(x.id)===String(id)); if(!p) return;
   document.getElementById('modal-paziente-title').textContent=p.cognome+' '+p.nome;
   const visite=p.visite||[];
+  const nReferti = visite.reduce((s,v)=>s+getFotoPaths(v.foto_url).length,0);
+  const canSint = nReferti>0 || visite.some(v=>(v.clinica||'').trim());
+  const sintLabel = nReferti>0 ? `Sintetizza dai referti (${nReferti})` : 'Sintetizza storia clinica';
   document.getElementById('modal-paziente-body').innerHTML=`
     <div class="extracted-fields" style="margin-bottom:16px">
       <div class="field-row"><span class="field-key">Nome</span><span class="field-val">${escapeHtml(p.nome)} ${escapeHtml(p.cognome)}</span></div>
@@ -4729,9 +4729,9 @@ function showPazienteDetail(id){
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
     <div class="section-title">${visite.length} ${visite.length===1?'visita':'visite'}</div>
     ${visite.map((v,i)=>_buildVisitaHTML(p,v,i)).join('')}
-    ${visite.length>=2?`
+    ${canSint?`
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-      <button class="btn btn-secondary" onclick="sintetizzaStoria('${escapeAttr(id)}')" id="btn-storia-${escapeAttr(id)}">✦ Sintetizza storia clinica (${visite.length} visite)</button>
+      <button class="btn btn-secondary" onclick="sintetizzaReferti('${escapeAttr(id)}')" id="btn-storia-${escapeAttr(id)}">✦ ${sintLabel}</button>
     </div>
     <div id="storia-container-${escapeAttr(id)}"></div>`:''}
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -4957,6 +4957,63 @@ async function sintetizzaStoria(pazId){
   }
 }
 
+async function sintetizzaReferti(pazId){
+  const p=S.pazienti.find(x=>String(x.id)===String(pazId)); if(!p) return;
+  const container=document.getElementById('storia-container-'+pazId); if(!container) return;
+  const btn=document.getElementById('btn-storia-'+pazId); if(btn) btn.disabled=true;
+
+  const paths=(p.visite||[]).flatMap(v=>getFotoPaths(v.foto_url));
+
+  // Nessun referto immagine → fallback alla sintesi testuale dalle note (clinica)
+  if(!paths.length){ if(btn) btn.disabled=false; return sintetizzaStoria(pazId); }
+
+  if(!isOnline()){ container.innerHTML='<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px">⚠ Connessione richiesta</div>'; if(btn) btn.disabled=false; return; }
+
+  const MAX_FILES=20;
+  let usePaths=paths;
+  if(paths.length>MAX_FILES){
+    if(!confirm(`Questo paziente ha ${paths.length} referti: ne verranno inviati ${MAX_FILES} per non superare i limiti dell'AI. Continuare?`)){ if(btn) btn.disabled=false; return; }
+    usePaths=paths.slice(0,MAX_FILES);
+  }
+
+  container.innerHTML='<div class="ai-processing" style="margin-top:12px"><div class="spinner"></div><span>Sintesi dai referti in corso…</span></div>';
+
+  const TYPE_BY_EXT={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',pdf:'application/pdf'};
+  const ALLOWED=new Set(Object.values(TYPE_BY_EXT));
+
+  try{
+    const files=[];
+    for(const path of usePaths){
+      const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 600);
+      if(error) throw error;
+      const resp=await fetch(data.signedUrl);
+      const blob=await resp.blob();
+      let type=blob.type;
+      if(!ALLOWED.has(type)){ const ext=(path.split('.').pop()||'').toLowerCase(); type=TYPE_BY_EXT[ext]||''; }
+      if(!ALLOWED.has(type)) continue;
+      const base64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
+      files.push({ base64, type });
+    }
+    if(!files.length) throw new Error('Nessun referto leggibile');
+
+    const eta=etaDaNascita(p.nascita);
+    const _jwt=await getAuthJwt();
+    const res=await fetch('/api/analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
+      body:JSON.stringify({mode:'sintesi-referti', eta, files, max_tokens:4096})
+    });
+    if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
+    const dataR=await res.json();
+    const testo=dataR.content.map(i=>i.text||'').join('').trim();
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${testo}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')">📤 Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')">📧 Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')">⬇️ PDF</button></div></div>`;
+  } catch(err){
+    container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px">⚠ ${err.message}</div>`;
+  } finally{
+    if(btn) btn.disabled=false;
+  }
+}
+
 // ── VISITA / FASCICOLO (flusso a step) ──
 var V = { selectedPazienteId:null, isNewPaziente:false, refertoFiles:[] };
 
@@ -5095,7 +5152,7 @@ function goToVisitaUpload(paziente, appt){
       if(el) el.style.display = 'none';
     });
   } else {
-    infoEl.innerHTML = `<div style="font-size:13px;color:var(--ink2)">📋 Nuovo paziente — i dati anagrafici verranno estratti dal referto</div>`;
+    infoEl.innerHTML = `<div style="font-size:13px;color:var(--ink2)">📋 Nuovo paziente — inserisci i dati anagrafici qui sotto</div>`;
     ['row-ex-nome','row-ex-cognome','row-ex-nascita'].forEach(id=>{
       const el = document.getElementById(id);
       if(el) el.style.display = 'flex';
@@ -5123,7 +5180,7 @@ function resetVisitaUpload(){
   V.refertoFiles = [];
   const fi = document.getElementById('referto-input');
   if(fi) fi.value='';
-  ['referto-preview','ai-status','extracted-data','ai-error','btn-analizza-ai'].forEach(id=>{
+  ['referto-preview','extracted-data'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display='none';
   });
@@ -5148,70 +5205,8 @@ function handleRefertoSelect(input){
       : `<div style="padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--ink2)">📄 ${f.name}</div>`
     ).join('')+`</div>`;
   prev.style.display = 'block';
-  document.getElementById('ai-status').style.display = 'none';
-  document.getElementById('ai-error').style.display = 'none';
   document.getElementById('extracted-data').style.display = 'block';
   document.getElementById('btn-salva-visita').style.display = 'inline-block';
-  const btnAI = document.getElementById('btn-analizza-ai');
-  if(btnAI){ btnAI.style.display='inline-block'; btnAI.disabled=false; btnAI.textContent = files.length>1 ? `🤖 Analizza ${files.length} referti con AI` : '🤖 Analizza referto con AI'; }
-}
-
-async function analizzaReferti(){
-  const files = V.refertoFiles || [];
-  if(!files.length){ showToast('Seleziona prima uno o più referti'); return; }
-  const btnAI = document.getElementById('btn-analizza-ai');
-  document.getElementById('ai-status').style.display = 'flex';
-  document.getElementById('ai-error').style.display = 'none';
-  if(btnAI) btnAI.disabled = true;
-
-  try {
-    // Leggi tutti i file come base64 in parallelo
-    const fileContents = await Promise.all(files.map(f => new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = e => res({ base64: e.target.result.split(',')[1], type: f.type });
-      r.onerror = rej;
-      r.readAsDataURL(f);
-    })));
-
-    const isNew = V.isNewPaziente;
-    const n = files.length;
-
-    const _jwt2 = await getAuthJwt();
-    const res = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt2 },
-      body: JSON.stringify({ mode:'referti', isNew, files: fileContents, max_tokens:2000 })
-    });
-    if(!res.ok){
-      const errBody = await res.json().catch(()=>({}));
-      throw new Error('HTTP '+res.status+(errBody.error?' — '+errBody.error:''));
-    }
-    const data = await res.json();
-    let text = data.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim();
-    const p = JSON.parse(text);
-
-    if(isNew){
-      document.getElementById('ex-nome').value = p.nome||'';
-      document.getElementById('ex-cognome').value = p.cognome||'';
-      document.getElementById('ex-nascita').value = p.data_nascita||'';
-    }
-    if(p.data_visita) document.getElementById('ex-data-visita').value = p.data_visita;
-    if(p.luogo) document.getElementById('ex-luogo').value = p.luogo;
-    document.getElementById('ex-clinica').value = p.contenuto_clinico||'';
-    showToast(`Sintesi AI completata${n>1?' ('+n+' file)':''} ✓`);
-  } catch(err){
-    console.error('AI error:', err);
-    const errEl = document.getElementById('ai-error');
-    if(errEl){
-      errEl.innerHTML = `<strong>⚠ Analisi AI non riuscita</strong><br>
-        ${err.message?'<small>'+err.message+'</small><br>':''}
-        Inserisci manualmente i dati qui sotto. Le foto sono visibili per riferimento.`;
-      errEl.style.display = 'block';
-    }
-  } finally {
-    document.getElementById('ai-status').style.display = 'none';
-    if(btnAI) btnAI.disabled = false;
-  }
 }
 
 async function saveVisita(){

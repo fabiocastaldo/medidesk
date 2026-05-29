@@ -120,8 +120,8 @@ ${visiteTesto}
 Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
       messages = [{ role: 'user', content: prompt }];
 
-    } else if (mode === 'referti') {
-      const { isNew, files } = req.body;
+    } else if (mode === 'sintesi-referti') {
+      const { eta, files } = req.body;
       if (!Array.isArray(files) || !files.length) {
         return res.status(400).json({ error: 'Campo files mancante o non valido' });
       }
@@ -132,31 +132,20 @@ Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
         }
       }
       const n = files.length;
-      const multiLabel = n > 1 ? `questi ${n} referti` : 'questo referto';
-      const multiNote  = n > 1 ? ` unificata dei ${n} documenti (usa la data più recente se ci sono più date)` : '';
-      let prompt;
-      if (isNew) {
-        prompt = `Sei un assistente medico. Analizza ${multiLabel} e produci una sintesi clinica concisa ma completa.
+      const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi ${n>1 ? n+' referti' : 'un referto'} di un paziente${eta ? ' di '+eta+' anni' : ''}, forniti come immagini/documenti.
 
-ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
-{
-  "nome": "nome del paziente",
-  "cognome": "cognome del paziente",
-  "data_nascita": "gg/mm/aaaa o vuoto",
-  "data_visita": "gg/mm/aaaa della visita",
-  "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
-  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti, ma NON riportare nome, cognome o data di nascita del paziente nel testo."
-}`;
-      } else {
-        prompt = `Sei un assistente medico. Analizza ${multiLabel} e produci una sintesi clinica strutturata.
+I dati anagrafici del paziente (nome, cognome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza. Inizia direttamente dal contenuto clinico.
 
-Rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
-{
-  "data_visita": "gg/mm/aaaa della visita",
-  "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
-  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti, ma NON riportare nome, cognome o data di nascita del paziente nel testo."
-}`;
-      }
+Produci una STORIA CLINICA UNIFICATA che:
+- Ordina i referti in modo cronologico quando le date sono leggibili nei documenti
+- Descrive l'evoluzione clinica nel tempo
+- Riporta diagnosi, terapie rilevanti e il loro andamento
+- Include esami strumentali e di laboratorio significativi con i risultati principali
+- Segnala eventuali cambiamenti terapeutici e il motivo
+- OMETTE informazioni ripetitive, amministrative o di scarso valore clinico
+- Usa linguaggio medico appropriato, con sezioni chiare ed elenchi puntati dove utile
+
+Rispondi SOLO con la storia clinica in testo. NESSUN JSON, nessuna introduzione, nessun commento finale.`;
       const contentBlocks = files.map(f => ({
         type: f.type === 'application/pdf' ? 'document' : 'image',
         source: { type: 'base64', media_type: f.type, data: f.base64 }
