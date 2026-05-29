@@ -1900,14 +1900,15 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
 
         <div class="confirm-box" id="visita-paziente-info" style="margin-bottom:16px"></div>
 
-        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Fotografa o seleziona il referto. L'AI estrarrà automaticamente il contenuto clinico.</p>
+        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Fotografa o seleziona il referto, poi avvia l'analisi AI quando vuoi.</p>
         <div class="upload-area" onclick="document.getElementById('referto-input').click()">
           <div class="uicon">📸</div>
           <strong>Clicca per selezionare o fotografare</strong>
-          <p>Uno o più file (JPG, PNG, PDF) — l'AI produrrà una sintesi unificata</p>
+          <p>Uno o più file (JPG, PNG, PDF) — sintesi unificata, su richiesta</p>
         </div>
-        <input type="file" id="referto-input" accept="image/*,application/pdf" style="display:none" multiple onchange="handleRefertoUpload(this)">
+        <input type="file" id="referto-input" accept="image/*,application/pdf" style="display:none" multiple onchange="handleRefertoSelect(this)">
         <div id="referto-preview" style="display:none;margin-top:12px"></div>
+        <button class="btn btn-primary" id="btn-analizza-ai" style="display:none;margin-top:12px" onclick="analizzaReferti()">🤖 Analizza referto con AI</button>
         <div id="ai-status" style="display:none" class="ai-processing"><div class="spinner"></div><span>Analisi AI in corso…</span></div>
         <div id="ai-error" style="display:none;background:var(--warm-light);border:1px solid #e8c8b0;border-radius:8px;padding:12px 14px;margin-top:12px;font-size:13px;color:var(--warm)"></div>
 
@@ -5128,7 +5129,7 @@ function resetVisitaUpload(){
   V.refertoFiles = [];
   const fi = document.getElementById('referto-input');
   if(fi) fi.value='';
-  ['referto-preview','ai-status','extracted-data','ai-error'].forEach(id=>{
+  ['referto-preview','ai-status','extracted-data','ai-error','btn-analizza-ai'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.style.display='none';
   });
@@ -5141,7 +5142,7 @@ function resetVisitaUpload(){
 }
 
 // ── UPLOAD REFERTO ──
-async function handleRefertoUpload(input){
+function handleRefertoSelect(input){
   const files = Array.from(input.files);
   if(!files.length) return;
   V.refertoFiles = files;
@@ -5153,10 +5154,21 @@ async function handleRefertoUpload(input){
       : `<div style="padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--ink2)">📄 ${f.name}</div>`
     ).join('')+`</div>`;
   prev.style.display = 'block';
+  document.getElementById('ai-status').style.display = 'none';
+  document.getElementById('ai-error').style.display = 'none';
+  document.getElementById('extracted-data').style.display = 'block';
+  document.getElementById('btn-salva-visita').style.display = 'inline-block';
+  const btnAI = document.getElementById('btn-analizza-ai');
+  if(btnAI){ btnAI.style.display='inline-block'; btnAI.disabled=false; btnAI.textContent = files.length>1 ? `🤖 Analizza ${files.length} referti con AI` : '🤖 Analizza referto con AI'; }
+}
+
+async function analizzaReferti(){
+  const files = V.refertoFiles || [];
+  if(!files.length){ showToast('Seleziona prima uno o più referti'); return; }
+  const btnAI = document.getElementById('btn-analizza-ai');
   document.getElementById('ai-status').style.display = 'flex';
   document.getElementById('ai-error').style.display = 'none';
-  document.getElementById('extracted-data').style.display = 'none';
-  document.getElementById('btn-salva-visita').style.display = 'none';
+  if(btnAI) btnAI.disabled = true;
 
   try {
     // Leggi tutti i file come base64 in parallelo
@@ -5239,8 +5251,7 @@ Il campo nome/cognome non serve, è già noto.`;
     }
   } finally {
     document.getElementById('ai-status').style.display = 'none';
-    document.getElementById('extracted-data').style.display = 'block';
-    document.getElementById('btn-salva-visita').style.display = 'inline-block';
+    if(btnAI) btnAI.disabled = false;
   }
 }
 
