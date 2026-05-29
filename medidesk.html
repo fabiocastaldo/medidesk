@@ -7870,12 +7870,11 @@ function _openPazienteFromStats(pid){
 async function auditLog(action, targetType, targetId, details){
   if(!isOnline() || !S.medicoId) return;
   try {
-    await supabaseClient.from('audit_log').insert({
-      medico_id: S.medicoId,
-      action,
-      target_type: targetType,
-      target_id: targetId ? String(targetId) : null,
-      details: details || {}
+    await supabaseClient.rpc('log_audit', {
+      p_action: action,
+      p_target_type: targetType,
+      p_target_id: targetId ? String(targetId) : null,
+      p_details: details || {}
     });
   } catch(e){
     console.error('[Delphi~Med] auditLog failed:', e.message);
