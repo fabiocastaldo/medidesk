@@ -8228,11 +8228,8 @@ async function confirmDeleteArchivioScaduto(){
   if(!confirm(`Eliminare ${checked.length} pazient${checked.length===1?'e':'i'} selezionat${checked.length===1?'o':'i'} e tutte le visite? L'operazione è irreversibile.`)) return;
   const pazIds = checked.map(String);
   const pazList = S.pazienti.filter(p => pazIds.includes(String(p.id)));
-  await auditLog('visite_archivio_eliminate', 'archivio', null, {
-    n_visite: pazList.reduce((s,p) => s + (p.visite||[]).length, 0),
-    pazienti_ids: pazIds
-  });
   let errors = 0;
+  const deleted = [];
   for(const p of pazList){
     const fotoPaths = (p.visite||[]).flatMap(v => getFotoPaths(v.foto_url));
     if(fotoPaths.length){
@@ -8243,6 +8240,13 @@ async function confirmDeleteArchivioScaduto(){
     if(vErr){ console.error('[Delphi~Med] delete visite fail:', vErr); errors++; continue; }
     const { error: pErr } = await supabaseClient.from('pazienti').delete().eq('id', p.id);
     if(pErr){ console.error('[Delphi~Med] delete paziente fail:', pErr); errors++; }
+    else { deleted.push(p); }
+  }
+  if(deleted.length){
+    await auditLog('visite_archivio_eliminate', 'archivio', null, {
+      n_visite: deleted.reduce((s,p) => s + (p.visite||[]).length, 0),
+      pazienti_ids: deleted.map(p => String(p.id))
+    });
   }
   S.pazienti = S.pazienti.filter(p => !pazIds.includes(String(p.id)));
   save(); renderPazienti(); updateStats();
