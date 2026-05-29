@@ -5016,7 +5016,7 @@ async function sintetizzaReferti(pazId){
 }
 
 // ── VISITA / FASCICOLO (flusso a step) ──
-var V = { selectedPazienteId:null, isNewPaziente:false, refertoFiles:[] };
+var V = { selectedPazienteId:null, isNewPaziente:false, refertoFiles:[], _previewUrls:[] };
 
 function openModalVisita(){
   V.selectedPazienteId = null;
@@ -5178,6 +5178,8 @@ function visitaBackToStep1(){
 }
 
 function resetVisitaUpload(){
+  (V._previewUrls||[]).forEach(u=>URL.revokeObjectURL(u));
+  V._previewUrls = [];
   V.refertoFiles = [];
   const fi = document.getElementById('referto-input');
   if(fi) fi.value='';
@@ -5197,17 +5199,41 @@ function resetVisitaUpload(){
 function handleRefertoSelect(input){
   const files = Array.from(input.files);
   if(!files.length) return;
-  V.refertoFiles = files;
+  V.refertoFiles = V.refertoFiles.concat(files);
+  input.value = ''; // consente di aggiungere altri scatti (anche lo stesso file) senza sovrascrivere
+  renderRefertoPreview();
+}
 
+function renderRefertoPreview(){
+  (V._previewUrls||[]).forEach(u=>URL.revokeObjectURL(u));
+  V._previewUrls = [];
   const prev = document.getElementById('referto-preview');
+  if(!prev) return;
+  if(!V.refertoFiles.length){
+    prev.innerHTML=''; prev.style.display='none';
+    document.getElementById('extracted-data').style.display='none';
+    document.getElementById('btn-salva-visita').style.display='none';
+    return;
+  }
   prev.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">`+
-    files.map(f => f.type.startsWith('image/')
-      ? `<img src="${URL.createObjectURL(f)}" style="max-height:90px;max-width:110px;border-radius:6px;object-fit:cover;border:1px solid var(--border)">`
-      : `<div style="padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--ink2)">📄 ${f.name}</div>`
-    ).join('')+`</div>`;
+    V.refertoFiles.map((f,idx)=>{
+      let inner;
+      if(f.type.startsWith('image/')){
+        const u = URL.createObjectURL(f); V._previewUrls.push(u);
+        inner = `<img src="${u}" style="max-height:90px;max-width:110px;border-radius:6px;object-fit:cover;border:1px solid var(--border);display:block">`;
+      } else {
+        inner = `<div style="padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--ink2)">📄 ${escapeHtml(f.name)}</div>`;
+      }
+      return `<div style="position:relative;display:inline-block">${inner}<button type="button" onclick="removeRefertoFile(${idx})" title="Rimuovi" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:var(--warm);color:#fff;font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">✕</button></div>`;
+    }).join('')+`</div>`;
   prev.style.display = 'block';
   document.getElementById('extracted-data').style.display = 'block';
   document.getElementById('btn-salva-visita').style.display = 'inline-block';
+}
+
+function removeRefertoFile(idx){
+  V.refertoFiles.splice(idx,1);
+  renderRefertoPreview();
 }
 
 async function saveVisita(){
@@ -5218,7 +5244,8 @@ async function saveVisita(){
     const dataVisita = document.getElementById('ex-data-visita').value.trim() || new Date().toLocaleDateString('it-IT');
     const luogo = document.getElementById('ex-luogo').value.trim();
     const clinica = document.getElementById('ex-clinica').value.trim();
-    const tipoReferto = document.getElementById('ex-tipo-referto').value.trim();
+    const _tipoRaw = document.getElementById('ex-tipo-referto').value.trim();
+    const tipoReferto = _tipoRaw ? _tipoRaw.charAt(0).toUpperCase() + _tipoRaw.slice(1) : '';
     const visita = { id: Date.now(), data: dataVisita, luogo, clinica, tipo: tipoReferto, foto_url: null };
 
     let authUser = null;
