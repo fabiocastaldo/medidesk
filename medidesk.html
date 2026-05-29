@@ -2725,6 +2725,7 @@ async function loadVisiteFromDB(user){
       .eq('medico_id', S.medicoId)
       .order('created_at', { ascending: false });
     if(error) throw error;
+    S.pazienti.forEach(p => { p.visite = []; });
     (data || []).forEach(v => {
       const paz = S.pazienti.find(p => String(p.id) === String(v.paziente_id));
       if(paz){
