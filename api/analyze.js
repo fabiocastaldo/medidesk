@@ -104,6 +104,8 @@ export default async function handler(req, res) {
       }).join('\n\n---\n\n');
       const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi le sintesi di ${visite.length} visite di un paziente${eta ? ' di '+eta+' anni' : ''}, in ordine cronologico.
 
+I dati anagrafici del paziente (nome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza. Inizia direttamente dal contenuto clinico.
+
 Produci una STORIA CLINICA UNIFICATA che:
 - Descrive l'evoluzione clinica in ordine cronologico
 - Riporta diagnosi, terapie rilevanti e loro andamento nel tempo
@@ -143,7 +145,7 @@ ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero 
   "data_nascita": "gg/mm/aaaa o vuoto",
   "data_visita": "gg/mm/aaaa della visita",
   "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
-  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
+  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti, ma NON riportare nome, cognome o data di nascita del paziente nel testo."
 }`;
       } else {
         prompt = `Sei un assistente medico. Analizza ${multiLabel} e produci una sintesi clinica strutturata.
@@ -152,7 +154,7 @@ Rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
 {
   "data_visita": "gg/mm/aaaa della visita",
   "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
-  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
+  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti, ma NON riportare nome, cognome o data di nascita del paziente nel testo."
 }`;
       }
       const contentBlocks = files.map(f => ({
