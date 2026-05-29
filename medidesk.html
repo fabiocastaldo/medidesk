@@ -1430,6 +1430,13 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
             </div>
             <label class="toggle-switch"><input type="checkbox" id="imp-nascondi-cancellati"><span class="toggle-slider"></span></label>
           </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Mostra prenotazioni in attesa</div>
+              <div class="notif-toggle-desc">Le nuove prenotazioni online compaiono come card da segnare "viste" in dashboard</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mostra-prenotazioni-attesa"><span class="toggle-slider"></span></label>
+          </div>
         </div></div>
       </div>
 
@@ -2610,6 +2617,7 @@ async function loadMedicoFromDB(user){
       S.settings.notifCancellazione       = data.notifica_cancellazione        !== false;
       S.settings.notifAppuntamentoManuale = data.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = data.notifica_cancellazione_medico !== false;
+      S.settings.mostraPrenotazioniAttesa = data.mostra_prenotazioni_attesa !== false;
       S.settings.nascondiCancellati       = data.nascondi_cancellati           === true;
       S.settings.sogliaConservazione     = data.soglia_conservazione_anni    || 10;
       if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
@@ -4658,9 +4666,13 @@ function renderPending(){
   const section = document.getElementById('pending-section');
   const el = document.getElementById('pending-list');
   if(!section||!el) return;
+  if(S.settings.mostraPrenotazioniAttesa === false){ section.style.display='none'; return; }
   if(!list.length){ section.style.display='none'; return; }
   section.style.display='block';
-  el.innerHTML = list.map(a=>{
+  const _bulk = list.length>1
+    ? `<div style="text-align:right;margin:0 0 8px"><button class="btn btn-sm btn-primary" onclick="markAllSeen()">✓ Segna tutte come viste (${list.length})</button></div>`
+    : '';
+  el.innerHTML = _bulk + list.map(a=>{
     const centro=S.centri.find(c=>String(c.id)===String(a.centroId));
     return `<div class="pending-card">
       <div class="pending-info">
@@ -4681,6 +4693,19 @@ async function markSeen(id){
     }
     save();
   }
+  renderPending();
+}
+
+async function markAllSeen(){
+  const list = S.appuntamenti.filter(a=>a.source==='paziente' && !a.seen);
+  if(!list.length) return;
+  const ids = list.map(a=>String(a.id));
+  list.forEach(a=>{ a.seen=true; });
+  if(isOnline()){
+    try { await supabaseClient.from('appuntamenti').update({ seen: true }).in('id', ids); }
+    catch(e){ console.error('[Delphi~Med] markAllSeen:', e.message); }
+  }
+  save();
   renderPending();
 }
 
@@ -5902,6 +5927,7 @@ async function bkInit(){
       S.settings.notifCancellazione       = m.notifica_cancellazione        !== false;
       S.settings.notifAppuntamentoManuale = m.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = m.notifica_cancellazione_medico !== false;
+      S.settings.mostraPrenotazioniAttesa = m.mostra_prenotazioni_attesa !== false;
       S.settings.nascondiCancellati       = m.nascondi_cancellati           === true;
       if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
       const { data: tipiDB } = await supabaseClient
@@ -6691,6 +6717,7 @@ function renderImpostazioni(){
   chk('imp-notif-cancellazione-medico',    S.settings.notifCancellazioneMedico    !== false);
   chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
+  chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
   const temaEl = document.getElementById('imp-tema-scuro');
   if(temaEl){
     temaEl.checked = document.documentElement.classList.contains('dark');
@@ -6712,7 +6739,8 @@ async function saveImpostazione(toggleId){
     'imp-notif-cancellazione':        { key: 'notifCancellazione',       col: 'notifica_cancellazione' },
     'imp-notif-cancellazione-medico': { key: 'notifCancellazioneMedico', col: 'notifica_cancellazione_medico' },
     'imp-notif-appuntamento-manuale': { key: 'notifAppuntamentoManuale', col: 'notifica_appuntamento_manuale' },
-    'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' }
+    'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' },
+    'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' }
   };
   const m = mapping[toggleId];
   if(!m){ console.warn('[Delphi~Med] saveImpostazione: toggle sconosciuto', toggleId); return; }
@@ -6724,6 +6752,7 @@ async function saveImpostazione(toggleId){
     if(S.agendaView==='month') renderMonthView();
     else renderDayAppointments();
   }
+  if(m.key === 'mostraPrenotazioniAttesa'){ renderPending(); }
   if(isOnline() && S.medicoId){
     try {
       const { error } = await supabaseClient.from('medici')
