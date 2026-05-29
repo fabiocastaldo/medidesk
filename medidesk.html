@@ -4867,6 +4867,19 @@ function parseVisitDate(s){
   return new Date(s+'T12:00:00');
 }
 
+function etaDaNascita(nascita){
+  if(!nascita) return null;
+  let d;
+  const m = String(nascita).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m){ d = new Date(+m[3], +m[2]-1, +m[1]); }
+  else { const t = Date.parse(nascita); if(!isNaN(t)) d = new Date(t); }
+  if(!d || isNaN(d)) return null;
+  const o = new Date();
+  let e = o.getFullYear() - d.getFullYear();
+  if(o.getMonth() < d.getMonth() || (o.getMonth()===d.getMonth() && o.getDate() < d.getDate())) e--;
+  return (e>=0 && e<130) ? e : null;
+}
+
 function shareStoria(pazId){
   const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return;
   const testo=(document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo')?.textContent)||'';
@@ -4924,33 +4937,14 @@ async function sintetizzaStoria(pazId){
   container.innerHTML='<div class="ai-processing" style="margin-top:12px"><div class="spinner"></div><span>Elaborazione storia clinica…</span></div>';
 
   const sorted=[...p.visite].sort((a,b)=>parseVisitDate(a.data)-parseVisitDate(b.data));
-
-  const visiteTesto=sorted.map((v,i)=>{
-    const header=`VISITA ${i+1}${v.data?' — '+v.data:''}${v.luogo?' ('+v.luogo+')':''}`;
-    return header+'\n'+(v.clinica||'(nessuna sintesi disponibile)');
-  }).join('\n\n---\n\n');
-
-  const prompt=`Sei un medico specialista. Di seguito trovi le sintesi di ${sorted.length} visite di ${p.cognome} ${p.nome}${p.nascita?', nato il '+p.nascita:''}, in ordine cronologico.
-
-Produci una STORIA CLINICA UNIFICATA che:
-- Descrive l'evoluzione clinica in ordine cronologico
-- Riporta diagnosi, terapie rilevanti e loro andamento nel tempo
-- Include esami strumentali/laboratorio significativi con i risultati principali
-- Segnala eventuali cambiamenti terapeutici e il motivo
-- OMETTE informazioni ripetitive, amministrative, di routine o di scarso valore clinico
-- Usa linguaggio medico appropriato, sezioni chiare ed elenchi puntati dove utile
-
-VISITE:
-${visiteTesto}
-
-Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
+  const eta=etaDaNascita(p.nascita);
 
   const _jwt1=await getAuthJwt();
   try{
     const res=await fetch('/api/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt1},
-      body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:2000})
+      body:JSON.stringify({mode:'storia', eta, visite:sorted.map(v=>({data:v.data, clinica:v.clinica})), max_tokens:2000})
     });
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const data=await res.json();
@@ -5181,47 +5175,12 @@ async function analizzaReferti(){
 
     const isNew = V.isNewPaziente;
     const n = files.length;
-    const multiLabel = n > 1 ? `questi ${n} referti` : 'questo referto';
-    const multiNote  = n > 1 ? ` unificata dei ${n} documenti (usa la data più recente se ci sono più date)` : '';
-
-    let prompt;
-    if(isNew){
-      prompt = `Sei un assistente medico. Analizza ${multiLabel} e produci una sintesi clinica concisa ma completa.
-
-ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
-{
-  "nome": "nome del paziente",
-  "cognome": "cognome del paziente",
-  "data_nascita": "gg/mm/aaaa o vuoto",
-  "data_visita": "gg/mm/aaaa della visita",
-  "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
-  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
-}`;
-    } else {
-      const paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
-      prompt = `Sei un assistente medico. Il paziente è: ${paz ? paz.cognome+' '+paz.nome : 'noto'}.
-Analizza ${multiLabel} e produci una sintesi clinica strutturata.
-
-Rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
-{
-  "data_visita": "gg/mm/aaaa della visita",
-  "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
-  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
-}
-Il campo nome/cognome non serve, è già noto.`;
-    }
-
-    const contentBlocks = fileContents.map(fc => ({
-      type: fc.type === 'application/pdf' ? 'document' : 'image',
-      source: { type: 'base64', media_type: fc.type, data: fc.base64 }
-    }));
-    contentBlocks.push({ type: 'text', text: prompt });
 
     const _jwt2 = await getAuthJwt();
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt2 },
-      body: JSON.stringify({ messages: [{ role: 'user', content: contentBlocks }], max_tokens: 2000 })
+      body: JSON.stringify({ mode:'referti', isNew, files: fileContents, max_tokens:2000 })
     });
     if(!res.ok){
       const errBody = await res.json().catch(()=>({}));

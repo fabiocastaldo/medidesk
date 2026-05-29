@@ -60,7 +60,7 @@ export default async function handler(req, res) {
   }
 
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=stato`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,specializzazione`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) {
@@ -70,6 +70,7 @@ export default async function handler(req, res) {
   if (!medicoData?.[0] || medicoData[0].stato !== 'approvato') {
     return res.status(403).json({ error: 'Account non autorizzato' });
   }
+  const spec = (medicoData[0].specializzazione || '').trim();
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -85,10 +86,84 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: "Troppe richieste. Riprova tra un'ora." });
   }
 
+  const reqMax = parseInt(req.body.max_tokens, 10);
+  const max_tokens = Math.min(Number.isFinite(reqMax) ? reqMax : 2000, 4096);
+  let messages;
+
   try {
-    const { messages, max_tokens } = req.body;
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Campo messages mancante o non valido' });
+    const { mode } = req.body;
+
+    if (mode === 'storia') {
+      const { eta, visite } = req.body;
+      if (!Array.isArray(visite) || !visite.length) {
+        return res.status(400).json({ error: 'Campo visite mancante o non valido' });
+      }
+      const visiteTesto = visite.map((v, i) => {
+        const header = `VISITA ${i+1}${v.data ? ' — '+v.data : ''}`;
+        return header + '\n' + (v.clinica || '(nessuna sintesi disponibile)');
+      }).join('\n\n---\n\n');
+      const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi le sintesi di ${visite.length} visite di un paziente${eta ? ' di '+eta+' anni' : ''}, in ordine cronologico.
+
+Produci una STORIA CLINICA UNIFICATA che:
+- Descrive l'evoluzione clinica in ordine cronologico
+- Riporta diagnosi, terapie rilevanti e loro andamento nel tempo
+- Include esami strumentali/laboratorio significativi con i risultati principali
+- Segnala eventuali cambiamenti terapeutici e il motivo
+- OMETTE informazioni ripetitive, amministrative, di routine o di scarso valore clinico
+- Usa linguaggio medico appropriato, sezioni chiare ed elenchi puntati dove utile
+
+VISITE:
+${visiteTesto}
+
+Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
+      messages = [{ role: 'user', content: prompt }];
+
+    } else if (mode === 'referti') {
+      const { isNew, files } = req.body;
+      if (!Array.isArray(files) || !files.length) {
+        return res.status(400).json({ error: 'Campo files mancante o non valido' });
+      }
+      const ALLOWED = new Set(['image/jpeg','image/png','image/gif','image/webp','application/pdf']);
+      for (const f of files) {
+        if (!f || typeof f.base64 !== 'string' || !ALLOWED.has(f.type)) {
+          return res.status(400).json({ error: 'File non valido' });
+        }
+      }
+      const n = files.length;
+      const multiLabel = n > 1 ? `questi ${n} referti` : 'questo referto';
+      const multiNote  = n > 1 ? ` unificata dei ${n} documenti (usa la data più recente se ci sono più date)` : '';
+      let prompt;
+      if (isNew) {
+        prompt = `Sei un assistente medico. Analizza ${multiLabel} e produci una sintesi clinica concisa ma completa.
+
+ESTRAI questi dati e rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
+{
+  "nome": "nome del paziente",
+  "cognome": "cognome del paziente",
+  "data_nascita": "gg/mm/aaaa o vuoto",
+  "data_visita": "gg/mm/aaaa della visita",
+  "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
+  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
+}`;
+      } else {
+        prompt = `Sei un assistente medico. Analizza ${multiLabel} e produci una sintesi clinica strutturata.
+
+Rispondi SOLO con JSON valido (zero testo aggiuntivo, zero markdown):
+{
+  "data_visita": "gg/mm/aaaa della visita",
+  "luogo": "centro/ambulatorio/ospedale dove è stata fatta",
+  "contenuto_clinico": "SINTESI CLINICA STRUTTURATA${multiNote}: anamnesi, esame obiettivo, diagnosi, esami eseguiti, terapie prescritte, conclusioni e follow-up. Usa elenchi puntati e sezioni chiare. Conserva tutti i dati medici rilevanti."
+}`;
+      }
+      const contentBlocks = files.map(f => ({
+        type: f.type === 'application/pdf' ? 'document' : 'image',
+        source: { type: 'base64', media_type: f.type, data: f.base64 }
+      }));
+      contentBlocks.push({ type: 'text', text: prompt });
+      messages = [{ role: 'user', content: contentBlocks }];
+
+    } else {
+      return res.status(400).json({ error: 'Campo mode mancante o non valido' });
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -98,11 +173,7 @@ export default async function handler(req, res) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: max_tokens || 2000,
-        messages
-      })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens, messages })
     });
 
     const data = await response.json();
