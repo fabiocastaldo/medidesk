@@ -8097,7 +8097,7 @@ function showArchivioBannerIfNeeded(){
   div.innerHTML = `<div class="modal">
     <div class="modal-header"><span class="modal-title">&#128203; Archivio da verificare</span></div>
     <div class="modal-body">
-      <p><strong>${S.archivioScaduto.nVisite} visite di ${S.archivioScaduto.nPazienti} pazienti</strong> oltre la soglia di conservazione impostata (${periodLabel}).</p>
+      <p><strong>${S.archivioScaduto.nVisite} visit${S.archivioScaduto.nVisite===1?'a':'e'} di ${S.archivioScaduto.nPazienti} pazient${S.archivioScaduto.nPazienti===1?'e':'i'}</strong> oltre la soglia di conservazione impostata (${periodLabel}).</p>
       <p style="font-size:13px">Il principio di minimizzazione dei dati (GDPR art. 5) raccomanda di non conservare i dati oltre il periodo necessario. <strong>Verifica la normativa applicabile</strong> e valuta se procedere.</p>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
         <button class="btn btn-primary" onclick="closeModal('modal-archivio-banner');showPage('manutenzione-archivio')">Mostra elenco</button>
@@ -8191,7 +8191,7 @@ function renderArchivioPage(){
     return;
   }
   const soglia = data.sogliaUsata;
-  if(subtitle) subtitle.textContent = `${data.nVisite} visite di ${data.nPazienti} pazienti oltre ${soglia} anni`;
+  if(subtitle) subtitle.textContent = `${data.nVisite} visit${data.nVisite===1?'a':'e'} di ${data.nPazienti} pazient${data.nPazienti===1?'e':'i'} oltre ${soglia} ann${soglia===1?'o':'i'}`;
   if(actions) actions.style.display = 'flex';
   if(list){
     list.innerHTML = data.pazienti.map(p => {
