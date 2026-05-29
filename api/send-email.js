@@ -23,6 +23,13 @@ function esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function redactEmail(e) {
+  if (!e || typeof e !== 'string') return e;
+  const [u, d] = e.split('@');
+  if (!d) return '***';
+  return `${u.slice(0, 1)}***@${d}`;
+}
+
 function formatDateIt(dateStr) {
   try {
     return new Date(dateStr + 'T12:00:00')
@@ -406,7 +413,7 @@ export default async function handler(req, res) {
         if (cErr) {
           console.error('[send-email] notifica centro anon error:', cErr.message);
         } else {
-          console.log('[send-email] notifica centro anon inviata', { to: appt.centroEmail, resend_id: cData?.id });
+          console.log('[send-email] notifica centro anon inviata', { to: redactEmail(appt.centroEmail), resend_id: cData?.id });
           await auditLog(base, dbHeaders, appt.apptMedicoId, 'notifica_centro_evento', 'appuntamento', authCtx.apptIdFromToken, 'email_token', appt.centroEmail, cData?.id);
         }
       } catch (e) {
@@ -514,11 +521,11 @@ export default async function handler(req, res) {
     if (replyTo) payload.reply_to = replyTo;
     const { data: sendData, error: sendErr } = await resend.emails.send(payload);
     if (sendErr) {
-      console.error('[send-email] resend error:', sendErr.message, { tipo, to });
+      console.error('[send-email] resend error:', sendErr.message, { tipo, to: redactEmail(to) });
       return res.status(500).json({ error: 'Errore invio email' });
     }
     resendId = sendData?.id;
-    console.log('[send-email] email inviata', { tipo, to, resend_id: resendId });
+    console.log('[send-email] email inviata', { tipo, to: redactEmail(to), resend_id: resendId });
   } catch (e) {
     console.error('[send-email] resend exception:', e.message);
     return res.status(500).json({ error: 'Errore invio email' });
