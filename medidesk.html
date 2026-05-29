@@ -1915,6 +1915,7 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
             <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" style="flex:1"></div>
+            <div class="field-row"><span class="field-key">Tipo referto</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome (opzionale)" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1"></div>
           </div>
@@ -2720,14 +2721,14 @@ async function loadVisiteFromDB(user){
   if(!isOnline() || !user || !S.medicoId) return;
   try {
     const { data, error } = await supabaseClient.from('visite')
-      .select('id, paziente_id, data_visita, luogo, contenuto_clinico, foto_referto_url')
+      .select('id, paziente_id, data_visita, luogo, contenuto_clinico, foto_referto_url, tipo_referto')
       .eq('medico_id', S.medicoId)
       .order('created_at', { ascending: false });
     if(error) throw error;
     (data || []).forEach(v => {
       const paz = S.pazienti.find(p => String(p.id) === String(v.paziente_id));
       if(paz){
-        paz.visite.push({ id:v.id, data:v.data_visita||'', luogo:v.luogo||'', clinica:v.contenuto_clinico||'', foto_url:v.foto_referto_url||null });
+        paz.visite.push({ id:v.id, data:v.data_visita||'', luogo:v.luogo||'', clinica:v.contenuto_clinico||'', tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null });
       }
     });
     save();
@@ -4688,7 +4689,7 @@ function _buildVisitaHTML(paz, v, i){
   // ── Header (sempre visibile, click per espandere)
   h+='<div class="visita-header" onclick="toggleV(\'vv-'+pid+'-'+i+'\')">';
   h+='<div>';
-  h+='<div class="visita-date">📋 '+escapeHtml(v.data||'N/A')+'</div>';
+  h+='<div class="visita-date">📋 '+escapeHtml(v.data||'N/A')+(v.tipo?' · '+escapeHtml(v.tipo):'')+'</div>';
   h+='<div style="font-size:12px;color:var(--ink3)">'+escapeHtml(v.luogo||'')+'</div>';
   h+='</div>';
   h+='<div style="display:flex;align-items:center;gap:6px">';
@@ -5186,7 +5187,7 @@ function resetVisitaUpload(){
   });
   const sb = document.getElementById('btn-salva-visita');
   if(sb) sb.style.display='none';
-  ['ex-nome','ex-cognome','ex-nascita','ex-data-visita','ex-luogo','ex-clinica'].forEach(id=>{
+  ['ex-nome','ex-cognome','ex-nascita','ex-data-visita','ex-luogo','ex-clinica','ex-tipo-referto'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value='';
   });
@@ -5217,7 +5218,8 @@ async function saveVisita(){
     const dataVisita = document.getElementById('ex-data-visita').value.trim() || new Date().toLocaleDateString('it-IT');
     const luogo = document.getElementById('ex-luogo').value.trim();
     const clinica = document.getElementById('ex-clinica').value.trim();
-    const visita = { id: Date.now(), data: dataVisita, luogo, clinica, foto_url: null };
+    const tipoReferto = document.getElementById('ex-tipo-referto').value.trim();
+    const visita = { id: Date.now(), data: dataVisita, luogo, clinica, tipo: tipoReferto, foto_url: null };
 
     let authUser = null;
     if(isOnline()){ try{ const r = await supabaseClient.auth.getUser(); authUser = r.data.user; }catch(e){} }
@@ -5280,7 +5282,8 @@ async function saveVisita(){
           data_visita:       dataVisita  || null,
           luogo:             luogo       || null,
           contenuto_clinico: clinica     || null,
-          foto_referto_url:  visita.foto_url || null
+          foto_referto_url:  visita.foto_url || null,
+          tipo_referto:      tipoReferto || null
         }).select('id').single();
         if(vErr){
           // Rollback: elimina tutte le foto già caricate
