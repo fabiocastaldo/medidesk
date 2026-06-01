@@ -579,11 +579,14 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
 /* ── HOME PUBBLICA ── */
 #view-home{display:none;flex-direction:column;min-height:100vh;background:var(--paper);font-family:'DM Sans',Arial,sans-serif}
-.home-header{background:var(--brand-mid);padding:18px 32px;display:flex;align-items:center;flex-shrink:0}
+.home-top{position:relative;flex-shrink:0;color:#fff;background:radial-gradient(130% 100% at 80% -10%,color-mix(in srgb,var(--brand-bright) 70%,transparent),transparent 62%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
+.home-top::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(240deg,rgba(255,255,255,.22),rgba(255,255,255,.04) 40%,transparent 75%)}
+.home-top>*{position:relative;z-index:1}
+.home-header{padding:18px 32px;display:flex;align-items:center;flex-shrink:0}
 .home-logo-wrap{display:flex;flex-direction:column;line-height:1.2}
 .home-logo{color:#fff;font-size:24px;font-weight:700;font-family:'Montserrat',sans-serif;letter-spacing:-.2px}
 .home-logo-payoff{color:rgba(255,255,255,.72);font-size:11.5px;font-weight:400;margin-top:4px;letter-spacing:.3px;font-family:'DM Sans',Arial,sans-serif}
-.home-hero{background:linear-gradient(160deg,var(--brand-mid) 0%,var(--brand-bright) 100%);padding:72px 20px 88px;text-align:center;flex-shrink:0}
+.home-hero{padding:48px 20px 88px;text-align:center;flex-shrink:0}
 .home-hero h2{color:#fff;font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
 .home-hero-sub{color:rgba(255,255,255,.82);font-size:15px;margin:0 0 34px}
 .home-search-wrap{max-width:520px;margin:0 auto;position:relative}
@@ -727,6 +730,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
 <!-- ══════════════ HOME PUBBLICA ══════════════ -->
 <div id="view-home">
+  <div class="home-top">
   <header class="home-header">
     <div class="home-logo-wrap">
       <span class="home-logo">Delphi~Med</span>
@@ -745,6 +749,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="home-search-results" id="home-search-results"></div>
     <div id="home-search-msg" class="home-search-msg"></div>
   </section>
+  </div>
 
   <div class="home-body">
     <div class="home-sections">
