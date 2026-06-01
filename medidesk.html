@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<script>(function(){var s=localStorage.getItem('medidesk_theme'),d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');var sk=localStorage.getItem('skin');if(sk&&['marine','fuxia','arancio'].indexOf(sk)>-1)document.documentElement.setAttribute('data-skin',sk);})()</script>
+<script>(function(){try{localStorage.removeItem('medidesk_theme');}catch(e){}var sk=localStorage.getItem('skin');if(sk&&['marine','fuxia','arancio'].indexOf(sk)>-1)document.documentElement.setAttribute('data-skin',sk);})()</script>
 <link rel="icon" href="data:,">
 <title>Delphi~Med</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
@@ -38,15 +38,6 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   --font-sans:'DM Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --font-serif:'DM Serif Display',Georgia,'Times New Roman',serif;
 }
-html.dark {
-  --paper:#0E1413; --surface:#151D1B; --surface2:#1C2624;
-  --ink:#EAF0EE; --ink2:#A6B4B0; --ink3:#6E7C79; --border:#26302E;
-  /* brand più chiaro in dark per non sparire sul fondo scuro */
-  --brand-deep:#0B5158; --brand-mid:#12877F; --brand-bright:#2BC4B8; --brand-soft:#1E3A38;
-  --pending-bg:#2E2620; --pending-ink:#E8B894; --pending-accent:#D2814E;
-  --shadow-soft:0 4px 14px rgba(0,0,0,.4);
-  --shadow-lg:0 8px 40px rgba(0,0,0,.5);
-}
 /* ── SKIN (override SOLO della rampa brand) ── */
 html[data-skin="marine"]{ --brand-deep:#0B2B4D; --brand-mid:#15487F; --brand-bright:#2F74C7; --brand-soft:#C3DBF2; }
 html[data-skin="fuxia"]{ --brand-deep:#4A0F33; --brand-mid:#A11F66; --brand-bright:#E04A9A; --brand-soft:#F6C9E2; }
@@ -54,12 +45,13 @@ html[data-skin="arancio"]{
   --brand-deep:#5A2410; --brand-mid:#B85A1C; --brand-bright:#F0852E; --brand-soft:#F8D9BC;
   --pending-bg:#E2EEF0; --pending-ink:#27606B; --pending-accent:#2E8A99;
 }
-html.dark[data-skin="marine"]{ --brand-deep:#103157; --brand-mid:#2A5C9A; --brand-bright:#4E8FDB; --brand-soft:#1A2B40; }
-html.dark[data-skin="fuxia"]{ --brand-deep:#5A1640; --brand-mid:#C23B82; --brand-bright:#EE6BB0; --brand-soft:#3A1228; }
-html.dark[data-skin="arancio"]{
-  --brand-deep:#6E2E14; --brand-mid:#D2742C; --brand-bright:#F59E4D; --brand-soft:#33271C;
-  --pending-bg:#1C2A2C; --pending-ink:#7FB8C2; --pending-accent:#3FA0B0;
-}
+.skin-grid{display:flex;gap:14px;flex-wrap:wrap}
+.skin-swatch{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;padding:0;cursor:pointer;font:inherit}
+.skin-chip{width:46px;height:46px;border-radius:50%;box-shadow:var(--shadow-soft);transition:transform .15s ease,box-shadow .15s ease}
+.skin-swatch:hover .skin-chip{transform:scale(1.06)}
+.skin-swatch.is-active .skin-chip{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--brand-mid)}
+.skin-name{font-size:12px;color:var(--ink2)}
+.skin-swatch.is-active .skin-name{color:var(--ink);font-weight:600}
 *{box-sizing:border-box;margin:0;padding:0;transition:background-color .2s ease,color .2s ease,border-color .2s ease}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px}
 
@@ -195,8 +187,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .banner-scadenza{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:var(--r-sm);margin-bottom:16px;font-size:13px;font-weight:500}
 .banner-scadenza.urgente{background:var(--pending-bg);border:1px solid var(--pending-accent);color:var(--pending-ink)}
 .banner-scadenza.promemoria{background:var(--accent-light);border:1px solid var(--accent);color:var(--ink2)}
-html.dark .banner-scadenza.urgente{background:rgba(249,115,22,.15);color:#FDBA74}
-html.dark .banner-scadenza.promemoria{background:var(--accent-light);color:var(--ink2)}
 .banner-scadenza-link{background:none;border:none;cursor:pointer;text-decoration:underline;color:inherit;font-size:inherit;font-weight:600;padding:0;font-family:inherit}
 .banner-scadenza-close{background:none;border:none;cursor:pointer;font-size:16px;color:inherit;padding:2px 4px;line-height:1;flex-shrink:0}
 .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
@@ -338,7 +328,6 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 
 /* ── PRENOTAZIONE PUBBLICA ── */
 #view-booking{display:none;min-height:100vh;background:linear-gradient(160deg,var(--brand-mid) 0%,var(--brand-bright) 100%)}
-html.dark #view-booking{background:linear-gradient(160deg,#051212 0%,#0A1A1A 60%,#0D2020 100%)}
 .booking-wrap{max-width:580px;margin:0 auto;padding:48px 20px 40px}
 .booking-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.35)}
 /* hero */
@@ -503,7 +492,6 @@ html.dark #view-booking{background:linear-gradient(160deg,#051212 0%,#0A1A1A 60%
 
 /* ── AUTH SCREEN ── */
 #view-auth{display:none;min-height:100vh;background:linear-gradient(135deg,var(--brand-bright) 0%,var(--brand-mid) 60%,var(--brand-deep) 100%);align-items:center;justify-content:center;padding:24px;font-family:'DM Sans',sans-serif;position:relative}
-html.dark #view-auth{background:linear-gradient(135deg,#051212 0%,#0A1A1A 60%,#0D2020 100%)}
 .auth-card{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.25)}
 .auth-logo{text-align:center;margin-bottom:28px}
 .auth-logo h1{font-family:'DM Serif Display',serif;font-size:32px;color:var(--ink);margin:0 0 4px}
@@ -549,31 +537,9 @@ html.dark #view-auth{background:linear-gradient(135deg,#051212 0%,#0A1A1A 60%,#0
   .auth-card{padding:28px 20px}
 }
 
-/* ── THEME TOGGLE ── */
-.icon-dark{display:none}
-html.dark .icon-light{display:none}
-html.dark .icon-dark{display:inline}
-.btn-theme-toggle{background:rgba(255,255,255,.1);border:none;border-radius:var(--r-sm);padding:7px 12px;cursor:pointer;font-size:14px;line-height:1;color:rgba(255,255,255,.7);width:100%;text-align:left;margin-top:8px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px}
-.btn-theme-toggle:hover{background:rgba(255,255,255,.2);color:#fff}
 .mobile-theme-btn{background:rgba(255,255,255,.12);border:none;border-radius:var(--r-sm);padding:7px 10px;cursor:pointer;font-size:16px;line-height:1;color:rgba(255,255,255,.8)}
 .mobile-theme-btn:hover{background:rgba(255,255,255,.22)}
-.auth-theme-btn{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:var(--r-sm);padding:8px 12px;cursor:pointer;font-size:16px;line-height:1;color:#fff}
-.auth-theme-btn:hover{background:rgba(255,255,255,.28)}
 
-/* ── DARK MODE: auth card ── */
-html.dark .auth-card{background:var(--surface);color:var(--ink)}
-html.dark .auth-logo h1{color:var(--ink)}
-html.dark .auth-tab.active{background:var(--surface2);color:var(--ink)}
-html.dark .auth-tabs{background:var(--bg)}
-html.dark .auth-field input,html.dark .auth-field select{background:var(--surface2);border-color:var(--border);color:var(--ink)}
-html.dark .auth-btn{background:var(--accent)}
-html.dark .auth-btn:hover{background:var(--accent2)}
-
-/* ── DARK MODE: booking card ── */
-html.dark .booking-card{background:var(--surface)}
-html.dark .booking-card-title{color:var(--ink)}
-html.dark .centro-btn{background:var(--surface2);color:var(--ink);border-color:var(--border)}
-html.dark .slot-btn{background:var(--surface2);color:var(--accent)}
 
 /* ── MOBILE: zoom block + font-size ── */
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
@@ -581,17 +547,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
 /* ── VIEW CANCEL ── */
 #view-cancel{display:none;min-height:100vh;background:linear-gradient(135deg,var(--brand-bright) 0%,var(--brand-mid) 60%,var(--brand-deep) 100%);align-items:center;justify-content:center;padding:24px;font-family:'DM Sans',sans-serif;position:relative}
-html.dark #view-cancel{background:linear-gradient(135deg,#051212 0%,#0A1A1A 60%,#0D2020 100%)}
 .cancel-card{background:#fff;border-radius:20px;padding:36px;width:100%;max-width:460px;box-shadow:0 24px 64px rgba(0,0,0,.25);text-align:center}
-html.dark .cancel-card{background:var(--surface);color:var(--ink)}
 .cancel-card h2{font-family:'DM Serif Display',serif;font-size:24px;color:var(--ink);margin-bottom:8px}
 .cancel-card p{font-size:14px;color:var(--ink2);line-height:1.6;margin-bottom:16px}
 
 /* ── CANCELLATION TOKEN ── */
 .cancel-token-box{background:var(--ink);color:#fff;border-radius:var(--r);padding:16px 20px;margin:16px 0;text-align:center}
-html.dark .cancel-token-box{background:var(--surface2)}
 .cancel-token-code{font-family:monospace;font-size:28px;font-weight:700;letter-spacing:4px;color:#fff;display:block;margin-top:4px}
-html.dark .cancel-token-code{color:var(--ink)}
 
 /* ── NOTIFICATION TOGGLES ── */
 .notif-toggle-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
@@ -699,7 +661,6 @@ html.dark .cancel-token-code{color:var(--ink)}
 .stats-insight-text strong{color:var(--accent);font-weight:600}
 .stats-insight-text .pos{color:#16a34a;font-weight:600}
 .stats-insight-text .neg{color:#dc2626;font-weight:600}
-html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15),rgba(13,148,136,.05));border-color:rgba(13,148,136,.3)}
 
 /* Sparkline nei KPI */
 .stats-kpi-spark{margin-top:10px;height:32px;overflow:hidden}
@@ -812,7 +773,6 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
 
 <!-- ══════════════ AUTH ══════════════ -->
 <div id="view-auth">
-  <button class="auth-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
   <div class="auth-card">
     <div class="auth-logo">
       <h1>Delphi~Med</h1>
@@ -1536,12 +1496,24 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
       <div style="margin-bottom:24px">
         <div class="section-title">Aspetto</div>
         <div class="card"><div class="card-body">
-          <div class="notif-toggle-row">
-            <div class="notif-toggle-info">
-              <div class="notif-toggle-label">Tema scuro</div>
-              <div class="notif-toggle-desc">Attiva per usare l'interfaccia in modalità scura. Lo sfondo diventa nero/grigio scuro e il testo chiaro.</div>
-            </div>
-            <label class="toggle-switch"><input type="checkbox" id="imp-tema-scuro"><span class="toggle-slider"></span></label>
+          <div class="notif-toggle-label" style="margin-bottom:12px">Tema colore</div>
+          <div class="skin-grid">
+            <button type="button" class="skin-swatch" data-skin="petrolio" onclick="selectSkin('petrolio')" aria-label="Verde petrolio">
+              <span class="skin-chip" style="background:linear-gradient(135deg,#16A89E,#0C726E,#073C42)"></span>
+              <span class="skin-name">Petrolio</span>
+            </button>
+            <button type="button" class="skin-swatch" data-skin="marine" onclick="selectSkin('marine')" aria-label="Marine">
+              <span class="skin-chip" style="background:linear-gradient(135deg,#2F74C7,#15487F,#0B2B4D)"></span>
+              <span class="skin-name">Marine</span>
+            </button>
+            <button type="button" class="skin-swatch" data-skin="fuxia" onclick="selectSkin('fuxia')" aria-label="Fuxia">
+              <span class="skin-chip" style="background:linear-gradient(135deg,#E04A9A,#A11F66,#4A0F33)"></span>
+              <span class="skin-name">Fuxia</span>
+            </button>
+            <button type="button" class="skin-swatch" data-skin="arancio" onclick="selectSkin('arancio')" aria-label="Arancio">
+              <span class="skin-chip" style="background:linear-gradient(135deg,#F0852E,#B85A1C,#5A2410)"></span>
+              <span class="skin-name">Arancio</span>
+            </button>
           </div>
         </div></div>
       </div>
@@ -1732,7 +1704,6 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
 
 <!-- ══════════════ PAGINA CANCELLAZIONE ══════════════ -->
 <div id="view-cancel">
-  <button class="auth-theme-btn" onclick="toggleTheme()" title="Cambia tema"><span class="icon-light">🌙</span><span class="icon-dark">☀️</span></button>
   <div class="cancel-card">
     <div id="cancel-loading">
       <div class="spinner" style="margin:0 auto 16px;width:32px;height:32px;border-width:3px;border-color:var(--accent);border-top-color:transparent"></div>
@@ -5614,15 +5585,15 @@ function buildSocialRow(st){
   return links.join('');
 }
 
-function toggleTheme(){
-  const dark = document.documentElement.classList.toggle('dark');
-  localStorage.setItem('medidesk_theme', dark ? 'dark' : 'light');
-}
-
 function applySkin(skin){
   if(skin === 'petrolio') document.documentElement.removeAttribute('data-skin');
   else document.documentElement.setAttribute('data-skin', skin);
   localStorage.setItem('skin', skin);
+}
+function selectSkin(skin){
+  applySkin(skin);
+  document.querySelectorAll('.skin-swatch').forEach(b => b.classList.toggle('is-active', b.dataset.skin === skin));
+  showToast('✓ Tema colore aggiornato');
 }
 
 // ── NOTIFICHE EMAIL ──
@@ -6857,14 +6828,8 @@ function renderImpostazioni(){
   chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
-  const temaEl = document.getElementById('imp-tema-scuro');
-  if(temaEl){
-    temaEl.checked = document.documentElement.classList.contains('dark');
-    temaEl.onchange = () => {
-      toggleTheme();
-      showToast('✓ Tema aggiornato');
-    };
-  }
+  const curSkin = localStorage.getItem('skin') || 'petrolio';
+  document.querySelectorAll('.skin-swatch').forEach(b => b.classList.toggle('is-active', b.dataset.skin === curSkin));
   const sogliaEl = document.getElementById('setting-soglia-anni');
   if(sogliaEl) sogliaEl.value = S.settings.sogliaConservazione || 10;
 }
