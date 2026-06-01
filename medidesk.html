@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<script>(function(){var s=localStorage.getItem('medidesk_theme'),d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');})()</script>
+<script>(function(){var s=localStorage.getItem('medidesk_theme'),d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s!=='light'&&d))document.documentElement.classList.add('dark');var sk=localStorage.getItem('skin');if(sk&&['marine','fuxia','arancio'].indexOf(sk)>-1)document.documentElement.setAttribute('data-skin',sk);})()</script>
 <link rel="icon" href="data:,">
 <title>Delphi~Med</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
@@ -15,21 +15,50 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 </script>
 <style>
 :root {
-  --bg: #F0FAFA; --surface: #FFFFFF; --surface2: #E6F7F7;
-  --ink: #0F2A2A; --ink2: #2D5A5A; --ink3: #6B9999;
-  --accent: #0D9488; --accent2: #0F766E; --accent-light: #CCFBF1;
-  --warm: #DC6B3A; --warm-light: #FEF3EE;
-  --border: #B2DFDF; --shadow: 0 2px 16px rgba(13,148,136,.08); --shadow-lg: 0 8px 40px rgba(13,148,136,.15);
-  --r: 12px; --r-sm: 8px;
-  --sidebar-bg: #0D9488; --header-bg: #0D9488; --nav-bg: #FFFFFF;
+  /* rampa brand (skin default: verde petrolio) */
+  --brand-deep:#073C42; --brand-mid:#0C726E; --brand-bright:#16A89E; --brand-soft:#BFE7E2;
+  /* neutri / carta */
+  --paper:#F3F6F5; --surface:#FFFFFF; --surface2:#EAF1EF;
+  --ink:#15211F; --ink2:#5E6E6B; --ink3:#9AA8A5; --border:#E7ECEA;
+  /* accento "in attesa" (stato, non brand) */
+  --pending-bg:#F6E7DB; --pending-ink:#9A4E23; --pending-accent:#C2683A;
+  /* ALIAS di compatibilità: i riferimenti esistenti puntano qui */
+  --bg:var(--paper);
+  --accent:var(--brand-mid); --accent2:var(--brand-deep); --accent-light:var(--brand-soft);
+  --warm:var(--pending-accent); --warm-light:var(--pending-bg);
+  --sidebar-bg:var(--brand-deep); --header-bg:var(--brand-deep); --nav-bg:var(--surface);
+  /* forma */
+  --radius-sm:12px; --radius-md:16px; --radius-lg:22px;
+  --r:var(--radius-md); --r-sm:var(--radius-sm);
+  /* elevazione: ombra tinta brand, segue la skin */
+  --shadow-soft:0 4px 14px color-mix(in srgb, var(--brand-deep) 12%, transparent);
+  --shadow:var(--shadow-soft);
+  --shadow-lg:0 8px 40px color-mix(in srgb, var(--brand-deep) 18%, transparent);
+  /* tipografia (font già caricati nell'head) */
+  --font-sans:'DM Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --font-serif:'DM Serif Display',Georgia,'Times New Roman',serif;
 }
 html.dark {
-  --bg: #0A1A1A; --surface: #0F2424; --surface2: #142E2E;
-  --ink: #E0F7F5; --ink2: #89CCCC; --ink3: #4A8888;
-  --accent: #14B8A6; --accent2: #0D9488; --accent-light: rgba(13,148,136,.2);
-  --warm: #F87171; --warm-light: rgba(248,113,113,.15);
-  --border: #1E3A3A; --shadow: 0 2px 16px rgba(0,0,0,.4); --shadow-lg: 0 8px 40px rgba(0,0,0,.5);
-  --sidebar-bg: #0A1A1A; --header-bg: #0A1A1A; --nav-bg: #0F2424;
+  --paper:#0E1413; --surface:#151D1B; --surface2:#1C2624;
+  --ink:#EAF0EE; --ink2:#A6B4B0; --ink3:#6E7C79; --border:#26302E;
+  /* brand più chiaro in dark per non sparire sul fondo scuro */
+  --brand-deep:#0B5158; --brand-mid:#12877F; --brand-bright:#2BC4B8; --brand-soft:#1E3A38;
+  --pending-bg:#2E2620; --pending-ink:#E8B894; --pending-accent:#D2814E;
+  --shadow-soft:0 4px 14px rgba(0,0,0,.4);
+  --shadow-lg:0 8px 40px rgba(0,0,0,.5);
+}
+/* ── SKIN (override SOLO della rampa brand) ── */
+html[data-skin="marine"]{ --brand-deep:#0B2B4D; --brand-mid:#15487F; --brand-bright:#2F74C7; --brand-soft:#C3DBF2; }
+html[data-skin="fuxia"]{ --brand-deep:#4A0F33; --brand-mid:#A11F66; --brand-bright:#E04A9A; --brand-soft:#F6C9E2; }
+html[data-skin="arancio"]{
+  --brand-deep:#5A2410; --brand-mid:#B85A1C; --brand-bright:#F0852E; --brand-soft:#F8D9BC;
+  --pending-bg:#E2EEF0; --pending-ink:#27606B; --pending-accent:#2E8A99;
+}
+html.dark[data-skin="marine"]{ --brand-deep:#103157; --brand-mid:#2A5C9A; --brand-bright:#4E8FDB; --brand-soft:#1A2B40; }
+html.dark[data-skin="fuxia"]{ --brand-deep:#5A1640; --brand-mid:#C23B82; --brand-bright:#EE6BB0; --brand-soft:#3A1228; }
+html.dark[data-skin="arancio"]{
+  --brand-deep:#6E2E14; --brand-mid:#D2742C; --brand-bright:#F59E4D; --brand-soft:#33271C;
+  --pending-bg:#1C2A2C; --pending-ink:#7FB8C2; --pending-accent:#3FA0B0;
 }
 *{box-sizing:border-box;margin:0;padding:0;transition:background-color .2s ease,color .2s ease,border-color .2s ease}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px}
@@ -5484,6 +5513,12 @@ function buildSocialRow(st){
 function toggleTheme(){
   const dark = document.documentElement.classList.toggle('dark');
   localStorage.setItem('medidesk_theme', dark ? 'dark' : 'light');
+}
+
+function applySkin(skin){
+  if(skin === 'petrolio') document.documentElement.removeAttribute('data-skin');
+  else document.documentElement.setAttribute('data-skin', skin);
+  localStorage.setItem('skin', skin);
 }
 
 // ── NOTIFICHE EMAIL ──
