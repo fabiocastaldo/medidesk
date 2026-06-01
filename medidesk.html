@@ -104,6 +104,40 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .stat-value{font-family:'DM Serif Display',serif;font-size:36px;color:var(--ink);margin:4px 0}
 .stat-sub{font-size:12px;color:var(--ink2)}
 
+/* ── DASHBOARD REDESIGN (Fase 2) ── */
+.dash-greet{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.dash-avatar{width:52px;height:52px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-weight:600;font-size:17px;color:#fff;letter-spacing:.5px;background:linear-gradient(135deg,var(--brand-mid),var(--brand-deep));box-shadow:var(--shadow-soft)}
+.dash-hello{font-family:var(--font-serif);font-style:italic;font-size:16px;color:var(--ink2);line-height:1.1}
+.dash-name{font-family:var(--font-serif);font-size:26px;color:var(--ink);letter-spacing:-.3px;line-height:1.15}
+.hero{position:relative;border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:18px;cursor:pointer;background:radial-gradient(120% 90% at 85% 0%,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 60%),linear-gradient(135deg,var(--brand-mid),var(--brand-deep));box-shadow:var(--shadow-soft);color:#fff;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.22),rgba(255,255,255,.04) 40%,transparent 75%)}
+.hero>*{position:relative;z-index:1}
+.hero-cal{position:absolute;top:18px;right:18px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(255,255,255,.15)}
+.hero-label{color:var(--brand-soft);font-size:14px;font-weight:500;margin-bottom:2px}
+.hero-main{display:flex;align-items:baseline;gap:10px}
+.hero-big{font-weight:300;font-size:54px;line-height:1}
+.hero-unit{font-size:16px;color:rgba(255,255,255,.92)}
+.hero-next{margin-top:14px;display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-height:18px}
+.hero-next-label{color:var(--brand-soft);font-size:12px}
+.hero-next-val{font-weight:700;font-size:16px}
+.tile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.tile{background:var(--surface);border-radius:var(--radius-md);box-shadow:var(--shadow-soft);padding:14px 16px}
+.tile[onclick]{cursor:pointer}
+.tile-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.tile-label{font-size:13px;color:var(--ink2);font-weight:500}
+.tile-chip{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;background:color-mix(in srgb,var(--brand-bright) 18%,var(--surface));color:var(--brand-mid)}
+.tile-chip.pending{background:var(--pending-bg);color:var(--pending-accent)}
+.tile-num{font-weight:300;font-size:30px;color:var(--ink);line-height:1.05}
+.tile-sub{font-size:12px;color:var(--ink3);margin-top:1px}
+.date-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:22px}
+.ds-day{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:14px;cursor:pointer}
+.ds-dow{font-size:11px;color:var(--ink3)}
+.ds-date{font-size:16px;color:var(--ink);font-weight:500}
+.ds-dot{width:5px;height:5px;border-radius:50%;background:var(--brand-mid)}
+.ds-day.is-today{background:linear-gradient(135deg,var(--brand-mid),var(--brand-deep));box-shadow:var(--shadow-soft)}
+.ds-day.is-today .ds-dow{color:var(--brand-soft)}
+.ds-day.is-today .ds-date{color:#fff}
+
 /* ── AGENDA ── */
 .week-nav{display:flex;align-items:center;gap:12px}
 .week-label{font-size:15px;font-weight:500;min-width:200px;text-align:center}
@@ -448,6 +482,9 @@ html.dark #view-booking{background:linear-gradient(160deg,#051212 0%,#0A1A1A 60%
   /* Stats */
   .stat-card{padding:16px}
   .stat-value{font-size:28px}
+  .tile-grid{grid-template-columns:repeat(2,1fr)}
+  .hero-big{font-size:46px}
+  .dash-name{font-size:22px}
 
   /* Modal */
   .modal{max-height:95vh}
@@ -1045,12 +1082,44 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
-      <div class="page-header">
-        <div><div class="page-title">Buongiorno 👋</div><div class="page-subtitle" id="today-date"></div></div>
-        <button class="btn btn-primary" onclick="openModal('modal-appuntamento')">+ Appuntamento</button>
+      <div class="dash-greet">
+        <div class="dash-avatar" id="dash-avatar">—</div>
+        <div>
+          <div class="dash-hello" id="dash-hello">Buongiorno,</div>
+          <div class="dash-name" id="dash-name">Medico</div>
+        </div>
+        <span id="today-date" style="display:none"></span>
       </div>
 
       <div id="banner-scadenza-dashboard"></div>
+
+      <div class="hero" id="hero-oggi" onclick="showPage('agenda')">
+        <div class="hero-cal">📅</div>
+        <div class="hero-label">Oggi</div>
+        <div class="hero-main"><span class="hero-big" id="hero-count">0</span><span class="hero-unit">appuntamenti</span></div>
+        <div class="hero-next" id="hero-next"></div>
+      </div>
+
+      <div class="tile-grid">
+        <div class="tile" onclick="showPage('pazienti')">
+          <div class="tile-top"><span class="tile-label">Pazienti</span><span class="tile-chip">👥</span></div>
+          <div class="tile-num" id="tile-pazienti">0</div><div class="tile-sub">in cura</div>
+        </div>
+        <div class="tile" onclick="showPage('centri')">
+          <div class="tile-top"><span class="tile-label">Centri</span><span class="tile-chip">➕</span></div>
+          <div class="tile-num" id="tile-centri">0</div><div class="tile-sub">ambulatori</div>
+        </div>
+        <div class="tile">
+          <div class="tile-top"><span class="tile-label">In attesa</span><span class="tile-chip pending">🕐</span></div>
+          <div class="tile-num" id="tile-attesa">0</div><div class="tile-sub">da vedere</div>
+        </div>
+        <div class="tile" onclick="showPage('statistiche')">
+          <div class="tile-top"><span class="tile-label">Settimana</span><span class="tile-chip">📊</span></div>
+          <div class="tile-num" id="tile-settimana">0</div><div class="tile-sub">visite</div>
+        </div>
+      </div>
+
+      <div class="date-strip" id="date-strip"></div>
 
       <!-- SHARE BOX -->
       <div class="share-box">
@@ -1069,11 +1138,6 @@ html.dark .stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.15)
         <div id="pending-list"></div>
       </div>
 
-      <div class="grid-3" style="margin-bottom:24px">
-        <div class="stat-card"><div class="stat-label">Oggi</div><div class="stat-value" id="stat-oggi">0</div><div class="stat-sub">appuntamenti</div></div>
-        <div class="stat-card"><div class="stat-label">Pazienti</div><div class="stat-value" id="stat-pazienti">0</div><div class="stat-sub">in archivio</div></div>
-        <div class="stat-card"><div class="stat-label">Centri</div><div class="stat-value" id="stat-centri">0</div><div class="stat-sub">ambulatori</div></div>
-      </div>
 
       <div class="grid-2">
         <div class="card">
@@ -3221,7 +3285,7 @@ function showPage(id){
   if(id==='pazienti') renderPazienti();
   if(id==='centri') renderCentri();
   if(id==='profilo'){ loadSettings(); renderTipiAree(); prefillProfiloNome(); }
-  if(id==='dashboard'){ renderDashboard(); renderPending(); }
+  if(id==='dashboard'){ renderDashboard(); updateStats(); renderPending(); }
   if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
   if(id==='manutenzione-archivio') renderArchivioPage();
@@ -5400,7 +5464,7 @@ function resetVisitaModal(){
 // ── DASHBOARD ──
 function renderDashboard(){
   const today=fmt(new Date());
-  const todayAppts=S.appuntamenti.filter(a=>a.data===today).sort((a,b)=>a.ora.localeCompare(b.ora));
+  const todayAppts=S.appuntamenti.filter(a=>a.data===today && !a.cancelled).sort((a,b)=>a.ora.localeCompare(b.ora));
   const upEl=document.getElementById('dash-upcoming');
   if(!upEl) return;
   if(todayAppts.length)
@@ -5424,17 +5488,57 @@ function renderDashboard(){
       </div>`;
     }).join('');
   else pazEl.innerHTML='<div style="text-align:center;padding:32px;color:var(--ink3)">Nessun paziente</div>';
+  renderDateStrip();
 }
 
 // ── STATS ──
 function updateStats(){
   const today=fmt(new Date());
-  const elO=document.getElementById('stat-oggi');
-  const elP=document.getElementById('stat-pazienti');
-  const elC=document.getElementById('stat-centri');
-  if(elO) elO.textContent=S.appuntamenti.filter(a=>a.data===today).length;
-  if(elP) elP.textContent=S.pazienti.length;
-  if(elC) elC.textContent=S.centri.filter(c=>c.attivo!==false).length;
+  const todayList=S.appuntamenti.filter(a=>a.data===today && !a.cancelled);
+  const elCount=document.getElementById('hero-count');
+  if(elCount) elCount.textContent=todayList.length;
+  const elNext=document.getElementById('hero-next');
+  if(elNext){
+    const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
+    const toMin=t=>{const p=(t||'').split(':'); return (+p[0]||0)*60+(+p[1]||0);};
+    const sorted=todayList.slice().sort((a,b)=>a.ora.localeCompare(b.ora));
+    const next=sorted.find(a=>toMin(a.ora)>=nowMin) || sorted[0];
+    if(next){
+      const nm=`${next.cognome} ${(next.nome||'').charAt(0)}.`.trim();
+      elNext.innerHTML=`<span class="hero-next-label">prossimo</span><span class="hero-next-val">${escapeHtml(next.ora)} · ${escapeHtml(nm)}</span>`;
+    } else elNext.innerHTML='';
+  }
+  const elPaz=document.getElementById('tile-pazienti'); if(elPaz) elPaz.textContent=S.pazienti.length;
+  const elCen=document.getElementById('tile-centri'); if(elCen) elCen.textContent=S.centri.filter(c=>c.attivo!==false).length;
+  const elAtt=document.getElementById('tile-attesa'); if(elAtt) elAtt.textContent=S.appuntamenti.filter(a=>a.source==='paziente' && !a.seen).length;
+  const elSet=document.getElementById('tile-settimana');
+  if(elSet){ const wk=weekRange(new Date()); elSet.textContent=S.appuntamenti.filter(a=>!a.cancelled && a.data>=wk.lun && a.data<=wk.dom).length; }
+  fillGreeting();
+}
+function parseISO(s){const p=(s||'').split('-').map(Number); return new Date(p[0],(p[1]||1)-1,p[2]||1);}
+function weekRange(d){const x=new Date(d); const off=(x.getDay()+6)%7; const mon=new Date(x); mon.setDate(x.getDate()-off); const sun=new Date(mon); sun.setDate(mon.getDate()+6); return {lun:fmt(mon),dom:fmt(sun)};}
+function fillGreeting(){
+  const h=new Date().getHours();
+  const hello = h<13?'Buongiorno,' : (h<18?'Buon pomeriggio,' : 'Buonasera,');
+  const nome=((S.settings&&S.settings.nomeProf)||'').trim();
+  const cognome=((S.settings&&S.settings.cognomeProf)||'').trim();
+  const full=[nome,cognome].filter(Boolean).join(' ') || ((S.settings&&S.settings.nome)||'').trim() || 'Medico';
+  const ini=((nome[0]||'')+(cognome[0]||'')).toUpperCase() || (full[0]||'M').toUpperCase();
+  const eH=document.getElementById('dash-hello'); if(eH) eH.textContent=hello;
+  const eN=document.getElementById('dash-name'); if(eN) eN.textContent=full;
+  const eA=document.getElementById('dash-avatar'); if(eA) eA.textContent=ini;
+}
+function renderDateStrip(){
+  const el=document.getElementById('date-strip'); if(!el) return;
+  const today=fmt(new Date()); const wk=weekRange(new Date()); const base=parseISO(wk.lun);
+  const dows=['lun','mar','mer','gio','ven','sab','dom']; let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(base); d.setDate(base.getDate()+i); const ds=fmt(d);
+    const isToday=ds===today;
+    const hasAppt=S.appuntamenti.some(a=>!a.cancelled && a.data===ds);
+    html+=`<div class="ds-day${isToday?' is-today':''}" onclick="showPage('agenda')"><span class="ds-dow">${dows[i]}</span><span class="ds-date">${d.getDate()}</span>${(hasAppt&&!isToday)?'<span class="ds-dot"></span>':''}</div>`;
+  }
+  el.innerHTML=html;
 }
 
 // ── SETTINGS ──
