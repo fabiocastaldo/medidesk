@@ -436,6 +436,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 /* ── BOTTOM NAV (mobile) ── */
 .bottom-nav{display:none}
 .mobile-header{display:none}
+.mobile-actions{display:none}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
@@ -454,6 +455,10 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
   .bottom-nav-item.active{color:var(--accent)}
   .bottom-nav-item .bn-icon{font-size:22px;line-height:1}
   .bottom-nav-item .bn-label{font-size:10px;font-weight:600;letter-spacing:.3px}
+
+  /* Barra azioni secondarie (Statistiche/Impostazioni/Esci) — reveal su scroll-up */
+  .mobile-actions{position:fixed;left:0;right:0;bottom:var(--nav-h,64px);display:flex;align-items:center;justify-content:flex-end;gap:4px;padding:6px 12px;background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -2px 12px rgba(0,0,0,.05);z-index:99;transform:translateY(120%);opacity:0;pointer-events:none;transition:transform .22s ease,opacity .22s ease}
+  .mobile-actions.revealed{transform:translateY(0);opacity:1;pointer-events:auto}
 
   /* Resto */
   .grid-2,.grid-3{grid-template-columns:1fr}
@@ -532,13 +537,14 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .auth-msg.error{background:#fdecea;color:#c0392b;display:block}
 .sidebar-logout{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.55);font-size:13px;font-weight:500;background:none;border:none;font-family:'DM Sans',sans-serif;width:100%;margin-top:8px;transition:color .15s}
 .sidebar-logout:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.1)}
-.mobile-logout{background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1}
+.mobile-logout{background:transparent;border:none;color:var(--ink2);font-size:20px;cursor:pointer;padding:8px 12px;line-height:1;display:flex;align-items:center;transition:color .15s}
+.mobile-logout:hover{color:var(--brand-mid)}
 @media(max-width:768px){
   .auth-card{padding:28px 20px}
 }
 
-.mobile-theme-btn{background:rgba(255,255,255,.12);border:none;border-radius:var(--r-sm);padding:7px 10px;cursor:pointer;font-size:16px;line-height:1;color:rgba(255,255,255,.8)}
-.mobile-theme-btn:hover{background:rgba(255,255,255,.22)}
+.mobile-theme-btn{background:transparent;border:none;border-radius:var(--r-sm);padding:8px 12px;cursor:pointer;font-size:18px;line-height:1;color:var(--ink2);transition:background .15s}
+.mobile-theme-btn:hover{background:color-mix(in srgb,var(--brand-mid) 10%,transparent)}
 
 
 /* ── MOBILE: zoom block + font-size ── */
@@ -1037,11 +1043,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="mobile-header-text">
         <h1>Delphi~Med</h1>
         <span id="mobile-doctor">Dr. Mario Rossi</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <button class="mobile-theme-btn" onclick="showPage('statistiche')" title="Statistiche">📊</button>
-        <button class="mobile-theme-btn" onclick="showPage('impostazioni')" title="Impostazioni">⚙️</button>
-        <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" title="Esci"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
       </div>
     </header>
 
@@ -1554,6 +1555,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
     </div>
   </main>
+
+  <!-- BARRA AZIONI SECONDARIE (mobile) — Statistiche / Impostazioni / Esci, reveal su scroll-up -->
+  <div class="mobile-actions" id="mobile-actions">
+    <button class="mobile-theme-btn" onclick="showPage('statistiche')" title="Statistiche">📊</button>
+    <button class="mobile-theme-btn" onclick="showPage('impostazioni')" title="Impostazioni">⚙️</button>
+    <button class="mobile-logout" id="mobile-logout-btn" onclick="signOut()" title="Esci"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+  </div>
 
   <!-- BOTTOM NAVIGATION (visible only on mobile) -->
   <nav class="bottom-nav">
@@ -3242,6 +3250,51 @@ function renderAll(){
 }
 
 // ── NAV ──
+// ── Fase 4: barra azioni mobile, reveal su scroll-up / visibile in cima ──
+function initMobileActions(){
+  const bar = document.getElementById('mobile-actions');
+  const nav = document.querySelector('.bottom-nav');
+  if(!bar) return;
+
+  function setNavHeight(){
+    if(!nav) return;
+    const h = nav.offsetHeight;
+    if(h > 0) document.documentElement.style.setProperty('--nav-h', h + 'px');
+  }
+  setNavHeight();
+  window.addEventListener('resize', setNavHeight);
+  if('ResizeObserver' in window && nav){
+    new ResizeObserver(setNavHeight).observe(nav); // aggiorna quando l'app passa da display:none a visibile (post-login)
+  }
+
+  let lastY = window.scrollY || 0;
+  let ticking = false;
+  const TH = 6; // soglia anti-jitter (px)
+
+  function update(){
+    const y = window.scrollY || 0;
+    const dy = y - lastY;
+    if(y <= 8 || dy < -TH){
+      bar.classList.add('revealed');    // in cima OPPURE scroll verso l'alto
+    } else if(dy > TH){
+      bar.classList.remove('revealed'); // scroll verso il basso
+    }
+    lastY = y;
+    ticking = false;
+  }
+
+  window.addEventListener('scroll', function(){
+    if(!ticking){ requestAnimationFrame(update); ticking = true; }
+  }, {passive:true});
+
+  update(); // stato iniziale (in cima → visibile)
+}
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initMobileActions);
+} else {
+  initMobileActions();
+}
+
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
