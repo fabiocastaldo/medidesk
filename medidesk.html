@@ -1105,7 +1105,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon"><svg class="ic"><use href="#ic-user"/></svg></span><span>Profilo</span></div>
       <div class="nav-item" onclick="showPage('statistiche')"><span class="icon"><svg class="ic"><use href="#ic-stats"/></svg></span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon"><svg class="ic"><use href="#ic-settings"/></svg></span><span>Impostazioni</span></div>
-      <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon"><svg class="ic"><use href="#ic-archive"/></svg></span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px"><svg class="ic"><use href="#ic-alert"/></svg></span></span></div>
+      <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon"><svg class="ic"><use href="#ic-archive"/></svg></span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px"><svg class="ic" style="color:#f59e0b"><use href="#ic-alert"/></svg></span></span></div>
     </nav>
     <div class="sidebar-bottom">
       <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
@@ -4829,7 +4829,7 @@ function showApptDetail(id){
       <div class="field-row"><span class="field-key">Note</span><span class="field-val">${escapeHtml(a.note||'—')}</span></div>
       ${a.tel?`<div class="field-row"><span class="field-key">Telefono</span><span class="field-val">${escapeHtml(a.tel)}</span></div>`:''}
       ${a.email?`<div class="field-row"><span class="field-key">Email</span><span class="field-val">${escapeHtml(a.email)}</span></div>`:''}
-      ${a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val">🌐 Prenotazione online</span></div>`:''}
+      ${a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-globe"/></svg>Prenotazione online</span></div>`:''}
       ${centro&&centro.email?`<div class="field-row"><span class="field-key">Email centro</span><span class="field-val">${escapeHtml(centro.email)}</span></div>`:''}
       ${a.cancelled?`<div class="field-row"><span class="field-key">Cancellato il</span><span class="field-val">${a.cancelledAt?new Date(a.cancelledAt).toLocaleDateString('it-IT'):'—'}</span></div>`:''}
       ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
