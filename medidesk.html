@@ -141,11 +141,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .day-tab .count{font-size:11px;color:var(--ink2)}
 .day-tab .dt-dow{font-size:11px;color:var(--ink3)}
 .day-tab .dt-num{font-size:16px;font-weight:500;color:var(--ink);line-height:1.1}
-.day-tab .dt-meta{display:flex;align-items:center;justify-content:center;gap:3px;min-height:13px}
+.day-tab .dt-meta{display:flex;align-items:center;justify-content:center;gap:3px;min-height:13px;overflow:hidden;max-width:100%}
 .day-tab.active .dt-dow{color:var(--brand-soft)}
 .day-tab.active .dt-num{color:#fff}
 .day-tab.active .count{color:#fff}
 .day-tab.is-today:not(.active) .dt-num{color:var(--brand-mid)}
+.cc-chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--ink2);white-space:nowrap}
+.cc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cc-more{font-size:11px;color:var(--ink3)}
+.day-tab.active .cc-chip,.day-tab.active .cc-more{color:#fff}
 .appt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;transition:box-shadow .15s;cursor:pointer;margin-bottom:8px}
 .appt-card:hover{box-shadow:var(--shadow)}
 .appt-time{font-weight:600;font-size:15px;color:var(--accent);min-width:50px}
@@ -260,7 +264,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .mc-day.selected .mc-num{color:var(--accent)}
 .mc-day:not(.empty):not(.selected):hover{background:var(--accent-light)}
 .mc-num{font-size:13px;font-weight:600;color:var(--ink)}
-.mc-dots-row{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.mc-dots-row{display:flex;flex-wrap:nowrap;overflow:hidden;gap:3px;margin-top:3px}
 .mc-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
 .mc-dot-turno{opacity:.55}
 .mc-count{font-size:9px;color:var(--ink3);font-weight:600;line-height:1}
@@ -278,7 +282,6 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .mc-day.chiusura .mc-num{color:var(--ink3)}
 .mc-holiday-dot{width:5px;height:5px;border-radius:50%;background:var(--warm);display:inline-block;vertical-align:middle;margin-left:2px;flex-shrink:0}
 .mc-holiday-name{font-size:8px;color:var(--warm);font-weight:600;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mc-turno-time{font-size:9px;color:var(--ink3);line-height:1.1;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mc-holiday-warn{font-size:9px;font-weight:700;color:var(--warm);flex-shrink:0}
 .mc-chiusura-icon{font-size:9px;color:var(--ink3)}
 .day-tab.holiday .dt-num{color:var(--warm)}
@@ -1165,8 +1168,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
       <div id="view-week">
         <div class="day-tabs" id="day-tabs"></div>
-        <div id="appointments-container"></div>
         <div id="week-legend-container"></div>
+        <div id="appointments-container"></div>
       </div>
       <div id="view-month" style="display:none">
         <div class="month-cal" id="month-cal"></div>
@@ -4436,6 +4439,14 @@ function getWeekDays(offset){
 }
 function fmt(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function formatDate(s){ if(!s) return ''; const [y,m,dd]=s.split('-'); return `${dd}/${m}/${y}`; }
+function turnoWindow(centro, ds){
+  if(!ds) return '';
+  const dow = new Date(ds+'T12:00:00').getDay();
+  const tt = (centro.turni||[]).filter(t => t.giorno===dow && (!t.dataFineValidita || t.dataFineValidita>=ds));
+  if(!tt.length) return '';
+  const f = hm => (hm||'').replace(/^0/,'').replace(/:00$/,'');
+  return `${f(tt.map(t=>t.inizio).sort()[0])}–${f(tt.map(t=>t.fine).sort().slice(-1)[0])}`;
+}
 
 function renderAgenda(){
   const wkLbl = document.getElementById('week-label');
@@ -4458,19 +4469,23 @@ function renderAgenda(){
   const DAYS_IT=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
   document.getElementById('day-tabs').innerHTML = days.map(d=>{
     const ds=fmt(d);
-    const count=S.appuntamenti.filter(a=>a.data===ds && !a.cancelled).length;
     const hol=isHoliday(ds);
     const chiuso=isChiusura(ds);
     let tabCls=`day-tab ${ds===S.selectedDay?'active':''}`;
     if(hol.isHoliday) tabCls+=' holiday';
     const centriConTurno = S.centri.filter(c=>c.attivo!==false && (c.turni||[]).some(t=>t.giorno===d.getDay() && (!t.dataFineValidita||t.dataFineValidita>=ds)));
     const dotsCentri = centriConTurno.slice(0,4).map(c=>`<span style="width:7px;height:7px;border-radius:50%;background:${c.colore};display:inline-block;flex-shrink:0"></span>`).join('');
+    const dayAppts = S.appuntamenti.filter(a=>a.data===ds && !a.cancelled);
+    const byCentro = {}; dayAppts.forEach(a=>{ const k=String(a.centroId); byCentro[k]=(byCentro[k]||0)+1; });
+    const cids = Object.keys(byCentro).sort((x,y)=>byCentro[y]-byCentro[x]);
+    const chips = cids.slice(0,2).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; return `<span class="cc-chip"><span class="cc-dot" style="background:${col}"></span>${byCentro[cid]}</span>`; }).join('');
+    const more = cids.length>2 ? `<span class="cc-more">+${cids.length-2}</span>` : '';
+    const metaInner = chips ? chips+more : dotsCentri;
     return `<div class="${tabCls}${ds===today?' is-today':''}" onclick="selectDay('${ds}')" title="${hol.isHoliday?hol.name:(chiuso?'Studio chiuso':'')}">
       <span class="dt-dow">${DAYS_IT[d.getDay()]}</span>
       <span class="dt-num">${d.getDate()}</span>
       <span class="dt-meta">
-        ${dotsCentri}
-        ${count?`<span class="count">${count}</span>`:''}
+        ${metaInner}
         ${hol.isHoliday?'<span class="dt-hol-dot"></span>':''}
         ${chiuso?'<span class="dt-chiuso-dot"></span>':''}
       </span>
@@ -4497,7 +4512,8 @@ function renderWeekLegend(days){
     const c=S.centri.find(x=>String(x.id)===String(cid));
     if(c){
       const op=c.attivo===false?'0.5':'1';
-      return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}${c.attivo===false?' (disattivato)':''}</span>`;
+      const w = turnoWindow(c, S.selectedDay);
+      return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}${w?` · ${w}`:''}${c.attivo===false?' (disattivato)':''}</span>`;
     }
     const apptCentro=S.appuntamenti.find(a=>String(a.centroId)===cid && dayStrs.includes(a.data));
     const nome=apptCentro?.centroNome;
@@ -4574,30 +4590,16 @@ function renderMonthView(){
     const chiusura = isChiusura(ds);
     // Pallini appuntamenti (centri con prenotazioni in questo giorno)
     const dayAppts = S.appuntamenti.filter(a=>a.data===ds);
-    const centrosIdAppt = [...new Set(dayAppts.map(a=>a.centroId))];
-    const apptDots = centrosIdAppt.slice(0,4).map(cid=>{
-      const c = S.centri.find(x=>String(x.id)===String(cid));
-      const colore = c ? c.colore : '#999';
-      const op = (c && c.attivo===false) ? '0.5' : '1';
-      const n = dayAppts.filter(a=>String(a.centroId)===String(cid)).length;
-      return `<span class="mc-dot" style="background:${colore};opacity:${op}" title="${c?c.nome+' ('+n+')':'('+n+')'}"></span>`;
-    }).join('');
-    const extra = centrosIdAppt.length > 4 ? `<span class="mc-count">+${centrosIdAppt.length-4}</span>` : '';
+    const dayApptsLive = dayAppts.filter(a=>!a.cancelled);
+    const byCentroM = {}; dayApptsLive.forEach(a=>{ const k=String(a.centroId); byCentroM[k]=(byCentroM[k]||0)+1; });
+    const cidsM = Object.keys(byCentroM).sort((x,y)=>byCentroM[y]-byCentroM[x]);
+    const apptDots = cidsM.slice(0,2).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; const op=(c&&c.attivo===false)?'0.5':'1'; return `<span class="cc-chip" style="opacity:${op}" title="${c?c.nome:''} (${byCentroM[cid]})"><span class="cc-dot" style="background:${col}"></span>${byCentroM[cid]}</span>`; }).join('');
+    const extra = cidsM.length>2 ? `<span class="cc-more">+${cidsM.length-2}</span>` : '';
     // Pallini turni (fallback se nessun appuntamento: mostra centri con turni pianificati)
     const centriConTurno = !apptDots ? S.centri.filter(c =>
       c.attivo !== false &&
       (c.turni||[]).some(t => t.giorno === date.getDay() && (!t.dataFineValidita || t.dataFineValidita >= ds))
     ) : [];
-    let turnoTime='';
-    if(!apptDots && centriConTurno.length){
-      const tt = centriConTurno.flatMap(c => (c.turni||[]).filter(t => t.giorno===date.getDay() && (!t.dataFineValidita || t.dataFineValidita>=ds)));
-      if(tt.length){
-        const minIn = tt.map(t=>t.inizio).sort()[0];
-        const maxFin = tt.map(t=>t.fine).sort().slice(-1)[0];
-        const f = hm => (hm||'').replace(/^0/,'').replace(/:00$/,'');
-        turnoTime = `<div class="mc-turno-time">${f(minIn)}–${f(maxFin)}</div>`;
-      }
-    }
     const turniDots = centriConTurno.slice(0,4).map(c =>
       `<span class="mc-dot mc-dot-turno" style="background:${c.colore}" title="${c.nome}"></span>`
     ).join('');
@@ -4619,7 +4621,6 @@ function renderMonthView(){
       </div>
       ${hol.isHoliday?`<div class="mc-holiday-name">${hol.name}</div>`:''}
       <div class="mc-dots-row">${dotsHtml}${extra}</div>
-      ${turnoTime}
     </div>`;
   }
   monthCal.innerHTML = html;
@@ -4652,7 +4653,8 @@ function renderMonthView(){
       const c=S.centri.find(x=>String(x.id)===String(cid));
       if(c) {
         const op=c.attivo===false?'0.5':'1';
-        return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}${c.attivo===false?' (disattivato)':''}</span>`;
+        const w = turnoWindow(c, S.selectedDay);
+        return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}${w?` · ${w}`:''}${c.attivo===false?' (disattivato)':''}</span>`;
       }
       // centro eliminato: usa centroNome dall'appuntamento
       const apptCentro=S.appuntamenti.find(a=>String(a.centroId)===cid && new Date(a.data+'T12:00:00').getFullYear()===y && new Date(a.data+'T12:00:00').getMonth()===m);
