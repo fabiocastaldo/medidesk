@@ -812,7 +812,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
   </div>
 
-  <footer class="home-footer">© 2025 Delphi~Med</footer>
+  <footer class="home-footer">© <span id="footer-year">2026</span> Delphi~Med</footer>
 </div>
 
 <!-- ══════════════ AUTH ══════════════ -->
@@ -3402,6 +3402,7 @@ function initMobileActions(){
 }
 if(document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', initMobileActions);
+document.addEventListener('DOMContentLoaded',()=>{const fy=document.getElementById('footer-year');if(fy)fy.textContent=new Date().getFullYear();});
 } else {
   initMobileActions();
 }
