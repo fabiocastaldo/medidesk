@@ -66,6 +66,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .nav-item:hover{color:#fff;background:rgba(255,255,255,.06)}
 .nav-item.active{color:#fff;border-left-color:rgba(255,255,255,.9);background:rgba(255,255,255,.15)}
 .nav-item .icon{font-size:16px;width:20px;text-align:center}
+.ic{display:inline-block;vertical-align:middle;width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
 .doctor-name strong{display:block;color:#fff;font-size:13px;margin-bottom:2px}
 .doctor-name span{font-size:11px;color:rgba(255,255,255,.45)}
@@ -1024,18 +1025,30 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 </div>
 
 <!-- ══════════════ APP MEDICO ══════════════ -->
+<!-- Sprite icone line-style (definite una volta, riusate via <use>) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 19v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-center" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="ic-stats" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-archive" viewBox="0 0 24 24"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5" rx="1"/><path d="M10 12h4"/></symbol>
+</svg>
 <div id="view-app" class="app" style="display:none">
   <aside class="sidebar">
     <div class="sidebar-logo"><h1>Delphi~Med</h1><p>Il tuo studio ovunque</p></div>
     <nav class="nav">
-      <div class="nav-item active" onclick="showPage('dashboard')"><span class="icon">🏠</span><span>Dashboard</span></div>
-      <div class="nav-item" onclick="showPage('agenda')"><span class="icon">📅</span><span>Agenda</span></div>
-      <div class="nav-item" onclick="showPage('pazienti')"><span class="icon">👥</span><span>Pazienti</span></div>
-      <div class="nav-item" onclick="showPage('centri')"><span class="icon">🏥</span><span>Centri</span></div>
-      <div class="nav-item" onclick="showPage('profilo')"><span class="icon">👤</span><span>Profilo</span></div>
-      <div class="nav-item" onclick="showPage('statistiche')"><span class="icon">📊</span><span>Statistiche</span></div>
-      <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon">⚙️</span><span>Impostazioni</span></div>
-      <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon">📋</span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px">⚠️</span></span></div>
+      <div class="nav-item active" onclick="showPage('dashboard')"><span class="icon"><svg class="ic"><use href="#ic-home"/></svg></span><span>Dashboard</span></div>
+      <div class="nav-item" onclick="showPage('agenda')"><span class="icon"><svg class="ic"><use href="#ic-calendar"/></svg></span><span>Agenda</span></div>
+      <div class="nav-item" onclick="showPage('pazienti')"><span class="icon"><svg class="ic"><use href="#ic-users"/></svg></span><span>Pazienti</span></div>
+      <div class="nav-item" onclick="showPage('centri')"><span class="icon"><svg class="ic"><use href="#ic-center"/></svg></span><span>Centri</span></div>
+      <div class="nav-item" onclick="showPage('profilo')"><span class="icon"><svg class="ic"><use href="#ic-user"/></svg></span><span>Profilo</span></div>
+      <div class="nav-item" onclick="showPage('statistiche')"><span class="icon"><svg class="ic"><use href="#ic-stats"/></svg></span><span>Statistiche</span></div>
+      <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon"><svg class="ic"><use href="#ic-settings"/></svg></span><span>Impostazioni</span></div>
+      <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon"><svg class="ic"><use href="#ic-archive"/></svg></span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px">⚠️</span></span></div>
     </nav>
     <div class="sidebar-bottom">
       <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
@@ -1075,19 +1088,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
       <div class="tile-grid">
         <div class="tile" onclick="showPage('pazienti')">
-          <div class="tile-top"><span class="tile-label">Pazienti</span><span class="tile-chip">👥</span></div>
+          <div class="tile-top"><span class="tile-label">Pazienti</span><span class="tile-chip"><svg class="ic"><use href="#ic-users"/></svg></span></div>
           <div class="tile-num" id="tile-pazienti">0</div><div class="tile-sub">in cura</div>
         </div>
         <div class="tile" onclick="showPage('centri')">
-          <div class="tile-top"><span class="tile-label">Centri</span><span class="tile-chip">➕</span></div>
+          <div class="tile-top"><span class="tile-label">Centri</span><span class="tile-chip"><svg class="ic"><use href="#ic-center"/></svg></span></div>
           <div class="tile-num" id="tile-centri">0</div><div class="tile-sub">ambulatori</div>
         </div>
         <div class="tile">
-          <div class="tile-top"><span class="tile-label">In attesa</span><span class="tile-chip pending">🕐</span></div>
+          <div class="tile-top"><span class="tile-label">In attesa</span><span class="tile-chip pending"><svg class="ic"><use href="#ic-clock"/></svg></span></div>
           <div class="tile-num" id="tile-attesa">0</div><div class="tile-sub">da vedere</div>
         </div>
         <div class="tile" onclick="showPage('statistiche')">
-          <div class="tile-top"><span class="tile-label">Settimana</span><span class="tile-chip">📊</span></div>
+          <div class="tile-top"><span class="tile-label">Settimana</span><span class="tile-chip"><svg class="ic"><use href="#ic-stats"/></svg></span></div>
           <div class="tile-num" id="tile-settimana">0</div><div class="tile-sub">visite</div>
         </div>
       </div>
@@ -1567,8 +1580,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <div class="mobile-actions" id="mobile-actions">
     <div class="ma-handle" id="ma-handle" role="button" tabindex="0" aria-label="Apri menu azioni" aria-expanded="false"><span class="ma-grabber"></span></div>
     <div class="ma-panel">
-      <button class="ma-item" onclick="showPage('statistiche')"><span class="ma-ico">📊</span><span class="ma-lbl">Statistiche</span></button>
-      <button class="ma-item" onclick="showPage('impostazioni')"><span class="ma-ico">⚙️</span><span class="ma-lbl">Impostazioni</span></button>
+      <button class="ma-item" onclick="showPage('statistiche')"><span class="ma-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="ma-lbl">Statistiche</span></button>
+      <button class="ma-item" onclick="showPage('impostazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-settings"/></svg></span><span class="ma-lbl">Impostazioni</span></button>
       <button class="ma-item ma-logout" id="mobile-logout-btn" onclick="signOut()"><span class="ma-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="ma-lbl">Esci</span></button>
     </div>
   </div>
@@ -1576,23 +1589,23 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <!-- BOTTOM NAVIGATION (visible only on mobile) -->
   <nav class="bottom-nav">
     <button class="bottom-nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
-      <span class="bn-icon">🏠</span>
+      <span class="bn-icon"><svg class="ic"><use href="#ic-home"/></svg></span>
       <span class="bn-label">Home</span>
     </button>
     <button class="bottom-nav-item" data-page="agenda" onclick="showPage('agenda')">
-      <span class="bn-icon">📅</span>
+      <span class="bn-icon"><svg class="ic"><use href="#ic-calendar"/></svg></span>
       <span class="bn-label">Agenda</span>
     </button>
     <button class="bottom-nav-item" data-page="pazienti" onclick="showPage('pazienti')">
-      <span class="bn-icon">👥</span>
+      <span class="bn-icon"><svg class="ic"><use href="#ic-users"/></svg></span>
       <span class="bn-label">Pazienti</span>
     </button>
     <button class="bottom-nav-item" data-page="centri" onclick="showPage('centri')">
-      <span class="bn-icon">🏥</span>
+      <span class="bn-icon"><svg class="ic"><use href="#ic-center"/></svg></span>
       <span class="bn-label">Centri</span>
     </button>
     <button class="bottom-nav-item" data-page="profilo" onclick="showPage('profilo')">
-      <span class="bn-icon">👤</span>
+      <span class="bn-icon"><svg class="ic"><use href="#ic-user"/></svg></span>
       <span class="bn-label">Profilo</span>
     </button>
   </nav>
