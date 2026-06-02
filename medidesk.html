@@ -216,8 +216,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-actions{display:flex;align-items:center;gap:2px}
 .centro-act{background:none;border:none;color:var(--ink3);padding:4px 5px;font-size:14px;line-height:1;cursor:pointer;border-radius:var(--r-sm);transition:color .15s,background .15s}
 .centro-act:hover{color:var(--ink);background:var(--surface2)}
-.centro-act-danger{margin-left:4px}
+.centro-act-danger{margin-left:10px}
 .centro-act-danger:hover{color:var(--warm)}
+@media(max-width:768px){.centro-act{padding:8px 10px}}
 .section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:600;margin-bottom:12px}
 
 /* ── TAG EDITOR ── */
@@ -1055,6 +1056,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <symbol id="ic-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
   <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
   <symbol id="ic-archive" viewBox="0 0 24 24"><path d="M21 8v13H3V8"/><rect x="1" y="3" width="22" height="5" rx="1"/><path d="M10 12h4"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
 </svg>
 <div id="view-app" class="app" style="display:none">
   <aside class="sidebar">
@@ -1281,17 +1283,18 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div class="slug-preview" id="slug-preview"></div>
             <div id="slug-availability" style="font-size:12px;margin-top:3px;min-height:16px"></div>
           </div>
-          <!-- Bio -->
-          <div class="form-group">
-            <label class="form-label">Bio breve <span style="font-weight:400;color:var(--ink3)">(max 500 caratteri)</span></label>
-            <textarea class="form-textarea" id="setting-bio" maxlength="500" style="min-height:80px" placeholder="Es. Cardiologo specializzato in aritmie, 15 anni di esperienza..." oninput="updateBioCounter()" onblur="this.value=capitalizeSentences(this.value.trim());updateBioCounter()"></textarea>
-            <div class="bio-counter" id="bio-counter">0 / 500</div>
-          </div>
           <div class="form-row">
             <div class="form-group"><label class="form-label">Anni di esperienza</label><input class="form-input" id="setting-esperienza" type="number" min="0" max="60" placeholder="es. 15"></div>
             <div class="form-group"><label class="form-label">N° iscrizione albo</label><input class="form-input" id="setting-albo" placeholder="es. 12345"></div>
           </div>
-          <button class="btn btn-secondary" style="margin-top:4px;color:var(--warm)" onclick="resetAllData()">🗑 Reset dati</button>
+        </div></div>
+      </div>
+
+      <div style="margin-top:32px">
+        <div class="section-title">Bio breve</div>
+        <div class="card"><div class="card-body">
+          <textarea class="form-textarea" id="setting-bio" maxlength="500" style="min-height:80px" placeholder="Es. Cardiologo specializzato in aritmie, 15 anni di esperienza..." oninput="updateBioCounter()" onblur="this.value=capitalizeSentences(this.value.trim());updateBioCounter()"></textarea>
+          <div class="bio-counter" id="bio-counter">0 / 500</div>
         </div></div>
       </div>
 
@@ -1345,6 +1348,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div></div>
       </div>
 
+      <div style="margin-top:40px;padding-top:20px;border-top:0.5px solid var(--border)">
+        <button class="btn btn-secondary" style="color:var(--warm)" onclick="resetAllData()">🗑 Reset dati</button>
+      </div>
 
     </div>
 
@@ -3684,8 +3690,8 @@ function renderCentroCard(c, isActive){
         const fineStr = t.dataFineValidita ? ` · fino al ${formatDate(t.dataFineValidita)}` : '';
         return `<div class="turno-row${scadenzaVicina?' turno-scadenza-vicina':''}" style="${scaduto?'opacity:.5':''}">
           <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min${freqStr}${inizioStr}${fineStr}${scaduto?' <span class="badge-inactive">Scaduto</span>':''}${scadenzaVicina?' <span class="badge-scadenza-vicina">Scadenza vicina</span>':''}</span>
-          ${isActive && !scaduto?`<button class="centro-act" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})">📅</button>`:''}
-          ${isActive?`<button class="centro-act" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
+          ${isActive && !scaduto?`<button class="centro-act" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})"><svg class="ic"><use href="#ic-calendar"/></svg></button>`:''}
+          ${isActive?`<button class="centro-act centro-act-danger" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
         </div>`;
       }).join('')}
     </div>` : isActive?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>':'';
@@ -3697,7 +3703,7 @@ function renderCentroCard(c, isActive){
       ${giornate.map((g)=>`
         <div class="giornata-row">
           <span>📆 ${formatDate(g.data)} ${g.inizio}–${g.fine} · slot ${g.slot} min</span>
-          ${isActive?`<button class="centro-act" onclick="deleteGiornataSingola('${c.id}','${g.data}','${g.inizio}')">✕</button>`:''}
+          ${isActive?`<button class="centro-act centro-act-danger" onclick="deleteGiornataSingola('${c.id}','${g.data}','${g.inizio}')">✕</button>`:''}
         </div>`).join('')}
       ${isActive?`<button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button>`:''}
     </div>` : '';
@@ -3712,7 +3718,7 @@ function renderCentroCard(c, isActive){
         </div>
         ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
         <div class="centro-actions">
-          <button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro">✏️</button>
+          <button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro"><svg class="ic"><use href="#ic-edit"/></svg></button>
           <button class="centro-act" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
           <button class="centro-act centro-act-danger" onclick="deleteCentro('${c.id}')" title="Elimina centro">✕</button>
         </div>
