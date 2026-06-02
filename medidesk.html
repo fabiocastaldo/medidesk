@@ -67,6 +67,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .nav-item.active{color:#fff;border-left-color:rgba(255,255,255,.9);background:rgba(255,255,255,.15)}
 .nav-item .icon{font-size:16px;width:20px;text-align:center}
 .ic{display:inline-block;vertical-align:middle;width:1em;height:1em;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.path-icon .ic{width:30px;height:30px}
+.uicon .ic{width:34px;height:34px}
+.btn .ic{vertical-align:-.15em;margin-right:6px}
 .sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
 .doctor-name strong{display:block;color:#fff;font-size:13px;margin-bottom:2px}
 .doctor-name span{font-size:11px;color:rgba(255,255,255,.45)}
@@ -629,7 +632,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-search-wrap{max-width:520px;margin:0 auto;position:relative}
 .home-search-input{width:100%;box-sizing:border-box;padding:15px 18px 15px 48px;border-radius:14px;border:none;font-size:15px;outline:none;box-shadow:0 8px 32px rgba(0,0,0,.22);font-family:'DM Sans',Arial,sans-serif;color:#111}
 .home-search-input::placeholder{color:#aaa}
-.home-search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none;line-height:1}
+.home-search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none;line-height:1;color:var(--ink3)}
 .home-search-results{max-width:520px;margin:10px auto 0;display:none;text-align:left}
 .home-result-card{background:#fff;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:8px;box-shadow:0 2px 12px rgba(0,0,0,.11);transition:transform .12s,box-shadow .12s}
 .home-result-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.16)}
@@ -778,7 +781,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <section class="home-hero">
     <h2>Trova il tuo medico di fiducia</h2>
     <div class="home-search-wrap">
-      <span class="home-search-icon">🔍</span>
+      <span class="home-search-icon"><svg class="ic"><use href="#ic-search"/></svg></span>
       <input class="home-search-input" id="home-search" type="text"
              placeholder="Digita nome e cognome del professionista…"
              oninput="homeSearch(this.value)" autocomplete="off">
@@ -1063,6 +1066,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></symbol>
   <symbol id="ic-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></symbol>
   <symbol id="ic-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></symbol>
+  <symbol id="ic-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
 </svg>
 <div id="view-app" class="app" style="display:none">
   <aside class="sidebar">
@@ -1209,7 +1217,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
       <div class="search-bar">
         <div class="search-input-wrap">
-          <span class="sicon">🔍</span>
+          <span class="sicon"><svg class="ic"><use href="#ic-search"/></svg></span>
           <input class="search-input" id="search-pazienti" placeholder="Cerca per nome o cognome..." oninput="renderPazienti()">
         </div>
       </div>
@@ -1797,11 +1805,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="step-label">Come vuoi procedere?</div>
         <div class="path-choice">
           <button class="path-btn" onclick="apptPathCenter()">
-            <div class="path-icon">🏥</div>
+            <div class="path-icon"><svg class="ic"><use href="#ic-center"/></svg></div>
             <div class="path-text"><strong>Per centro</strong><span>Scegli prima l'ambulatorio</span></div>
           </button>
           <button class="path-btn" onclick="apptPathDate()">
-            <div class="path-icon">📅</div>
+            <div class="path-icon"><svg class="ic"><use href="#ic-calendar"/></svg></div>
             <div class="path-text"><strong>Per data</strong><span>Scegli prima il giorno</span></div>
           </button>
         </div>
@@ -1879,9 +1887,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="section-title">Notifica centro</div>
           <div id="mail-preview-appt" class="mail-preview" style="display:none"></div>
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-            <button class="btn btn-secondary btn-sm" onclick="previewMail()">👁 Anteprima</button>
-            <button class="btn btn-secondary btn-sm" onclick="copyMail()">📋 Copia mail</button>
-            <button class="btn btn-secondary btn-sm" onclick="downloadICS()">📎 .ics</button>
+            <button class="btn btn-secondary btn-sm" onclick="previewMail()"><svg class="ic"><use href="#ic-eye"/></svg>Anteprima</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyMail()"><svg class="ic"><use href="#ic-copy"/></svg>Copia mail</button>
+            <button class="btn btn-secondary btn-sm" onclick="downloadICS()"><svg class="ic"><use href="#ic-download"/></svg>.ics</button>
           </div>
         </div>
       </div>
@@ -2044,7 +2052,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
         <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Fotografa o seleziona il referto e salvalo nel fascicolo. La sintesi clinica si genera quando vuoi, dal fascicolo del paziente.</p>
         <div class="upload-area" onclick="document.getElementById('referto-input').click()">
-          <div class="uicon">📸</div>
+          <div class="uicon"><svg class="ic"><use href="#ic-camera"/></svg></div>
           <strong>Clicca per selezionare o fotografare</strong>
           <p>Uno o più file (JPG, PNG, PDF)</p>
         </div>
@@ -2091,9 +2099,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-header"><span class="modal-title">Appuntamento</span><button class="modal-close" onclick="closeModal('modal-appt-detail')">✕</button></div>
     <div class="modal-body" id="modal-appt-detail-body"></div>
     <div class="modal-footer">
-      <button class="btn btn-secondary btn-sm" id="btn-delete-appt">🗑 Elimina</button>
-      <button class="btn btn-secondary btn-sm" onclick="copyMailFromDetail()">📋 Copia mail</button>
-      <button class="btn btn-secondary btn-sm" onclick="downloadICSFromDetail()">📎 .ics</button>
+      <button class="btn btn-secondary btn-sm" id="btn-delete-appt"><svg class="ic"><use href="#ic-trash"/></svg>Elimina</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyMailFromDetail()"><svg class="ic"><use href="#ic-copy"/></svg>Copia mail</button>
+      <button class="btn btn-secondary btn-sm" onclick="downloadICSFromDetail()"><svg class="ic"><use href="#ic-download"/></svg>.ics</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-appt-detail')">Chiudi</button>
     </div>
   </div>
@@ -2109,12 +2117,12 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-body" style="text-align:center;padding:20px 24px">
       <div id="qr-canvas-wrap" style="display:flex;justify-content:center;align-items:center;min-height:120px;margin-bottom:12px"></div>
       <p id="qr-url-label" style="font-size:11px;font-family:monospace;color:var(--ink3);word-break:break-all;margin-bottom:6px"></p>
-      <p style="font-size:12px;color:var(--ink2)">Mostra ai pazienti per prenotare · tocca ⛶ per il fullscreen</p>
+      <p style="font-size:12px;color:var(--ink2)">Mostra ai pazienti per prenotare · tocca «Schermo intero» per il fullscreen</p>
     </div>
     <div class="modal-footer" style="gap:8px">
       <button class="btn btn-secondary" onclick="closeModal('modal-qr')">Chiudi</button>
-      <button class="btn btn-secondary" onclick="showQRFullscreen()">⛶ Schermo intero</button>
-      <button class="btn btn-primary" onclick="downloadQR()">⬇ Scarica PNG</button>
+      <button class="btn btn-secondary" onclick="showQRFullscreen()"><svg class="ic"><use href="#ic-maximize"/></svg>Schermo intero</button>
+      <button class="btn btn-primary" onclick="downloadQR()"><svg class="ic"><use href="#ic-download"/></svg>Scarica PNG</button>
     </div>
   </div>
 </div>
@@ -2151,7 +2159,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- MODAL AVVISO TURNO SU FESTIVITÀ -->
 <div class="modal-overlay" id="modal-turno-festivi">
   <div class="modal" style="max-width:460px">
-    <div class="modal-header"><span class="modal-title">⚠️ Turno su festività</span><button class="modal-close" onclick="closeModal('modal-turno-festivi')">✕</button></div>
+    <div class="modal-header"><span class="modal-title">Turno su festività</span><button class="modal-close" onclick="closeModal('modal-turno-festivi')">✕</button></div>
     <div class="modal-body">
       <p style="font-size:14px;margin-bottom:12px;color:var(--ink)">Nei prossimi 90 giorni questo turno cade nelle seguenti festività:</p>
       <div id="turno-festivi-list" style="margin-bottom:12px;font-size:13px;color:var(--ink2)"></div>
