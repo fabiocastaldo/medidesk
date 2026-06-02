@@ -1170,6 +1170,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div id="view-week">
         <div class="day-tabs" id="day-tabs"></div>
         <div id="week-legend-container"></div>
+        <div id="week-day-label" class="section-title" style="margin-top:20px;text-transform:capitalize"></div>
         <div id="appointments-container"></div>
       </div>
       <div id="view-month" style="display:none">
@@ -4479,8 +4480,9 @@ function renderAgenda(){
     const dayAppts = S.appuntamenti.filter(a=>a.data===ds && !a.cancelled);
     const byCentro = {}; dayAppts.forEach(a=>{ const k=String(a.centroId); byCentro[k]=(byCentro[k]||0)+1; });
     const cids = Object.keys(byCentro).sort((x,y)=>byCentro[y]-byCentro[x]);
-    const chips = cids.slice(0,2).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; return `<span class="cc-chip"><span class="cc-dot" style="background:${col}"></span>${byCentro[cid]}</span>`; }).join('');
-    const more = cids.length>2 ? `<span class="cc-more">+${cids.length-2}</span>` : '';
+    const shown = cids.length<=2 ? cids.length : 1;
+    const chips = cids.slice(0,shown).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; return `<span class="cc-chip"><span class="cc-dot" style="background:${col}"></span>${byCentro[cid]}</span>`; }).join('');
+    const more = cids.length>shown ? `<span class="cc-more">+${cids.length-shown}</span>` : '';
     const metaInner = chips ? chips+more : dotsCentri;
     return `<div class="${tabCls}${ds===today?' is-today':''}" onclick="selectDay('${ds}')" title="${hol.isHoliday?hol.name:(chiuso?'Studio chiuso':'')}">
       <span class="dt-dow">${DAYS_IT[d.getDay()]}</span>
@@ -4494,6 +4496,8 @@ function renderAgenda(){
   }).join('');
   renderDayAppointments();
   renderWeekLegend(days);
+  const selEl = document.getElementById('week-day-label');
+  if(selEl) selEl.textContent = S.selectedDay ? new Date(S.selectedDay+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
 }
 
 function renderWeekLegend(days){
@@ -4594,8 +4598,9 @@ function renderMonthView(){
     const dayApptsLive = dayAppts.filter(a=>!a.cancelled);
     const byCentroM = {}; dayApptsLive.forEach(a=>{ const k=String(a.centroId); byCentroM[k]=(byCentroM[k]||0)+1; });
     const cidsM = Object.keys(byCentroM).sort((x,y)=>byCentroM[y]-byCentroM[x]);
-    const apptDots = cidsM.slice(0,2).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; const op=(c&&c.attivo===false)?'0.5':'1'; return `<span class="cc-chip" style="opacity:${op}" title="${c?c.nome:''} (${byCentroM[cid]})"><span class="cc-dot" style="background:${col}"></span>${byCentroM[cid]}</span>`; }).join('');
-    const extra = cidsM.length>2 ? `<span class="cc-more">+${cidsM.length-2}</span>` : '';
+    const shownM = cidsM.length<=2 ? cidsM.length : 1;
+    const apptDots = cidsM.slice(0,shownM).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; const op=(c&&c.attivo===false)?'0.5':'1'; return `<span class="cc-chip" style="opacity:${op}" title="${c?c.nome:''} (${byCentroM[cid]})"><span class="cc-dot" style="background:${col}"></span>${byCentroM[cid]}</span>`; }).join('');
+    const extra = cidsM.length>shownM ? `<span class="cc-more">+${cidsM.length-shownM}</span>` : '';
     // Pallini turni (fallback se nessun appuntamento: mostra centri con turni pianificati)
     const centriConTurno = !apptDots ? S.centri.filter(c =>
       c.attivo !== false &&
