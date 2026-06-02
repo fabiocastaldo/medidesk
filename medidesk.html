@@ -671,9 +671,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .stats-period-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 .stats-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-.stats-kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:16px}
+.stats-kpi-card{background:var(--surface);box-shadow:var(--shadow-soft);border-radius:var(--r-md);padding:16px}
 .stats-kpi-label{font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.stats-kpi-value{font-size:28px;font-weight:700;color:var(--ink);line-height:1.1}
+.stats-kpi-value{font-size:28px;font-weight:300;color:var(--ink);line-height:1.1}
 .stats-kpi-delta{font-size:12px;color:var(--ink3);margin-top:4px}
 .stats-kpi-delta.up{color:#16a34a}
 .stats-kpi-delta.down{color:#dc2626}
@@ -695,11 +695,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   .chart-row-label{flex:0 0 90px;font-size:12px}
 }
 
-.stats-insights{background:linear-gradient(135deg,rgba(13,148,136,.08),rgba(13,148,136,.02));border:1px solid rgba(13,148,136,.2);border-radius:var(--r-md);padding:14px 16px;margin-bottom:20px}
+.stats-insights{background:linear-gradient(135deg, color-mix(in srgb, var(--brand-bright) 10%, var(--surface)), color-mix(in srgb, var(--brand-bright) 3%, var(--surface)));border:1px solid color-mix(in srgb, var(--brand-bright) 16%, transparent);border-radius:var(--r-md);padding:14px 16px;margin-bottom:20px}
 .stats-insights-header{margin-bottom:10px;color:var(--accent)}
 .stats-insight-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:13.5px;line-height:1.5;color:var(--ink)}
-.stats-insight-item + .stats-insight-item{border-top:1px solid rgba(13,148,136,.1)}
-.stats-insight-icon{flex:0 0 24px;font-size:18px;line-height:1.3}
+.stats-insight-item + .stats-insight-item{border-top:1px solid color-mix(in srgb, var(--brand-bright) 12%, transparent)}
+.stats-insight-icon{flex:0 0 24px;font-size:18px;line-height:1.3;color:var(--brand-mid)}
 .stats-insight-text{flex:1}
 .stats-insight-text strong{color:var(--accent);font-weight:600}
 .stats-insight-text .pos{color:#16a34a;font-weight:600}
@@ -1071,6 +1071,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <symbol id="ic-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
   <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></symbol>
   <symbol id="ic-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></symbol>
+  <symbol id="ic-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+  <symbol id="ic-trend-up" viewBox="0 0 24 24"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></symbol>
+  <symbol id="ic-trend-down" viewBox="0 0 24 24"><path d="M23 18l-9.5-9.5-5 5L1 6"/><path d="M17 18h6v-6"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="ic-repeat" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
 </svg>
 <div id="view-app" class="app" style="display:none">
   <aside class="sidebar">
@@ -1397,7 +1404,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <!-- INSIGHTS -->
         <div id="stats-insights" class="stats-insights" style="display:none">
           <div class="stats-insights-header">
-            <span style="font-weight:600;font-size:14px">💡 Cosa dicono i tuoi dati</span>
+            <span style="font-weight:600;font-size:14px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-bulb"/></svg>Cosa dicono i tuoi dati</span>
           </div>
           <div id="stats-insights-list"></div>
         </div>
@@ -1480,7 +1487,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <!-- Top pazienti -->
         <div class="card" style="margin-bottom:14px">
           <div class="card-header">
-            <span style="font-weight:600">👥 Pazienti più frequenti</span>
+            <span style="font-weight:600"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-users"/></svg>Pazienti più frequenti</span>
             <span style="font-size:12px;color:var(--ink3)">ultimi 12 mesi</span>
           </div>
           <div id="chart-top-pazienti" style="padding:8px"></div>
@@ -7481,11 +7488,11 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
     const delta = effettuate.length - prevEffettuate.length;
     const pct = Math.round((delta/prevEffettuate.length)*100);
     if(pct >= 20){
-      insights.push({icon:'📈', html:`Stai crescendo: <span class="pos">+${delta} visite</span> rispetto al ${periodLabel} (<span class="pos">+${pct}%</span>).`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-trend-up"/></svg>', html:`Stai crescendo: <span class="pos">+${delta} visite</span> rispetto al ${periodLabel} (<span class="pos">+${pct}%</span>).`});
     } else if(pct <= -20){
-      insights.push({icon:'📉', html:`Calo di attività: <span class="neg">${delta} visite</span> rispetto al ${periodLabel} (<span class="neg">${pct}%</span>).`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-trend-down"/></svg>', html:`Calo di attività: <span class="neg">${delta} visite</span> rispetto al ${periodLabel} (<span class="neg">${pct}%</span>).`});
     } else if(Math.abs(pct) < 10){
-      insights.push({icon:'➡️', html:`Attività stabile rispetto al ${periodLabel}: <strong>${effettuate.length}</strong> visite contro ${prevEffettuate.length}.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-stats"/></svg>', html:`Attività stabile rispetto al ${periodLabel}: <strong>${effettuate.length}</strong> visite contro ${prevEffettuate.length}.`});
     }
   }
 
@@ -7499,7 +7506,7 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
     const avg = effettuate.length / counts.filter(c=>c>0).length;
     if(max > 0 && max >= avg * 1.4){
       const pctSopra = Math.round((max/avg - 1) * 100);
-      insights.push({icon:'📅', html:`Il <strong>${days[maxIdx]}</strong> è il tuo giorno più pieno: <strong>${max} visite</strong>, il <strong>${pctSopra}%</strong> in più della media settimanale.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-calendar"/></svg>', html:`Il <strong>${days[maxIdx]}</strong> è il tuo giorno più pieno: <strong>${max} visite</strong>, il <strong>${pctSopra}%</strong> in più della media settimanale.`});
     }
   }
 
@@ -7523,7 +7530,7 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
       const tot = entries.reduce((s,[,v])=>s+v,0);
       const pct = Math.round((topCount/tot)*100);
       if(pct >= 35){
-        insights.push({icon:'🕐', html:`La fascia <strong>${topFascia}</strong> è la più richiesta: concentra il <strong>${pct}%</strong> delle visite del periodo.`});
+        insights.push({icon:'<svg class="ic"><use href="#ic-clock"/></svg>', html:`La fascia <strong>${topFascia}</strong> è la più richiesta: concentra il <strong>${pct}%</strong> delle visite del periodo.`});
       }
     }
   }
@@ -7549,7 +7556,7 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
               deltaStr = ` (<span class="${cls}">${sign}${delta}</span> vs ${periodLabel})`;
             }
           }
-          insights.push({icon:'🏥', html:`<strong>${escapeHtml(centro.nome)}</strong> è il tuo centro principale: <strong>${pct}%</strong> delle prenotazioni${deltaStr}.`});
+          insights.push({icon:'<svg class="ic"><use href="#ic-center"/></svg>', html:`<strong>${escapeHtml(centro.nome)}</strong> è il tuo centro principale: <strong>${pct}%</strong> delle prenotazioni${deltaStr}.`});
         }
       }
     }
@@ -7569,11 +7576,11 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
       }
     }
     if(cancRate >= 25){
-      insights.push({icon:'⚠️', html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> (<strong>${cancellate.length} su ${all.length}</strong>)${deltaStr}. Vale la pena capire se c'è un pattern.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-alert"/></svg>', html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> (<strong>${cancellate.length} su ${all.length}</strong>)${deltaStr}. Vale la pena capire se c'è un pattern.`});
     } else if(cancRate >= 15 && cancRate < 25){
-      insights.push({icon:'📋', html:`Tasso di cancellazione: <strong>${Math.round(cancRate)}%</strong> nel periodo (${cancellate.length} cancellazioni)${deltaStr}.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-alert"/></svg>', html:`Tasso di cancellazione: <strong>${Math.round(cancRate)}%</strong> nel periodo (${cancellate.length} cancellazioni)${deltaStr}.`});
     } else if(cancRate <= 5 && cancellate.length === 0 && all.length >= 15){
-      insights.push({icon:'✨', html:`<span class="pos">Zero cancellazioni</span> nel periodo su ${all.length} appuntamenti. I tuoi pazienti rispettano gli orari.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-check"/></svg>', html:`<span class="pos">Zero cancellazioni</span> nel periodo su ${all.length} appuntamenti. I tuoi pazienti rispettano gli orari.`});
     }
   }
 
@@ -7593,9 +7600,9 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
       }
     }
     if(pctOnline >= 60){
-      insights.push({icon:'🌐', html:`Il <strong>${pctOnline}%</strong> dei tuoi pazienti prenota online${deltaStr}. La tua pagina di prenotazione funziona.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-globe"/></svg>', html:`Il <strong>${pctOnline}%</strong> dei tuoi pazienti prenota online${deltaStr}. La tua pagina di prenotazione funziona.`});
     } else if(pctOnline > 0 && pctOnline <= 15 && (S.appuntamenti||[]).length >= 10){
-      insights.push({icon:'💬', html:`Solo il <strong>${pctOnline}%</strong> delle prenotazioni arriva online${deltaStr}. Condividi più spesso il tuo link via WhatsApp o QR.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-globe"/></svg>', html:`Solo il <strong>${pctOnline}%</strong> delle prenotazioni arriva online${deltaStr}. Condividi più spesso il tuo link via WhatsApp o QR.`});
     }
   }
 
@@ -7615,9 +7622,9 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
       }
     }
     if(pctPrime >= 50){
-      insights.push({icon:'🆕', html:`Il <strong>${pctPrime}%</strong> delle visite sono prime visite${deltaStr}: stai acquisendo molti nuovi pazienti.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-user"/></svg>', html:`Il <strong>${pctPrime}%</strong> delle visite sono prime visite${deltaStr}: stai acquisendo molti nuovi pazienti.`});
     } else if(pctPrime <= 15 && prime > 0){
-      insights.push({icon:'🔁', html:`Solo il <strong>${pctPrime}%</strong> sono prime visite${deltaStr}: lavori soprattutto su pazienti di ritorno.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-repeat"/></svg>', html:`Solo il <strong>${pctPrime}%</strong> sono prime visite${deltaStr}: lavori soprattutto su pazienti di ritorno.`});
     }
   }
 
@@ -7642,7 +7649,7 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
     if(Math.abs(deltaOre) >= 2 && orePrev > 0){
       const sign = deltaOre>=0?'+':'';
       const cls = deltaOre>=0?'pos':'neg';
-      insights.push({icon:'⏱️', html:`Ore lavorate: <strong>${Math.round(oreNow)}h</strong> (<span class="${cls}">${sign}${deltaOre}h</span> vs ${periodLabel}).`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-clock"/></svg>', html:`Ore lavorate: <strong>${Math.round(oreNow)}h</strong> (<span class="${cls}">${sign}${deltaOre}h</span> vs ${periodLabel}).`});
     }
   }
 
@@ -7956,8 +7963,8 @@ function _renderOrigine(apps){
   const online = apps.filter(a=>a.source==='paziente').length;
   const manuale = apps.filter(a=>a.source!=='paziente').length;
   const data = [
-    { label: '🌐 Online', value: online, color: '#0D9488' },
-    { label: '✍️ Manuale', value: manuale, color: '#6366F1' }
+    { label: 'Online', value: online, color: '#0D9488' },
+    { label: 'Manuale', value: manuale, color: '#6366F1' }
   ];
   _renderBarList('chart-source', data, {showPct:true});
 }
@@ -7972,8 +7979,8 @@ function _renderCancelSource(cancellate){
   const online = cancellate.filter(a=>a.source==='paziente').length;
   const manuale = cancellate.filter(a=>a.source!=='paziente').length;
   const data = [
-    { label: '🌐 Da paziente', value: online, color: '#dc2626' },
-    { label: '✍️ Da me', value: manuale, color: '#ea580c' }
+    { label: 'Da paziente', value: online, color: '#dc2626' },
+    { label: 'Da me', value: manuale, color: '#ea580c' }
   ];
   _renderBarList('chart-cancel-source', data, {showPct:true});
 }
