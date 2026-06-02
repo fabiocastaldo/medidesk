@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<script>(function(){try{localStorage.removeItem('medidesk_theme');}catch(e){}var sk=localStorage.getItem('skin');if(sk&&['marine','fuxia','arancio'].indexOf(sk)>-1)document.documentElement.setAttribute('data-skin',sk);})()</script>
+<script>(function(){try{localStorage.removeItem('medidesk_theme');}catch(e){}var sk=localStorage.getItem('skin')||'marine';if(['marine','fuxia','arancio'].indexOf(sk)>-1)document.documentElement.setAttribute('data-skin',sk);})()</script>
 <link rel="icon" href="data:,">
 <title>Delphi~Med</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
@@ -804,7 +804,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="home-feature">Un'unica agenda per tutti i tuoi ambulatori</div>
         <div class="home-feature">Continuità di cura tra una visita e l'altra</div>
         <div class="home-feature">Più tempo per i pazienti, meno burocrazia</div>
-        <div class="home-feature">Prenotazioni online: condividi link, QR o WhatsApp</div>
+        <div class="home-feature">Prenotazioni online accessibili ovunque</div>
         <div class="home-cta-row">
           <button class="home-cta-btn" onclick="showLoginView('login')">Registrati / Accedi</button>
         </div>
@@ -7008,7 +7008,7 @@ function renderImpostazioni(){
   chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
-  const curSkin = localStorage.getItem('skin') || 'petrolio';
+  const curSkin = localStorage.getItem('skin') || 'marine';
   document.querySelectorAll('.skin-swatch').forEach(b => b.classList.toggle('is-active', b.dataset.skin === curSkin));
   const sogliaEl = document.getElementById('setting-soglia-anni');
   if(sogliaEl) sogliaEl.value = S.settings.sogliaConservazione || 10;
