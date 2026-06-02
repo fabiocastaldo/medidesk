@@ -192,7 +192,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .paziente-meta{font-size:12px;color:var(--ink3);margin-top:2px}
 
 /* ── CENTRI & TURNI ── */
-.centro-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:10px;transition:opacity .2s}
+.centro-card{background:var(--surface);border:none;box-shadow:var(--shadow-soft);border-radius:var(--r);padding:18px 20px;margin-bottom:12px;transition:opacity .2s}
 .centro-card.centro-disabled{opacity:.6;background:var(--surface2)}
 .badge-inactive{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--ink3);color:#fff;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.5px}
 .badge-scadenza-vicina{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--pending-accent);color:#fff;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.5px}
@@ -209,9 +209,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-info{flex:1}
 .centro-nome{font-weight:600}
 .centro-email{font-size:12px;color:var(--ink3)}
-.turni-list{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
-.turno-row{display:flex;align-items:center;gap:8px;font-size:13px;background:var(--surface2);border-radius:var(--r-sm);padding:8px 12px}
+.turni-list{margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.turno-row{display:flex;align-items:center;gap:8px;font-size:13px;background:none;border-radius:0;padding:5px 2px}
+.giornata-row{display:flex;align-items:center;gap:8px;font-size:13px;background:none;border-radius:0;padding:5px 2px}
 .turno-row span{flex:1;color:var(--ink2)}
+.centro-actions{display:flex;align-items:center;gap:2px}
+.centro-act{background:none;border:none;color:var(--ink3);padding:4px 5px;font-size:14px;line-height:1;cursor:pointer;border-radius:var(--r-sm);transition:color .15s,background .15s}
+.centro-act:hover{color:var(--ink);background:var(--surface2)}
+.centro-act-danger{margin-left:4px}
+.centro-act-danger:hover{color:var(--warm)}
 .section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:600;margin-bottom:12px}
 
 /* ── TAG EDITOR ── */
@@ -1285,28 +1291,33 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div class="form-group"><label class="form-label">Anni di esperienza</label><input class="form-input" id="setting-esperienza" type="number" min="0" max="60" placeholder="es. 15"></div>
             <div class="form-group"><label class="form-label">N° iscrizione albo</label><input class="form-input" id="setting-albo" placeholder="es. 12345"></div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Lingue parlate</label>
-            <div id="lingue-list" class="tag-editor" style="margin-bottom:8px"></div>
-            <div style="display:flex;gap:8px">
-              <input class="form-input" id="new-lingua" placeholder="es. Inglese" style="flex:1" onkeydown="if(event.key==='Enter')addLingua()" onblur="this.value=capitalizeWords(this.value.trim())">
-              <button class="btn btn-secondary" onclick="addLingua()">+ Aggiungi</button>
-            </div>
-          </div>
-          <!-- Social & Contatti -->
-          <div class="form-group" style="margin-top:4px">
-            <label class="form-label">Contatti e social</label>
-            <div class="social-links-grid">
-              <div class="social-link-row"><span class="social-link-icon">✉️</span><input class="form-input" id="setting-email" type="email" placeholder="Email pubblica"></div>
-              <div class="social-link-row"><span class="social-link-icon">📞</span><input class="form-input" id="setting-telefono" placeholder="Telefono pubblico"></div>
-              <div class="social-link-row"><span class="social-link-icon">🌐</span><input class="form-input" id="setting-sito-web" placeholder="Sito web (https://...)"></div>
-              <div class="social-link-row"><span class="social-link-icon" style="font-style:normal;font-weight:700;font-family:serif">in</span><input class="form-input" id="setting-linkedin" placeholder="LinkedIn (URL o username)"></div>
-              <div class="social-link-row"><span class="social-link-icon">📷</span><input class="form-input" id="setting-instagram" placeholder="Instagram (@username)"></div>
-              <div class="social-link-row"><span class="social-link-icon">▶</span><input class="form-input" id="setting-youtube" placeholder="YouTube (URL canale)"></div>
-              <div class="social-link-row"><span class="social-link-icon" style="font-weight:700">f</span><input class="form-input" id="setting-facebook" placeholder="Facebook (URL pagina)"></div>
-            </div>
-          </div>
           <button class="btn btn-secondary" style="margin-top:4px;color:var(--warm)" onclick="resetAllData()">🗑 Reset dati</button>
+        </div></div>
+      </div>
+
+      <div style="margin-top:32px">
+        <div class="section-title">Contatti & social</div>
+        <div class="card"><div class="card-body">
+          <div class="social-links-grid">
+            <div class="social-link-row"><span class="social-link-icon">✉️</span><input class="form-input" id="setting-email" type="email" placeholder="Email pubblica"></div>
+            <div class="social-link-row"><span class="social-link-icon">📞</span><input class="form-input" id="setting-telefono" placeholder="Telefono pubblico"></div>
+            <div class="social-link-row"><span class="social-link-icon">🌐</span><input class="form-input" id="setting-sito-web" placeholder="Sito web (https://...)"></div>
+            <div class="social-link-row"><span class="social-link-icon" style="font-style:normal;font-weight:700;font-family:serif">in</span><input class="form-input" id="setting-linkedin" placeholder="LinkedIn (URL o username)"></div>
+            <div class="social-link-row"><span class="social-link-icon">📷</span><input class="form-input" id="setting-instagram" placeholder="Instagram (@username)"></div>
+            <div class="social-link-row"><span class="social-link-icon">▶</span><input class="form-input" id="setting-youtube" placeholder="YouTube (URL canale)"></div>
+            <div class="social-link-row"><span class="social-link-icon" style="font-weight:700">f</span><input class="form-input" id="setting-facebook" placeholder="Facebook (URL pagina)"></div>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-top:32px">
+        <div class="section-title">Lingue parlate</div>
+        <div class="card"><div class="card-body">
+          <div id="lingue-list" class="tag-editor" style="margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" id="new-lingua" placeholder="es. Inglese" style="flex:1" onkeydown="if(event.key==='Enter')addLingua()" onblur="this.value=capitalizeWords(this.value.trim())">
+            <button class="btn btn-secondary" onclick="addLingua()">+ Aggiungi</button>
+          </div>
         </div></div>
       </div>
 
@@ -3673,8 +3684,8 @@ function renderCentroCard(c, isActive){
         const fineStr = t.dataFineValidita ? ` · fino al ${formatDate(t.dataFineValidita)}` : '';
         return `<div class="turno-row${scadenzaVicina?' turno-scadenza-vicina':''}" style="${scaduto?'opacity:.5':''}">
           <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min${freqStr}${inizioStr}${fineStr}${scaduto?' <span class="badge-inactive">Scaduto</span>':''}${scadenzaVicina?' <span class="badge-scadenza-vicina">Scadenza vicina</span>':''}</span>
-          ${isActive && !scaduto?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})">📅</button>`:''}
-          ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
+          ${isActive && !scaduto?`<button class="centro-act" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})">📅</button>`:''}
+          ${isActive?`<button class="centro-act" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
         </div>`;
       }).join('')}
     </div>` : isActive?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>':'';
@@ -3686,7 +3697,7 @@ function renderCentroCard(c, isActive){
       ${giornate.map((g)=>`
         <div class="giornata-row">
           <span>📆 ${formatDate(g.data)} ${g.inizio}–${g.fine} · slot ${g.slot} min</span>
-          ${isActive?`<button class="btn btn-sm btn-secondary" style="padding:3px 8px" onclick="deleteGiornataSingola('${c.id}','${g.data}','${g.inizio}')">✕</button>`:''}
+          ${isActive?`<button class="centro-act" onclick="deleteGiornataSingola('${c.id}','${g.data}','${g.inizio}')">✕</button>`:''}
         </div>`).join('')}
       ${isActive?`<button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button>`:''}
     </div>` : '';
@@ -3700,9 +3711,11 @@ function renderCentroCard(c, isActive){
           <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
         </div>
         ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
-        <button class="btn btn-sm btn-secondary" onclick="openEditCentro('${c.id}')" title="Modifica centro">✏️</button>
-        <button class="btn btn-sm btn-secondary" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
-        <button class="btn btn-sm btn-secondary" style="color:var(--warm)" onclick="deleteCentro('${c.id}')" title="Elimina centro">✕</button>
+        <div class="centro-actions">
+          <button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro">✏️</button>
+          <button class="centro-act" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
+          <button class="centro-act centro-act-danger" onclick="deleteCentro('${c.id}')" title="Elimina centro">✕</button>
+        </div>
       </div>
       ${turniHtml}${giornateHtml}
     </div>`;
