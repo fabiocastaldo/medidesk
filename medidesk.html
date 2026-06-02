@@ -1130,10 +1130,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="card-header"><span style="font-weight:600">Appuntamenti di oggi</span><button class="btn btn-sm btn-secondary" onclick="showPage('agenda')">Vedi tutto</button></div>
           <div id="dash-upcoming"></div>
         </div>
-        <div class="card">
-          <div class="card-header"><span style="font-weight:600">Ultimi pazienti</span><button class="btn btn-sm btn-secondary" onclick="showPage('pazienti')">Vedi tutto</button></div>
-          <div id="dash-pazienti"></div>
-        </div>
       </div>
     </div>
 
@@ -5557,16 +5553,6 @@ function renderDashboard(){
     }).join('');
   else upEl.innerHTML='<div style="text-align:center;padding:32px;color:var(--ink3)">✨ Nessun appuntamento oggi</div>';
 
-  const pazEl=document.getElementById('dash-pazienti');
-  if(S.pazienti.length)
-    pazEl.innerHTML=S.pazienti.slice(0,5).map(p=>{
-      const ini=(p.nome[0]||'')+(p.cognome[0]||'');
-      return `<div class="paziente-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showPazienteDetail('${p.id}')">
-        <div class="paziente-avatar" style="width:34px;height:34px;font-size:12px">${ini.toUpperCase()}</div>
-        <div class="paziente-info"><div class="paziente-name">${p.cognome} ${p.nome}</div><div class="paziente-meta">${(p.visite||[]).length} visite</div></div>
-      </div>`;
-    }).join('');
-  else pazEl.innerHTML='<div style="text-align:center;padding:32px;color:var(--ink3)">Nessun paziente</div>';
   renderDateStrip();
 }
 
