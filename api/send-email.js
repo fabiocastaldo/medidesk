@@ -543,45 +543,16 @@ export default async function handler(req, res) {
 
 function buildHtmlCancellazioneMedico({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, medico_slug }) {
   const bookingLink = medico_slug ? `https://delphi-med.com/?booking&doc=${encodeURIComponent(medico_slug)}` : '';
-  return `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-  <tr>
-    <td style="background:#0D9488;padding:32px 40px;text-align:center;">
-      <p style="margin:0;font-size:30px;color:#ffffff;">&#9888;</p>
-      <p style="margin:8px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.3px;">Appuntamento annullato</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:36px 40px;">
-      <p style="font-size:16px;color:#1a1a1a;margin:0 0 20px;">Gentile <strong>${paziente_nome}</strong>,</p>
-      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">
-        la informiamo che l&apos;appuntamento del <strong>${dataFmt}</strong> alle ore <strong>${ora}</strong> presso <strong>${centro_nome}</strong> con il medico <strong>${medico_nome}</strong> &egrave; stato annullato.
-      </p>
-      ${bookingLink
-        ? `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per riprenotare la visita, pu&ograve; contattare direttamente il centro oppure consultare i nuovi orari disponibili:</p>
-           <div style="text-align:center;margin:0 0 28px;">
-             <a href="${bookingLink}" style="display:inline-block;padding:12px 24px;background:#0D9488;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;">Prenota un nuovo appuntamento</a>
-           </div>`
-        : `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">Per riprenotare la visita, pu&ograve; contattare direttamente il centro.</p>`
-      }
-      <p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Ci scusiamo per l&apos;inconveniente.<br><br>Cordiali saluti.</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f8f8f8;border-top:1px solid #eeeeee;padding:18px 40px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da MediDesk</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const riprenota = bookingLink
+    ? `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per riprenotare la visita, pu&ograve; contattare direttamente il centro oppure consultare i nuovi orari disponibili:</p>` + ctaButton(bookingLink, 'Prenota un nuovo appuntamento')
+    : `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">Per riprenotare la visita, pu&ograve; contattare direttamente il centro.</p>`;
+  const body =
+    emailTitle('Appuntamento annullato') +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 20px;">Gentile <strong>${paziente_nome}</strong>,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">la informiamo che l&apos;appuntamento del <strong>${dataFmt}</strong> alle ore <strong>${ora}</strong> presso <strong>${centro_nome}</strong> con il medico <strong>${medico_nome}</strong> &egrave; stato annullato.</p>` +
+    riprenota +
+    `<p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Ci scusiamo per l&apos;inconveniente.<br><br>Cordiali saluti.</p>`;
+  return emailShell(body);
 }
 
 function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione }) {
@@ -604,147 +575,46 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
 
 function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_visita, medico_nome, centro_nome }) {
   const LABELS = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento' };
-  const ICONS  = { nuova_prenotazione: '&#128197;', appuntamento_manuale: '&#128203;', cancellazione: '&#9888;' };
-  const label  = LABELS[evento] || evento;
-  const icon   = ICONS[evento]  || '&#128276;';
   const INTRO  = {
-    nuova_prenotazione: `È appena arrivata una nuova prenotazione online per ${medico_nome}. Vi giriamo i dettagli per la vostra agenda.`,
+    nuova_prenotazione: `&Egrave; appena arrivata una nuova prenotazione online per ${medico_nome}. Vi giriamo i dettagli per la vostra agenda.`,
     appuntamento_manuale: `${medico_nome} ha inserito un nuovo appuntamento. Di seguito i dettagli.`,
-    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento di ${medico_nome}: lo slot è di nuovo disponibile.`
+    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento di ${medico_nome}: lo slot &egrave; di nuovo disponibile.`
   };
-  const intro  = INTRO[evento] || `Vi inoltriamo un aggiornamento relativo all'agenda di ${medico_nome}.`;
-
-  const rows = [
-    `<tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;"><span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#128100;&nbsp; Paziente</span><br><strong style="color:#111;font-size:14px;">${paziente_nome}</strong></td></tr>`,
-    `<tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;"><span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#128100;&nbsp; Medico</span><br><strong style="color:#111;font-size:14px;">${medico_nome}</strong></td></tr>`,
-    `<tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;"><span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#128197;&nbsp; Data</span><br><strong style="color:#111;font-size:14px;">${data_fmt}</strong></td></tr>`,
-    `<tr><td style="padding:8px 0;${tipo_visita ? 'border-bottom:1px solid #d9f0ee;' : ''}"><span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#128336;&nbsp; Ora</span><br><strong style="color:#111;font-size:14px;">${ora}</strong></td></tr>`,
-    tipo_visita ? `<tr><td style="padding:8px 0;"><span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#129658;&nbsp; Tipo visita</span><br><strong style="color:#111;font-size:14px;">${tipo_visita}</strong></td></tr>` : ''
-  ].join('');
-
-  return `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-  <tr>
-    <td style="background:#0D9488;padding:32px 40px;text-align:center;">
-      <p style="margin:0;font-size:30px;color:#ffffff;">${icon}</p>
-      <p style="margin:8px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.3px;">${label}</p>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">${centro_nome}</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:36px 40px;">
-      <p style="margin:0 0 24px;color:#333333;font-size:15px;line-height:1.55;">Gentile Segreteria,<br>${intro}</p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdfb;border:1px solid #ccece9;border-radius:8px;margin-bottom:28px;">
-        <tr><td style="padding:20px 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0">${rows}</table>
-        </td></tr>
-      </table>
-      <p style="margin:24px 0 0;color:#333333;font-size:14px;line-height:1.55;">Grazie per la collaborazione.</p>
-      <p style="font-size:12px;color:#aaa;text-align:center;margin:0;">Notifica automatica da Delphi&tilde;Med</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f8f8f8;border-top:1px solid #eeeeee;padding:18px 40px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da MediDesk</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const label = LABELS[evento] || evento;
+  const intro = INTRO[evento] || `Vi inoltriamo un aggiornamento relativo all&apos;agenda di ${medico_nome}.`;
+  const rows =
+    detailRow('Paziente', paziente_nome) +
+    detailRow('Medico', medico_nome) +
+    detailRow('Data', data_fmt) +
+    detailRow('Ora', ora, { last: !tipo_visita }) +
+    (tipo_visita ? detailRow('Tipo visita', tipo_visita, { last: true }) : '');
+  const body =
+    emailTitle(label) +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile Segreteria,<br>${intro}</p>` +
+    detailCard(rows) +
+    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">Grazie per la collaborazione.</p>`;
+  return emailShell(body);
 }
 
 function buildHtmlChiusura({ data_inizio_fmt, data_fine_fmt, etichetta, centro_nome, medico_nome }) {
   const periodo = data_inizio_fmt === data_fine_fmt
     ? `il <strong>${data_inizio_fmt}</strong>`
     : `dal <strong>${data_inizio_fmt}</strong> al <strong>${data_fine_fmt}</strong>`;
-  return `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-  <tr>
-    <td style="background:#0D9488;padding:32px 40px;text-align:center;">
-      <p style="margin:0;font-size:30px;color:#ffffff;">&#128274;</p>
-      <p style="margin:8px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.3px;">Chiusura studio programmata</p>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">${centro_nome}</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:36px 40px;">
-      <p style="font-size:15px;color:#1a1a1a;margin:0 0 20px;">Gentile <strong>${centro_nome}</strong>,</p>
-      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">
-        il medico <strong>${medico_nome}</strong> ha programmato una chiusura dello studio${etichetta ? ` (<em>${etichetta}</em>)` : ''} ${periodo}.
-      </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;margin-bottom:24px;">
-        <tr><td style="padding:14px 18px;">
-          <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
-            &#128203; In questo periodo non verranno generati nuovi slot prenotabili. Gli appuntamenti gi&agrave; confermati restano in agenda.
-          </p>
-        </td></tr>
-      </table>
-      <p style="font-size:13px;color:#888;margin:0;">Per informazioni contattare direttamente il medico.</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f8f8f8;border-top:1px solid #eeeeee;padding:18px 40px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da MediDesk</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const body =
+    emailTitle('Chiusura studio programmata') +
+    `<p style="font-size:15px;color:#1a1a1a;margin:0 0 20px;">Gentile <strong>${centro_nome}</strong>,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">il medico <strong>${medico_nome}</strong> ha programmato una chiusura dello studio${etichetta ? ` (<em>${etichetta}</em>)` : ''} ${periodo}.</p>` +
+    noteBox('In questo periodo non verranno generati nuovi slot prenotabili. Gli appuntamenti gi&agrave; confermati restano in agenda.') +
+    `<p style="font-size:13px;color:#888;margin:0;">Per informazioni contattare direttamente il medico.</p>`;
+  return emailShell(body);
 }
 
 function buildHtmlAccountEliminazione({ medico_nome }) {
-  return `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-  <tr>
-    <td style="background:#dc2626;padding:32px 40px;text-align:center;">
-      <p style="margin:0;font-size:30px;color:#ffffff;">&#128683;</p>
-      <p style="margin:8px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.3px;">Eliminazione account programmata</p>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Delphi~Med</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:36px 40px;">
-      <p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${medico_nome}</strong>,</p>
-      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">
-        abbiamo ricevuto una richiesta di eliminazione del tuo account Delphi&tilde;Med. La procedura &egrave; stata avviata.
-      </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border-left:3px solid #dc2626;border-radius:0 6px 6px 0;margin-bottom:24px;">
-        <tr><td style="padding:14px 18px;">
-          <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
-            Se non sei stato tu a richiedere l&rsquo;eliminazione, contatta immediatamente il supporto a <a href="mailto:support@delphi-med.com" style="color:#dc2626;">support@delphi-med.com</a>.
-          </p>
-        </td></tr>
-      </table>
-      <p style="font-size:13px;color:#888;margin:0;">Grazie per aver utilizzato Delphi&tilde;Med.</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f8f8f8;border-top:1px solid #eeeeee;padding:18px 40px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da Delphi~Med</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const body =
+    emailTitle('Eliminazione account programmata', { tone: 'danger' }) +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${medico_nome}</strong>,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">abbiamo ricevuto una richiesta di eliminazione del tuo account Delphi&tilde;Med. La procedura &egrave; stata avviata.</p>` +
+    noteBox('Se non sei stato tu a richiedere l&rsquo;eliminazione, contatta immediatamente il supporto a <a href="mailto:support@delphi-med.com" style="color:#dc2626;">support@delphi-med.com</a>.', { tone: 'danger' }) +
+    `<p style="font-size:13px;color:#888;margin:0;">Grazie per aver utilizzato Delphi&tilde;Med.</p>`;
+  return emailShell(body);
 }
