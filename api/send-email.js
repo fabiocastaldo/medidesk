@@ -659,6 +659,12 @@ function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_vi
   const ICONS  = { nuova_prenotazione: '&#128197;', appuntamento_manuale: '&#128203;', cancellazione: '&#9888;' };
   const label  = LABELS[evento] || evento;
   const icon   = ICONS[evento]  || '&#128276;';
+  const INTRO  = {
+    nuova_prenotazione: `È appena arrivata una nuova prenotazione online per ${medico_nome}. Vi giriamo i dettagli per la vostra agenda.`,
+    appuntamento_manuale: `${medico_nome} ha inserito un nuovo appuntamento. Di seguito i dettagli.`,
+    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento di ${medico_nome}: lo slot è di nuovo disponibile.`
+  };
+  const intro  = INTRO[evento] || `Vi inoltriamo un aggiornamento relativo all'agenda di ${medico_nome}.`;
 
   const rows = [
     `<tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;"><span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#128100;&nbsp; Paziente</span><br><strong style="color:#111;font-size:14px;">${paziente_nome}</strong></td></tr>`,
@@ -684,11 +690,13 @@ function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_vi
   </tr>
   <tr>
     <td style="padding:36px 40px;">
+      <p style="margin:0 0 24px;color:#333333;font-size:15px;line-height:1.55;">Gentile Segreteria,<br>${intro}</p>
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdfb;border:1px solid #ccece9;border-radius:8px;margin-bottom:28px;">
         <tr><td style="padding:20px 24px;">
           <table width="100%" cellpadding="0" cellspacing="0">${rows}</table>
         </td></tr>
       </table>
+      <p style="margin:24px 0 0;color:#333333;font-size:14px;line-height:1.55;">Grazie per la collaborazione.</p>
       <p style="font-size:12px;color:#aaa;text-align:center;margin:0;">Notifica automatica da Delphi&tilde;Med</p>
     </td>
   </tr>
