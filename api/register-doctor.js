@@ -277,7 +277,7 @@ function buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordin
     detailRow('Provincia ordine', ordineProvincia, { last: true });
   const body =
     emailTitle('Nuova richiesta di registrazione') +
-    `<p style="font-size:15px;color:#333;margin:0 0 24px;">Un nuovo medico ha richiesto l&rsquo;accesso a Delphi&tilde;Med.</p>` +
+    `<p style="font-size:15px;color:#333;margin:0 0 24px;">Un nuovo medico ha richiesto l&rsquo;accesso a Delphi~Med.</p>` +
     detailCard(rows) +
     ctaButton(approveLink, 'Approva medico') +
     `<p style="font-size:12px;color:#888;text-align:center;line-height:1.5;margin:0;">Link di approvazione valido per 7 giorni. Dopo l&rsquo;uso, il token verr&agrave; invalidato.</p>`;

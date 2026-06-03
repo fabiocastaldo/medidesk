@@ -87,7 +87,7 @@ function buildApprovalEmail({ nome, cognome }) {
   const body =
     emailTitle('Account approvato') +
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${nomeCompleto}</strong>,</p>` +
-    `<p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 28px;">Il tuo account Delphi&tilde;Med &egrave; stato approvato.<br>Puoi ora accedere alla piattaforma e iniziare a gestire il tuo studio.</p>` +
+    `<p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 28px;">Il tuo account Delphi~Med &egrave; stato approvato.<br>Puoi ora accedere alla piattaforma e iniziare a gestire il tuo studio.</p>` +
     ctaButton('https://delphi-med.com', 'Accedi a Delphi~Med') +
     `<p style="font-size:13px;color:#888;text-align:center;margin:0;">Oppure copia il link: <a href="https://delphi-med.com" style="color:#15487F;">https://delphi-med.com</a></p>`;
   return emailShell(body);

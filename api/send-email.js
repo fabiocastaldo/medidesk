@@ -613,8 +613,8 @@ function buildHtmlAccountEliminazione({ medico_nome }) {
   const body =
     emailTitle('Eliminazione account programmata', { tone: 'danger' }) +
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${medico_nome}</strong>,</p>` +
-    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">abbiamo ricevuto una richiesta di eliminazione del tuo account Delphi&tilde;Med. La procedura &egrave; stata avviata.</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">abbiamo ricevuto una richiesta di eliminazione del tuo account Delphi~Med. La procedura &egrave; stata avviata.</p>` +
     noteBox('Se non sei stato tu a richiedere l&rsquo;eliminazione, contatta immediatamente il supporto a <a href="mailto:support@delphi-med.com" style="color:#dc2626;">support@delphi-med.com</a>.', { tone: 'danger' }) +
-    `<p style="font-size:13px;color:#888;margin:0;">Grazie per aver utilizzato Delphi&tilde;Med.</p>`;
+    `<p style="font-size:13px;color:#888;margin:0;">Grazie per aver utilizzato Delphi~Med.</p>`;
   return emailShell(body);
 }

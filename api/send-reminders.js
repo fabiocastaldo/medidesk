@@ -332,8 +332,8 @@ function buildScadenzaHtml({ medico, turni, giorni }) {
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">questo &egrave; un promemoria automatico: hai <strong>${n} turn${n === 1 ? 'o' : 'i'} ricorrent${n === 1 ? 'e' : 'i'}</strong> in scadenza tra <strong>${giorni} giorni</strong>.</p>` +
     detailCard(cardInner) +
     noteBox('<strong>Cosa succede a scadenza</strong><br>&bull; Il turno non generer&agrave; pi&ugrave; nuovi slot prenotabili<br>&bull; Gli appuntamenti gi&agrave; prenotati restano in agenda') +
-    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">Se vuoi prorogare o modificare la scadenza, accedi a <strong>Delphi&tilde;Med &rarr; Centri</strong> e clicca il bottone calendario sul turno interessato.</p>` +
-    `<p style="font-size:14px;color:#555;margin:0;">Buon lavoro,<br><strong>Delphi&tilde;Med</strong></p>`;
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">Se vuoi prorogare o modificare la scadenza, accedi a <strong>Delphi~Med &rarr; Centri</strong> e clicca il bottone calendario sul turno interessato.</p>` +
+    `<p style="font-size:14px;color:#555;margin:0;">Buon lavoro,<br><strong>Delphi~Med</strong></p>`;
   return emailShell(body);
 }
 
