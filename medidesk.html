@@ -1562,6 +1562,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             </div>
             <label class="toggle-switch"><input type="checkbox" id="imp-notif-appuntamento-manuale"><span class="toggle-slider"></span></label>
           </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Chiusura / ferie</div>
+              <div class="notif-toggle-desc">La segreteria viene avvisata quando inserisci una chiusura o un periodo di ferie</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-notif-chiusura-centro"><span class="toggle-slider"></span></label>
+          </div>
         </div></div>
       </div>
 
@@ -2785,6 +2792,7 @@ async function loadMedicoFromDB(user){
       S.settings.notifCancellazione       = data.notifica_cancellazione        !== false;
       S.settings.notifAppuntamentoManuale = data.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = data.notifica_cancellazione_medico !== false;
+      S.settings.notifChiusuraCentro      = data.notifica_chiusura_centro      !== false;
       S.settings.mostraPrenotazioniAttesa = data.mostra_prenotazioni_attesa !== false;
       S.settings.nascondiCancellati       = data.nascondi_cancellati           === true;
       S.settings.sogliaConservazione     = data.soglia_conservazione_anni    || 10;
@@ -6222,6 +6230,7 @@ async function bkInit(){
       S.settings.notifCancellazione       = m.notifica_cancellazione        !== false;
       S.settings.notifAppuntamentoManuale = m.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = m.notifica_cancellazione_medico !== false;
+      S.settings.notifChiusuraCentro      = m.notifica_chiusura_centro      !== false;
       S.settings.mostraPrenotazioniAttesa = m.mostra_prenotazioni_attesa !== false;
       S.settings.nascondiCancellati       = m.nascondi_cancellati           === true;
       if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
@@ -6789,7 +6798,7 @@ async function saveChiusura(){
   const centriAssociati=selCentri.length
     ? S.centri.filter(c=>selCentri.some(id=>String(id)===String(c.id)))
     : S.centri.filter(c=>c.attivo!==false);
-  if(centriAssociati.length){
+  if(centriAssociati.length && S.settings.notifChiusuraCentro){
     await inviaMailChiusuraAiCentri(nuova, centriAssociati);
     showMailBozzaChiusura(nuova, centriAssociati);
   }
@@ -7011,6 +7020,7 @@ function renderImpostazioni(){
   chk('imp-notif-cancellazione',           S.settings.notifCancellazione          !== false);
   chk('imp-notif-cancellazione-medico',    S.settings.notifCancellazioneMedico    !== false);
   chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
+  chk('imp-notif-chiusura-centro',         S.settings.notifChiusuraCentro         !== false);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
   const curSkin = localStorage.getItem('skin') || 'marine';
@@ -7028,6 +7038,7 @@ async function saveImpostazione(toggleId){
     'imp-notif-cancellazione':        { key: 'notifCancellazione',       col: 'notifica_cancellazione' },
     'imp-notif-cancellazione-medico': { key: 'notifCancellazioneMedico', col: 'notifica_cancellazione_medico' },
     'imp-notif-appuntamento-manuale': { key: 'notifAppuntamentoManuale', col: 'notifica_appuntamento_manuale' },
+    'imp-notif-chiusura-centro':      { key: 'notifChiusuraCentro',      col: 'notifica_chiusura_centro' },
     'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' },
     'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' }
   };
