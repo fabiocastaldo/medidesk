@@ -368,14 +368,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .bk-hero-bio{font-size:13px;color:rgba(255,255,255,.72);line-height:1.65;margin-bottom:12px}
 .bk-hero-tags{display:flex;flex-wrap:wrap;gap:6px}
 .bk-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15)}
-/* dove ricevo */
-.bk-dove-section{margin-bottom:24px}
 .bk-section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.38);margin-bottom:10px}
-.bk-centro-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:var(--r);padding:14px 16px;margin-bottom:8px}
-.bk-centro-nome{font-weight:600;color:#fff;font-size:14px;margin-bottom:2px}
-.bk-centro-addr{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:8px}
-.bk-centro-giorni{display:flex;flex-wrap:wrap;gap:4px}
-.bk-giorno{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(13,148,136,.45);color:#ccfbf1}
 /* booking card (no colored header) */
 .booking-card-title{padding:22px 28px 0;font-family:'DM Serif Display',serif;font-size:18px;color:var(--ink)}
 /* footer */
@@ -392,6 +385,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .centro-btn:hover,.centro-btn.selected{border-color:var(--accent);background:var(--accent-light)}
 .centro-btn strong{display:block;font-size:14px;color:var(--ink)}
 .centro-btn span{font-size:12px;color:var(--ink3)}
+.centro-btn .bk-days{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.centro-btn .bk-day{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent)}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .cal-title{font-weight:600;font-size:16px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:20px}
@@ -441,13 +436,6 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .bk-social-link{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;transition:all .18s;text-decoration:none;flex-shrink:0}
 .bk-social-link:hover{background:rgba(255,255,255,.25);transform:translateY(-2px)}
 .bk-social-link svg{width:16px;height:16px}
-
-/* ── DOVE RICEVO COLLAPSIBLE ── */
-.bk-dove-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.bk-dove-toggle{background:none;border:none;color:rgba(255,255,255,.5);font-size:11px;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.8px;display:flex;align-items:center;gap:4px;transition:color .15s}
-.bk-dove-toggle:hover{color:rgba(255,255,255,.8)}
-.bk-dove-content{overflow:hidden;transition:max-height .32s ease,opacity .32s ease;max-height:600px;opacity:1}
-.bk-dove-content.collapsed{max-height:0;opacity:0}
 
 /* ── QR MODAL ── */
 .qr-canvas-wrap{display:flex;justify-content:center;padding:16px 0}
@@ -1699,17 +1687,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <p class="bk-hero-bio" id="bk-hero-bio" style="display:none"></p>
         <div class="bk-hero-tags" id="bk-hero-tags"></div>
         <div class="bk-social" id="bk-social-row"></div>
-      </div>
-    </div>
-
-    <!-- DOVE RICEVO -->
-    <div class="bk-dove-section" id="bk-dove-section" style="display:none">
-      <div class="bk-dove-header">
-        <div class="bk-section-label" style="margin-bottom:0">Dove ricevo</div>
-        <button class="bk-dove-toggle" id="bk-dove-toggle-btn" onclick="toggleDoveRicevo()">Mostra ▼</button>
-      </div>
-      <div class="bk-dove-content collapsed" id="bk-dove-content">
-        <div id="bk-dove-centri" style="padding-top:10px"></div>
       </div>
     </div>
 
@@ -6267,39 +6244,11 @@ async function bkInit(){
     const socialEl=document.getElementById('bk-social-row');
     if(socialEl) socialEl.innerHTML=buildSocialRow(S.settings);
   }
-  renderDoveRicevo();
   populateTipiVisitaSelects();
   const now=new Date();
   bk.calYear=now.getFullYear(); bk.calMonth=now.getMonth();
   bkStep(1);
   renderBkCentri();
-}
-
-function renderDoveRicevo(){
-  const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
-  const _today=new Date().toLocaleDateString('en-CA');
-  const centri=S.centri.filter(c=>c.attivo!==false && ((c.turni&&c.turni.length) || (c.giornateSingole&&c.giornateSingole.some(g=>g.data>=_today))));
-  const section=document.getElementById('bk-dove-section');
-  const cont=document.getElementById('bk-dove-centri');
-  if(!section||!cont) return;
-  if(!centri.length){ section.style.display='none'; return; }
-  section.style.display='block';
-  cont.innerHTML=centri.map(c=>{
-    const giorni=[...new Set((c.turni||[]).map(t=>t.giorno))].sort().map(g=>GIORNI_BK[g]);
-    return `<div class="bk-centro-card">
-      <div class="bk-centro-nome">${c.nome}</div>
-      ${c.indirizzo?`<div class="bk-centro-addr">${c.indirizzo}</div>`:''}
-      ${giorni.length?`<div class="bk-centro-giorni">${giorni.map(g=>`<span class="bk-giorno">${g}</span>`).join('')}</div>`:''}
-    </div>`;
-  }).join('');
-}
-
-function toggleDoveRicevo(){
-  const content=document.getElementById('bk-dove-content');
-  const btn=document.getElementById('bk-dove-toggle-btn');
-  if(!content||!btn) return;
-  const collapsed=content.classList.toggle('collapsed');
-  btn.textContent=collapsed?'Mostra ▼':'Nascondi ▲';
 }
 
 function bkStep(n){
@@ -6311,15 +6260,24 @@ function renderBkCentri(){
   const el=document.getElementById('bk-centri-list');
   const noEl=document.getElementById('bk-no-centri');
   const _today=new Date().toLocaleDateString('en-CA');
+  const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
   const eligibili=S.centri.filter(c=>c.attivo!==false && ((c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
   if(!eligibili.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
-  el.innerHTML=eligibili.map(c=>`
-    <div class="centro-btn" onclick="bkSelectCentro('${c.id}')">
+  const MAX_DATE=4;
+  el.innerHTML=eligibili.map(c=>{
+    const feriali=[...new Set((c.turni||[]).map(t=>t.giorno))].sort((a,b)=>a-b).map(g=>GIORNI_BK[g]);
+    const future=(c.giornateSingole||[]).filter(g=>g.data>=_today).map(g=>g.data).sort();
+    const dateChips=future.slice(0,MAX_DATE).map(d=>new Date(d+'T12:00:00').toLocaleDateString('it-IT',{day:'numeric',month:'short'}));
+    const extra=future.length-MAX_DATE;
+    const chips=[...feriali, ...dateChips, ...(extra>0?['+'+extra]:[])];
+    const days=chips.length?`<div class="bk-days">${chips.map(x=>`<span class="bk-day">${x}</span>`).join('')}</div>`:'';
+    return `<div class="centro-btn" onclick="bkSelectCentro('${c.id}')">
       <strong>${c.nome}</strong>
       <span>${c.indirizzo||''}</span>
-    </div>
-  `).join('');
+      ${days}
+    </div>`;
+  }).join('');
 }
 
 function bkSelectCentro(id){
