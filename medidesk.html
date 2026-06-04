@@ -6309,15 +6309,20 @@ function bkStep(n){
 function renderBkCentri(){
   const el=document.getElementById('bk-centri-list');
   const noEl=document.getElementById('bk-no-centri');
-  const withTurni=S.centri.filter(c=>c.attivo!==false && c.turni&&c.turni.length);
-  if(!withTurni.length){ el.innerHTML=''; noEl.style.display='block'; return; }
+  const _today=new Date().toLocaleDateString('en-CA');
+  const eligibili=S.centri.filter(c=>c.attivo!==false && ((c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
+  if(!eligibili.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
-  el.innerHTML=withTurni.map(c=>`
+  el.innerHTML=eligibili.map(c=>{
+    const nTurni=(c.turni||[]).length;
+    const nGiornate=(c.giornateSingole||[]).filter(g=>g.data>=_today).length;
+    const meta=nTurni ? `${nTurni} turni configurati` : (nGiornate===1 ? '1 giornata singola disponibile' : `${nGiornate} giornate singole disponibili`);
+    return `
     <div class="centro-btn" onclick="bkSelectCentro('${c.id}')">
       <strong>${c.nome}</strong>
-      <span>${c.indirizzo||''} · ${c.turni.length} turni configurati</span>
-    </div>
-  `).join('');
+      <span>${c.indirizzo||''} · ${meta}</span>
+    </div>`;
+  }).join('');
 }
 
 function bkSelectCentro(id){
