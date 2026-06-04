@@ -6277,7 +6277,8 @@ async function bkInit(){
 
 function renderDoveRicevo(){
   const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
-  const centri=S.centri.filter(c=>c.attivo!==false&&c.turni&&c.turni.length);
+  const _today=new Date().toLocaleDateString('en-CA');
+  const centri=S.centri.filter(c=>c.attivo!==false && ((c.turni&&c.turni.length) || (c.giornateSingole&&c.giornateSingole.some(g=>g.data>=_today))));
   const section=document.getElementById('bk-dove-section');
   const cont=document.getElementById('bk-dove-centri');
   if(!section||!cont) return;
@@ -6288,7 +6289,7 @@ function renderDoveRicevo(){
     return `<div class="bk-centro-card">
       <div class="bk-centro-nome">${c.nome}</div>
       ${c.indirizzo?`<div class="bk-centro-addr">${c.indirizzo}</div>`:''}
-      <div class="bk-centro-giorni">${giorni.map(g=>`<span class="bk-giorno">${g}</span>`).join('')}</div>
+      ${giorni.length?`<div class="bk-centro-giorni">${giorni.map(g=>`<span class="bk-giorno">${g}</span>`).join('')}</div>`:''}
     </div>`;
   }).join('');
 }
