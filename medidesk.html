@@ -2820,7 +2820,7 @@ async function loadCentriFromDB(user){
       .from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data: centri, error } = await supabaseClient
-      .from('centri').select('*, turni(*)').eq('medico_id', medico.id);
+      .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', medico.id);
     if(error) throw error;
     S.centri = (centri || []).map(c => ({
       id:        c.id,
@@ -2843,7 +2843,7 @@ async function loadCentriFromDB(user){
         dataInizioValidita: t.data_inizio_validita||null,
         dataFineValidita:   t.data_fine_validita||null
       })),
-      giornateSingole: []
+      giornateSingole: (c.disponibilita_singole || []).map(g => ({ id: g.id, data: g.data, inizio: (g.inizio||'').substring(0,5), fine: (g.fine||'').substring(0,5), slot: g.durata_slot, centroId: String(c.id) }))
     }));
     save();
     console.log('[Delphi~Med] Centri caricati da DB:', S.centri.length);
@@ -6219,12 +6219,12 @@ async function bkInit(){
         facebook: m.facebook
       });
       const { data: centriDB } = await supabaseClient
-        .from('centri').select('*, turni(*)').eq('medico_id', m.id).eq('attivo', true);
+        .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
       S.centri = (centriDB||[]).map(c=>({
         id: c.id, nome: c.nome, indirizzo: c.indirizzo||'', colore: c.colore||'#0D9488',
         attivo: true, email: c.email_segreteria||'',
         turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:(t.inizio||'').substring(0,5), fine:(t.fine||'').substring(0,5), slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
-        giornateSingole: []
+        giornateSingole: (c.disponibilita_singole || []).map(g => ({ id: g.id, data: g.data, inizio: (g.inizio||'').substring(0,5), fine: (g.fine||'').substring(0,5), slot: g.durata_slot, centroId: String(c.id) }))
       }));
       S.settings.notifNuovaPrenotazione   = m.notifica_nuova_prenotazione   !== false;
       S.settings.notifCancellazione       = m.notifica_cancellazione        !== false;
