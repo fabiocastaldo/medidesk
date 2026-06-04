@@ -409,7 +409,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .slot-btn.slot-occupied:hover{background:var(--warm);color:#fff;border-color:var(--warm)}
 .slot-btn.slot-occupied .slot-time{font-size:13px;font-weight:600}
 .slot-btn.slot-occupied .slot-name{font-size:10px;font-weight:500;opacity:.85;text-overflow:ellipsis;overflow:hidden;max-width:100%;white-space:nowrap}
-.booking-back{background:none;border:none;color:var(--ink3);font-size:13px;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;margin-bottom:20px;display:flex;align-items:center;gap:4px}
+.booking-back{background:none;border:none;color:var(--ink);font-size:13px;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif;margin-bottom:20px;display:flex;align-items:center;gap:4px}
 .booking-back:hover{color:var(--ink)}
 .confirm-box{background:var(--accent-light);border-radius:var(--r);padding:16px;margin-bottom:20px}
 .confirm-row{display:flex;gap:8px;font-size:13px;margin-bottom:6px}
@@ -1809,7 +1809,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
       </div>
     </div>
-    <div class="bk-footer">Prenotazione gestita con Delphi~Med · Sistema professionale per medici</div>
+    <div class="bk-footer">Prenotazione gestita con Delphi~Med · Sistema professionale per medici<br><a href="https://delphi-med.com" style="color:inherit;text-decoration:underline;opacity:.8">← Torna alla home</a></div>
   </div>
 </div>
 
@@ -2820,7 +2820,7 @@ async function loadCentriFromDB(user){
       .from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data: centri, error } = await supabaseClient
-      .from('centri').select('*, turni(*)').eq('medico_id', medico.id);
+      .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', medico.id);
     if(error) throw error;
     S.centri = (centri || []).map(c => ({
       id:        c.id,
@@ -2843,7 +2843,7 @@ async function loadCentriFromDB(user){
         dataInizioValidita: t.data_inizio_validita||null,
         dataFineValidita:   t.data_fine_validita||null
       })),
-      giornateSingole: []
+      giornateSingole: (c.disponibilita_singole || []).map(g => ({ id: g.id, data: g.data, inizio: (g.inizio||'').substring(0,5), fine: (g.fine||'').substring(0,5), slot: g.durata_slot, centroId: String(c.id) }))
     }));
     save();
     console.log('[Delphi~Med] Centri caricati da DB:', S.centri.length);
@@ -6219,12 +6219,12 @@ async function bkInit(){
         facebook: m.facebook
       });
       const { data: centriDB } = await supabaseClient
-        .from('centri').select('*, turni(*)').eq('medico_id', m.id).eq('attivo', true);
+        .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
       S.centri = (centriDB||[]).map(c=>({
-        id: c.id, nome: c.nome, indirizzo: c.indirizzo||'', colore: c.colore||'#0D9488',
+        id: c.id, nome: c.nome, indirizzo: [c.via, [c.cap, c.citta].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', '), colore: c.colore||'#0D9488',
         attivo: true, email: c.email_segreteria||'',
         turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:(t.inizio||'').substring(0,5), fine:(t.fine||'').substring(0,5), slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
-        giornateSingole: []
+        giornateSingole: (c.disponibilita_singole || []).map(g => ({ id: g.id, data: g.data, inizio: (g.inizio||'').substring(0,5), fine: (g.fine||'').substring(0,5), slot: g.durata_slot, centroId: String(c.id) }))
       }));
       S.settings.notifNuovaPrenotazione   = m.notifica_nuova_prenotazione   !== false;
       S.settings.notifCancellazione       = m.notifica_cancellazione        !== false;
@@ -6277,7 +6277,8 @@ async function bkInit(){
 
 function renderDoveRicevo(){
   const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
-  const centri=S.centri.filter(c=>c.attivo!==false&&c.turni&&c.turni.length);
+  const _today=new Date().toLocaleDateString('en-CA');
+  const centri=S.centri.filter(c=>c.attivo!==false && ((c.turni&&c.turni.length) || (c.giornateSingole&&c.giornateSingole.some(g=>g.data>=_today))));
   const section=document.getElementById('bk-dove-section');
   const cont=document.getElementById('bk-dove-centri');
   if(!section||!cont) return;
@@ -6288,7 +6289,7 @@ function renderDoveRicevo(){
     return `<div class="bk-centro-card">
       <div class="bk-centro-nome">${c.nome}</div>
       ${c.indirizzo?`<div class="bk-centro-addr">${c.indirizzo}</div>`:''}
-      <div class="bk-centro-giorni">${giorni.map(g=>`<span class="bk-giorno">${g}</span>`).join('')}</div>
+      ${giorni.length?`<div class="bk-centro-giorni">${giorni.map(g=>`<span class="bk-giorno">${g}</span>`).join('')}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -6309,13 +6310,14 @@ function bkStep(n){
 function renderBkCentri(){
   const el=document.getElementById('bk-centri-list');
   const noEl=document.getElementById('bk-no-centri');
-  const withTurni=S.centri.filter(c=>c.attivo!==false && c.turni&&c.turni.length);
-  if(!withTurni.length){ el.innerHTML=''; noEl.style.display='block'; return; }
+  const _today=new Date().toLocaleDateString('en-CA');
+  const eligibili=S.centri.filter(c=>c.attivo!==false && ((c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
+  if(!eligibili.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
-  el.innerHTML=withTurni.map(c=>`
+  el.innerHTML=eligibili.map(c=>`
     <div class="centro-btn" onclick="bkSelectCentro('${c.id}')">
       <strong>${c.nome}</strong>
-      <span>${c.indirizzo||''} · ${c.turni.length} turni configurati</span>
+      <span>${c.indirizzo||''}</span>
     </div>
   `).join('');
 }
@@ -6498,8 +6500,8 @@ async function confirmBooking(){
   const medicoDisplayName=document.getElementById('bk-doctor-name').textContent||getFullName();
   document.getElementById('bk-success-msg').innerHTML=
     `Il tuo appuntamento con <strong>${medicoDisplayName}</strong> è confermato.<br><br>`+
-    `📅 <strong>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${bk.ora}</strong><br>`+
-    `🏥 ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
+    `<svg class="ic" style="vertical-align:-.15em"><use href="#ic-calendar"/></svg> <strong>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${bk.ora}</strong><br>`+
+    `<svg class="ic" style="vertical-align:-.15em"><use href="#ic-center"/></svg> ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
     `${appt.email?'Riceverai un riepilogo all\'email indicata.':''}`;
   bkStep(5);
   // NOTA: notifica al centro nel flusso anon gestita dal backend in conferma_appt_anon (#5)
