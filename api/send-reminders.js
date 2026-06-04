@@ -324,7 +324,7 @@ function buildScadenzaHtml({ medico, turni, giorni }) {
     return `<tr><td style="padding:8px 0;border-bottom:1px solid #e2edf8;font-size:14px;color:#111;">&#8226; Centro <strong>${centroNome}</strong>: ${esc(giorno)} ${esc(inizio)}&ndash;${esc(fine)}, scadenza <strong>${esc(scadenza)}</strong></td></tr>`;
   }).join('');
   const cardInner =
-    `<tr><td style="padding:0 0 12px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#6a6a6a;font-weight:600;">Turni in scadenza</td></tr>` +
+    `<tr><td style="padding:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#666;font-weight:600;">Turni in scadenza</td></tr>` +
     turniRows;
   const body =
     emailTitle('Promemoria scadenza turno') +
