@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Rate limit in-memory: 5 registrazioni/ora per IP (anti-spam abuse)
@@ -269,53 +270,16 @@ export default async function handler(req, res) {
 // Template email admin (identico a buildAdminRegistrationEmail del frontend)
 // ─────────────────────────────────────────────────────────────────────────────
 function buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordineProvincia, approveLink }) {
-  return `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-<tr><td style="background:#0D9488;padding:32px 40px;text-align:center;">
-  <p style="margin:0;font-size:28px;color:#fff;">&#128711;</p>
-  <p style="margin:8px 0 0;color:#fff;font-size:20px;font-weight:700;">Nuova richiesta di registrazione</p>
-  <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Delphi~Med &mdash; Pannello di approvazione</p>
-</td></tr>
-<tr><td style="padding:32px 40px;">
-  <p style="font-size:15px;color:#333;margin:0 0 24px;">Un nuovo medico ha richiesto l&rsquo;accesso a Delphi~Med.</p>
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdfb;border:1px solid #ccece9;border-radius:8px;margin-bottom:28px;">
-  <tr><td style="padding:20px 24px;">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-        <span style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Nome e Cognome</span><br>
-        <strong style="color:#111;font-size:14px;">${nome} ${cognome}</strong>
-      </td></tr>
-      <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-        <span style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Email</span><br>
-        <strong style="color:#111;font-size:14px;">${email}</strong>
-      </td></tr>
-      <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-        <span style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">N&deg; Iscrizione Ordine</span><br>
-        <strong style="color:#111;font-size:14px;">${ordineNumero}</strong>
-      </td></tr>
-      <tr><td style="padding:8px 0;">
-        <span style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Provincia Ordine</span><br>
-        <strong style="color:#111;font-size:14px;">${ordineProvincia}</strong>
-      </td></tr>
-    </table>
-  </td></tr>
-  </table>
-  <div style="text-align:center;margin:0 0 24px;">
-    <a href="${approveLink}" style="display:inline-block;padding:14px 32px;background:#0D9488;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:15px;">Approva medico</a>
-  </div>
-  <p style="font-size:12px;color:#888;text-align:center;line-height:1.5;margin:0;">
-    Link di approvazione valido per 7 giorni. Dopo l&rsquo;uso, il token verr&agrave; invalidato.
-  </p>
-</td></tr>
-<tr><td style="background:#f8f8f8;border-top:1px solid #eee;padding:18px 40px;text-align:center;">
-  <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da Delphi~Med</p>
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const rows =
+    detailRow('Nome e cognome', `${nome} ${cognome}`) +
+    detailRow('Email', email) +
+    detailRow('N&deg; iscrizione ordine', ordineNumero) +
+    detailRow('Provincia ordine', ordineProvincia, { last: true });
+  const body =
+    emailTitle('Nuova richiesta di registrazione') +
+    `<p style="font-size:15px;color:#333;margin:0 0 24px;">Un nuovo medico ha richiesto l&rsquo;accesso a Delphi~Med.</p>` +
+    detailCard(rows) +
+    ctaButton(approveLink, 'Approva medico') +
+    `<p style="font-size:12px;color:#888;text-align:center;line-height:1.5;margin:0;">Link di approvazione valido per 7 giorni. Dopo l&rsquo;uso, il token verr&agrave; invalidato.</p>`;
+  return emailShell(body);
 }

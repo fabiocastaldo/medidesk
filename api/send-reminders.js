@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 
 export default async function handler(req, res) {
   // Auth: CRON_SECRET obbligatorio. Vercel Cron lo inietta automaticamente
@@ -315,138 +316,41 @@ function buildScadenzaHtml({ medico, turni, giorni }) {
   const nomeCompleto = [medico.nome, medico.cognome].filter(Boolean).join(' ');
   const n = turni.length;
   const turniRows = turni.map(t => {
-    const giorno    = GIORNI_IT[t.giorno] || '';
-    const inizio    = (t.inizio || '').substring(0, 5);
-    const fine      = (t.fine   || '').substring(0, 5);
-    const scadenza  = formatDateIt(t.data_fine_validita);
+    const giorno = GIORNI_IT[t.giorno] || '';
+    const inizio = (t.inizio || '').substring(0, 5);
+    const fine   = (t.fine   || '').substring(0, 5);
+    const scadenza = formatDateIt(t.data_fine_validita);
     const centroNome = esc(t.centro_nome || '—');
-    return `<tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;font-size:14px;color:#111;">
-      &#8226; Centro <strong>${centroNome}</strong>: ${esc(giorno)} ${esc(inizio)}–${esc(fine)}, scadenza <strong>${esc(scadenza)}</strong>
-    </td></tr>`;
+    return `<tr><td style="padding:8px 0;border-bottom:1px solid #e2edf8;font-size:14px;color:#111;">&#8226; Centro <strong>${centroNome}</strong>: ${esc(giorno)} ${esc(inizio)}&ndash;${esc(fine)}, scadenza <strong>${esc(scadenza)}</strong></td></tr>`;
   }).join('');
-
-  return `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-  <tr>
-    <td style="background:#0D9488;padding:32px 40px;text-align:center;">
-      <p style="margin:0;font-size:30px;color:#ffffff;">&#128197;</p>
-      <p style="margin:8px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.3px;">Promemoria scadenza turno</p>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Delphi~Med</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:36px 40px;">
-      <p style="font-size:16px;color:#1a1a1a;margin:0 0 12px;">Ciao <strong>${esc(nomeCompleto)}</strong>,</p>
-      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">
-        questo è un promemoria automatico: hai <strong>${n} turn${n === 1 ? 'o' : 'i'} ricorrent${n === 1 ? 'e' : 'i'}</strong> in scadenza tra <strong>${giorni} giorni</strong>.
-      </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdfb;border:1px solid #ccece9;border-radius:8px;margin-bottom:24px;">
-        <tr><td style="padding:20px 24px;">
-          <p style="margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#666;font-weight:600;">Turni in scadenza</p>
-          <table width="100%" cellpadding="0" cellspacing="0">
-            ${turniRows}
-          </table>
-        </td></tr>
-      </table>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;margin-bottom:24px;">
-        <tr><td style="padding:14px 18px;">
-          <p style="margin:0 0 6px;font-size:13px;color:#555;font-weight:700;">Cosa succede a scadenza</p>
-          <ul style="margin:0;padding-left:18px;font-size:13px;color:#555;line-height:1.7;">
-            <li>Il turno non genererà più nuovi slot prenotabili</li>
-            <li>Gli appuntamenti già prenotati restano in agenda</li>
-          </ul>
-        </td></tr>
-      </table>
-      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">
-        Se vuoi prorogare o modificare la scadenza, accedi a <strong>Delphi~Med → Centri</strong> e clicca il bottone calendario sul turno interessato.
-      </p>
-      <p style="font-size:14px;color:#555;margin:0 0 28px;">Buon lavoro,<br><strong>Delphi~Med</strong></p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f8f8f8;border-top:1px solid #eeeeee;padding:18px 40px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">Email automatica inviata da Delphi~Med &middot; Non rispondere a questo indirizzo</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const cardInner =
+    `<tr><td style="padding:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#666;font-weight:600;">Turni in scadenza</td></tr>` +
+    turniRows;
+  const body =
+    emailTitle('Promemoria scadenza turno') +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 12px;">Ciao <strong>${esc(nomeCompleto)}</strong>,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">questo &egrave; un promemoria automatico: hai <strong>${n} turn${n === 1 ? 'o' : 'i'} ricorrent${n === 1 ? 'e' : 'i'}</strong> in scadenza tra <strong>${giorni} giorni</strong>.</p>` +
+    detailCard(cardInner) +
+    noteBox('<strong>Cosa succede a scadenza</strong><br>&bull; Il turno non generer&agrave; pi&ugrave; nuovi slot prenotabili<br>&bull; Gli appuntamenti gi&agrave; prenotati restano in agenda') +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">Se vuoi prorogare o modificare la scadenza, accedi a <strong>Delphi~Med &rarr; Centri</strong> e clicca il bottone calendario sul turno interessato.</p>` +
+    `<p style="font-size:14px;color:#555;margin:0;">Buon lavoro,<br><strong>Delphi~Med</strong></p>`;
+  return emailShell(body);
 }
 
 function buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora, tipoVisita, centroNome, centroIndirizzo }) {
-  return `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-  <tr>
-    <td style="background:#0D9488;padding:32px 40px;text-align:center;">
-      <p style="margin:0;font-size:30px;color:#ffffff;">&#128336;</p>
-      <p style="margin:8px 0 0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:.3px;">Promemoria visita</p>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Delphi~Med</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:36px 40px;">
-      <p style="font-size:16px;color:#1a1a1a;margin:0 0 12px;">Gentile <strong>${esc(pazienteNome)}</strong>,</p>
-      <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">
-        ti ricordiamo che hai una visita prenotata <strong>domani</strong>.
-      </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdfb;border:1px solid #ccece9;border-radius:8px;margin-bottom:28px;">
-        <tr><td style="padding:20px 24px;">
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-              <span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#128100;&nbsp; Medico</span><br>
-              <strong style="color:#111;font-size:14px;">${esc(medicoNome)}</strong>
-            </td></tr>
-            <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-              <span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#128197;&nbsp; Data</span><br>
-              <strong style="color:#111;font-size:14px;">${esc(dataFmt)}</strong>
-            </td></tr>
-            <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-              <span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#128336;&nbsp; Ora</span><br>
-              <strong style="color:#111;font-size:14px;">${esc(ora || '—')}</strong>
-            </td></tr>
-            ${tipoVisita ? `<tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-              <span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#129658;&nbsp; Tipo visita</span><br>
-              <strong style="color:#111;font-size:14px;">${esc(tipoVisita)}</strong>
-            </td></tr>` : ''}
-            <tr><td style="padding:8px 0;${tipoVisita ? '' : 'border-bottom:none'}">
-              <span style="color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.5px;">&#127973;&nbsp; Centro</span><br>
-              <strong style="color:#111;font-size:14px;">${esc(centroNome || '—')}</strong>
-              ${centroIndirizzo ? `<br><span style="color:#555;font-size:13px;">${esc(centroIndirizzo)}</span>` : ''}
-            </td></tr>
-          </table>
-        </td></tr>
-      </table>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;margin-bottom:28px;">
-        <tr><td style="padding:14px 18px;">
-          <p style="margin:0 0 6px;font-size:13px;color:#555;font-weight:700;">&#128203; Cosa portare alla visita</p>
-          <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
-            Documentazione sanitaria (referti, esami precedenti, cartelle cliniche), tessera sanitaria, eventuali farmaci che assumi regolarmente, documento di identità e ogni altro documento rilevante per la visita.
-          </p>
-        </td></tr>
-      </table>
-      <p style="font-size:13px;color:#888;margin:0;">Per cancellare o modificare l&rsquo;appuntamento usa il codice di cancellazione ricevuto al momento della prenotazione.</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f8f8f8;border-top:1px solid #eeeeee;padding:18px 40px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">Email automatica inviata da Delphi~Med &middot; Non rispondere a questo indirizzo</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const centroVal = `${esc(centroNome || '—')}` + (centroIndirizzo ? `<br><span style="color:#555;font-size:13px;font-weight:400;">${esc(centroIndirizzo)}</span>` : '');
+  const rows =
+    detailRow('Medico', esc(medicoNome)) +
+    detailRow('Data', esc(dataFmt)) +
+    detailRow('Ora', esc(ora || '—')) +
+    (tipoVisita ? detailRow('Tipo visita', esc(tipoVisita)) : '') +
+    detailRow('Centro', centroVal, { last: true });
+  const body =
+    emailTitle('Promemoria visita') +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 12px;">Gentile <strong>${esc(pazienteNome)}</strong>,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">ti ricordiamo che hai una visita prenotata <strong>domani</strong>.</p>` +
+    detailCard(rows) +
+    noteBox('<strong>Cosa portare alla visita</strong><br>Documentazione sanitaria (referti, esami precedenti, cartelle cliniche), tessera sanitaria, eventuali farmaci che assumi regolarmente, documento di identit&agrave; e ogni altro documento rilevante per la visita.') +
+    `<p style="font-size:13px;color:#888;margin:0;">Per cancellare o modificare l&rsquo;appuntamento usa il codice di cancellazione ricevuto al momento della prenotazione.</p>`;
+  return emailShell(body);
 }

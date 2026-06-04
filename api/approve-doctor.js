@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // JWT HS256 minimal verify (no library, crypto nativo)
@@ -83,45 +84,13 @@ function htmlPage(title, message, isSuccess) {
 // ─────────────────────────────────────────────────────────────────────────────
 function buildApprovalEmail({ nome, cognome }) {
   const nomeCompleto = esc([nome, cognome].filter(Boolean).join(' ')) || 'Dottore/ssa';
-  return `<!DOCTYPE html>
-<html lang="it">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:'Helvetica Neue',Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-  <tr>
-    <td style="background:#0D9488;padding:32px 40px;text-align:center;">
-      <p style="margin:0;font-size:30px;color:#fff;">&#9989;</p>
-      <p style="margin:8px 0 0;color:#fff;font-size:20px;font-weight:700;letter-spacing:.3px;">Account approvato</p>
-      <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Delphi~Med</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding:36px 40px;">
-      <p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${nomeCompleto}</strong>,</p>
-      <p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 28px;">
-        Il tuo account Delphi~Med &egrave; stato approvato.<br>
-        Puoi ora accedere alla piattaforma e iniziare a gestire il tuo studio.
-      </p>
-      <div style="text-align:center;margin-bottom:28px;">
-        <a href="https://delphi-med.com" style="display:inline-block;background:#0D9488;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;">Accedi a Delphi~Med</a>
-      </div>
-      <p style="font-size:13px;color:#888;text-align:center;margin:0;">
-        Oppure copia il link: <a href="https://delphi-med.com" style="color:#0D9488;">https://delphi-med.com</a>
-      </p>
-    </td>
-  </tr>
-  <tr>
-    <td style="background:#f8f8f8;border-top:1px solid #eee;padding:18px 40px;text-align:center;">
-      <p style="margin:0;font-size:11px;color:#bbb;">Messaggio inviato automaticamente da Delphi~Med</p>
-    </td>
-  </tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const body =
+    emailTitle('Account approvato') +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${nomeCompleto}</strong>,</p>` +
+    `<p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 28px;">Il tuo account Delphi~Med &egrave; stato approvato.<br>Puoi ora accedere alla piattaforma e iniziare a gestire il tuo studio.</p>` +
+    ctaButton('https://delphi-med.com', 'Accedi a Delphi~Med') +
+    `<p style="font-size:13px;color:#888;text-align:center;margin:0;">Oppure copia il link: <a href="https://delphi-med.com" style="color:#15487F;">https://delphi-med.com</a></p>`;
+  return emailShell(body);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
