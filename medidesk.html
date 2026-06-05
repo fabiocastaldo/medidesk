@@ -240,6 +240,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .visita-date{font-weight:600;font-size:13px}
 .visita-body{padding:16px;background:var(--surface);border-top:1px solid var(--border);white-space:pre-wrap;font-size:13px;line-height:1.6;color:var(--ink2)}
 .storia-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-top:16px}
+.storia-testo h4,.storia-testo h5,.storia-testo h6{margin:14px 0 6px;font-weight:600;line-height:1.3;color:var(--ink)}
+.storia-testo h4{font-size:15px}
+.storia-testo h5{font-size:14px}
+.storia-testo h6{font-size:13px;color:var(--ink2)}
+.storia-testo p{margin:0 0 8px;line-height:1.55}
+.storia-testo ul,.storia-testo ol{margin:6px 0 10px;padding-left:20px}
+.storia-testo li{margin:2px 0;line-height:1.5}
+.storia-testo hr{border:0;border-top:1px solid var(--border);margin:12px 0}
+.storia-testo strong{font-weight:600}
+.storia-testo>:first-child{margin-top:0}
+.storia-testo>:last-child{margin-bottom:0}
 .storia-testo{font-size:13px;line-height:1.7;color:var(--ink2);white-space:pre-wrap}
 .extracted-fields{display:flex;flex-direction:column;gap:8px}
 .field-row{display:flex;gap:8px;align-items:flex-start}
@@ -4035,6 +4046,36 @@ function populateTipiVisitaSelects(){
 
 function escapeHtml(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function escapeAttr(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function mdToSafeHtml(md){
+  const esc = escapeHtml(String(md ?? ''));
+  const inline = (t) => t
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  const lines = esc.split(/\r?\n/);
+  let html = '', list = null;
+  const closeList = () => { if(list){ html += '</' + list + '>'; list = null; } };
+  for(const raw of lines){
+    const line = raw.trim();
+    if(!line){ closeList(); continue; }
+    let m;
+    if(/^([-*_])\1{2,}$/.test(line)){ closeList(); html += '<hr>'; continue; }
+    if((m = line.match(/^(#{1,6})\s+(.*)$/))){ closeList(); const lvl = Math.min(m[1].length + 2, 6); html += '<h' + lvl + '>' + inline(m[2]) + '</h' + lvl + '>'; continue; }
+    if((m = line.match(/^[-*+]\s+(.*)$/))){ if(list !== 'ul'){ closeList(); html += '<ul>'; list = 'ul'; } html += '<li>' + inline(m[1]) + '</li>'; continue; }
+    if((m = line.match(/^\d+\.\s+(.*)$/))){ if(list !== 'ol'){ closeList(); html += '<ol>'; list = 'ol'; } html += '<li>' + inline(m[1]) + '</li>'; continue; }
+    closeList(); html += '<p>' + inline(line) + '</p>';
+  }
+  closeList();
+  return html;
+}
+function mdToPlain(md){
+  return String(md ?? '')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s{0,3}([-*+])\s+/gm, '• ')
+    .replace(/^\s{0,3}([-*_]){3,}\s*$/gm, '———')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1$2')
+    .trim();
+}
 async function getAuthJwt(){ try{ const {data:{session}}=await supabaseClient.auth.getSession(); return session?.access_token||''; }catch{ return ''; } }
 
 // ── SLOT LOGIC ──
@@ -5153,7 +5194,7 @@ function etaDaNascita(nascita){
 
 function shareStoria(pazId){
   const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return;
-  const testo=(document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo')?.textContent)||'';
+  const _se=document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo'); const testo=mdToPlain(_se?.dataset.md ?? _se?.textContent ?? '');
   const title='Storia clinica — '+paz.cognome+' '+paz.nome;
   if(navigator.share){ navigator.share({title,text:testo}).catch(()=>{}); }
   else { navigator.clipboard.writeText(testo).then(()=>showToast('Copiato ✓')).catch(()=>showToast('Copia non supportata')); }
@@ -5161,14 +5202,14 @@ function shareStoria(pazId){
 
 function emailStoria(pazId){
   const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return;
-  const testo=(document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo')?.textContent)||'';
+  const _se=document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo'); const testo=mdToPlain(_se?.dataset.md ?? _se?.textContent ?? '');
   const subject=encodeURIComponent('Storia clinica — '+paz.cognome+' '+paz.nome);
   window.open('mailto:?subject='+subject+'&body='+encodeURIComponent(testo),'_blank');
 }
 
 function downloadStoriaPDF(pazId){
   const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return;
-  const testo=(document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo')?.textContent)||'';
+  const _se=document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo'); const testo=mdToPlain(_se?.dataset.md ?? _se?.textContent ?? '');
   try {
     const { jsPDF } = window.jspdf;
     const doc=new jsPDF({unit:'mm',format:'a4'});
@@ -5220,7 +5261,8 @@ async function sintetizzaStoria(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const data=await res.json();
     const testo=data.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${testo}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button></div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button></div></div>`;
+    const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${err.message}</div>`;
   } finally{
@@ -5277,7 +5319,8 @@ async function sintetizzaReferti(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const dataR=await res.json();
     const testo=dataR.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${testo}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button></div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button></div></div>`;
+    const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${err.message}</div>`;
   } finally{
