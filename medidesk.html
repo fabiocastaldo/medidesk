@@ -6429,6 +6429,28 @@ function bkTogglePerConto(){
   }
 }
 
+// Registro versioni consenso: AUTORITA legale del testo accettato.
+// La label HTML mostrata e' solo il render; la verita' registrata e' qui.
+// Disciplina: se cambi il testo di una label NON riusare il codice ->
+// aggiungi una nuova entry (cons-pp-2 / cons-pc-2) e lascia la vecchia
+// per le righe storiche che vi puntano.
+const CONSENSI = {
+  'cons-pp-1': {
+    tipo: 'interessato', art6: true, art9: true, dal: '2026-06',
+    testi: {
+      base:   "Ho letto l'informativa e acconsento al trattamento dei miei dati per la finalità di prenotazione (art. 6 GDPR).",
+      health: "Acconsento al trattamento del tipo di visita e dell'area tematica come dati relativi alla salute (art. 9 GDPR)."
+    }
+  },
+  'cons-pc-1': {
+    tipo: 'autorizzazione_terzi', art6: true, art9: true, dal: '2026-06',
+    testi: {
+      terzi: "Dichiaro di essere autorizzato/a a effettuare la prenotazione per conto della persona interessata e a fornire i relativi dati personali, inclusi quelli relativi alla salute, oppure di agire in qualità di legale rappresentante, ai sensi degli artt. 6 e 9 del GDPR."
+    }
+  }
+};
+const consensoVersioneCorrente = (perConto) => perConto ? 'cons-pc-1' : 'cons-pp-1';
+
 async function confirmBooking(){
   const nome=capitalizeName(document.getElementById('bk-nome').value.trim());
   const cognome=capitalizeName(document.getElementById('bk-cognome').value.trim());
@@ -6479,6 +6501,7 @@ async function confirmBooking(){
         cancellation_token: cancellationToken,
         consenso_base_at:   consentTs,
         consenso_health_at: consentTs,
+        consenso_versione:  consensoVersioneCorrente(perConto),
         per_conto:          perConto
       }).select('id').single();
       const timeoutPromise = new Promise((_, reject) =>
