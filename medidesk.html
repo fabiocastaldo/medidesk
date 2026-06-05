@@ -383,7 +383,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 /* booking card (no colored header) */
 .booking-card-title{padding:22px 28px 0;font-family:'DM Serif Display',serif;font-size:18px;color:var(--ink)}
 /* footer */
-.bk-footer{text-align:center;margin-top:28px;font-size:11px;color:rgba(255,255,255,.18)}
+.bk-footer{text-align:center;margin-top:28px;font-size:11px;color:rgba(255,255,255,.55)}
 @media(max-width:480px){
   .bk-avatar{width:56px;height:56px;font-size:22px}
   .bk-hero-name{font-size:23px}
@@ -537,6 +537,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 /* ── AUTH SCREEN ── */
 #view-auth{display:none;min-height:100vh;background:linear-gradient(135deg,var(--brand-bright) 0%,var(--brand-mid) 60%,var(--brand-deep) 100%);align-items:center;justify-content:center;padding:24px;font-family:'DM Sans',sans-serif;position:relative}
 .auth-card{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+.auth-footer{position:absolute;bottom:20px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,.55)}
 .auth-logo{text-align:center;margin-bottom:28px}
 .auth-logo h1{font-family:'DM Serif Display',serif;font-size:32px;color:var(--ink);margin:0 0 4px}
 .auth-logo p{font-size:13px;color:var(--ink3);margin:0}
@@ -1049,6 +1050,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <button class="auth-btn" id="recovery-save-btn" onclick="saveNewPassword()">Salva nuova password</button>
     </div>
   </div>
+  <div class="auth-footer"><a href="https://delphi-med.com" style="color:rgba(255,255,255,.85);text-decoration:underline">← Torna alla home</a></div>
 </div>
 
 <!-- ══════════════ APP MEDICO ══════════════ -->
@@ -1797,7 +1799,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
       </div>
     </div>
-    <div class="bk-footer">Prenotazione gestita con Delphi~Med · Sistema professionale per medici<br><a href="https://delphi-med.com" style="color:inherit;text-decoration:underline;opacity:.8">← Torna alla home</a></div>
+    <div class="bk-footer">Prenotazione gestita con Delphi~Med · Sistema professionale per medici<br><a href="https://delphi-med.com" style="color:rgba(255,255,255,.85);text-decoration:underline">← Torna alla home</a></div>
   </div>
 </div>
 
@@ -6214,7 +6216,7 @@ async function bkInit(){
       const fullName = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
       bk.medicoNome = fullName;
       document.getElementById('bk-doctor-name').textContent = fullName;
-      document.getElementById('bk-doctor-spec').textContent = m.specializzazione || '';
+      document.getElementById('bk-doctor-spec').textContent = [...new Set([m.specializzazione, ...(m.specializzazioni || [])].filter(Boolean))].join(' · ');
       const avatarEl = document.getElementById('bk-avatar-display');
       const ini = fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
       if(m.foto_url){ avatarEl.innerHTML = `<img src="${escapeAttr(m.foto_url)}" alt="${escapeAttr(fullName)}">`; }
@@ -6269,7 +6271,7 @@ async function bkInit(){
     const fullName=getFullName();
     bk.medicoNome = fullName;
     document.getElementById('bk-doctor-name').textContent=fullName;
-    document.getElementById('bk-doctor-spec').textContent=S.settings.spec||'';
+    document.getElementById('bk-doctor-spec').textContent=[...new Set([S.settings.spec, ...(S.settings.specAltre || [])].filter(Boolean))].join(' · ');
     const avatarEl=document.getElementById('bk-avatar-display');
     const ini=fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
     if(S.settings.foto_url){ avatarEl.innerHTML=`<img src="${S.settings.foto_url}" alt="${fullName}">`; }
