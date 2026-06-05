@@ -1740,7 +1740,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="step-label">4 / 4 — I tuoi dati</div>
           <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;background:var(--surface2);padding:12px 14px;border-radius:8px;margin-bottom:14px;font-size:13px">
             <input type="checkbox" id="bk-per-conto" style="margin-top:3px;flex-shrink:0" onchange="bkTogglePerConto()">
-            <span>Sto prenotando <strong>per un'altra persona</strong> (es. un familiare). Inserirò i suoi dati e dichiarerò di averne raccolto il consenso.</span>
+            <span><strong>Prenotazione per conto terzi</strong></span>
           </label>
           <div id="bk-perconto-hint" style="display:none;font-size:12px;color:var(--ink2);margin:-6px 0 14px;padding:0 2px">I dati richiesti sono quelli dell'interessato; la conferma sarà inviata alla <strong>sua</strong> email.</div>
           <div class="confirm-box" id="bk-confirm-summary"></div>
@@ -1765,14 +1765,20 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <p id="bk-info-intro" style="margin:0 0 8px 0">I dati che inserisci (nome, cognome, email, telefono, recapito) sono raccolti da <strong>Delphi~Med</strong> per la gestione del tuo appuntamento, per conto del medico che gestisce questa agenda.</p>
             <p style="margin:0 0 8px 0">Il tipo di visita e l'area tematica possono costituire <strong>dati relativi alla salute</strong> (art. 9 GDPR) e richiedono il tuo consenso esplicito.</p>
             <p style="margin:0 0 12px 0;font-size:12px;color:var(--ink2)">Titolare: il medico. Responsabile: Delphi~Med. <a href="/privacy-policy" target="_blank" rel="noopener" style="color:var(--accent)">Informativa completa</a></p>
-            <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer">
+            <label id="bk-row-base" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer">
               <input type="checkbox" id="bk-consent-base" style="margin-top:3px;flex-shrink:0">
               <span id="bk-consent-base-label">Ho letto l'informativa e acconsento al trattamento dei miei dati per la finalità di prenotazione (art. 6 GDPR).</span>
             </label>
-            <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+            <label id="bk-row-health" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
               <input type="checkbox" id="bk-consent-health" style="margin-top:3px;flex-shrink:0">
               <span id="bk-consent-health-label">Acconsento al trattamento del tipo di visita e dell'area tematica come dati relativi alla salute (art. 9 GDPR).</span>
             </label>
+            <div id="bk-auth-terzi" style="display:none;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-left:3px solid var(--accent);border-radius:6px;padding:12px 14px;margin-top:4px">
+              <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+                <input type="checkbox" id="bk-consent-terzi" style="margin-top:3px;flex-shrink:0">
+                <span>Dichiaro di essere autorizzato/a a effettuare la prenotazione per conto della persona interessata e a fornire i relativi dati personali, inclusi quelli relativi alla salute, oppure di agire in qualità di legale rappresentante, ai sensi degli artt. 6 e 9 del GDPR.</span>
+              </label>
+            </div>
           </div>
 
           <button class="btn btn-primary" id="bk-confirm-btn" style="width:100%;padding:13px" onclick="confirmBooking()">Conferma prenotazione</button>
@@ -6404,19 +6410,22 @@ function generateCancellationToken(){
 
 function bkTogglePerConto(){
   const on = document.getElementById('bk-per-conto')?.checked;
-  const hint = document.getElementById('bk-perconto-hint');
-  if(hint) hint.style.display = on ? 'block' : 'none';
+  const hint   = document.getElementById('bk-perconto-hint');
   const intro  = document.getElementById('bk-info-intro');
-  const base   = document.getElementById('bk-consent-base-label');
-  const health = document.getElementById('bk-consent-health-label');
+  const rowBase   = document.getElementById('bk-row-base');
+  const rowHealth = document.getElementById('bk-row-health');
+  const auth      = document.getElementById('bk-auth-terzi');
+  if(hint)      hint.style.display      = on ? 'block' : 'none';
+  if(rowBase)   rowBase.style.display   = on ? 'none'  : 'flex';
+  if(rowHealth) rowHealth.style.display = on ? 'none'  : 'flex';
+  if(auth)      auth.style.display      = on ? 'block' : 'none';
   if(on){
-    if(intro)  intro.innerHTML    = 'I dati che inserisci sono dell\'interessato (la persona che riceverà la visita) e sono raccolti da <strong>Delphi~Med</strong> per la gestione del suo appuntamento, per conto del medico che gestisce questa agenda.';
-    if(base)   base.textContent   = 'Dichiaro di aver raccolto il consenso dell\'interessato, o di esserne legale rappresentante, al trattamento dei suoi dati per la finalità di prenotazione (art. 6 GDPR).';
-    if(health) health.textContent = 'Dichiaro di aver raccolto il consenso esplicito dell\'interessato al trattamento del tipo di visita e dell\'area tematica come dati relativi alla salute (art. 9 GDPR).';
+    if(intro) intro.innerHTML = 'I dati che inserisci sono dell\'interessato (la persona che riceverà la visita) e sono raccolti da <strong>Delphi~Med</strong> per la gestione del suo appuntamento, per conto del medico che gestisce questa agenda.';
+    const cb=document.getElementById('bk-consent-base');   if(cb) cb.checked=false;
+    const ch=document.getElementById('bk-consent-health'); if(ch) ch.checked=false;
   } else {
-    if(intro)  intro.innerHTML    = 'I dati che inserisci (nome, cognome, email, telefono, recapito) sono raccolti da <strong>Delphi~Med</strong> per la gestione del tuo appuntamento, per conto del medico che gestisce questa agenda.';
-    if(base)   base.textContent   = 'Ho letto l\'informativa e acconsento al trattamento dei miei dati per la finalità di prenotazione (art. 6 GDPR).';
-    if(health) health.textContent = 'Acconsento al trattamento del tipo di visita e dell\'area tematica come dati relativi alla salute (art. 9 GDPR).';
+    if(intro) intro.innerHTML = 'I dati che inserisci (nome, cognome, email, telefono, recapito) sono raccolti da <strong>Delphi~Med</strong> per la gestione del tuo appuntamento, per conto del medico che gestisce questa agenda.';
+    const ct=document.getElementById('bk-consent-terzi');  if(ct) ct.checked=false;
   }
 }
 
@@ -6426,11 +6435,15 @@ async function confirmBooking(){
   if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
   const emailVal=document.getElementById('bk-email').value.trim();
   if(!emailVal){ showToast('Inserisci la tua email per ricevere la conferma'); return; }
-  const consentBase = document.getElementById('bk-consent-base')?.checked;
-  const consentHealth = document.getElementById('bk-consent-health')?.checked;
-  if(!consentBase || !consentHealth){ showToast('Per procedere è necessario fornire entrambi i consensi'); return; }
-  const consentTs = new Date().toISOString();
   const perConto = document.getElementById('bk-per-conto')?.checked || false;
+  if(perConto){
+    if(!document.getElementById('bk-consent-terzi')?.checked){ showToast('Per procedere devi fornire la dichiarazione di autorizzazione'); return; }
+  } else {
+    const consentBase = document.getElementById('bk-consent-base')?.checked;
+    const consentHealth = document.getElementById('bk-consent-health')?.checked;
+    if(!consentBase || !consentHealth){ showToast('Per procedere è necessario fornire entrambi i consensi'); return; }
+  }
+  const consentTs = new Date().toISOString();
   const cancellationToken = generateCancellationToken();
   const appt={
     id:Date.now(), nome, cognome,
