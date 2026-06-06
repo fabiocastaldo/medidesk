@@ -377,6 +377,9 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .bk-hero-divider{position:relative;width:110px;height:1px;border:none;margin:14px 0 16px 46px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.82) 50%,transparent)}
 .bk-hero-divider::before{content:"";position:absolute;left:50%;top:50%;width:72px;height:10px;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(255,255,255,.45),transparent 75%);filter:blur(3px);border-radius:50%;pointer-events:none}
 .bk-hero-bio{font-size:13px;color:rgba(255,255,255,.72);line-height:1.65;margin-bottom:12px}
+.bk-about{max-width:760px;margin:0 auto 28px;padding:0 4px}
+.bk-about-h{font-family:'DM Serif Display',serif;font-size:19px;color:#fff;margin:18px 0 8px}
+.bk-about-p{font-size:14px;line-height:1.7;color:rgba(255,255,255,.82);white-space:pre-line}
 .bk-hero-tags{display:flex;flex-wrap:wrap;gap:6px}
 .bk-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15)}
 .bk-section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.38);margin-bottom:10px}
@@ -1716,6 +1719,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="bk-social" id="bk-social-row"></div>
       </div>
     </div>
+    <div class="bk-about" id="bk-about" style="display:none"></div>
 
     <div class="booking-card">
       <div class="booking-card-title">Prenota una visita</div>
@@ -3210,7 +3214,8 @@ const SOCIAL_ICONS={
   linkedin:`<svg class="ic"><use href="#ic-linkedin"/></svg>`,
   instagram:`<svg class="ic"><use href="#ic-instagram"/></svg>`,
   youtube:`<svg class="ic"><use href="#ic-youtube"/></svg>`,
-  facebook:`<svg class="ic"><use href="#ic-facebook"/></svg>`
+  facebook:`<svg class="ic"><use href="#ic-facebook"/></svg>`,
+  x:`<svg class="ic"><use href="#ic-x"/></svg>`
 };
 
 const SAFE_KEYS = ['agendaView', 'selectedDay', 'currentPage', 'settings_ui_only'];
@@ -5834,6 +5839,7 @@ function buildSocialRow(st){
   if(st.instagram){const u=st.instagram.replace(/^@/,''); addLink('instagram','https://instagram.com/'+u,'Instagram'); }
   if(st.youtube){  const u=st.youtube.startsWith('http')?st.youtube:'https://youtube.com/@'+st.youtube; addLink('youtube',u,'YouTube'); }
   if(st.facebook){ const u=st.facebook.startsWith('http')?st.facebook:'https://facebook.com/'+st.facebook; addLink('facebook',u,'Facebook'); }
+  if(st.x){ const u=st.x.startsWith('http')?st.x:'https://x.com/'+st.x.replace(/^@/,''); addLink('x',u,'X'); }
   return links.join('');
 }
 
@@ -6275,6 +6281,7 @@ async function bkInit(){
       if(tagsEl){
         const tags = [];
         if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
+        if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
         (m.lingue||[]).forEach(l=>tags.push(l));
         tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
       }
@@ -6286,8 +6293,12 @@ async function bkInit(){
         linkedin: m.linkedin,
         instagram:m.instagram,
         youtube:  m.youtube,
-        facebook: m.facebook
+        facebook: m.facebook,
+        x: m.x_url,
       });
+      bk.aboutBio  = m.bio_lunga || '';
+      bk.aboutSpec = m.specializzazioni_descrizione || '';
+      bk.aboutPat  = m.patologie_trattate || '';
       const { data: centriDB } = await supabaseClient
         .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
       S.centri = (centriDB||[]).map(c=>({
@@ -6330,12 +6341,24 @@ async function bkInit(){
     if(tagsEl){
       const tags=[];
       if(S.settings.esperienza) tags.push(S.settings.esperienza+' anni di esperienza');
-      if(S.settings.albo) tags.push('Albo n. '+S.settings.albo);
+      if(S.settings.albo) tags.push('Albo n. '+S.settings.albo+(S.settings.alboProvincia?' ('+S.settings.alboProvincia+')':''));
       (S.settings.lingue||[]).forEach(l=>tags.push(l));
       tagsEl.innerHTML=tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
     }
     const socialEl=document.getElementById('bk-social-row');
     if(socialEl) socialEl.innerHTML=buildSocialRow(S.settings);
+    bk.aboutBio  = S.settings.bioLunga || '';
+    bk.aboutSpec = S.settings.specDescr || '';
+    bk.aboutPat  = S.settings.patologie || '';
+  }
+  const aboutEl=document.getElementById('bk-about');
+  if(aboutEl){
+    let h='';
+    if(bk.aboutBio)  h += `<p class="bk-about-p">${escapeHtml(bk.aboutBio)}</p>`;
+    if(bk.aboutSpec) h += `<h2 class="bk-about-h">Aree di competenza</h2><p class="bk-about-p">${escapeHtml(bk.aboutSpec)}</p>`;
+    if(bk.aboutPat)  h += `<h2 class="bk-about-h">Patologie trattate</h2><p class="bk-about-p">${escapeHtml(bk.aboutPat)}</p>`;
+    aboutEl.innerHTML=h;
+    aboutEl.style.display = h ? 'block' : 'none';
   }
   populateTipiVisitaSelects();
   const now=new Date();

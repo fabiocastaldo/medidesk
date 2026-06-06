@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     : `Prenota online una visita con ${fullName}${specPrimaria ? ', ' + specPrimaria : ''}${cittaPrim ? ' a ' + cittaPrim : ''}.`;
 
   // 4) JSON-LD @graph
-  const sameAs = [m.sito_web, m.linkedin, m.instagram, m.youtube, m.facebook].filter(Boolean);
+  const sameAs = [m.sito_web, m.linkedin, m.instagram, m.youtube, m.facebook, m.x_url].filter(Boolean);
   const lingue = Array.isArray(m.lingue) ? m.lingue.filter(Boolean) : [];
   const specialties = [...new Set([m.specializzazione, ...(Array.isArray(m.specializzazioni)?m.specializzazioni:[])].filter(Boolean))];
   const postal = (c) => ({ '@type':'PostalAddress', streetAddress:c.via||undefined, addressLocality:c.citta||undefined, postalCode:c.cap||undefined, addressRegion:c.provincia||undefined, addressCountry:'IT' });
