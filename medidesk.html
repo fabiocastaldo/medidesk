@@ -3208,7 +3208,7 @@ async function generaPresentazioneAI(){
   if(!ta) return;
   if(!isOnline()){ showToast('Connessione assente'); return; }
   const note = ta.value.trim();
-  if(note && !confirm('Rigenero la presentazione dalle tue note attuali? Il contenuto del box verrà sostituito.')) return;
+  const prevBio = ta.value;
   let token = '';
   try { const { data:{ session } } = await supabaseClient.auth.getSession(); token = session?.access_token || ''; } catch(_){}
   if(!token){ showToast('Sessione scaduta — rientra'); return; }
@@ -3239,7 +3239,11 @@ async function generaPresentazioneAI(){
     ta.value = text;
     S.settings.bioLunga = text;
     if(typeof save==='function') save();
-    showToast('Presentazione generata — rivedila e premi Salva ✓');
+    if(prevBio.trim()){
+      showToastAction('Presentazione rigenerata — rivedila e premi Salva', 'Annulla', ()=>{ ta.value = prevBio; S.settings.bioLunga = prevBio; if(typeof save==='function') save(); });
+    } else {
+      showToast('Presentazione generata — rivedila e premi Salva ✓');
+    }
   } catch(e){
     showToast('Errore: ' + e.message);
   } finally {
@@ -3249,11 +3253,13 @@ async function generaPresentazioneAI(){
 function svuotaPresentazione(){
   const ta = document.getElementById('setting-bio-lunga');
   if(!ta) return;
-  if(ta.value.trim() && !confirm('Svuotare il testo della presentazione?')) return;
+  const prevBio = ta.value;
+  if(!prevBio.trim()){ ta.focus(); return; }
   ta.value = '';
   S.settings.bioLunga = '';
   if(typeof save==='function') save();
   ta.focus();
+  showToastAction('Presentazione svuotata', 'Annulla', ()=>{ ta.value = prevBio; S.settings.bioLunga = prevBio; if(typeof save==='function') save(); });
 }
 const SOCIAL_ICONS={
   email:`<svg class="ic"><use href="#ic-mail"/></svg>`,
@@ -8736,6 +8742,31 @@ function showToast(msg){
   if(!t){ console.log('[toast]', msg); return; }
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
+}
+let _toastActionTimer = null;
+function showToastAction(msg, actionLabel, actionFn, ms){
+  const t = document.getElementById('toast');
+  if(!t){ console.log('[toast]', msg); return; }
+  if(_toastActionTimer){ clearTimeout(_toastActionTimer); }
+  t.textContent = '';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  t.appendChild(span);
+  if(actionLabel && typeof actionFn === 'function'){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = actionLabel;
+    btn.style.cssText = 'margin-left:14px;background:transparent;border:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer';
+    btn.onclick = () => {
+      if(_toastActionTimer){ clearTimeout(_toastActionTimer); }
+      t.classList.remove('show');
+      t.textContent = '';
+      actionFn();
+    };
+    t.appendChild(btn);
+  }
+  t.classList.add('show');
+  _toastActionTimer = setTimeout(()=>{ t.classList.remove('show'); t.textContent = ''; }, ms || 5000);
 }
 
 // Popola i select specializzazione subito al caricamento pagina (DOM già pronto,
