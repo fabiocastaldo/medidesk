@@ -20,13 +20,9 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/medidesk.html"
-    }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/m/(.*)", "destination": "/api/medico?slug=$1" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/((?!api/).*)", "destination": "/medidesk.html" }
   ]
 }
