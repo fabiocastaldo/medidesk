@@ -1345,6 +1345,14 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div style="margin-top:32px">
         <div class="section-title">Presentazione estesa <span style="font-size:12px;font-weight:400;color:var(--ink3)">(pagina pubblica · SEO)</span></div>
         <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);line-height:1.55;margin-bottom:14px">Questi testi appaiono sulla tua pagina pubblica e aiutano i pazienti a trovarti su Google quando cercano il tuo nome. Compilali in italiano naturale e completo, oppure usa «Genera» per una bozza da rifinire.</p>
+          <label class="form-label">I tuoi ambiti / prestazioni <span style="font-size:12px;font-weight:400;color:var(--ink3)">(aiutano la generazione)</span></label>
+          <div id="ambiti-list" class="tag-editor" style="margin:6px 0 8px"></div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <input class="form-input" id="new-ambito" placeholder="es. rinoplastica" style="flex:1" onkeydown="if(event.key==='Enter')addAmbito()" onblur="this.value=this.value.trim()">
+            <button class="btn btn-secondary" onclick="addAmbito()">+ Aggiungi</button>
+          </div>
+          <button class="btn btn-secondary" style="margin-bottom:18px" onclick="generaPresentazione()"><svg class="ic"><use href="#ic-sparkles"/></svg>Genera presentazione</button>
           <label class="form-label">Bio estesa</label>
           <textarea class="form-textarea" id="setting-bio-lunga" maxlength="2000" style="min-height:120px" placeholder="Presentazione completa del medico, in frasi compiute." onblur="this.value=this.value.trim()"></textarea>
           <label class="form-label" style="margin-top:14px">Descrizione delle specializzazioni</label>
@@ -2796,6 +2804,7 @@ async function loadMedicoFromDB(user){
       S.settings.bio         = data.bio                || '';
       S.settings.esperienza  = data.anni_esperienza    || '';
       S.settings.lingue      = Array.isArray(data.lingue) ? data.lingue : [];
+      S.settings.ambitiExpertise = Array.isArray(data.ambiti_expertise) ? data.ambiti_expertise : [];
       S.settings.specAltre   = data.specializzazioni
         ? data.specializzazioni.filter(s => s !== data.specializzazione)
         : [];
@@ -3169,7 +3178,7 @@ var S = {
   settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', alboProvincia:'', esperienza:'', lingue:[], specAltre:[],
              titolo:'Dr.', nomeProf:'Mario', cognomeProf:'Rossi', slug:'',
              email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'',
-             x:'', bioLunga:'', specDescr:'', patologie:'',
+             x:'', bioLunga:'', specDescr:'', patologie:'', ambitiExpertise:[],
              foto_url: null },
   tipiVisita: ['Prima visita', 'Controllo'],
   tipiVisitaRecords: [],
@@ -3207,6 +3216,75 @@ const SPECIALIZZAZIONI_UFFICIALI = [
   'Radiodiagnostica','Radioterapia','Reumatologia','Scienza dell\'alimentazione',
   'Statistica sanitaria e biometria','Urologia'
 ];
+const SPEC_INFO = {
+  "Cardiologia": { descr:"la diagnosi e la cura delle malattie del cuore e dei vasi", ambiti:["ipertensione","aritmie","scompenso cardiaco","prevenzione cardiovascolare"] },
+  "Chirurgia generale": { descr:"la diagnosi e il trattamento chirurgico delle patologie dell'addome e dei tessuti molli", ambiti:["ernie","colecisti","noduli e cisti","piccola chirurgia ambulatoriale"] },
+  "Chirurgia plastica, ricostruttiva ed estetica": { descr:"la chirurgia ricostruttiva ed estetica del volto e del corpo", ambiti:["chirurgia post-traumatica","chirurgia oncologica ricostruttiva","medicina e chirurgia estetica"] },
+  "Dermatologia e venereologia": { descr:"la salute della pelle, dei capelli, delle unghie e delle mucose", ambiti:["controllo dei nei","acne","dermatiti","dermatologia oncologica"] },
+  "Ginecologia e ostetricia": { descr:"la salute dell'apparato genitale femminile e il percorso della gravidanza", ambiti:["visite di controllo","ecografie","contraccezione","menopausa"] },
+  "Ortopedia e traumatologia": { descr:"la diagnosi e la cura delle patologie di ossa, articolazioni e muscoli", ambiti:["lesioni sportive","artrosi","mal di schiena","traumi"] },
+  "Oftalmologia": { descr:"la salute della vista e le patologie dell'occhio", ambiti:["visite oculistiche","controllo della vista","glaucoma","cataratta"] },
+  "Otorinolaringoiatria": { descr:"la diagnosi e la cura delle patologie di orecchio, naso e gola", ambiti:["vertigini","sinusiti","disturbi dell'udito","russamento"] },
+  "Gastroenterologia": { descr:"la diagnosi e la cura delle malattie dell'apparato digerente", ambiti:["reflusso","colon irritabile","epatologia","endoscopia digestiva"] },
+  "Endocrinologia e malattie del metabolismo": { descr:"la diagnosi e la cura dei disturbi ormonali e metabolici", ambiti:["tiroide","diabete","osteoporosi","disturbi del peso"] },
+  "Neurologia": { descr:"la diagnosi e la cura delle malattie del sistema nervoso", ambiti:["cefalee","disturbi del sonno","vertigini","disturbi della memoria"] },
+  "Psichiatria": { descr:"la diagnosi e la cura dei disturbi della sfera psichica", ambiti:["ansia","depressione","disturbi del sonno","disturbi dell'umore"] },
+  "Psicoterapia": { descr:"il sostegno e la cura del disagio psicologico attraverso il colloquio", ambiti:["ansia","depressione","difficoltà relazionali","gestione dello stress"] },
+  "Urologia": { descr:"la diagnosi e la cura delle patologie dell'apparato urinario e genitale maschile", ambiti:["calcolosi","prostata","disturbi urinari","prevenzione urologica"] },
+  "Pediatria": { descr:"la salute e lo sviluppo del bambino, dalla nascita all'adolescenza", ambiti:["visite di controllo","vaccinazioni","allergie","disturbi della crescita"] },
+  "Reumatologia": { descr:"la diagnosi e la cura delle malattie di articolazioni, ossa e tessuto connettivo", ambiti:["artrite","artrosi","osteoporosi","malattie autoimmuni"] },
+  "Allergologia e immunologia clinica": { descr:"la diagnosi e la cura delle allergie e dei disturbi del sistema immunitario", ambiti:["allergie respiratorie","allergie alimentari","orticaria","test allergologici"] },
+  "Malattie dell'apparato respiratorio": { descr:"la diagnosi e la cura delle malattie dei polmoni e delle vie respiratorie", ambiti:["asma","BPCO","tosse cronica","disturbi respiratori del sonno"] },
+  "Medicina interna": { descr:"la diagnosi e la gestione complessiva delle patologie dell'adulto", ambiti:["ipertensione","diabete","patologie croniche","inquadramento diagnostico"] },
+  "Scienza dell'alimentazione": { descr:"la valutazione nutrizionale e l'impostazione di percorsi alimentari", ambiti:["educazione alimentare","sovrappeso","nutrizione clinica","piani alimentari personalizzati"] },
+  "Geriatria": { descr:"la salute e la cura della persona anziana", ambiti:["valutazione multidimensionale","fragilità","polipatologia","prevenzione"] },
+  "Medicina fisica e riabilitativa": { descr:"il recupero funzionale dopo traumi, interventi o patologie", ambiti:["riabilitazione post-operatoria","dolore muscoloscheletrico","recupero motorio","percorsi riabilitativi"] }
+};
+const SPEC_DESCR_GENERICA = "la diagnosi, la cura e il monitoraggio delle condizioni di propria competenza";
+function _joinIt(arr){
+  arr = (arr||[]).map(s=>String(s||'').trim()).filter(Boolean);
+  if(!arr.length) return '';
+  if(arr.length===1) return arr[0];
+  return arr.slice(0,-1).join(', ') + ' e ' + arr[arr.length-1];
+}
+function generaPresentazione(){
+  const titolo = (S.settings.titolo||'').trim();
+  const nomeCompleto = [titolo, (S.settings.nomeProf||'').trim(), (S.settings.cognomeProf||'').trim()].filter(Boolean).join(' ').trim() || 'Il medico';
+  const art = /ssa\.?$/i.test(titolo) ? 'La' : 'Il';
+  const specPrinc = (S.settings.spec||'').trim();
+  const specTutte = [...new Set([specPrinc, ...((S.settings.specAltre)||[])].filter(Boolean))];
+  const ambiti = ((S.settings.ambitiExpertise)||[]).map(s=>String(s||'').trim()).filter(Boolean);
+  const lingue = ((S.settings.lingue)||[]).filter(Boolean);
+  const esp = parseInt(S.settings.esperienza,10);
+  const citta = [...new Set((S.centri||[]).filter(c=>c.attivo!==false).map(c=>(c.citta||'').trim()).filter(Boolean))];
+  const info = SPEC_INFO[specPrinc] || null;
+
+  const _v = id => (document.getElementById(id)||{}).value||'';
+  if((_v('setting-bio-lunga') || _v('setting-spec-descrizione') || _v('setting-patologie')) && !confirm('Sovrascrivo i testi attuali con una nuova bozza generata?')) return;
+
+  let bio = `${art} ${nomeCompleto} è specialista in ${_joinIt(specTutte) || 'medicina'}.`;
+  if(citta.length) bio += ` Riceve a ${_joinIt(citta)}.`;
+  if(ambiti.length) bio += ` Si dedica in particolare a ${_joinIt(ambiti)}.`;
+  bio += (esp && esp>0)
+    ? ` Con ${esp} anni di esperienza, segue ogni paziente con un approccio personalizzato, dalla prima visita al follow-up.`
+    : ` Segue ogni paziente con un approccio personalizzato, dalla prima visita al follow-up.`;
+  if(lingue.length) bio += ` Offre visite anche in ${_joinIt(lingue.map(l=>String(l).toLowerCase()))}.`;
+
+  const disc = info ? info.descr : SPEC_DESCR_GENERICA;
+  let descr = (specTutte.length>1)
+    ? `Specialista in ${_joinIt(specTutte)}, si occupa di ${disc}.`
+    : `${art==='La'?'La dottoressa':'Il dottore'} si occupa di ${disc}.`;
+  if(ambiti.length) descr += ` In particolare offre prestazioni di ${_joinIt(ambiti)}.`;
+
+  const fontePat = ambiti.length ? ambiti : (info ? info.ambiti : []);
+  const pat = fontePat.length ? `Tra gli ambiti di cui si occupa rientrano ${_joinIt(fontePat)}. Per una valutazione del proprio caso è consigliata una visita.` : '';
+
+  const setVal = (id,val) => { const e=document.getElementById(id); if(e) e.value=val; };
+  setVal('setting-bio-lunga', bio);     S.settings.bioLunga = bio;
+  setVal('setting-spec-descrizione', descr); S.settings.specDescr = descr;
+  if(pat){ setVal('setting-patologie', pat); S.settings.patologie = pat; }
+  showToast('Bozza generata — rivedila e salva ✓');
+}
 const SOCIAL_ICONS={
   email:`<svg class="ic"><use href="#ic-mail"/></svg>`,
   phone:`<svg class="ic"><use href="#ic-phone"/></svg>`,
@@ -5934,7 +6012,7 @@ function loadSettings(){
   fld('setting-patologie', S.settings.patologie);
   updateBioCounter();
   renderSlugPreview();
-  renderLingue();
+  renderLingue(); renderAmbiti();
   renderSpecAltre();
   renderFotoProfilo();
 }
@@ -5993,6 +6071,7 @@ async function saveSettings(){
         bio:              S.settings.bio         || null,
         anni_esperienza:  S.settings.esperienza  || null,
         lingue:           S.settings.lingue.length ? S.settings.lingue : null,
+        ambiti_expertise: (S.settings.ambitiExpertise && S.settings.ambitiExpertise.length) ? S.settings.ambitiExpertise : null,
         email_pubblica:   S.settings.email       || null,
         telefono:         S.settings.telefono    || null,
         sito_web:         S.settings.sitoWeb     || null,
@@ -6139,6 +6218,30 @@ function addLingua(){
   syncLingueToDB();
 }
 function removeLingua(idx){ S.settings.lingue.splice(idx,1); save(); renderLingue(); syncLingueToDB(); }
+// ambiti expertise
+function renderAmbiti(){
+  const el=document.getElementById('ambiti-list'); if(!el) return;
+  el.innerHTML=(S.settings.ambitiExpertise||[]).map((a,i)=>
+    `<span class="tag-chip">${a}<button class="tag-chip-x chip-remove-ambiti" data-idx="${i}" title="Rimuovi">✕</button></span>`
+  ).join('');
+}
+function addAmbito(){
+  const inp=document.getElementById('new-ambito'); const v=inp.value.trim(); if(!v) return;
+  if((S.settings.ambitiExpertise||[]).some(a=>a.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
+  if(!S.settings.ambitiExpertise) S.settings.ambitiExpertise=[];
+  S.settings.ambitiExpertise.push(v); inp.value=''; save(); renderAmbiti(); showToast('Aggiunto ✓');
+  syncAmbitiToDB();
+}
+function removeAmbito(idx){ S.settings.ambitiExpertise.splice(idx,1); save(); renderAmbiti(); syncAmbitiToDB(); }
+async function syncAmbitiToDB(){
+  if(!isOnline()) return;
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser(); if(!user) return;
+    await supabaseClient.from('medici')
+      .update({ ambiti_expertise: S.settings.ambitiExpertise.length ? S.settings.ambitiExpertise : null })
+      .eq('user_id', user.id);
+  } catch(e){ console.error('[Delphi~Med] syncAmbitiToDB:', e.message); }
+}
 async function syncLingueToDB(){
   if(!isOnline()) return;
   try {
