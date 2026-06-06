@@ -1087,6 +1087,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <symbol id="ic-instagram" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></symbol>
   <symbol id="ic-youtube" viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></symbol>
   <symbol id="ic-facebook" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><path style="fill:currentColor;stroke:none" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></symbol>
   <symbol id="ic-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
   <symbol id="ic-message" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></symbol>
   <symbol id="ic-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="17.5"/><line x1="14" y1="20.5" x2="17.5" y2="20.5"/><line x1="20.5" y1="14" x2="20.5" y2="20.5"/><line x1="17.5" y1="17.5" x2="17.5" y2="14"/></symbol>
@@ -1325,7 +1326,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           </div>
           <div class="form-row">
             <div class="form-group"><label class="form-label">Anni di esperienza</label><input class="form-input" id="setting-esperienza" type="number" min="0" max="60" placeholder="es. 15"></div>
-            <div class="form-group"><label class="form-label">N° iscrizione albo</label><input class="form-input" id="setting-albo" placeholder="es. 12345"></div>
+            <div class="form-group"><label class="form-label">N&deg; iscrizione albo <span style="font-size:12px;font-weight:400;color:var(--ink3)">(dalla registrazione)</span></label><input class="form-input" id="setting-albo" readonly style="background:var(--surface2);color:var(--ink2);cursor:not-allowed" placeholder="—"></div>
           </div>
         </div></div>
       </div>
@@ -1335,6 +1336,18 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="card"><div class="card-body">
           <textarea class="form-textarea" id="setting-bio" maxlength="500" style="min-height:80px" placeholder="Es. Cardiologo specializzato in aritmie, 15 anni di esperienza..." oninput="updateBioCounter()" onblur="this.value=capitalizeSentences(this.value.trim());updateBioCounter()"></textarea>
           <div class="bio-counter" id="bio-counter">0 / 500</div>
+        </div></div>
+      </div>
+
+      <div style="margin-top:32px">
+        <div class="section-title">Presentazione estesa <span style="font-size:12px;font-weight:400;color:var(--ink3)">(pagina pubblica · SEO)</span></div>
+        <div class="card"><div class="card-body">
+          <label class="form-label">Bio estesa</label>
+          <textarea class="form-textarea" id="setting-bio-lunga" maxlength="2000" style="min-height:120px" placeholder="Presentazione completa del medico, in frasi compiute." onblur="this.value=this.value.trim()"></textarea>
+          <label class="form-label" style="margin-top:14px">Descrizione delle specializzazioni</label>
+          <textarea class="form-textarea" id="setting-spec-descrizione" maxlength="1500" style="min-height:90px" placeholder="Di cosa ti occupi, in prosa discorsiva." onblur="this.value=this.value.trim()"></textarea>
+          <label class="form-label" style="margin-top:14px">Patologie trattate</label>
+          <textarea class="form-textarea" id="setting-patologie" maxlength="1500" style="min-height:90px" placeholder="Le condizioni di cui ti occupi, integrate in frase." onblur="this.value=this.value.trim()"></textarea>
         </div></div>
       </div>
 
@@ -1349,6 +1362,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-instagram"/></svg></span><input class="form-input" id="setting-instagram" placeholder="Instagram (@username)"></div>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-youtube"/></svg></span><input class="form-input" id="setting-youtube" placeholder="YouTube (URL canale)"></div>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-facebook"/></svg></span><input class="form-input" id="setting-facebook" placeholder="Facebook (URL pagina)"></div>
+            <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-x"/></svg></span><input class="form-input" id="setting-x" placeholder="X (URL o @username)"></div>
           </div>
         </div></div>
       </div>
@@ -2774,7 +2788,7 @@ async function loadMedicoFromDB(user){
       S.settings.nome        = [data.titolo, data.nome, data.cognome].filter(Boolean).join(' ') || S.settings.nome;
       S.settings.spec        = data.specializzazione   || '';
       S.settings.slug        = data.slug               || '';
-      S.settings.albo        = data.numero_albo        || '';
+      S.settings.albo        = data.numero_iscrizione_ordine || '';
       S.settings.bio         = data.bio                || '';
       S.settings.esperienza  = data.anni_esperienza    || '';
       S.settings.lingue      = Array.isArray(data.lingue) ? data.lingue : [];
@@ -2788,6 +2802,11 @@ async function loadMedicoFromDB(user){
       S.settings.instagram   = data.instagram          || '';
       S.settings.youtube     = data.youtube            || '';
       S.settings.facebook    = data.facebook           || '';
+      S.settings.alboProvincia = data.provincia_ordine || '';
+      S.settings.x             = data.x_url || '';
+      S.settings.bioLunga      = data.bio_lunga || '';
+      S.settings.specDescr     = data.specializzazioni_descrizione || '';
+      S.settings.patologie     = data.patologie_trattate || '';
       S.settings.foto_url    = data.foto_url           || null;
       S.settings.notifNuovaPrenotazione   = data.notifica_nuova_prenotazione   !== false;
       S.settings.notifCancellazione       = data.notifica_cancellazione        !== false;
@@ -3143,9 +3162,10 @@ function translateAuthError(msg){
 var S = {
   medicoId: null,
   centri:[], appuntamenti:[], pazienti:[],
-  settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', esperienza:'', lingue:[], specAltre:[],
+  settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', alboProvincia:'', esperienza:'', lingue:[], specAltre:[],
              titolo:'Dr.', nomeProf:'Mario', cognomeProf:'Rossi', slug:'',
              email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'',
+             x:'', bioLunga:'', specDescr:'', patologie:'',
              foto_url: null },
   tipiVisita: ['Prima visita', 'Controllo'],
   tipiVisitaRecords: [],
@@ -5894,7 +5914,7 @@ function loadSettings(){
   fld('setting-slug',      S.settings.slug);
   fld('setting-bio',       S.settings.bio);
   fld('setting-esperienza',S.settings.esperienza);
-  fld('setting-albo',      S.settings.albo);
+  { const _ae=document.getElementById('setting-albo'); if(_ae) _ae.value=[S.settings.albo, S.settings.alboProvincia?'('+S.settings.alboProvincia+')':''].filter(Boolean).join(' '); }
   fld('setting-email',     S.settings.email);
   fld('setting-telefono',  S.settings.telefono);
   fld('setting-sito-web',  S.settings.sitoWeb);
@@ -5902,6 +5922,10 @@ function loadSettings(){
   fld('setting-instagram', S.settings.instagram);
   fld('setting-youtube',   S.settings.youtube);
   fld('setting-facebook',  S.settings.facebook);
+  fld('setting-x', S.settings.x);
+  fld('setting-bio-lunga', S.settings.bioLunga);
+  fld('setting-spec-descrizione', S.settings.specDescr);
+  fld('setting-patologie', S.settings.patologie);
   updateBioCounter();
   renderSlugPreview();
   renderLingue();
@@ -5925,7 +5949,6 @@ async function saveSettings(){
   S.settings.slug        = newSlug;
   S.settings.bio         = val('setting-bio');
   S.settings.esperienza  = val('setting-esperienza');
-  S.settings.albo        = val('setting-albo');
   S.settings.email       = val('setting-email');
   S.settings.telefono    = val('setting-telefono');
   S.settings.sitoWeb     = val('setting-sito-web');
@@ -5933,6 +5956,10 @@ async function saveSettings(){
   S.settings.instagram   = val('setting-instagram');
   S.settings.youtube     = val('setting-youtube');
   S.settings.facebook    = val('setting-facebook');
+  S.settings.x         = val('setting-x');
+  S.settings.bioLunga  = val('setting-bio-lunga');
+  S.settings.specDescr = val('setting-spec-descrizione');
+  S.settings.patologie = val('setting-patologie');
   const _slugImpactChanged = S.settings.nomeProf !== _prevNome ||
                              S.settings.cognomeProf !== _prevCogn ||
                              S.settings.spec !== _prevSpec;
@@ -5957,7 +5984,6 @@ async function saveSettings(){
         specializzazione: S.settings.spec        || null,
         specializzazioni: (()=>{ const a=[...new Set([S.settings.spec,...(S.settings.specAltre||[])].filter(Boolean))]; return a.length?a:null; })(),
         slug:             S.settings.slug        || null,
-        numero_albo:      S.settings.albo        || null,
         bio:              S.settings.bio         || null,
         anni_esperienza:  S.settings.esperienza  || null,
         lingue:           S.settings.lingue.length ? S.settings.lingue : null,
@@ -5968,6 +5994,11 @@ async function saveSettings(){
         instagram:        S.settings.instagram   || null,
         youtube:          S.settings.youtube     || null,
         facebook:         S.settings.facebook    || null,
+        x_url:                        S.settings.x         || null,
+        bio_lunga:                    S.settings.bioLunga  || null,
+        specializzazioni_descrizione: S.settings.specDescr || null,
+        patologie_trattate:           S.settings.patologie || null,
+        data_modifica_profilo:        new Date().toISOString(),
         notifica_nuova_prenotazione:   S.settings.notifNuovaPrenotazione,
         notifica_cancellazione:        S.settings.notifCancellazione,
         notifica_appuntamento_manuale: S.settings.notifAppuntamentoManuale,
