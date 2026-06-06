@@ -377,6 +377,9 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .bk-hero-divider{position:relative;width:110px;height:1px;border:none;margin:14px 0 16px 46px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.82) 50%,transparent)}
 .bk-hero-divider::before{content:"";position:absolute;left:50%;top:50%;width:72px;height:10px;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(255,255,255,.45),transparent 75%);filter:blur(3px);border-radius:50%;pointer-events:none}
 .bk-hero-bio{font-size:13px;color:rgba(255,255,255,.72);line-height:1.65;margin-bottom:12px}
+.bk-about{max-width:640px;margin:0 auto 28px;padding:0 4px}
+.bk-about-h{font-family:'DM Serif Display',serif;font-size:19px;color:#fff;margin:18px 0 8px}
+.bk-about-p{font-size:14px;line-height:1.7;color:rgba(255,255,255,.82);white-space:pre-line}
 .bk-hero-tags{display:flex;flex-wrap:wrap;gap:6px}
 .bk-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15)}
 .bk-section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.38);margin-bottom:10px}
@@ -1087,6 +1090,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <symbol id="ic-instagram" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></symbol>
   <symbol id="ic-youtube" viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></symbol>
   <symbol id="ic-facebook" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24"><path style="fill:currentColor;stroke:none" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></symbol>
   <symbol id="ic-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
   <symbol id="ic-message" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></symbol>
   <symbol id="ic-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><line x1="14" y1="14" x2="14" y2="17.5"/><line x1="14" y1="20.5" x2="17.5" y2="20.5"/><line x1="20.5" y1="14" x2="20.5" y2="20.5"/><line x1="17.5" y1="17.5" x2="17.5" y2="14"/></symbol>
@@ -1325,16 +1329,22 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           </div>
           <div class="form-row">
             <div class="form-group"><label class="form-label">Anni di esperienza</label><input class="form-input" id="setting-esperienza" type="number" min="0" max="60" placeholder="es. 15"></div>
-            <div class="form-group"><label class="form-label">N° iscrizione albo</label><input class="form-input" id="setting-albo" placeholder="es. 12345"></div>
+            <div class="form-group"><label class="form-label">N&deg; iscrizione albo <span style="font-size:12px;font-weight:400;color:var(--ink3)">(dalla registrazione)</span></label><input class="form-input" id="setting-albo" readonly style="background:var(--surface2);color:var(--ink2);cursor:not-allowed" placeholder="—"></div>
           </div>
         </div></div>
       </div>
 
       <div style="margin-top:32px">
-        <div class="section-title">Bio breve</div>
+        <div class="section-title">Presentazione <span style="font-size:12px;font-weight:400;color:var(--ink3)">(pagina pubblica · SEO)</span></div>
         <div class="card"><div class="card-body">
-          <textarea class="form-textarea" id="setting-bio" maxlength="500" style="min-height:80px" placeholder="Es. Cardiologo specializzato in aritmie, 15 anni di esperienza..." oninput="updateBioCounter()" onblur="this.value=capitalizeSentences(this.value.trim());updateBioCounter()"></textarea>
-          <div class="bio-counter" id="bio-counter">0 / 500</div>
+          <p style="font-size:13px;color:var(--ink2);line-height:1.55;margin-bottom:8px">Questo testo compare sulla tua pagina pubblica ed è ciò che aiuta i pazienti a trovarti su Google quando cercano il tuo nome: più è ricco e specifico, meglio ti posiziona. <strong style="color:var(--ink)">Ricordati di salvare dopo aver generato il testo definitivo.</strong></p>
+
+          <p style="font-size:12px;color:var(--ink3);line-height:1.55;margin-bottom:14px">Cosa includere: le tue aree di expertise e le prestazioni che offri, le condizioni e patologie che tratti più spesso, i tuoi titoli e certificazioni, master e pubblicazioni, la partecipazione a congressi come relatore, l'attività di ricerca e universitaria, esperienze all'estero e cosa caratterizza il tuo approccio. Nome, specializzazione, città e lingue li prendiamo già dal tuo profilo.</p>
+          <div style="position:relative">
+            <textarea class="form-textarea" id="setting-bio-lunga" maxlength="2000" style="min-height:160px;padding-right:34px" placeholder="Scrivi qui la tua presentazione, oppure inserisci degli appunti e premi «Genera con AI»." onblur="this.value=this.value.trim()"></textarea>
+            <button type="button" id="btn-svuota-bio" title="Svuota" aria-label="Svuota la presentazione" onclick="svuotaPresentazione()" style="position:absolute;top:8px;right:8px;border:none;background:transparent;color:var(--ink3);cursor:pointer;font-size:15px;line-height:1;padding:4px;border-radius:6px">✕</button>
+          </div>
+          <button class="btn btn-secondary" id="btn-genera-ai" style="margin-top:12px" onclick="generaPresentazioneAI()"><svg class="ic"><use href="#ic-sparkles"/></svg>Genera con AI</button>
         </div></div>
       </div>
 
@@ -1349,6 +1359,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-instagram"/></svg></span><input class="form-input" id="setting-instagram" placeholder="Instagram (@username)"></div>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-youtube"/></svg></span><input class="form-input" id="setting-youtube" placeholder="YouTube (URL canale)"></div>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-facebook"/></svg></span><input class="form-input" id="setting-facebook" placeholder="Facebook (URL pagina)"></div>
+            <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-x"/></svg></span><input class="form-input" id="setting-x" placeholder="X (URL o @username)"></div>
           </div>
         </div></div>
       </div>
@@ -1702,6 +1713,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="bk-social" id="bk-social-row"></div>
       </div>
     </div>
+    <div class="bk-about" id="bk-about" style="display:none"></div>
 
     <div class="booking-card">
       <div class="booking-card-title">Prenota una visita</div>
@@ -2774,10 +2786,11 @@ async function loadMedicoFromDB(user){
       S.settings.nome        = [data.titolo, data.nome, data.cognome].filter(Boolean).join(' ') || S.settings.nome;
       S.settings.spec        = data.specializzazione   || '';
       S.settings.slug        = data.slug               || '';
-      S.settings.albo        = data.numero_albo        || '';
+      S.settings.albo        = data.numero_iscrizione_ordine || '';
       S.settings.bio         = data.bio                || '';
       S.settings.esperienza  = data.anni_esperienza    || '';
       S.settings.lingue      = Array.isArray(data.lingue) ? data.lingue : [];
+      S.settings.ambitiExpertise = Array.isArray(data.ambiti_expertise) ? data.ambiti_expertise : [];
       S.settings.specAltre   = data.specializzazioni
         ? data.specializzazioni.filter(s => s !== data.specializzazione)
         : [];
@@ -2788,6 +2801,11 @@ async function loadMedicoFromDB(user){
       S.settings.instagram   = data.instagram          || '';
       S.settings.youtube     = data.youtube            || '';
       S.settings.facebook    = data.facebook           || '';
+      S.settings.alboProvincia = data.provincia_ordine || '';
+      S.settings.x             = data.x_url || '';
+      S.settings.bioLunga      = data.bio_lunga || '';
+      S.settings.specDescr     = data.specializzazioni_descrizione || '';
+      S.settings.patologie     = data.patologie_trattate || '';
       S.settings.foto_url    = data.foto_url           || null;
       S.settings.notifNuovaPrenotazione   = data.notifica_nuova_prenotazione   !== false;
       S.settings.notifCancellazione       = data.notifica_cancellazione        !== false;
@@ -3143,9 +3161,10 @@ function translateAuthError(msg){
 var S = {
   medicoId: null,
   centri:[], appuntamenti:[], pazienti:[],
-  settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', esperienza:'', lingue:[], specAltre:[],
+  settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', alboProvincia:'', esperienza:'', lingue:[], specAltre:[],
              titolo:'Dr.', nomeProf:'Mario', cognomeProf:'Rossi', slug:'',
              email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'',
+             x:'', bioLunga:'', specDescr:'', patologie:'', ambitiExpertise:[],
              foto_url: null },
   tipiVisita: ['Prima visita', 'Controllo'],
   tipiVisitaRecords: [],
@@ -3183,6 +3202,65 @@ const SPECIALIZZAZIONI_UFFICIALI = [
   'Radiodiagnostica','Radioterapia','Reumatologia','Scienza dell\'alimentazione',
   'Statistica sanitaria e biometria','Urologia'
 ];
+async function generaPresentazioneAI(){
+  const ta = document.getElementById('setting-bio-lunga');
+  const btn = document.getElementById('btn-genera-ai');
+  if(!ta) return;
+  if(!isOnline()){ showToast('Connessione assente'); return; }
+  const note = ta.value.trim();
+  const prevBio = ta.value;
+  let token = '';
+  try { const { data:{ session } } = await supabaseClient.auth.getSession(); token = session?.access_token || ''; } catch(_){}
+  if(!token){ showToast('Sessione scaduta — rientra'); return; }
+  const citta = [...new Set((S.centri||[]).filter(c=>c.attivo!==false).map(c=>(c.citta||'').trim()).filter(Boolean))];
+  const payload = {
+    note,
+    titolo:    (S.settings.titolo||'').trim(),
+    nome:      (S.settings.nomeProf||'').trim(),
+    cognome:   (S.settings.cognomeProf||'').trim(),
+    spec:      (S.settings.spec||'').trim(),
+    specAltre: (S.settings.specAltre||[]).filter(Boolean),
+    citta,
+    lingue:    (S.settings.lingue||[]).filter(Boolean),
+    esperienza: parseInt(S.settings.esperienza,10) || null
+  };
+  const orig = btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled = true; btn.innerHTML = 'Generazione in corso…'; }
+  try {
+    const r = await fetch('/api/genera-presentazione', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.error || 'Errore generazione');
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+    if(!text) throw new Error('Risposta vuota');
+    ta.value = text;
+    S.settings.bioLunga = text;
+    if(typeof save==='function') save();
+    if(prevBio.trim()){
+      showToastAction('Presentazione rigenerata — rivedila e premi Salva', 'Annulla', ()=>{ ta.value = prevBio; S.settings.bioLunga = prevBio; if(typeof save==='function') save(); });
+    } else {
+      showToast('Presentazione generata — rivedila e premi Salva ✓');
+    }
+  } catch(e){
+    showToast('Errore: ' + e.message);
+  } finally {
+    if(btn){ btn.disabled = false; btn.innerHTML = orig; }
+  }
+}
+function svuotaPresentazione(){
+  const ta = document.getElementById('setting-bio-lunga');
+  if(!ta) return;
+  const prevBio = ta.value;
+  if(!prevBio.trim()){ ta.focus(); return; }
+  ta.value = '';
+  S.settings.bioLunga = '';
+  if(typeof save==='function') save();
+  ta.focus();
+  showToastAction('Presentazione svuotata', 'Annulla', ()=>{ ta.value = prevBio; S.settings.bioLunga = prevBio; if(typeof save==='function') save(); });
+}
 const SOCIAL_ICONS={
   email:`<svg class="ic"><use href="#ic-mail"/></svg>`,
   phone:`<svg class="ic"><use href="#ic-phone"/></svg>`,
@@ -3190,7 +3268,8 @@ const SOCIAL_ICONS={
   linkedin:`<svg class="ic"><use href="#ic-linkedin"/></svg>`,
   instagram:`<svg class="ic"><use href="#ic-instagram"/></svg>`,
   youtube:`<svg class="ic"><use href="#ic-youtube"/></svg>`,
-  facebook:`<svg class="ic"><use href="#ic-facebook"/></svg>`
+  facebook:`<svg class="ic"><use href="#ic-facebook"/></svg>`,
+  x:`<svg class="ic"><use href="#ic-x"/></svg>`
 };
 
 const SAFE_KEYS = ['agendaView', 'selectedDay', 'currentPage', 'settings_ui_only'];
@@ -3286,9 +3365,14 @@ loadConfig().then(checkView);
 
 function checkView(){
   const params = new URLSearchParams(location.search);
+  const _legacyDoc = params.get('doc');
+  if(_legacyDoc && location.pathname === '/'){
+    location.replace(location.origin + '/m/' + encodeURIComponent(_legacyDoc));
+    return;
+  }
   if(params.has('cancel')){
     showCancelView();
-  } else if(location.search.includes('booking')){
+  } else if(location.search.includes('booking') || location.pathname.startsWith('/m/')){
     showBookingView();
   } else {
     checkSession();
@@ -3509,9 +3593,8 @@ document.getElementById('modal-paziente').addEventListener('click', function(e){
 
 // ── SHARE LINK ──
 function getShareUrl(){
-  const base = location.href.split('?')[0];
   const slug = S.settings.slug;
-  return base + '?booking' + (slug ? '&doc='+encodeURIComponent(slug) : '');
+  return slug ? location.origin + '/m/' + encodeURIComponent(slug) : location.origin + '/?booking';
 }
 function updateShareLink(){
   const el = document.getElementById('share-url-display');
@@ -3523,7 +3606,7 @@ function copyShareLink(){
 }
 function openBookingPage(){
   showBookingView();
-  history.pushState({},'',getShareUrl().replace(location.href.split('?')[0], ''));
+  const _su = getShareUrl(); history.pushState({}, '', _su.replace(location.origin, ''));
 }
 function shareWhatsApp(){
   const url = getShareUrl();
@@ -5792,15 +5875,8 @@ async function checkSlugAvailability(){
 function renderSlugPreview(){
   const el=document.getElementById('slug-preview'); if(!el) return;
   const slug=(document.getElementById('setting-slug')||{}).value||'';
-  const base=location.href.split('?')[0];
-  el.innerHTML=base+'?booking'+(slug?'&amp;doc=<span>'+slug+'</span>':'');
+  el.innerHTML = location.origin + '/m/' + (slug ? '<span>'+slug+'</span>' : '<span style="opacity:.5">…</span>');
 }
-function updateBioCounter(){
-  const ta=document.getElementById('setting-bio');
-  const el=document.getElementById('bio-counter');
-  if(ta&&el) el.textContent=(ta.value.length)+' / 500';
-}
-
 function buildSocialRow(st){
   const links=[];
   const addLink=(icon,href,title)=>links.push(`<a href="${href}" class="bk-social-link" title="${title}" target="_blank" rel="noopener">${SOCIAL_ICONS[icon]}</a>`);
@@ -5811,6 +5887,7 @@ function buildSocialRow(st){
   if(st.instagram){const u=st.instagram.replace(/^@/,''); addLink('instagram','https://instagram.com/'+u,'Instagram'); }
   if(st.youtube){  const u=st.youtube.startsWith('http')?st.youtube:'https://youtube.com/@'+st.youtube; addLink('youtube',u,'YouTube'); }
   if(st.facebook){ const u=st.facebook.startsWith('http')?st.facebook:'https://facebook.com/'+st.facebook; addLink('facebook',u,'Facebook'); }
+  if(st.x){ const u=st.x.startsWith('http')?st.x:'https://x.com/'+st.x.replace(/^@/,''); addLink('x',u,'X'); }
   return links.join('');
 }
 
@@ -5889,9 +5966,8 @@ function loadSettings(){
   fld('setting-cognome-prof', S.settings.cognomeProf);
   fld('setting-spec',      S.settings.spec);
   fld('setting-slug',      S.settings.slug);
-  fld('setting-bio',       S.settings.bio);
   fld('setting-esperienza',S.settings.esperienza);
-  fld('setting-albo',      S.settings.albo);
+  { const _ae=document.getElementById('setting-albo'); if(_ae) _ae.value=[S.settings.albo, S.settings.alboProvincia?'('+S.settings.alboProvincia+')':''].filter(Boolean).join(' '); }
   fld('setting-email',     S.settings.email);
   fld('setting-telefono',  S.settings.telefono);
   fld('setting-sito-web',  S.settings.sitoWeb);
@@ -5899,7 +5975,8 @@ function loadSettings(){
   fld('setting-instagram', S.settings.instagram);
   fld('setting-youtube',   S.settings.youtube);
   fld('setting-facebook',  S.settings.facebook);
-  updateBioCounter();
+  fld('setting-x', S.settings.x);
+  fld('setting-bio-lunga', S.settings.bioLunga);
   renderSlugPreview();
   renderLingue();
   renderSpecAltre();
@@ -5920,9 +5997,7 @@ async function saveSettings(){
   }
   const newSlug          = slugify(val('setting-slug'));
   S.settings.slug        = newSlug;
-  S.settings.bio         = val('setting-bio');
   S.settings.esperienza  = val('setting-esperienza');
-  S.settings.albo        = val('setting-albo');
   S.settings.email       = val('setting-email');
   S.settings.telefono    = val('setting-telefono');
   S.settings.sitoWeb     = val('setting-sito-web');
@@ -5930,6 +6005,8 @@ async function saveSettings(){
   S.settings.instagram   = val('setting-instagram');
   S.settings.youtube     = val('setting-youtube');
   S.settings.facebook    = val('setting-facebook');
+  S.settings.x         = val('setting-x');
+  S.settings.bioLunga  = val('setting-bio-lunga');
   const _slugImpactChanged = S.settings.nomeProf !== _prevNome ||
                              S.settings.cognomeProf !== _prevCogn ||
                              S.settings.spec !== _prevSpec;
@@ -5954,8 +6031,6 @@ async function saveSettings(){
         specializzazione: S.settings.spec        || null,
         specializzazioni: (()=>{ const a=[...new Set([S.settings.spec,...(S.settings.specAltre||[])].filter(Boolean))]; return a.length?a:null; })(),
         slug:             S.settings.slug        || null,
-        numero_albo:      S.settings.albo        || null,
-        bio:              S.settings.bio         || null,
         anni_esperienza:  S.settings.esperienza  || null,
         lingue:           S.settings.lingue.length ? S.settings.lingue : null,
         email_pubblica:   S.settings.email       || null,
@@ -5965,6 +6040,9 @@ async function saveSettings(){
         instagram:        S.settings.instagram   || null,
         youtube:          S.settings.youtube     || null,
         facebook:         S.settings.facebook    || null,
+        x_url:                        S.settings.x         || null,
+        bio_lunga:                    S.settings.bioLunga  || null,
+        data_modifica_profilo:        new Date().toISOString(),
         notifica_nuova_prenotazione:   S.settings.notifNuovaPrenotazione,
         notifica_cancellazione:        S.settings.notifCancellazione,
         notifica_appuntamento_manuale: S.settings.notifAppuntamentoManuale,
@@ -6195,7 +6273,7 @@ function homeSearch(q){
         }
         const sub = [specHtml, cittaHtml].filter(Boolean).join(' · ');
         const subEl = sub ? `<div class="home-result-spec">${sub}</div>` : '';
-        return `<div class="home-result-card" onclick="location.href='?booking&doc=${encodeURIComponent(m.slug)}'">
+        return `<div class="home-result-card" onclick="location.href='/m/${encodeURIComponent(m.slug)}'">
           <div class="home-result-avatar">${av}</div>
           <div><div class="home-result-name">${nome}</div>${subEl}</div>
         </div>`;
@@ -6217,8 +6295,8 @@ function showBookingView(){
   bkInit();
 }
 async function bkInit(){
-  const params = new URLSearchParams(location.search);
-  const urlSlug = params.get('doc');
+  const _pm = location.pathname.match(/^\/m\/([^\/?#]+)/);
+  const urlSlug = _pm ? decodeURIComponent(_pm[1]) : (new URLSearchParams(location.search).get('doc') || '');
 
   if(urlSlug && isOnline()){
     try {
@@ -6235,12 +6313,11 @@ async function bkInit(){
       const ini = fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
       if(m.foto_url){ avatarEl.innerHTML = `<img src="${escapeAttr(m.foto_url)}" alt="${escapeAttr(fullName)}">`; }
       else { avatarEl.textContent = ini; }
-      const bioEl = document.getElementById('bk-hero-bio');
-      if(bioEl){ if(m.bio){ bioEl.textContent=m.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
       const tagsEl = document.getElementById('bk-hero-tags');
       if(tagsEl){
         const tags = [];
         if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
+        if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
         (m.lingue||[]).forEach(l=>tags.push(l));
         tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
       }
@@ -6252,8 +6329,10 @@ async function bkInit(){
         linkedin: m.linkedin,
         instagram:m.instagram,
         youtube:  m.youtube,
-        facebook: m.facebook
+        facebook: m.facebook,
+        x: m.x_url,
       });
+      bk.aboutBio  = m.bio_lunga || '';
       const { data: centriDB } = await supabaseClient
         .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
       S.centri = (centriDB||[]).map(c=>({
@@ -6290,18 +6369,24 @@ async function bkInit(){
     const ini=fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
     if(S.settings.foto_url){ avatarEl.innerHTML=`<img src="${S.settings.foto_url}" alt="${fullName}">`; }
     else { avatarEl.textContent=ini; }
-    const bioEl=document.getElementById('bk-hero-bio');
-    if(bioEl){ if(S.settings.bio){ bioEl.textContent=S.settings.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
     const tagsEl=document.getElementById('bk-hero-tags');
     if(tagsEl){
       const tags=[];
       if(S.settings.esperienza) tags.push(S.settings.esperienza+' anni di esperienza');
-      if(S.settings.albo) tags.push('Albo n. '+S.settings.albo);
+      if(S.settings.albo) tags.push('Albo n. '+S.settings.albo+(S.settings.alboProvincia?' ('+S.settings.alboProvincia+')':''));
       (S.settings.lingue||[]).forEach(l=>tags.push(l));
       tagsEl.innerHTML=tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
     }
     const socialEl=document.getElementById('bk-social-row');
     if(socialEl) socialEl.innerHTML=buildSocialRow(S.settings);
+    bk.aboutBio  = S.settings.bioLunga || '';
+  }
+  const aboutEl=document.getElementById('bk-about');
+  if(aboutEl){
+    let h='';
+    if(bk.aboutBio)  h += `<p class="bk-about-p">${escapeHtml(bk.aboutBio)}</p>`;
+    aboutEl.innerHTML=h;
+    aboutEl.style.display = h ? 'block' : 'none';
   }
   populateTipiVisitaSelects();
   const now=new Date();
@@ -8657,6 +8742,31 @@ function showToast(msg){
   if(!t){ console.log('[toast]', msg); return; }
   t.textContent=msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
+}
+let _toastActionTimer = null;
+function showToastAction(msg, actionLabel, actionFn, ms){
+  const t = document.getElementById('toast');
+  if(!t){ console.log('[toast]', msg); return; }
+  if(_toastActionTimer){ clearTimeout(_toastActionTimer); }
+  t.textContent = '';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  t.appendChild(span);
+  if(actionLabel && typeof actionFn === 'function'){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = actionLabel;
+    btn.style.cssText = 'margin-left:14px;background:transparent;border:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer';
+    btn.onclick = () => {
+      if(_toastActionTimer){ clearTimeout(_toastActionTimer); }
+      t.classList.remove('show');
+      t.textContent = '';
+      actionFn();
+    };
+    t.appendChild(btn);
+  }
+  t.classList.add('show');
+  _toastActionTimer = setTimeout(()=>{ t.classList.remove('show'); t.textContent = ''; }, ms || 5000);
 }
 
 // Popola i select specializzazione subito al caricamento pagina (DOM già pronto,
