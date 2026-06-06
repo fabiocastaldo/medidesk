@@ -1335,30 +1335,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
 
       <div style="margin-top:32px">
-        <div class="section-title">Bio breve</div>
+        <div class="section-title">Presentazione <span style="font-size:12px;font-weight:400;color:var(--ink3)">(pagina pubblica · SEO)</span></div>
         <div class="card"><div class="card-body">
-          <textarea class="form-textarea" id="setting-bio" maxlength="500" style="min-height:80px" placeholder="Es. Cardiologo specializzato in aritmie, 15 anni di esperienza..." oninput="updateBioCounter()" onblur="this.value=capitalizeSentences(this.value.trim());updateBioCounter()"></textarea>
-          <div class="bio-counter" id="bio-counter">0 / 500</div>
-        </div></div>
-      </div>
-
-      <div style="margin-top:32px">
-        <div class="section-title">Presentazione estesa <span style="font-size:12px;font-weight:400;color:var(--ink3)">(pagina pubblica · SEO)</span></div>
-        <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);line-height:1.55;margin-bottom:14px">Questi testi appaiono sulla tua pagina pubblica e aiutano i pazienti a trovarti su Google quando cercano il tuo nome. Compilali in italiano naturale e completo, oppure usa «Genera» per una bozza da rifinire.</p>
-          <label class="form-label">I tuoi ambiti / prestazioni <span style="font-size:12px;font-weight:400;color:var(--ink3)">(aiutano la generazione)</span></label>
-          <div id="ambiti-list" class="tag-editor" style="margin:6px 0 8px"></div>
-          <div style="display:flex;gap:8px;margin-bottom:14px">
-            <input class="form-input" id="new-ambito" placeholder="es. rinoplastica" style="flex:1" onkeydown="if(event.key==='Enter')addAmbito()" onblur="this.value=this.value.trim()">
-            <button class="btn btn-secondary" onclick="addAmbito()">+ Aggiungi</button>
-          </div>
-          <button class="btn btn-secondary" style="margin-bottom:18px" onclick="generaPresentazione()"><svg class="ic"><use href="#ic-sparkles"/></svg>Genera presentazione</button>
-          <label class="form-label">Bio estesa</label>
-          <textarea class="form-textarea" id="setting-bio-lunga" maxlength="2000" style="min-height:120px" placeholder="Presentazione completa del medico, in frasi compiute." onblur="this.value=this.value.trim()"></textarea>
-          <label class="form-label" style="margin-top:14px">Descrizione delle specializzazioni</label>
-          <textarea class="form-textarea" id="setting-spec-descrizione" maxlength="1500" style="min-height:90px" placeholder="Di cosa ti occupi, in prosa discorsiva." onblur="this.value=this.value.trim()"></textarea>
-          <label class="form-label" style="margin-top:14px">Patologie trattate</label>
-          <textarea class="form-textarea" id="setting-patologie" maxlength="1500" style="min-height:90px" placeholder="Le condizioni di cui ti occupi, integrate in frase." onblur="this.value=this.value.trim()"></textarea>
+          <p style="font-size:13px;color:var(--ink2);line-height:1.55;margin-bottom:14px">Questo testo compare sulla tua pagina pubblica ed è ciò che aiuta i pazienti a trovarti su Google quando cercano il tuo nome: più è ricco e specifico, meglio ti posiziona.</p>
+          <textarea class="form-textarea" id="setting-bio-lunga" maxlength="2000" style="min-height:160px" placeholder="Indica qui le tue aree di expertise e le prestazioni che offri, le condizioni e patologie che tratti più spesso, i tuoi titoli e certificazioni, e cosa caratterizza il tuo approccio. Nome, specializzazione, città e lingue li prendiamo già dal tuo profilo. Poi premi «Genera con AI» per trasformare gli appunti in una presentazione, oppure scrivila direttamente." onblur="this.value=this.value.trim()"></textarea>
+          <button class="btn btn-secondary" id="btn-genera-ai" style="margin-top:12px" onclick="generaPresentazioneAI()"><svg class="ic"><use href="#ic-sparkles"/></svg>Genera con AI</button>
         </div></div>
       </div>
 
@@ -3216,74 +3197,49 @@ const SPECIALIZZAZIONI_UFFICIALI = [
   'Radiodiagnostica','Radioterapia','Reumatologia','Scienza dell\'alimentazione',
   'Statistica sanitaria e biometria','Urologia'
 ];
-const SPEC_INFO = {
-  "Cardiologia": { descr:"la diagnosi e la cura delle malattie del cuore e dei vasi", ambiti:["ipertensione","aritmie","scompenso cardiaco","prevenzione cardiovascolare"] },
-  "Chirurgia generale": { descr:"la diagnosi e il trattamento chirurgico delle patologie dell'addome e dei tessuti molli", ambiti:["ernie","colecisti","noduli e cisti","piccola chirurgia ambulatoriale"] },
-  "Chirurgia plastica, ricostruttiva ed estetica": { descr:"la chirurgia ricostruttiva ed estetica del volto e del corpo", ambiti:["chirurgia post-traumatica","chirurgia oncologica ricostruttiva","medicina e chirurgia estetica"] },
-  "Dermatologia e venereologia": { descr:"la salute della pelle, dei capelli, delle unghie e delle mucose", ambiti:["controllo dei nei","acne","dermatiti","dermatologia oncologica"] },
-  "Ginecologia e ostetricia": { descr:"la salute dell'apparato genitale femminile e il percorso della gravidanza", ambiti:["visite di controllo","ecografie","contraccezione","menopausa"] },
-  "Ortopedia e traumatologia": { descr:"la diagnosi e la cura delle patologie di ossa, articolazioni e muscoli", ambiti:["lesioni sportive","artrosi","mal di schiena","traumi"] },
-  "Oftalmologia": { descr:"la salute della vista e le patologie dell'occhio", ambiti:["visite oculistiche","controllo della vista","glaucoma","cataratta"] },
-  "Otorinolaringoiatria": { descr:"la diagnosi e la cura delle patologie di orecchio, naso e gola", ambiti:["vertigini","sinusiti","disturbi dell'udito","russamento"] },
-  "Gastroenterologia": { descr:"la diagnosi e la cura delle malattie dell'apparato digerente", ambiti:["reflusso","colon irritabile","epatologia","endoscopia digestiva"] },
-  "Endocrinologia e malattie del metabolismo": { descr:"la diagnosi e la cura dei disturbi ormonali e metabolici", ambiti:["tiroide","diabete","osteoporosi","disturbi del peso"] },
-  "Neurologia": { descr:"la diagnosi e la cura delle malattie del sistema nervoso", ambiti:["cefalee","disturbi del sonno","vertigini","disturbi della memoria"] },
-  "Psichiatria": { descr:"la diagnosi e la cura dei disturbi della sfera psichica", ambiti:["ansia","depressione","disturbi del sonno","disturbi dell'umore"] },
-  "Psicoterapia": { descr:"il sostegno e la cura del disagio psicologico attraverso il colloquio", ambiti:["ansia","depressione","difficoltà relazionali","gestione dello stress"] },
-  "Urologia": { descr:"la diagnosi e la cura delle patologie dell'apparato urinario e genitale maschile", ambiti:["calcolosi","prostata","disturbi urinari","prevenzione urologica"] },
-  "Pediatria": { descr:"la salute e lo sviluppo del bambino, dalla nascita all'adolescenza", ambiti:["visite di controllo","vaccinazioni","allergie","disturbi della crescita"] },
-  "Reumatologia": { descr:"la diagnosi e la cura delle malattie di articolazioni, ossa e tessuto connettivo", ambiti:["artrite","artrosi","osteoporosi","malattie autoimmuni"] },
-  "Allergologia e immunologia clinica": { descr:"la diagnosi e la cura delle allergie e dei disturbi del sistema immunitario", ambiti:["allergie respiratorie","allergie alimentari","orticaria","test allergologici"] },
-  "Malattie dell'apparato respiratorio": { descr:"la diagnosi e la cura delle malattie dei polmoni e delle vie respiratorie", ambiti:["asma","BPCO","tosse cronica","disturbi respiratori del sonno"] },
-  "Medicina interna": { descr:"la diagnosi e la gestione complessiva delle patologie dell'adulto", ambiti:["ipertensione","diabete","patologie croniche","inquadramento diagnostico"] },
-  "Scienza dell'alimentazione": { descr:"la valutazione nutrizionale e l'impostazione di percorsi alimentari", ambiti:["educazione alimentare","sovrappeso","nutrizione clinica","piani alimentari personalizzati"] },
-  "Geriatria": { descr:"la salute e la cura della persona anziana", ambiti:["valutazione multidimensionale","fragilità","polipatologia","prevenzione"] },
-  "Medicina fisica e riabilitativa": { descr:"il recupero funzionale dopo traumi, interventi o patologie", ambiti:["riabilitazione post-operatoria","dolore muscoloscheletrico","recupero motorio","percorsi riabilitativi"] }
-};
-const SPEC_DESCR_GENERICA = "la diagnosi, la cura e il monitoraggio delle condizioni di propria competenza";
-function _joinIt(arr){
-  arr = (arr||[]).map(s=>String(s||'').trim()).filter(Boolean);
-  if(!arr.length) return '';
-  if(arr.length===1) return arr[0];
-  return arr.slice(0,-1).join(', ') + ' e ' + arr[arr.length-1];
-}
-function generaPresentazione(){
-  const titolo = (S.settings.titolo||'').trim();
-  const nomeCompleto = [titolo, (S.settings.nomeProf||'').trim(), (S.settings.cognomeProf||'').trim()].filter(Boolean).join(' ').trim() || 'Il medico';
-  const art = /ssa\.?$/i.test(titolo) ? 'La' : 'Il';
-  const specPrinc = (S.settings.spec||'').trim();
-  const specTutte = [...new Set([specPrinc, ...((S.settings.specAltre)||[])].filter(Boolean))];
-  const ambiti = ((S.settings.ambitiExpertise)||[]).map(s=>String(s||'').trim()).filter(Boolean);
-  const lingue = ((S.settings.lingue)||[]).filter(Boolean);
-  const esp = parseInt(S.settings.esperienza,10);
+async function generaPresentazioneAI(){
+  const ta = document.getElementById('setting-bio-lunga');
+  const btn = document.getElementById('btn-genera-ai');
+  if(!ta) return;
+  if(!isOnline()){ showToast('Connessione assente'); return; }
+  const note = ta.value.trim();
+  if(note && !confirm('Rigenero la presentazione dalle tue note attuali? Il contenuto del box verrà sostituito.')) return;
+  let token = '';
+  try { const { data:{ session } } = await supabaseClient.auth.getSession(); token = session?.access_token || ''; } catch(_){}
+  if(!token){ showToast('Sessione scaduta — rientra'); return; }
   const citta = [...new Set((S.centri||[]).filter(c=>c.attivo!==false).map(c=>(c.citta||'').trim()).filter(Boolean))];
-  const info = SPEC_INFO[specPrinc] || null;
-
-  const _v = id => (document.getElementById(id)||{}).value||'';
-  if((_v('setting-bio-lunga') || _v('setting-spec-descrizione') || _v('setting-patologie')) && !confirm('Sovrascrivo i testi attuali con una nuova bozza generata?')) return;
-
-  let bio = `${art} ${nomeCompleto} è specialista in ${_joinIt(specTutte) || 'medicina'}.`;
-  if(citta.length) bio += ` Riceve a ${_joinIt(citta)}.`;
-  if(ambiti.length) bio += ` Si dedica in particolare a ${_joinIt(ambiti)}.`;
-  bio += (esp && esp>0)
-    ? ` Con ${esp} anni di esperienza, segue ogni paziente con un approccio personalizzato, dalla prima visita al follow-up.`
-    : ` Segue ogni paziente con un approccio personalizzato, dalla prima visita al follow-up.`;
-  if(lingue.length) bio += ` Offre visite anche in ${_joinIt(lingue.map(l=>String(l).toLowerCase()))}.`;
-
-  const disc = info ? info.descr : SPEC_DESCR_GENERICA;
-  let descr = (specTutte.length>1)
-    ? `Specialista in ${_joinIt(specTutte)}, si occupa di ${disc}.`
-    : `${art==='La'?'La dottoressa':'Il dottore'} si occupa di ${disc}.`;
-  if(ambiti.length) descr += ` In particolare offre prestazioni di ${_joinIt(ambiti)}.`;
-
-  const fontePat = ambiti.length ? ambiti : (info ? info.ambiti : []);
-  const pat = fontePat.length ? `Tra gli ambiti di cui si occupa rientrano ${_joinIt(fontePat)}. Per una valutazione del proprio caso è consigliata una visita.` : '';
-
-  const setVal = (id,val) => { const e=document.getElementById(id); if(e) e.value=val; };
-  setVal('setting-bio-lunga', bio);     S.settings.bioLunga = bio;
-  setVal('setting-spec-descrizione', descr); S.settings.specDescr = descr;
-  if(pat){ setVal('setting-patologie', pat); S.settings.patologie = pat; }
-  showToast('Bozza generata — rivedila e salva ✓');
+  const payload = {
+    note,
+    titolo:    (S.settings.titolo||'').trim(),
+    nome:      (S.settings.nomeProf||'').trim(),
+    cognome:   (S.settings.cognomeProf||'').trim(),
+    spec:      (S.settings.spec||'').trim(),
+    specAltre: (S.settings.specAltre||[]).filter(Boolean),
+    citta,
+    lingue:    (S.settings.lingue||[]).filter(Boolean),
+    esperienza: parseInt(S.settings.esperienza,10) || null
+  };
+  const orig = btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled = true; btn.innerHTML = 'Generazione in corso…'; }
+  try {
+    const r = await fetch('/api/genera-presentazione', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.error || 'Errore generazione');
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
+    if(!text) throw new Error('Risposta vuota');
+    ta.value = text;
+    S.settings.bioLunga = text;
+    if(typeof save==='function') save();
+    showToast('Presentazione generata — rivedila e premi Salva ✓');
+  } catch(e){
+    showToast('Errore: ' + e.message);
+  } finally {
+    if(btn){ btn.disabled = false; btn.innerHTML = orig; }
+  }
 }
 const SOCIAL_ICONS={
   email:`<svg class="ic"><use href="#ic-mail"/></svg>`,
@@ -5901,12 +5857,6 @@ function renderSlugPreview(){
   const slug=(document.getElementById('setting-slug')||{}).value||'';
   el.innerHTML = location.origin + '/m/' + (slug ? '<span>'+slug+'</span>' : '<span style="opacity:.5">…</span>');
 }
-function updateBioCounter(){
-  const ta=document.getElementById('setting-bio');
-  const el=document.getElementById('bio-counter');
-  if(ta&&el) el.textContent=(ta.value.length)+' / 500';
-}
-
 function buildSocialRow(st){
   const links=[];
   const addLink=(icon,href,title)=>links.push(`<a href="${href}" class="bk-social-link" title="${title}" target="_blank" rel="noopener">${SOCIAL_ICONS[icon]}</a>`);
@@ -5996,7 +5946,6 @@ function loadSettings(){
   fld('setting-cognome-prof', S.settings.cognomeProf);
   fld('setting-spec',      S.settings.spec);
   fld('setting-slug',      S.settings.slug);
-  fld('setting-bio',       S.settings.bio);
   fld('setting-esperienza',S.settings.esperienza);
   { const _ae=document.getElementById('setting-albo'); if(_ae) _ae.value=[S.settings.albo, S.settings.alboProvincia?'('+S.settings.alboProvincia+')':''].filter(Boolean).join(' '); }
   fld('setting-email',     S.settings.email);
@@ -6008,11 +5957,8 @@ function loadSettings(){
   fld('setting-facebook',  S.settings.facebook);
   fld('setting-x', S.settings.x);
   fld('setting-bio-lunga', S.settings.bioLunga);
-  fld('setting-spec-descrizione', S.settings.specDescr);
-  fld('setting-patologie', S.settings.patologie);
-  updateBioCounter();
   renderSlugPreview();
-  renderLingue(); renderAmbiti();
+  renderLingue();
   renderSpecAltre();
   renderFotoProfilo();
 }
@@ -6031,7 +5977,6 @@ async function saveSettings(){
   }
   const newSlug          = slugify(val('setting-slug'));
   S.settings.slug        = newSlug;
-  S.settings.bio         = val('setting-bio');
   S.settings.esperienza  = val('setting-esperienza');
   S.settings.email       = val('setting-email');
   S.settings.telefono    = val('setting-telefono');
@@ -6042,8 +5987,6 @@ async function saveSettings(){
   S.settings.facebook    = val('setting-facebook');
   S.settings.x         = val('setting-x');
   S.settings.bioLunga  = val('setting-bio-lunga');
-  S.settings.specDescr = val('setting-spec-descrizione');
-  S.settings.patologie = val('setting-patologie');
   const _slugImpactChanged = S.settings.nomeProf !== _prevNome ||
                              S.settings.cognomeProf !== _prevCogn ||
                              S.settings.spec !== _prevSpec;
@@ -6068,10 +6011,8 @@ async function saveSettings(){
         specializzazione: S.settings.spec        || null,
         specializzazioni: (()=>{ const a=[...new Set([S.settings.spec,...(S.settings.specAltre||[])].filter(Boolean))]; return a.length?a:null; })(),
         slug:             S.settings.slug        || null,
-        bio:              S.settings.bio         || null,
         anni_esperienza:  S.settings.esperienza  || null,
         lingue:           S.settings.lingue.length ? S.settings.lingue : null,
-        ambiti_expertise: (S.settings.ambitiExpertise && S.settings.ambitiExpertise.length) ? S.settings.ambitiExpertise : null,
         email_pubblica:   S.settings.email       || null,
         telefono:         S.settings.telefono    || null,
         sito_web:         S.settings.sitoWeb     || null,
@@ -6081,8 +6022,6 @@ async function saveSettings(){
         facebook:         S.settings.facebook    || null,
         x_url:                        S.settings.x         || null,
         bio_lunga:                    S.settings.bioLunga  || null,
-        specializzazioni_descrizione: S.settings.specDescr || null,
-        patologie_trattate:           S.settings.patologie || null,
         data_modifica_profilo:        new Date().toISOString(),
         notifica_nuova_prenotazione:   S.settings.notifNuovaPrenotazione,
         notifica_cancellazione:        S.settings.notifCancellazione,
@@ -6218,30 +6157,6 @@ function addLingua(){
   syncLingueToDB();
 }
 function removeLingua(idx){ S.settings.lingue.splice(idx,1); save(); renderLingue(); syncLingueToDB(); }
-// ambiti expertise
-function renderAmbiti(){
-  const el=document.getElementById('ambiti-list'); if(!el) return;
-  el.innerHTML=(S.settings.ambitiExpertise||[]).map((a,i)=>
-    `<span class="tag-chip">${a}<button class="tag-chip-x chip-remove-ambiti" data-idx="${i}" title="Rimuovi">✕</button></span>`
-  ).join('');
-}
-function addAmbito(){
-  const inp=document.getElementById('new-ambito'); const v=inp.value.trim(); if(!v) return;
-  if((S.settings.ambitiExpertise||[]).some(a=>a.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
-  if(!S.settings.ambitiExpertise) S.settings.ambitiExpertise=[];
-  S.settings.ambitiExpertise.push(v); inp.value=''; save(); renderAmbiti(); showToast('Aggiunto ✓');
-  syncAmbitiToDB();
-}
-function removeAmbito(idx){ S.settings.ambitiExpertise.splice(idx,1); save(); renderAmbiti(); syncAmbitiToDB(); }
-async function syncAmbitiToDB(){
-  if(!isOnline()) return;
-  try {
-    const { data: { user } } = await supabaseClient.auth.getUser(); if(!user) return;
-    await supabaseClient.from('medici')
-      .update({ ambiti_expertise: S.settings.ambitiExpertise.length ? S.settings.ambitiExpertise : null })
-      .eq('user_id', user.id);
-  } catch(e){ console.error('[Delphi~Med] syncAmbitiToDB:', e.message); }
-}
 async function syncLingueToDB(){
   if(!isOnline()) return;
   try {
@@ -6378,8 +6293,6 @@ async function bkInit(){
       const ini = fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
       if(m.foto_url){ avatarEl.innerHTML = `<img src="${escapeAttr(m.foto_url)}" alt="${escapeAttr(fullName)}">`; }
       else { avatarEl.textContent = ini; }
-      const bioEl = document.getElementById('bk-hero-bio');
-      if(bioEl){ if(m.bio){ bioEl.textContent=m.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
       const tagsEl = document.getElementById('bk-hero-tags');
       if(tagsEl){
         const tags = [];
@@ -6400,8 +6313,6 @@ async function bkInit(){
         x: m.x_url,
       });
       bk.aboutBio  = m.bio_lunga || '';
-      bk.aboutSpec = m.specializzazioni_descrizione || '';
-      bk.aboutPat  = m.patologie_trattate || '';
       const { data: centriDB } = await supabaseClient
         .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
       S.centri = (centriDB||[]).map(c=>({
@@ -6438,8 +6349,6 @@ async function bkInit(){
     const ini=fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
     if(S.settings.foto_url){ avatarEl.innerHTML=`<img src="${S.settings.foto_url}" alt="${fullName}">`; }
     else { avatarEl.textContent=ini; }
-    const bioEl=document.getElementById('bk-hero-bio');
-    if(bioEl){ if(S.settings.bio){ bioEl.textContent=S.settings.bio; bioEl.style.display='block'; } else bioEl.style.display='none'; }
     const tagsEl=document.getElementById('bk-hero-tags');
     if(tagsEl){
       const tags=[];
@@ -6451,15 +6360,11 @@ async function bkInit(){
     const socialEl=document.getElementById('bk-social-row');
     if(socialEl) socialEl.innerHTML=buildSocialRow(S.settings);
     bk.aboutBio  = S.settings.bioLunga || '';
-    bk.aboutSpec = S.settings.specDescr || '';
-    bk.aboutPat  = S.settings.patologie || '';
   }
   const aboutEl=document.getElementById('bk-about');
   if(aboutEl){
     let h='';
     if(bk.aboutBio)  h += `<p class="bk-about-p">${escapeHtml(bk.aboutBio)}</p>`;
-    if(bk.aboutSpec) h += `<h2 class="bk-about-h">Aree di competenza</h2><p class="bk-about-p">${escapeHtml(bk.aboutSpec)}</p>`;
-    if(bk.aboutPat)  h += `<h2 class="bk-about-h">Patologie trattate</h2><p class="bk-about-p">${escapeHtml(bk.aboutPat)}</p>`;
     aboutEl.innerHTML=h;
     aboutEl.style.display = h ? 'block' : 'none';
   }
