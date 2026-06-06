@@ -380,6 +380,9 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .bk-about{max-width:640px;margin:0 auto 28px;padding:0 4px}
 .bk-about-h{font-family:'DM Serif Display',serif;font-size:19px;color:#fff;margin:18px 0 8px}
 .bk-about-p{font-size:14px;line-height:1.7;color:rgba(255,255,255,.82);white-space:pre-line}
+.bk-about-p.bk-clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;overflow:hidden}
+.bk-about-toggle{display:none;margin-top:8px;background:none;border:0;padding:0;color:#fff;opacity:.85;font:600 13px/1.4 inherit;cursor:pointer;text-decoration:underline}
+.bk-about-toggle.show{display:inline-block}
 .bk-hero-tags{display:flex;flex-wrap:wrap;gap:6px}
 .bk-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.15)}
 .bk-section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.38);margin-bottom:10px}
@@ -6384,9 +6387,13 @@ async function bkInit(){
   const aboutEl=document.getElementById('bk-about');
   if(aboutEl){
     let h='';
-    if(bk.aboutBio)  h += `<p class="bk-about-p">${escapeHtml(bk.aboutBio)}</p>`;
+    if(bk.aboutBio){
+      h += `<p class="bk-about-p bk-clamp" id="bk-about-text">${escapeHtml(bk.aboutBio)}</p>`;
+      h += `<button type="button" class="bk-about-toggle" id="bk-about-toggle" aria-expanded="false" onclick="toggleAboutBio()">Leggi tutto</button>`;
+    }
     aboutEl.innerHTML=h;
     aboutEl.style.display = h ? 'block' : 'none';
+    if(h) requestAnimationFrame(initAboutClamp);
   }
   populateTipiVisitaSelects();
   const now=new Date();
@@ -6395,6 +6402,32 @@ async function bkInit(){
   renderBkCentri();
 }
 
+function toggleAboutBio(){
+  const t=document.getElementById('bk-about-text');
+  const b=document.getElementById('bk-about-toggle');
+  if(!t||!b) return;
+  const collapsed=t.classList.contains('bk-clamp');
+  t.classList.toggle('bk-clamp', !collapsed);
+  b.textContent = collapsed ? 'Mostra meno' : 'Leggi tutto';
+  b.setAttribute('aria-expanded', String(collapsed));
+}
+function initAboutClamp(){
+  const t=document.getElementById('bk-about-text');
+  const b=document.getElementById('bk-about-toggle');
+  if(!t||!b) return;
+  b.textContent='Leggi tutto'; b.setAttribute('aria-expanded','false');
+  if(!window.matchMedia('(max-width:640px)').matches){
+    t.classList.remove('bk-clamp'); b.classList.remove('show'); return;
+  }
+  t.classList.add('bk-clamp');
+  const overflows = t.scrollHeight > t.clientHeight + 2;
+  b.classList.toggle('show', overflows);
+  if(!overflows) t.classList.remove('bk-clamp');
+}
+if(!window._aboutClampBound){
+  window._aboutClampBound = true;
+  let _abTo; window.addEventListener('resize', ()=>{ clearTimeout(_abTo); _abTo=setTimeout(initAboutClamp,150); });
+}
 function bkStep(n){
   document.querySelectorAll('.booking-step').forEach(s=>s.classList.remove('active'));
   document.getElementById('bk-step-'+n).classList.add('active');
