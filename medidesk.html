@@ -3286,9 +3286,14 @@ loadConfig().then(checkView);
 
 function checkView(){
   const params = new URLSearchParams(location.search);
+  const _legacyDoc = params.get('doc');
+  if(_legacyDoc && location.pathname === '/'){
+    location.replace(location.origin + '/m/' + encodeURIComponent(_legacyDoc));
+    return;
+  }
   if(params.has('cancel')){
     showCancelView();
-  } else if(location.search.includes('booking')){
+  } else if(location.search.includes('booking') || location.pathname.startsWith('/m/')){
     showBookingView();
   } else {
     checkSession();
@@ -3509,9 +3514,8 @@ document.getElementById('modal-paziente').addEventListener('click', function(e){
 
 // ── SHARE LINK ──
 function getShareUrl(){
-  const base = location.href.split('?')[0];
   const slug = S.settings.slug;
-  return base + '?booking' + (slug ? '&doc='+encodeURIComponent(slug) : '');
+  return slug ? location.origin + '/m/' + encodeURIComponent(slug) : location.origin + '/?booking';
 }
 function updateShareLink(){
   const el = document.getElementById('share-url-display');
@@ -3523,7 +3527,7 @@ function copyShareLink(){
 }
 function openBookingPage(){
   showBookingView();
-  history.pushState({},'',getShareUrl().replace(location.href.split('?')[0], ''));
+  const _su = getShareUrl(); history.pushState({}, '', _su.replace(location.origin, ''));
 }
 function shareWhatsApp(){
   const url = getShareUrl();
@@ -5792,8 +5796,7 @@ async function checkSlugAvailability(){
 function renderSlugPreview(){
   const el=document.getElementById('slug-preview'); if(!el) return;
   const slug=(document.getElementById('setting-slug')||{}).value||'';
-  const base=location.href.split('?')[0];
-  el.innerHTML=base+'?booking'+(slug?'&amp;doc=<span>'+slug+'</span>':'');
+  el.innerHTML = location.origin + '/m/' + (slug ? '<span>'+slug+'</span>' : '<span style="opacity:.5">…</span>');
 }
 function updateBioCounter(){
   const ta=document.getElementById('setting-bio');
@@ -6195,7 +6198,7 @@ function homeSearch(q){
         }
         const sub = [specHtml, cittaHtml].filter(Boolean).join(' · ');
         const subEl = sub ? `<div class="home-result-spec">${sub}</div>` : '';
-        return `<div class="home-result-card" onclick="location.href='?booking&doc=${encodeURIComponent(m.slug)}'">
+        return `<div class="home-result-card" onclick="location.href='/m/${encodeURIComponent(m.slug)}'">
           <div class="home-result-avatar">${av}</div>
           <div><div class="home-result-name">${nome}</div>${subEl}</div>
         </div>`;
@@ -6217,8 +6220,8 @@ function showBookingView(){
   bkInit();
 }
 async function bkInit(){
-  const params = new URLSearchParams(location.search);
-  const urlSlug = params.get('doc');
+  const _pm = location.pathname.match(/^\/m\/([^\/?#]+)/);
+  const urlSlug = _pm ? decodeURIComponent(_pm[1]) : (new URLSearchParams(location.search).get('doc') || '');
 
   if(urlSlug && isOnline()){
     try {
