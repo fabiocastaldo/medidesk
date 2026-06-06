@@ -1340,7 +1340,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <p style="font-size:13px;color:var(--ink2);line-height:1.55;margin-bottom:8px">Questo testo compare sulla tua pagina pubblica ed è ciò che aiuta i pazienti a trovarti su Google quando cercano il tuo nome: più è ricco e specifico, meglio ti posiziona. Ricordati di salvare dopo aver generato il testo.</p>
 
           <p style="font-size:12px;color:var(--ink3);line-height:1.55;margin-bottom:14px">Cosa includere: le tue aree di expertise e le prestazioni che offri, le condizioni e patologie che tratti più spesso, i tuoi titoli e certificazioni, master e pubblicazioni, la partecipazione a congressi come relatore, l'attività di ricerca e universitaria, esperienze all'estero e cosa caratterizza il tuo approccio. Nome, specializzazione, città e lingue li prendiamo già dal tuo profilo.</p>
-          <textarea class="form-textarea" id="setting-bio-lunga" maxlength="2000" style="min-height:160px" placeholder="Scrivi qui la tua presentazione, oppure inserisci degli appunti e premi «Genera con AI»." onblur="this.value=this.value.trim()"></textarea>
+          <div style="position:relative">
+            <textarea class="form-textarea" id="setting-bio-lunga" maxlength="2000" style="min-height:160px;padding-right:34px" placeholder="Scrivi qui la tua presentazione, oppure inserisci degli appunti e premi «Genera con AI»." onblur="this.value=this.value.trim()"></textarea>
+            <button type="button" id="btn-svuota-bio" title="Svuota" aria-label="Svuota la presentazione" onclick="svuotaPresentazione()" style="position:absolute;top:8px;right:8px;border:none;background:transparent;color:var(--ink3);cursor:pointer;font-size:15px;line-height:1;padding:4px;border-radius:6px">✕</button>
+          </div>
           <button class="btn btn-secondary" id="btn-genera-ai" style="margin-top:12px" onclick="generaPresentazioneAI()"><svg class="ic"><use href="#ic-sparkles"/></svg>Genera con AI</button>
         </div></div>
       </div>
@@ -3242,6 +3245,15 @@ async function generaPresentazioneAI(){
   } finally {
     if(btn){ btn.disabled = false; btn.innerHTML = orig; }
   }
+}
+function svuotaPresentazione(){
+  const ta = document.getElementById('setting-bio-lunga');
+  if(!ta) return;
+  if(ta.value.trim() && !confirm('Svuotare il testo della presentazione?')) return;
+  ta.value = '';
+  S.settings.bioLunga = '';
+  if(typeof save==='function') save();
+  ta.focus();
 }
 const SOCIAL_ICONS={
   email:`<svg class="ic"><use href="#ic-mail"/></svg>`,
