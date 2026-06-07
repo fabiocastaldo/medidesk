@@ -6486,7 +6486,7 @@ async function bkInit(){
           attivo: true,
           email: data.centro.email_segreteria || '',
           turni: (data.centro.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:(t.inizio||'').substring(0,5), fine:(t.fine||'').substring(0,5), slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
-          giornateSingole: (data.centro.disponibilita_singole||[]).map(g=>({ id:g.id, data:g.data, inizio:(g.inizio||'').substring(0,5), fine:(g.fine||'').substring(0,5), slot:g.durata_slot, centroId:String(data.centro.id) }))
+          giornateSingole: (data.centro.giornate || data.centro.disponibilita_singole || []).map(g=>({ id:g.id, data:g.data, inizio:(g.inizio||'').substring(0,5), fine:(g.fine||'').substring(0,5), slot:g.durata_slot, centroId:String(data.centro.id) }))
         };
         S.centri = [centroMappato]; bk.centroId = String(data.centro.id);
         const _lockedEl = document.getElementById('bk-centro-locked');
@@ -6890,8 +6890,9 @@ async function confirmBooking(){
           const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: bk.medicoId });
           if(slotDB) bk.slotOccupati = slotDB.map(s=>({ centroId: s.centro_id, data: s.data, ora: (s.ora||'').substring(0,5) }));
         } catch(_){}
-        showToast(e.message);
-        bkStep(3);
+        showToastAction(e.message, 'Chiudi', ()=>{}, 0);
+        bk.ora = null;
+        bkSelectDate(bk.dateStr);
         return;
       }
       showToast(e.message || 'Servizio temporaneamente non disponibile. Riprova tra qualche istante.');
@@ -8998,11 +8999,11 @@ async function confirmDeleteArchivioScaduto(){
 }
 
 // ── TOAST ──
-function showToast(msg){
+function showToast(msg, ms){
   const t=document.getElementById('toast');
   if(!t){ console.log('[toast]', msg); return; }
   t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
+  setTimeout(()=>t.classList.remove('show'), ms || 2500);
 }
 let _toastActionTimer = null;
 function showToastAction(msg, actionLabel, actionFn, ms){
@@ -9017,7 +9018,7 @@ function showToastAction(msg, actionLabel, actionFn, ms){
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = actionLabel;
-    btn.style.cssText = 'margin-left:14px;background:transparent;border:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer';
+    btn.style.cssText = 'margin-left:14px;background:transparent;border:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;pointer-events:auto';
     btn.onclick = () => {
       if(_toastActionTimer){ clearTimeout(_toastActionTimer); }
       t.classList.remove('show');
@@ -9027,7 +9028,9 @@ function showToastAction(msg, actionLabel, actionFn, ms){
     t.appendChild(btn);
   }
   t.classList.add('show');
-  _toastActionTimer = setTimeout(()=>{ t.classList.remove('show'); t.textContent = ''; }, ms || 5000);
+  if(ms !== 0){
+    _toastActionTimer = setTimeout(()=>{ t.classList.remove('show'); t.textContent = ''; }, ms || 5000);
+  }
 }
 
 // Popola i select specializzazione subito al caricamento pagina (DOM già pronto,
