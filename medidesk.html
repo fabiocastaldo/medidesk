@@ -6714,6 +6714,25 @@ async function confirmBooking(){
     const btn = document.getElementById('bk-confirm-btn');
     if(btn){ btn.disabled = true; btn.textContent = 'Invio in corso…'; }
     try {
+      if(bk.centroMode){
+        const _r = await fetch('/api/create-booking-centro', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            booking_token: bk.centroToken,
+            nome, cognome,
+            email: appt.email, tel: appt.tel,
+            tipo: appt.tipo, area: appt.area,
+            data: bk.dateStr, ora: bk.ora
+          })
+        });
+        const _out = await _r.json().catch(()=>({}));
+        if(_r.status === 409 || _out.error === 'slot_taken'){
+          const err = new Error('Questo orario è appena stato prenotato. Ti riportiamo alla scelta dello slot.');
+          err.isSlotTaken = true; throw err;
+        }
+        if(!_r.ok || !_out.ok){ throw new Error(_out.error || 'Servizio temporaneamente non disponibile, riprova tra qualche minuto'); }
+        appt.id = _out.appt_id;
+      } else {
       const insertPromise = supabaseClient.from('appuntamenti').insert({
         medico_id:          bk.medicoId,
         centro_id:          bk.centroId,
@@ -6765,6 +6784,7 @@ async function confirmBooking(){
           console.error('[Delphi~Med] emit_email_token:', e.message);
           // Soft-fail: appt salvato, email no. La UI mostra comunque "Prenotazione confermata"
         }
+      }
       }
     } catch(e){
       console.error('[Delphi~Med] confirmBooking INSERT:', e.message);
