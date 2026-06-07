@@ -6890,7 +6890,7 @@ async function confirmBooking(){
           const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: bk.medicoId });
           if(slotDB) bk.slotOccupati = slotDB.map(s=>({ centroId: s.centro_id, data: s.data, ora: (s.ora||'').substring(0,5) }));
         } catch(_){}
-        showToast(e.message, 6000);
+        showToastAction(e.message, 'Chiudi', ()=>{}, 0);
         bk.ora = null;
         bkSelectDate(bk.dateStr);
         return;
@@ -9028,7 +9028,9 @@ function showToastAction(msg, actionLabel, actionFn, ms){
     t.appendChild(btn);
   }
   t.classList.add('show');
-  _toastActionTimer = setTimeout(()=>{ t.classList.remove('show'); t.textContent = ''; }, ms || 5000);
+  if(ms !== 0){
+    _toastActionTimer = setTimeout(()=>{ t.classList.remove('show'); t.textContent = ''; }, ms || 5000);
+  }
 }
 
 // Popola i select specializzazione subito al caricamento pagina (DOM già pronto,
