@@ -210,8 +210,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .status-dot.active{background:var(--accent)}
 .status-dot.inactive{background:var(--ink3)}
 .centro-header{display:flex;align-items:center;gap:12px}
-.centro-booking-link{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 0;padding-top:10px;border-top:1px solid var(--border)}
-.centro-booking-link .share-url{flex:1;min-width:160px}
+.centro-booking{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--border)}
+.centro-booking-hdr{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;font-weight:600;color:var(--ink2)}
+.centro-booking-hdr .ic{width:15px;height:15px;flex-shrink:0}
+.centro-booking-state{font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-light);border-radius:var(--r-sm);padding:1px 7px}
+.centro-booking-chevron{margin-left:auto;font-size:11px;color:var(--ink3);transition:transform .15s;transform:rotate(-90deg)}
+.centro-booking-hdr.open .centro-booking-chevron{transform:rotate(0)}
+.centro-booking-body{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.centro-booking-body .share-url{flex:1;min-width:160px}
+.centro-booking-acts{display:flex;flex-wrap:wrap;gap:8px}
+.centro-booking-warn{flex:1 1 100%;font-size:12px;line-height:1.4;color:var(--pending-ink);background:var(--pending-bg);border-left:3px solid var(--pending-accent);border-radius:var(--r-sm);padding:8px 10px}
 .centro-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
 .centro-info{flex:1}
 .centro-nome{font-weight:600}
@@ -3909,41 +3917,83 @@ function renderCentroCard(c, isActive){
         </div>
       </div>
       ${isActive ? `
-      <div class="centro-booking-link">
-        ${c.booking_token ? `
-          <span class="share-url">${escapeAttr(centroBookingUrl(c))}</span>
-          <button class="btn btn-sm btn-primary" onclick="copyBookingLink('${c.id}')">Copia</button>
-          <button class="btn btn-sm btn-secondary" onclick="qrBookingLink('${c.id}')"><svg class="ic"><use href="#ic-qr"/></svg>QR</button>
-          <button class="btn btn-sm btn-secondary" onclick="generaBookingLink('${c.id}', true)">Rigenera</button>
-          <button class="btn btn-sm btn-secondary centro-act-danger" onclick="revocaBookingLink('${c.id}')">Revoca</button>
-        ` : `
-          <button class="btn btn-sm btn-secondary" onclick="generaBookingLink('${c.id}')"><svg class="ic"><use href="#ic-link"/></svg>Genera link prenotazione</button>
-        `}
+      <div class="centro-booking">
+        <div class="centro-booking-hdr ${_linkOpen.has(String(c.id))?'open':''}" onclick="toggleCentroLink('${c.id}')">
+          <svg class="ic"><use href="#ic-link"/></svg>
+          <span>Link prenotazione</span>
+          ${c.booking_token?'<span class="centro-booking-state">attivo</span>':''}
+          <span class="centro-booking-chevron">▾</span>
+        </div>
+        ${_linkOpen.has(String(c.id)) ? `
+        <div class="centro-booking-body">
+          ${(_linkPending && _linkPending.id===String(c.id)) ? `
+            <div class="centro-booking-warn">${_linkPending.action==='rigenera'?'Rigenerare il link? Il link e il QR attuali smetteranno di funzionare.':'Revocare il link? Chi ha il link o il QR non potrà più prenotare.'}</div>
+            <div class="centro-booking-acts">
+              <button class="btn btn-sm centro-act-danger" onclick="confirmBookingAction()">Conferma</button>
+              <button class="btn btn-sm btn-secondary" onclick="cancelBookingAction()">Annulla</button>
+            </div>
+          ` : (c.booking_token ? `
+            <span class="share-url">${escapeAttr(centroBookingUrl(c))}</span>
+            <div class="centro-booking-acts">
+              <button class="btn btn-sm btn-primary" onclick="copyBookingLink('${c.id}')">Copia</button>
+              <button class="btn btn-sm btn-secondary" onclick="qrBookingLink('${c.id}')"><svg class="ic"><use href="#ic-qr"/></svg>QR</button>
+              <button class="btn btn-sm btn-secondary" onclick="armBookingAction('${c.id}','rigenera')">Rigenera</button>
+              <button class="btn btn-sm btn-secondary centro-act-danger" onclick="armBookingAction('${c.id}','revoca')">Revoca</button>
+            </div>
+          ` : `
+            <button class="btn btn-sm btn-secondary" onclick="generaBookingLink('${c.id}')"><svg class="ic"><use href="#ic-link"/></svg>Genera link prenotazione</button>
+          `)}
+        </div>
+        ` : ''}
       </div>
       ` : ''}
       ${turniHtml}${giornateHtml}
     </div>`;
 }
 
+let _linkOpen = new Set();
+let _linkPending = null;
+
 function centroBookingUrl(c){
   return c && c.booking_token ? location.origin + '/c/' + c.booking_token : '';
+}
+function toggleCentroLink(id){
+  const k = String(id);
+  if(_linkOpen.has(k)) _linkOpen.delete(k); else _linkOpen.add(k);
+  _linkPending = null;
+  renderCentri();
+}
+function armBookingAction(id, action){
+  _linkPending = { id: String(id), action };
+  _linkOpen.add(String(id));
+  renderCentri();
+}
+function cancelBookingAction(){
+  _linkPending = null;
+  renderCentri();
+}
+function confirmBookingAction(){
+  if(!_linkPending) return;
+  const { id, action } = _linkPending;
+  if(action === 'rigenera') generaBookingLink(id, true);
+  else if(action === 'revoca') revocaBookingLink(id);
 }
 async function generaBookingLink(id, rigenera){
   const c = S.centri.find(x=>String(x.id)===String(id)); if(!c) return;
   if(!isOnline()){ showToast('Serve la connessione per generare il link'); return; }
-  if(rigenera && !confirm('Rigenerare il link? Il link e il QR precedenti smetteranno di funzionare.')) return;
   const token = crypto.randomUUID().replace(/-/g,'');
   const { error } = await supabaseClient.from('centri').update({ booking_token: token }).eq('id', id);
   if(error){ console.error('[Delphi~Med] generaBookingLink:', error.message); showToast('Errore: link non generato'); return; }
-  c.booking_token = token; save(); renderCentri(); showToast(rigenera?'Link rigenerato ✓':'Link generato ✓');
+  c.booking_token = token; _linkPending = null; _linkOpen.add(String(id)); save(); renderCentri();
+  showToast(rigenera ? 'Link rigenerato ✓' : 'Link generato ✓');
 }
 async function revocaBookingLink(id){
   const c = S.centri.find(x=>String(x.id)===String(id)); if(!c) return;
   if(!isOnline()){ showToast('Serve la connessione per revocare il link'); return; }
-  if(!confirm('Revocare il link di prenotazione di questo centro? Chi ha il link o il QR non potrà più prenotare.')) return;
   const { error } = await supabaseClient.from('centri').update({ booking_token: null }).eq('id', id);
   if(error){ console.error('[Delphi~Med] revocaBookingLink:', error.message); showToast('Errore: link non revocato'); return; }
-  c.booking_token = null; save(); renderCentri(); showToast('Link revocato');
+  c.booking_token = null; _linkPending = null; _linkOpen.add(String(id)); save(); renderCentri();
+  showToast('Link revocato');
 }
 function copyBookingLink(id){
   const c = S.centri.find(x=>String(x.id)===String(id)); if(!c||!c.booking_token) return;
