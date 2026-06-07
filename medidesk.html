@@ -9018,7 +9018,7 @@ function showToastAction(msg, actionLabel, actionFn, ms){
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = actionLabel;
-    btn.style.cssText = 'margin-left:14px;background:transparent;border:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer';
+    btn.style.cssText = 'margin-left:14px;background:transparent;border:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;pointer-events:auto';
     btn.onclick = () => {
       if(_toastActionTimer){ clearTimeout(_toastActionTimer); }
       t.classList.remove('show');
