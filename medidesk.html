@@ -645,15 +645,15 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .giornata-row span{flex:1;color:var(--ink2)}
 
 /* ── HOME PUBBLICA ── */
-#view-home{display:none;flex-direction:column;min-height:100vh;background:var(--paper);font-family:'DM Sans',Arial,sans-serif}
+#view-home{display:none;flex-direction:column;min-height:100dvh;background:var(--paper);font-family:'DM Sans',Arial,sans-serif}
 .home-top{position:relative;flex-shrink:0;color:#fff;background:radial-gradient(130% 100% at 80% -10%,color-mix(in srgb,var(--brand-bright) 70%,transparent),transparent 62%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
 .home-top::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(240deg,rgba(255,255,255,.22),rgba(255,255,255,.04) 40%,transparent 75%)}
 .home-top>*{position:relative;z-index:1}
-.home-header{padding:18px 32px;display:flex;align-items:center;flex-shrink:0}
+.home-header{padding:14px 32px;display:flex;align-items:center;flex-shrink:0}
 .home-logo-wrap{display:flex;flex-direction:column;line-height:1.2}
 .home-logo{color:#fff;font-size:24px;font-weight:700;font-family:'Montserrat',sans-serif;letter-spacing:-.2px}
 .home-logo-payoff{color:rgba(255,255,255,.72);font-size:11.5px;font-weight:400;margin-top:4px;letter-spacing:.3px;font-family:'DM Sans',Arial,sans-serif}
-.home-hero{padding:48px 20px 88px;text-align:center;flex-shrink:0}
+.home-hero{padding:36px 20px 44px;text-align:center;flex-shrink:0}
 .home-hero h2{color:#fff;font-size:30px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
 .home-hero-sub{color:rgba(255,255,255,.82);font-size:15px;margin:0 0 34px}
 .home-search-wrap{max-width:520px;margin:0 auto;position:relative}
@@ -669,25 +669,25 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-result-spec{font-size:12px;color:#666;margin-top:2px}
 .home-search-msg{color:rgba(255,255,255,.75);font-size:13px;margin-top:10px;min-height:20px}
 .home-body{flex:1;background:var(--paper)}
-.home-sections{display:flex;gap:0;flex-wrap:wrap;max-width:860px;margin:0 auto;padding:52px 24px}
+.home-sections{display:flex;gap:0;flex-wrap:wrap;max-width:860px;margin:0 auto;padding:30px 24px}
 .home-section{flex:1;min-width:260px;padding:0 32px}
 .home-section:first-child{border-right:1px solid #e2e8e8}
-.home-section h3{font-size:19px;font-weight:700;color:var(--brand-mid);margin:0 0 20px;letter-spacing:-.2px}
-.home-feature{display:flex;align-items:flex-start;gap:10px;margin-bottom:13px;font-size:14px;color:#444;line-height:1.55}
+.home-section h3{font-size:19px;font-weight:700;color:var(--brand-mid);margin:0 0 14px;letter-spacing:-.2px}
+.home-feature{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:#444;line-height:1.55}
 .home-feature::before{content:'✓';color:var(--brand-mid);font-weight:700;flex-shrink:0;margin-top:1px}
 .home-cta-btn{display:inline-block;background:var(--brand-mid);color:#fff;border:1.5px solid var(--brand-mid);border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;font-family:'DM Sans',Arial,sans-serif}
 .home-cta-btn:hover{background:color-mix(in srgb,var(--brand-mid) 85%,#000);border-color:color-mix(in srgb,var(--brand-mid) 85%,#000)}
 .home-cta-btn-outline{background:transparent;color:var(--brand-mid)}
 .home-cta-btn-outline:hover{background:color-mix(in srgb,var(--brand-mid) 8%,var(--surface));border-color:color-mix(in srgb,var(--brand-mid) 85%,#000);color:color-mix(in srgb,var(--brand-mid) 85%,#000)}
-.home-cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
-.home-footer{background:#f0f0f0;padding:16px;text-align:center;font-size:12px;color:#aaa;flex-shrink:0}
+.home-cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.home-footer{background:#f0f0f0;padding:12px;text-align:center;font-size:12px;color:#aaa;flex-shrink:0}
 @media(max-width:640px){
-  .home-hero{padding:48px 16px 60px}
+  .home-hero{padding:32px 16px 36px}
   .home-hero h2{font-size:24px}
   .home-header{padding:14px 16px}
   .home-logo{font-size:20px}
-  .home-sections{padding:32px 16px}
-  .home-section+.home-section{border-right:none;border-top:1px solid #e2e8e8;margin-top:28px;padding-top:28px}
+  .home-sections{padding:24px 16px}
+  .home-section+.home-section{border-right:none;border-top:1px solid #e2e8e8;margin-top:20px;padding-top:20px}
   .home-section{padding:0}
 }
 
