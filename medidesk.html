@@ -3038,6 +3038,7 @@ async function loadAppuntamentiFromDB(user){
         centroNome: _centro ? _centro.nome : (a.centro_nome || ''),
         source:      a.source || 'medico',
         per_conto:   a.per_conto || false,
+        da_centro:   a.da_centro || false,
         seen:        a.seen || false,
         cancelled:   a.cancelled === true,
         cancelledAt: a.cancelled_at || null
@@ -3106,6 +3107,7 @@ function startRealtimeChannel(){
         centroNome: _centro ? _centro.nome : '',
         source:     r.source || 'paziente',
         per_conto:  r.per_conto || false,
+        da_centro:  r.da_centro || false,
         seen:       r.seen || false,
         cancelled:   r.cancelled === true,
         cancelledAt: r.cancelled_at || null
@@ -3139,6 +3141,7 @@ function startRealtimeChannel(){
       local.centroNome = _centro ? _centro.nome : '';
       local.source     = r.source || 'paziente';
       local.per_conto  = r.per_conto || false;
+      local.da_centro  = r.da_centro || false;
       local.seen       = r.seen || false;
       local.cancelled   = r.cancelled === true;
       local.cancelledAt = r.cancelled_at || null;
@@ -5001,7 +5004,7 @@ function showApptDetail(id){
       <div class="field-row"><span class="field-key">Note</span><span class="field-val">${escapeHtml(a.note||'—')}</span></div>
       ${a.tel?`<div class="field-row"><span class="field-key">Telefono</span><span class="field-val">${escapeHtml(a.tel)}</span></div>`:''}
       ${a.email?`<div class="field-row"><span class="field-key">Email</span><span class="field-val">${escapeHtml(a.email)}</span></div>`:''}
-      ${a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-globe"/></svg>Prenotazione online</span></div>`:''}
+      ${a.da_centro?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-center"/></svg>Da segreteria</span></div>`:a.per_conto?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-globe"/></svg>Per conto di</span></div>`:a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-globe"/></svg>Prenotazione online</span></div>`:''}
       ${centro&&centro.email?`<div class="field-row"><span class="field-key">Email centro</span><span class="field-val">${escapeHtml(centro.email)}</span></div>`:''}
       ${a.cancelled?`<div class="field-row"><span class="field-key">Cancellato il</span><span class="field-val">${a.cancelledAt?new Date(a.cancelledAt).toLocaleDateString('it-IT'):'—'}</span></div>`:''}
       ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
@@ -6337,7 +6340,97 @@ function showBookingView(){
   setupCapitalizeListeners();
   bkInit();
 }
+function bkRenderHero(m){
+  const fullName = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
+  bk.medicoNome = fullName;
+  document.getElementById('bk-doctor-name').textContent = fullName;
+  document.getElementById('bk-doctor-spec').textContent = [...new Set([m.specializzazione, ...(m.specializzazioni || [])].filter(Boolean))].join(' · ');
+  const avatarEl = document.getElementById('bk-avatar-display');
+  const ini = fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
+  if(m.foto_url){ avatarEl.innerHTML = `<img src="${escapeAttr(m.foto_url)}" alt="${escapeAttr(fullName)}">`; }
+  else { avatarEl.textContent = ini; }
+  const tagsEl = document.getElementById('bk-hero-tags');
+  if(tagsEl){
+    const tags = [];
+    if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
+    if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
+    (m.lingue||[]).forEach(l=>tags.push(l));
+    tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+  }
+  const socialEl = document.getElementById('bk-social-row');
+  if(socialEl) socialEl.innerHTML = buildSocialRow({
+    email:    m.email_pubblica,
+    telefono: m.telefono,
+    sitoWeb:  m.sito_web,
+    linkedin: m.linkedin,
+    instagram:m.instagram,
+    youtube:  m.youtube,
+    facebook: m.facebook,
+    x: m.x_url,
+  });
+  bk.aboutBio = m.bio_lunga || '';
+}
 async function bkInit(){
+  const _cm = location.pathname.match(/^\/c\/([^\/?#]+)/);
+  if(_cm){
+    bk.centroMode = true; bk.centroToken = decodeURIComponent(_cm[1]);
+    if(isOnline()){
+      try {
+        const { data } = await supabaseClient.rpc('get_centro_by_token', { p_token: bk.centroToken });
+        if(!data){ document.getElementById('bk-doctor-name').textContent = 'Link non valido o revocato'; return; }
+        const { data: arr } = await supabaseClient.rpc('get_medico_pubblico', { p_slug: data.slug });
+        const m = arr && arr[0];
+        if(!m){ document.getElementById('bk-doctor-name').textContent = 'Link non valido o revocato'; return; }
+        bk.medicoId = m.id; bk.medicoEmail = m.email_pubblica || ''; bk.aboutBio = m.bio_lunga || '';
+        bkRenderHero(m);
+        const centroMappato = {
+          id: data.centro.id,
+          nome: data.centro.nome,
+          indirizzo: [data.centro.via, [data.centro.cap, data.centro.citta].filter(Boolean).join(' '), data.centro.provincia].filter(Boolean).join(', '),
+          colore: data.centro.colore || '#0D9488',
+          attivo: true,
+          email: data.centro.email_segreteria || '',
+          turni: (data.centro.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:(t.inizio||'').substring(0,5), fine:(t.fine||'').substring(0,5), slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
+          giornateSingole: (data.centro.disponibilita_singole||[]).map(g=>({ id:g.id, data:g.data, inizio:(g.inizio||'').substring(0,5), fine:(g.fine||'').substring(0,5), slot:g.durata_slot, centroId:String(data.centro.id) }))
+        };
+        S.centri = [centroMappato]; bk.centroId = String(data.centro.id);
+        const { data: tipiDB } = await supabaseClient.from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
+        S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
+        const { data: areeDB } = await supabaseClient.from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
+        S.areeTematiche = (areeDB||[]).map(r=>r.nome);
+        bk.slotOccupati = (data.occupati||[]).map(s=>({ centroId: data.centro.id, data: s.data, ora: (s.ora||'').substring(0,5) }));
+        if(!document.head.querySelector('meta[name="robots"]')){
+          document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
+        }
+        const _aboutEl = document.getElementById('bk-about');
+        if(_aboutEl){
+          let _h = '';
+          if(bk.aboutBio){
+            _h += `<p class="bk-about-p bk-clamp" id="bk-about-text">${escapeHtml(bk.aboutBio)}</p>`;
+            _h += `<button type="button" class="bk-about-toggle" id="bk-about-toggle" aria-expanded="false" onclick="toggleAboutBio()">Leggi tutto</button>`;
+          }
+          _aboutEl.innerHTML = _h;
+          _aboutEl.style.display = _h ? 'block' : 'none';
+          if(_h) requestAnimationFrame(initAboutClamp);
+        }
+        populateTipiVisitaSelects();
+        const _now = new Date();
+        bk.calYear = _now.getFullYear(); bk.calMonth = _now.getMonth();
+        const _toggleLabel = document.getElementById('bk-per-conto')?.closest('label');
+        if(_toggleLabel) _toggleLabel.style.display = 'none';
+        const _percontoHint = document.getElementById('bk-perconto-hint');
+        if(_percontoHint) _percontoHint.style.display = 'none';
+        const _perContoEl = document.getElementById('bk-per-conto');
+        if(_perContoEl) _perContoEl.checked = true;
+        bkTogglePerConto();
+        if(_toggleLabel) _toggleLabel.style.display = 'none';
+        bkStep(2);
+        renderBkCal();
+      } catch(e){ console.error('[Delphi~Med] bkInit centro:', e.message); }
+    }
+    return;
+  }
+  bk.centroMode = false;
   const _pm = location.pathname.match(/^\/m\/([^\/?#]+)/);
   const urlSlug = _pm ? decodeURIComponent(_pm[1]) : (new URLSearchParams(location.search).get('doc') || '');
 
@@ -6348,34 +6441,7 @@ async function bkInit(){
       if(!m){ document.getElementById('bk-doctor-name').textContent='Medico non trovato'; return; }
       bk.medicoId = m.id;
       bk.medicoEmail = m.email_pubblica || '';
-      const fullName = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
-      bk.medicoNome = fullName;
-      document.getElementById('bk-doctor-name').textContent = fullName;
-      document.getElementById('bk-doctor-spec').textContent = [...new Set([m.specializzazione, ...(m.specializzazioni || [])].filter(Boolean))].join(' · ');
-      const avatarEl = document.getElementById('bk-avatar-display');
-      const ini = fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
-      if(m.foto_url){ avatarEl.innerHTML = `<img src="${escapeAttr(m.foto_url)}" alt="${escapeAttr(fullName)}">`; }
-      else { avatarEl.textContent = ini; }
-      const tagsEl = document.getElementById('bk-hero-tags');
-      if(tagsEl){
-        const tags = [];
-        if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
-        if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
-        (m.lingue||[]).forEach(l=>tags.push(l));
-        tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
-      }
-      const socialEl = document.getElementById('bk-social-row');
-      if(socialEl) socialEl.innerHTML = buildSocialRow({
-        email:    m.email_pubblica,
-        telefono: m.telefono,
-        sitoWeb:  m.sito_web,
-        linkedin: m.linkedin,
-        instagram:m.instagram,
-        youtube:  m.youtube,
-        facebook: m.facebook,
-        x: m.x_url,
-      });
-      bk.aboutBio  = m.bio_lunga || '';
+      bkRenderHero(m);
       const { data: centriDB } = await supabaseClient
         .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
       S.centri = (centriDB||[]).map(c=>({
@@ -6615,7 +6681,7 @@ async function confirmBooking(){
   if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
   const emailVal=document.getElementById('bk-email').value.trim();
   if(!emailVal){ showToast('Inserisci la tua email per ricevere la conferma'); return; }
-  const perConto = document.getElementById('bk-per-conto')?.checked || false;
+  const perConto = bk.centroMode ? true : (document.getElementById('bk-per-conto')?.checked || false);
   if(perConto){
     if(!document.getElementById('bk-consent-terzi')?.checked){ showToast('Per procedere devi fornire la dichiarazione di autorizzazione'); return; }
   } else {
@@ -6634,7 +6700,7 @@ async function confirmBooking(){
     note:'',
     data:bk.dateStr, ora:bk.ora,
     centroId:bk.centroId, source:'paziente', seen:false,
-    cancellationToken, cancelled:false
+    cancellationToken, cancelled:false, da_centro:!!bk.centroMode
   };
   console.log('[Booking] supabaseClient:', !!supabaseClient);
   console.log('[Booking] medico_id:', bk.medicoId);
@@ -6660,7 +6726,8 @@ async function confirmBooking(){
         consenso_base_at:   consentTs,
         consenso_health_at: consentTs,
         consenso_versione:  consensoVersioneCorrente(perConto),
-        per_conto:          perConto
+        per_conto:          perConto,
+        da_centro:          !!bk.centroMode
       }).select('id').single();
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Servizio temporaneamente non disponibile, riprova tra qualche minuto')), 10000)
@@ -8217,10 +8284,12 @@ function _renderDonut(containerId, data, centerLabel){
 
 // ── ORIGINE PRENOTAZIONI ──
 function _renderOrigine(apps){
-  const perConto = apps.filter(a=>a.source==='paziente' && a.per_conto).length;
-  const online   = apps.filter(a=>a.source==='paziente' && !a.per_conto).length;
+  const daCentro = apps.filter(a=>a.da_centro).length;
+  const perConto = apps.filter(a=>a.source==='paziente' && a.per_conto && !a.da_centro).length;
+  const online   = apps.filter(a=>a.source==='paziente' && !a.per_conto && !a.da_centro).length;
   const manuale  = apps.filter(a=>a.source!=='paziente').length;
   const data = [{ label: 'Paziente', value: online, color: '#0D9488' }];
+  if(daCentro > 0) data.push({ label: 'Centro', value: daCentro, color: '#15487F' });
   if(perConto > 0) data.push({ label: 'Per conto di', value: perConto, color: '#F59E0B' });
   data.push({ label: 'Manuale', value: manuale, color: '#6366F1' });
   _renderBarList('chart-source', data, {showPct:true});
