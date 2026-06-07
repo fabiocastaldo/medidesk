@@ -3418,7 +3418,7 @@ function checkView(){
   }
   if(params.has('cancel')){
     showCancelView();
-  } else if(location.search.includes('booking') || location.pathname.startsWith('/m/')){
+  } else if(location.search.includes('booking') || location.pathname.startsWith('/m/') || location.pathname.startsWith('/c/')){
     showBookingView();
   } else {
     checkSession();
