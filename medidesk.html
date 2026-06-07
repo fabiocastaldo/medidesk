@@ -1397,7 +1397,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="card"><div class="card-body">
           <div class="social-links-grid">
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-mail"/></svg></span><input class="form-input" id="setting-email" type="email" placeholder="Email pubblica"></div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);margin:-2px 0 10px 34px"><input type="checkbox" id="setting-mostra-email" checked style="width:auto;margin:0">Mostra anche ai pazienti sul link pubblico</label>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-phone"/></svg></span><input class="form-input" id="setting-telefono" placeholder="Telefono pubblico"></div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);margin:-2px 0 4px 34px"><input type="checkbox" id="setting-mostra-telefono" checked style="width:auto;margin:0">Mostra anche ai pazienti sul link pubblico</label>
+            <p style="font-size:12px;color:var(--ink3);margin:0 0 12px 34px">La segreteria del centro vede sempre i tuoi contatti; questa scelta riguarda solo il link pubblico di prenotazione.</p>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-globe"/></svg></span><input class="form-input" id="setting-sito-web" placeholder="Sito web (https://...)"></div>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-linkedin"/></svg></span><input class="form-input" id="setting-linkedin" placeholder="LinkedIn (URL o username)"></div>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-instagram"/></svg></span><input class="form-input" id="setting-instagram" placeholder="Instagram (@username)"></div>
@@ -2851,6 +2854,8 @@ async function loadMedicoFromDB(user){
       S.settings.email       = data.email_pubblica     || '';
       S.settings.telefono    = data.telefono           || '';
       S.settings.sitoWeb     = data.sito_web           || '';
+      S.settings.mostraEmailPazienti    = data.mostra_email_pazienti    !== false;
+      S.settings.mostraTelefonoPazienti = data.mostra_telefono_pazienti !== false;
       S.settings.linkedin    = data.linkedin           || '';
       S.settings.instagram   = data.instagram          || '';
       S.settings.youtube     = data.youtube            || '';
@@ -6112,6 +6117,8 @@ function loadSettings(){
   fld('setting-email',     S.settings.email);
   fld('setting-telefono',  S.settings.telefono);
   fld('setting-sito-web',  S.settings.sitoWeb);
+  const _me=document.getElementById('setting-mostra-email');    if(_me) _me.checked = S.settings.mostraEmailPazienti    !== false;
+  const _mt=document.getElementById('setting-mostra-telefono'); if(_mt) _mt.checked = S.settings.mostraTelefonoPazienti !== false;
   fld('setting-linkedin',  S.settings.linkedin);
   fld('setting-instagram', S.settings.instagram);
   fld('setting-youtube',   S.settings.youtube);
@@ -6142,6 +6149,8 @@ async function saveSettings(){
   S.settings.email       = val('setting-email');
   S.settings.telefono    = val('setting-telefono');
   S.settings.sitoWeb     = val('setting-sito-web');
+  S.settings.mostraEmailPazienti    = document.getElementById('setting-mostra-email')?.checked    ?? true;
+  S.settings.mostraTelefonoPazienti = document.getElementById('setting-mostra-telefono')?.checked ?? true;
   S.settings.linkedin    = val('setting-linkedin');
   S.settings.instagram   = val('setting-instagram');
   S.settings.youtube     = val('setting-youtube');
@@ -6176,6 +6185,8 @@ async function saveSettings(){
         lingue:           S.settings.lingue.length ? S.settings.lingue : null,
         email_pubblica:   S.settings.email       || null,
         telefono:         S.settings.telefono    || null,
+        mostra_email_pazienti:    S.settings.mostraEmailPazienti    !== false,
+        mostra_telefono_pazienti: S.settings.mostraTelefonoPazienti !== false,
         sito_web:         S.settings.sitoWeb     || null,
         linkedin:         S.settings.linkedin    || null,
         instagram:        S.settings.instagram   || null,
@@ -6446,23 +6457,33 @@ function bkRenderHero(m){
   else { avatarEl.textContent = ini; }
   const tagsEl = document.getElementById('bk-hero-tags');
   if(tagsEl){
-    const tags = [];
-    if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
-    if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
-    (m.lingue||[]).forEach(l=>tags.push(l));
-    tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+    if(bk.centroMode){
+      tagsEl.innerHTML = '';
+    } else {
+      const tags = [];
+      if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
+      if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
+      (m.lingue||[]).forEach(l=>tags.push(l));
+      tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+    }
   }
   const socialEl = document.getElementById('bk-social-row');
-  if(socialEl) socialEl.innerHTML = buildSocialRow({
-    email:    m.email_pubblica,
-    telefono: m.telefono,
-    sitoWeb:  m.sito_web,
-    linkedin: m.linkedin,
-    instagram:m.instagram,
-    youtube:  m.youtube,
-    facebook: m.facebook,
-    x: m.x_url,
-  });
+  if(socialEl){
+    if(bk.centroMode){
+      socialEl.innerHTML = buildSocialRow({ email: m.email_pubblica, telefono: m.telefono });
+    } else {
+      socialEl.innerHTML = buildSocialRow({
+        email:    m.mostra_email_pazienti    !== false ? m.email_pubblica : '',
+        telefono: m.mostra_telefono_pazienti !== false ? m.telefono       : '',
+        sitoWeb:  m.sito_web,
+        linkedin: m.linkedin,
+        instagram:m.instagram,
+        youtube:  m.youtube,
+        facebook: m.facebook,
+        x: m.x_url,
+      });
+    }
+  }
   bk.aboutBio = m.bio_lunga || '';
 }
 async function bkInit(){
@@ -6503,16 +6524,7 @@ async function bkInit(){
           document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
         }
         const _aboutEl = document.getElementById('bk-about');
-        if(_aboutEl){
-          let _h = '';
-          if(bk.aboutBio){
-            _h += `<p class="bk-about-p bk-clamp" id="bk-about-text">${escapeHtml(bk.aboutBio)}</p>`;
-            _h += `<button type="button" class="bk-about-toggle" id="bk-about-toggle" aria-expanded="false" onclick="toggleAboutBio()">Leggi tutto</button>`;
-          }
-          _aboutEl.innerHTML = _h;
-          _aboutEl.style.display = _h ? 'block' : 'none';
-          if(_h) requestAnimationFrame(initAboutClamp);
-        }
+        if(_aboutEl){ _aboutEl.innerHTML = ''; _aboutEl.style.display = 'none'; }
         populateTipiVisitaSelects();
         const _now = new Date();
         bk.calYear = _now.getFullYear(); bk.calMonth = _now.getMonth();
@@ -6589,7 +6601,11 @@ async function bkInit(){
       tagsEl.innerHTML=tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
     }
     const socialEl=document.getElementById('bk-social-row');
-    if(socialEl) socialEl.innerHTML=buildSocialRow(S.settings);
+    if(socialEl) socialEl.innerHTML=buildSocialRow({
+      ...S.settings,
+      email:    S.settings.mostraEmailPazienti    !== false ? S.settings.email    : '',
+      telefono: S.settings.mostraTelefonoPazienti !== false ? S.settings.telefono : '',
+    });
     bk.aboutBio  = S.settings.bioLunga || '';
   }
   const aboutEl=document.getElementById('bk-about');
