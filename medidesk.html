@@ -564,6 +564,25 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .auth-link:hover{color:var(--accent)}
 .auth-legal{font-size:11px;color:var(--ink3);text-align:center;margin-top:14px;line-height:1.5}
 .auth-legal a{color:var(--accent);text-decoration:underline}
+/* ── Auth: pannello brand desktop + toggle password ── */
+.auth-shell{width:100%;max-width:400px;margin:0 auto}
+.auth-brand{display:none}
+.auth-pwd-wrap{position:relative}
+.auth-pwd-wrap input{padding-right:44px}
+.auth-pwd-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:none;background:none;border-radius:8px;color:var(--ink3);cursor:pointer}
+.auth-pwd-toggle:hover{color:var(--ink2)}
+.auth-pwd-toggle .ic{width:18px;height:18px}
+@media(min-width:880px){
+  .auth-shell{max-width:860px;display:flex;border-radius:20px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+  .auth-brand{display:flex;flex-direction:column;justify-content:center;flex-shrink:0;width:340px;padding:48px 40px;color:#fff;background:radial-gradient(120% 80% at 85% -10%,rgba(255,255,255,.18),transparent 60%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
+  .auth-brand-mark{font-family:'DM Serif Display',serif;font-size:34px;line-height:1;margin:0 0 8px}
+  .auth-brand-payoff{font-size:14px;opacity:.85;margin:0 0 32px}
+  .auth-brand-points{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:18px}
+  .auth-brand-points li{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.4;opacity:.92}
+  .auth-brand-points .ic{width:20px;height:20px;flex-shrink:0;margin-top:1px}
+  .auth-shell .auth-card{flex:1;max-width:none;border-radius:0;box-shadow:none}
+  .auth-shell .auth-card .auth-logo{display:none}
+}
 .pwd-strength-bar{height:4px;background:var(--border);border-radius:2px;margin:8px 0 3px}
 #pwd-strength-fill{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
 #pwd-strength-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;min-height:15px;margin-bottom:5px}
@@ -826,6 +845,16 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
 <!-- ══════════════ AUTH ══════════════ -->
 <div id="view-auth">
+  <div class="auth-shell">
+    <div class="auth-brand">
+      <div class="auth-brand-mark">Delphi~Med</div>
+      <p class="auth-brand-payoff">Il tuo studio, ovunque</p>
+      <ul class="auth-brand-points">
+        <li><svg class="ic"><use href="#ic-calendar"/></svg><span>Un'unica agenda per tutti i tuoi centri</span></li>
+        <li><svg class="ic"><use href="#ic-users"/></svg><span>Il fascicolo dei tuoi pazienti sempre con te</span></li>
+        <li><svg class="ic"><use href="#ic-sparkles"/></svg><span>Sintesi cliniche generate in un tocco</span></li>
+      </ul>
+    </div>
   <div class="auth-card">
     <div class="auth-logo">
       <h1>Delphi~Med</h1>
@@ -849,7 +878,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
       <div class="auth-field">
         <label>Password</label>
-        <input type="password" id="auth-login-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')signIn()">
+        <div class="auth-pwd-wrap"><input type="password" id="auth-login-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')signIn()"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
       </div>
       <button class="auth-btn" id="auth-login-btn" onclick="signIn()">Accedi</button>
       <button class="auth-link" onclick="switchAuthTab('reset')">Password dimenticata?</button>
@@ -864,7 +893,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
       <div class="auth-field">
         <label>Password</label>
-        <input type="password" id="auth-reg-password" placeholder="••••••••" autocomplete="new-password" minlength="8" oninput="updatePasswordStrength()">
+        <div class="auth-pwd-wrap"><input type="password" id="auth-reg-password" placeholder="••••••••" autocomplete="new-password" minlength="8" oninput="updatePasswordStrength()"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
         <div class="pwd-strength-bar"><div id="pwd-strength-fill"></div></div>
         <div id="pwd-strength-label"></div>
         <ul class="pwd-criteria">
@@ -877,7 +906,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
       <div class="auth-field">
         <label>Conferma password</label>
-        <input type="password" id="auth-reg-confirm" placeholder="••••••••" autocomplete="new-password">
+        <div class="auth-pwd-wrap"><input type="password" id="auth-reg-confirm" placeholder="••••••••" autocomplete="new-password"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
       </div>
       <div class="auth-field">
         <label>Nome</label>
@@ -1038,7 +1067,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <p style="font-size:13px;color:var(--ink2);line-height:1.6;margin:0 0 18px;text-align:center">Stai completando il recupero password. Inserisci una nuova password sicura per accedere nuovamente al tuo account.</p>
       <div class="auth-field">
         <label>Nuova password</label>
-        <input type="password" id="recovery-pwd" placeholder="••••••••" autocomplete="new-password" minlength="8" oninput="updatePasswordStrengthRecovery()">
+        <div class="auth-pwd-wrap"><input type="password" id="recovery-pwd" placeholder="••••••••" autocomplete="new-password" minlength="8" oninput="updatePasswordStrengthRecovery()"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
         <div class="pwd-strength-bar"><div id="pwd-strength-fill-r"></div></div>
         <div id="pwd-strength-label-r"></div>
         <ul class="pwd-criteria">
@@ -1051,10 +1080,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
       <div class="auth-field">
         <label>Conferma password</label>
-        <input type="password" id="recovery-pwd-confirm" placeholder="••••••••" autocomplete="new-password">
+        <div class="auth-pwd-wrap"><input type="password" id="recovery-pwd-confirm" placeholder="••••••••" autocomplete="new-password"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
       </div>
       <button class="auth-btn" id="recovery-save-btn" onclick="saveNewPassword()">Salva nuova password</button>
     </div>
+  </div>
   </div>
   <div class="auth-footer"><a href="https://delphi-med.com" style="color:rgba(255,255,255,.85);text-decoration:underline">← Torna alla home</a></div>
 </div>
@@ -1077,6 +1107,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <symbol id="ic-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></symbol>
   <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
   <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></symbol>
   <symbol id="ic-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
   <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></symbol>
   <symbol id="ic-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
@@ -2596,6 +2627,15 @@ async function resetPassword(){
   showAuthMsg('Link di reset inviato! Controlla la tua email.', 'success');
 }
 
+function togglePwd(btn){
+  const inp = btn.parentElement.querySelector('input');
+  if(!inp) return;
+  const reveal = inp.type === 'password';
+  inp.type = reveal ? 'text' : 'password';
+  btn.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+  btn.setAttribute('aria-label', reveal ? 'Nascondi password' : 'Mostra password');
+  btn.querySelector('use').setAttribute('href', reveal ? '#ic-eye-off' : '#ic-eye');
+}
 function showPasswordRecoveryView(){
   document.getElementById('view-home').style.display    = 'none';
   document.getElementById('view-auth').style.display    = 'flex';
