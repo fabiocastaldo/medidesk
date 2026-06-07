@@ -1745,6 +1745,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <p class="bk-hero-bio" id="bk-hero-bio" style="display:none"></p>
         <div class="bk-hero-tags" id="bk-hero-tags"></div>
         <div class="bk-social" id="bk-social-row"></div>
+        <div id="bk-centro-locked" style="display:none;align-items:center;gap:8px;margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);font-size:13px;color:rgba(255,255,255,.88)"></div>
       </div>
     </div>
     <div class="bk-about" id="bk-about" style="display:none"></div>
@@ -6394,6 +6395,11 @@ async function bkInit(){
           giornateSingole: (data.centro.disponibilita_singole||[]).map(g=>({ id:g.id, data:g.data, inizio:(g.inizio||'').substring(0,5), fine:(g.fine||'').substring(0,5), slot:g.durata_slot, centroId:String(data.centro.id) }))
         };
         S.centri = [centroMappato]; bk.centroId = String(data.centro.id);
+        const _lockedEl = document.getElementById('bk-centro-locked');
+        if(_lockedEl){
+          _lockedEl.innerHTML = `<svg class="ic" style="flex-shrink:0;width:16px;height:16px"><use href="#ic-center"/></svg><span><strong>${escapeHtml(S.centri[0].nome)}</strong>${S.centri[0].indirizzo ? ' — '+escapeHtml(S.centri[0].indirizzo) : ''}</span>`;
+          _lockedEl.style.display = 'flex';
+        }
         const { data: tipiDB } = await supabaseClient.from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
         S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
         const { data: areeDB } = await supabaseClient.from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
@@ -6426,6 +6432,8 @@ async function bkInit(){
         if(_toggleLabel) _toggleLabel.style.display = 'none';
         bkStep(2);
         renderBkCal();
+        const _backBtn = document.querySelector('#bk-step-2 .booking-back');
+        if(_backBtn) _backBtn.style.display = 'none';
       } catch(e){ console.error('[Delphi~Med] bkInit centro:', e.message); }
     }
     return;
@@ -6522,9 +6530,6 @@ function initAboutClamp(){
   const b=document.getElementById('bk-about-toggle');
   if(!t||!b) return;
   b.textContent='Leggi tutto'; b.setAttribute('aria-expanded','false');
-  if(!window.matchMedia('(max-width:640px)').matches){
-    t.classList.remove('bk-clamp'); b.classList.remove('show'); return;
-  }
   t.classList.add('bk-clamp');
   const overflows = t.scrollHeight > t.clientHeight + 2;
   b.classList.toggle('show', overflows);
@@ -6791,7 +6796,7 @@ async function confirmBooking(){
   const d=new Date(bk.dateStr+'T12:00:00');
   const medicoDisplayName=document.getElementById('bk-doctor-name').textContent||getFullName();
   document.getElementById('bk-success-msg').innerHTML=
-    `Il tuo appuntamento con <strong>${medicoDisplayName}</strong> è confermato.<br><br>`+
+    `L'appuntamento con <strong>${medicoDisplayName}</strong> è confermato.<br><br>`+
     `<svg class="ic" style="vertical-align:-.15em"><use href="#ic-calendar"/></svg> <strong>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${bk.ora}</strong><br>`+
     `<svg class="ic" style="vertical-align:-.15em"><use href="#ic-center"/></svg> ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
     `${appt.email?'Riceverai un riepilogo all\'email indicata.':''}`;
