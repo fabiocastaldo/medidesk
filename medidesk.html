@@ -6514,6 +6514,13 @@ async function bkInit(){
         if(_lockedEl){
           _lockedEl.innerHTML = `<svg class="ic" style="flex-shrink:0;width:16px;height:16px"><use href="#ic-center"/></svg><span><strong>${escapeHtml(S.centri[0].nome)}</strong>${S.centri[0].indirizzo ? ' — '+escapeHtml(S.centri[0].indirizzo) : ''}</span>`;
           _lockedEl.style.display = 'flex';
+          document.querySelector('.bk-hero-divider')?.style.setProperty('display','none');
+          const _bcard = document.querySelector('.booking-card');
+          if(_bcard && _bcard.parentNode){
+            _bcard.parentNode.insertBefore(_lockedEl, _bcard);
+            _lockedEl.style.marginTop = '0';
+            _lockedEl.style.marginBottom = '20px';
+          }
         }
         const { data: tipiDB } = await supabaseClient.from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
         S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
