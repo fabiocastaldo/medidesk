@@ -166,7 +166,8 @@ Rispondi SOLO con la storia clinica in testo. NESSUN JSON, nessuna introduzione,
 
     res.json(data);
   } catch (err) {
+    console.error('analyze error:', err);
     const status = Number.isInteger(err?.status) ? err.status : 500;
-    res.status(status).json({ error: err?.message || 'Errore AI' });
+    res.status(status).json({ error: 'Si è verificato un errore. Riprova.' });
   }
 }
