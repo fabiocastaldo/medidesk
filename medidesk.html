@@ -1649,6 +1649,26 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
 
       <div style="margin-bottom:24px">
+        <div class="section-title">Visibilità contatti sul link pubblico</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Email visibile ai pazienti</div>
+              <div class="notif-toggle-desc">Se attiva, la tua email compare sul link pubblico di prenotazione. La segreteria del centro la vede sempre.</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mostra-email"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Telefono visibile ai pazienti</div>
+              <div class="notif-toggle-desc">Se attivo, il tuo telefono compare sul link pubblico di prenotazione. La segreteria del centro lo vede sempre.</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mostra-telefono"><span class="toggle-slider"></span></label>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
         <div class="section-title">Aspetto</div>
         <div class="card"><div class="card-body">
           <div class="notif-toggle-label" style="margin-bottom:12px">Tema colore</div>
@@ -2851,6 +2871,8 @@ async function loadMedicoFromDB(user){
       S.settings.email       = data.email_pubblica     || '';
       S.settings.telefono    = data.telefono           || '';
       S.settings.sitoWeb     = data.sito_web           || '';
+      S.settings.mostraEmailPazienti    = data.mostra_email_pazienti    !== false;
+      S.settings.mostraTelefonoPazienti = data.mostra_telefono_pazienti !== false;
       S.settings.linkedin    = data.linkedin           || '';
       S.settings.instagram   = data.instagram          || '';
       S.settings.youtube     = data.youtube            || '';
@@ -6446,23 +6468,33 @@ function bkRenderHero(m){
   else { avatarEl.textContent = ini; }
   const tagsEl = document.getElementById('bk-hero-tags');
   if(tagsEl){
-    const tags = [];
-    if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
-    if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
-    (m.lingue||[]).forEach(l=>tags.push(l));
-    tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+    if(bk.centroMode){
+      tagsEl.innerHTML = '';
+    } else {
+      const tags = [];
+      if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
+      if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
+      (m.lingue||[]).forEach(l=>tags.push(l));
+      tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+    }
   }
   const socialEl = document.getElementById('bk-social-row');
-  if(socialEl) socialEl.innerHTML = buildSocialRow({
-    email:    m.email_pubblica,
-    telefono: m.telefono,
-    sitoWeb:  m.sito_web,
-    linkedin: m.linkedin,
-    instagram:m.instagram,
-    youtube:  m.youtube,
-    facebook: m.facebook,
-    x: m.x_url,
-  });
+  if(socialEl){
+    if(bk.centroMode){
+      socialEl.innerHTML = buildSocialRow({ email: m.email_pubblica, telefono: m.telefono });
+    } else {
+      socialEl.innerHTML = buildSocialRow({
+        email:    m.mostra_email_pazienti    !== false ? m.email_pubblica : '',
+        telefono: m.mostra_telefono_pazienti !== false ? m.telefono       : '',
+        sitoWeb:  m.sito_web,
+        linkedin: m.linkedin,
+        instagram:m.instagram,
+        youtube:  m.youtube,
+        facebook: m.facebook,
+        x: m.x_url,
+      });
+    }
+  }
   bk.aboutBio = m.bio_lunga || '';
 }
 async function bkInit(){
@@ -6493,6 +6525,13 @@ async function bkInit(){
         if(_lockedEl){
           _lockedEl.innerHTML = `<svg class="ic" style="flex-shrink:0;width:16px;height:16px"><use href="#ic-center"/></svg><span><strong>${escapeHtml(S.centri[0].nome)}</strong>${S.centri[0].indirizzo ? ' — '+escapeHtml(S.centri[0].indirizzo) : ''}</span>`;
           _lockedEl.style.display = 'flex';
+          document.querySelector('.bk-hero-divider')?.style.setProperty('display','none');
+          const _bcard = document.querySelector('.booking-card');
+          if(_bcard && _bcard.parentNode){
+            _bcard.parentNode.insertBefore(_lockedEl, _bcard);
+            _lockedEl.style.marginTop = '0';
+            _lockedEl.style.marginBottom = '20px';
+          }
         }
         const { data: tipiDB } = await supabaseClient.from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
         S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
@@ -6503,16 +6542,7 @@ async function bkInit(){
           document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
         }
         const _aboutEl = document.getElementById('bk-about');
-        if(_aboutEl){
-          let _h = '';
-          if(bk.aboutBio){
-            _h += `<p class="bk-about-p bk-clamp" id="bk-about-text">${escapeHtml(bk.aboutBio)}</p>`;
-            _h += `<button type="button" class="bk-about-toggle" id="bk-about-toggle" aria-expanded="false" onclick="toggleAboutBio()">Leggi tutto</button>`;
-          }
-          _aboutEl.innerHTML = _h;
-          _aboutEl.style.display = _h ? 'block' : 'none';
-          if(_h) requestAnimationFrame(initAboutClamp);
-        }
+        if(_aboutEl){ _aboutEl.innerHTML = ''; _aboutEl.style.display = 'none'; }
         populateTipiVisitaSelects();
         const _now = new Date();
         bk.calYear = _now.getFullYear(); bk.calMonth = _now.getMonth();
@@ -6589,7 +6619,11 @@ async function bkInit(){
       tagsEl.innerHTML=tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
     }
     const socialEl=document.getElementById('bk-social-row');
-    if(socialEl) socialEl.innerHTML=buildSocialRow(S.settings);
+    if(socialEl) socialEl.innerHTML=buildSocialRow({
+      ...S.settings,
+      email:    S.settings.mostraEmailPazienti    !== false ? S.settings.email    : '',
+      telefono: S.settings.mostraTelefonoPazienti !== false ? S.settings.telefono : '',
+    });
     bk.aboutBio  = S.settings.bioLunga || '';
   }
   const aboutEl=document.getElementById('bk-about');
@@ -7437,6 +7471,8 @@ function renderImpostazioni(){
   chk('imp-notif-chiusura-centro',         S.settings.notifChiusuraCentro         !== false);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
+  chk('imp-mostra-email',    S.settings.mostraEmailPazienti    !== false);
+  chk('imp-mostra-telefono', S.settings.mostraTelefonoPazienti !== false);
   const curSkin = localStorage.getItem('skin') || 'marine';
   document.querySelectorAll('.skin-swatch').forEach(b => b.classList.toggle('is-active', b.dataset.skin === curSkin));
   const sogliaEl = document.getElementById('setting-soglia-anni');
@@ -7454,7 +7490,9 @@ async function saveImpostazione(toggleId){
     'imp-notif-appuntamento-manuale': { key: 'notifAppuntamentoManuale', col: 'notifica_appuntamento_manuale' },
     'imp-notif-chiusura-centro':      { key: 'notifChiusuraCentro',      col: 'notifica_chiusura_centro' },
     'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' },
-    'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' }
+    'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' },
+    'imp-mostra-email':    { key: 'mostraEmailPazienti',    col: 'mostra_email_pazienti' },
+    'imp-mostra-telefono': { key: 'mostraTelefonoPazienti', col: 'mostra_telefono_pazienti' }
   };
   const m = mapping[toggleId];
   if(!m){ console.warn('[Delphi~Med] saveImpostazione: toggle sconosciuto', toggleId); return; }
