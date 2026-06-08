@@ -6,6 +6,9 @@
     }
   ],
   "regions": ["fra1"],
+  "functions": {
+    "api/analyze.js": { "maxDuration": 300 }
+  },
   "headers": [
     {
       "source": "/(.*)",
