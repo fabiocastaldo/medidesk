@@ -1397,10 +1397,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="card"><div class="card-body">
           <div class="social-links-grid">
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-mail"/></svg></span><input class="form-input" id="setting-email" type="email" placeholder="Email pubblica"></div>
-            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);margin:-2px 0 10px 34px"><input type="checkbox" id="setting-mostra-email" checked style="width:auto;margin:0">Mostra anche ai pazienti sul link pubblico</label>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-phone"/></svg></span><input class="form-input" id="setting-telefono" placeholder="Telefono pubblico"></div>
-            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);margin:-2px 0 4px 34px"><input type="checkbox" id="setting-mostra-telefono" checked style="width:auto;margin:0">Mostra anche ai pazienti sul link pubblico</label>
-            <p style="font-size:12px;color:var(--ink3);margin:0 0 12px 34px">La segreteria del centro vede sempre i tuoi contatti; questa scelta riguarda solo il link pubblico di prenotazione.</p>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-globe"/></svg></span><input class="form-input" id="setting-sito-web" placeholder="Sito web (https://...)"></div>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-linkedin"/></svg></span><input class="form-input" id="setting-linkedin" placeholder="LinkedIn (URL o username)"></div>
             <div class="social-link-row"><span class="social-link-icon"><svg class="ic"><use href="#ic-instagram"/></svg></span><input class="form-input" id="setting-instagram" placeholder="Instagram (@username)"></div>
@@ -1647,6 +1644,26 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
               <div class="notif-toggle-desc">Le nuove prenotazioni online compaiono come card da segnare "viste" in dashboard</div>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="imp-mostra-prenotazioni-attesa"><span class="toggle-slider"></span></label>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div class="section-title">Visibilità contatti sul link pubblico</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Email visibile ai pazienti</div>
+              <div class="notif-toggle-desc">Se attiva, la tua email compare sul link pubblico di prenotazione. La segreteria del centro la vede sempre.</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mostra-email"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Telefono visibile ai pazienti</div>
+              <div class="notif-toggle-desc">Se attivo, il tuo telefono compare sul link pubblico di prenotazione. La segreteria del centro lo vede sempre.</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mostra-telefono"><span class="toggle-slider"></span></label>
           </div>
         </div></div>
       </div>
@@ -6117,8 +6134,6 @@ function loadSettings(){
   fld('setting-email',     S.settings.email);
   fld('setting-telefono',  S.settings.telefono);
   fld('setting-sito-web',  S.settings.sitoWeb);
-  const _me=document.getElementById('setting-mostra-email');    if(_me) _me.checked = S.settings.mostraEmailPazienti    !== false;
-  const _mt=document.getElementById('setting-mostra-telefono'); if(_mt) _mt.checked = S.settings.mostraTelefonoPazienti !== false;
   fld('setting-linkedin',  S.settings.linkedin);
   fld('setting-instagram', S.settings.instagram);
   fld('setting-youtube',   S.settings.youtube);
@@ -6149,8 +6164,6 @@ async function saveSettings(){
   S.settings.email       = val('setting-email');
   S.settings.telefono    = val('setting-telefono');
   S.settings.sitoWeb     = val('setting-sito-web');
-  S.settings.mostraEmailPazienti    = document.getElementById('setting-mostra-email')?.checked    ?? true;
-  S.settings.mostraTelefonoPazienti = document.getElementById('setting-mostra-telefono')?.checked ?? true;
   S.settings.linkedin    = val('setting-linkedin');
   S.settings.instagram   = val('setting-instagram');
   S.settings.youtube     = val('setting-youtube');
@@ -6185,8 +6198,6 @@ async function saveSettings(){
         lingue:           S.settings.lingue.length ? S.settings.lingue : null,
         email_pubblica:   S.settings.email       || null,
         telefono:         S.settings.telefono    || null,
-        mostra_email_pazienti:    S.settings.mostraEmailPazienti    !== false,
-        mostra_telefono_pazienti: S.settings.mostraTelefonoPazienti !== false,
         sito_web:         S.settings.sitoWeb     || null,
         linkedin:         S.settings.linkedin    || null,
         instagram:        S.settings.instagram   || null,
@@ -7460,6 +7471,8 @@ function renderImpostazioni(){
   chk('imp-notif-chiusura-centro',         S.settings.notifChiusuraCentro         !== false);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
+  chk('imp-mostra-email',    S.settings.mostraEmailPazienti    !== false);
+  chk('imp-mostra-telefono', S.settings.mostraTelefonoPazienti !== false);
   const curSkin = localStorage.getItem('skin') || 'marine';
   document.querySelectorAll('.skin-swatch').forEach(b => b.classList.toggle('is-active', b.dataset.skin === curSkin));
   const sogliaEl = document.getElementById('setting-soglia-anni');
@@ -7477,7 +7490,9 @@ async function saveImpostazione(toggleId){
     'imp-notif-appuntamento-manuale': { key: 'notifAppuntamentoManuale', col: 'notifica_appuntamento_manuale' },
     'imp-notif-chiusura-centro':      { key: 'notifChiusuraCentro',      col: 'notifica_chiusura_centro' },
     'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' },
-    'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' }
+    'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' },
+    'imp-mostra-email':    { key: 'mostraEmailPazienti',    col: 'mostra_email_pazienti' },
+    'imp-mostra-telefono': { key: 'mostraTelefonoPazienti', col: 'mostra_telefono_pazienti' }
   };
   const m = mapping[toggleId];
   if(!m){ console.warn('[Delphi~Med] saveImpostazione: toggle sconosciuto', toggleId); return; }
