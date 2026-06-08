@@ -1,6 +1,12 @@
+import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
+
 const rateMap = new Map(); // ip -> { count, resetAt } — fallback in-memory
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
+
+// Client Bedrock. Le credenziali AWS si risolvono dall'ambiente standard:
+// AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION.
+const bedrock = new AnthropicBedrock({ awsRegion: process.env.AWS_REGION || 'eu-central-1' });
 
 function checkInMemoryRateLimit(ip) {
   const now = Date.now();
@@ -71,11 +77,6 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Account non autorizzato' });
   }
   const spec = (medicoData[0].specializzazione || '').trim();
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'API key not configured' });
-  }
 
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
 
@@ -157,22 +158,15 @@ Rispondi SOLO con la storia clinica in testo. NESSUN JSON, nessuna introduzione,
       return res.status(400).json({ error: 'Campo mode mancante o non valido' });
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens, messages })
+    const data = await bedrock.messages.create({
+      model: process.env.BEDROCK_MODEL_ID || 'eu.anthropic.claude-sonnet-4-6',
+      max_tokens,
+      messages
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data.error?.message || 'Errore Anthropic' });
-    }
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const status = Number.isInteger(err?.status) ? err.status : 500;
+    res.status(status).json({ error: err?.message || 'Errore AI' });
   }
 }
