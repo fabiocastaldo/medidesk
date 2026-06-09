@@ -6564,9 +6564,8 @@ async function pfAddCurrent(){
     const out = await r.json().catch(()=>({}));
     if(!r.ok || !out.ok) throw new Error(out.error || ('HTTP '+r.status));
     const tok = out.portfolio_token;
-    if(tok){ try{ localStorage.setItem('pf_token', tok); }catch(e){} }
-    if(!stored && tok){
-      showToast('Portafoglio creato ✓');
+    if(tok){
+      try{ localStorage.setItem('pf_token', tok); }catch(e){}
       location.href = location.origin + '/p/' + encodeURIComponent(tok);
     } else {
       showToast('Aggiunto al portafoglio ✓');
