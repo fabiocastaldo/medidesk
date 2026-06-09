@@ -272,8 +272,10 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
   if (!chiusura) return { ok: false, status: 404, error: 'Chiusura non trovata' };
   // Check a
   if (chiusura.medico_id !== userId) return { ok: false, status: 403, error: 'Accesso non autorizzato alla chiusura' };
-  // Check b
-  if (!Array.isArray(chiusura.centri_ids) || !chiusura.centri_ids.includes(centroId)) {
+  // Check b — vincolo solo se la chiusura è circoscritta a centri specifici.
+  // centri_ids vuoto = chiusura globale (vale per tutti i centri del medico): nessun vincolo qui;
+  // l'ownership resta garantita dai check a (chiusura.medico_id) e c (centro.medico_id).
+  if (Array.isArray(chiusura.centri_ids) && chiusura.centri_ids.length && !chiusura.centri_ids.includes(centroId)) {
     return { ok: false, status: 400, error: 'Il centro specificato non è incluso in questa chiusura' };
   }
 
