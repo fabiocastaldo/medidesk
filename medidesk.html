@@ -1776,6 +1776,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="bk-hero-tags" id="bk-hero-tags"></div>
         <div class="bk-social" id="bk-social-row"></div>
         <div id="bk-centro-locked" style="display:none;align-items:center;gap:8px;margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);font-size:13px;color:rgba(255,255,255,.88)"></div>
+        <button id="bk-add-portfolio" onclick="pfAddCurrent()" style="display:none;align-items:center;gap:6px;margin:0 0 20px;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.14);color:#fff;font-size:13px;font-weight:600;cursor:pointer">+ Aggiungi al portafoglio</button>
       </div>
     </div>
     <div class="bk-about" id="bk-about" style="display:none"></div>
@@ -1890,6 +1891,21 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="bk-footer">Prenotazione gestita con Delphi~Med · Sistema professionale per medici<br><a href="https://delphi-med.com" style="color:rgba(255,255,255,.85);text-decoration:underline">← Torna alla home</a></div>
   </div>
 </div>
+
+    <div id="view-portfolio" style="display:none">
+      <div class="booking-wrap">
+        <div style="text-align:center;margin-bottom:6px">
+          <div style="font-size:22px;font-weight:700;color:#fff">Il tuo portafoglio</div>
+          <div id="pf-sub" style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px"></div>
+        </div>
+        <div class="home-search-wrap" style="margin-top:16px">
+          <span class="home-search-icon"><svg class="ic"><use href="#ic-search"/></svg></span>
+          <input class="home-search-input" id="pf-search" type="text" placeholder="Cerca nel portafoglio…" oninput="pfFilter(this.value)">
+        </div>
+        <div id="pf-list" style="max-width:520px;margin:14px auto 0"></div>
+        <div id="pf-empty" style="display:none;text-align:center;color:rgba(255,255,255,.75);font-size:14px;margin:22px auto 0;max-width:420px"></div>
+      </div>
+    </div>
 
 <!-- ══════════════ PAGINA CANCELLAZIONE ══════════════ -->
 <div id="view-cancel">
@@ -3454,6 +3470,8 @@ function checkView(){
     showCancelView();
   } else if(location.search.includes('booking') || location.pathname.startsWith('/m/') || location.pathname.startsWith('/c/')){
     showBookingView();
+  } else if(location.pathname.startsWith('/p/')){
+    showPortfolioView();
   } else {
     checkSession();
   }
@@ -6457,6 +6475,106 @@ function showBookingView(){
   setupCapitalizeListeners();
   bkInit();
 }
+
+function showPortfolioView(){
+  document.getElementById('view-home').style.display    = 'none';
+  document.getElementById('view-app').style.display     = 'none';
+  document.getElementById('view-booking').style.display = 'none';
+  const pv = document.getElementById('view-portfolio');
+  if(pv) pv.style.display = 'block';
+  pfInit();
+}
+
+let _pfData = null;
+async function pfInit(){
+  const m = location.pathname.match(/^\/p\/([^\/?#]+)/);
+  const emptyEl = document.getElementById('pf-empty');
+  const subEl   = document.getElementById('pf-sub');
+  if(!m){ if(emptyEl){ emptyEl.textContent='Link non valido.'; emptyEl.style.display='block'; } return; }
+  const token = decodeURIComponent(m[1]);
+  try{ localStorage.setItem('pf_token', token); }catch(e){}
+  if(!document.head.querySelector('meta[name="robots"]')){
+    document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
+  }
+  if(!isOnline() || !supabaseClient){ if(emptyEl){ emptyEl.textContent='Serve la connessione per aprire il portafoglio.'; emptyEl.style.display='block'; } return; }
+  try{
+    const { data, error } = await supabaseClient.rpc('get_portfolio_by_token', { p_token: token });
+    if(error) throw error;
+    if(!data){ if(emptyEl){ emptyEl.textContent='Portafoglio non trovato o link non valido.'; emptyEl.style.display='block'; } return; }
+    _pfData = data;
+    const n = (data.medici||[]).length;
+    if(subEl) subEl.textContent = n ? (n+' medic'+(n===1?'o':'i')+' salvat'+(n===1?'o':'i')) : '';
+    pfRender(data.medici || []);
+  }catch(e){
+    console.error('[Delphi~Med] pfInit:', e.message);
+    if(emptyEl){ emptyEl.textContent='Errore nel caricamento del portafoglio.'; emptyEl.style.display='block'; }
+  }
+}
+
+function pfRender(list){
+  const listEl  = document.getElementById('pf-list');
+  const emptyEl = document.getElementById('pf-empty');
+  if(!listEl) return;
+  if(!list.length){
+    listEl.innerHTML = '';
+    if(emptyEl){ emptyEl.textContent='Nessun medico nel portafoglio. Apri il link di un centro e tocca «Aggiungi al portafoglio».'; emptyEl.style.display='block'; }
+    return;
+  }
+  if(emptyEl) emptyEl.style.display='none';
+  listEl.innerHTML = list.map(it=>{
+    const nome = escapeHtml(it.medico_nome||'');
+    const ini  = (it.medico_nome||'M').trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'M';
+    const sub  = [it.medico_spec, it.centro_nome].filter(Boolean).map(escapeHtml).join(' · ');
+    const subHtml = sub ? `<div class="home-result-spec">${sub}</div>` : '';
+    if(it.live && it.booking_token){
+      return `<div class="home-result-card" style="margin-bottom:10px" onclick="location.href='/c/${encodeURIComponent(it.booking_token)}'">
+        <div class="home-result-avatar">${ini}</div>
+        <div style="flex:1"><div class="home-result-name">${nome}</div>${subHtml}</div>
+      </div>`;
+    }
+    return `<div class="home-result-card" style="margin-bottom:10px;opacity:.5;cursor:default">
+      <div class="home-result-avatar">${ini}</div>
+      <div style="flex:1"><div class="home-result-name">${nome}</div>${subHtml}<div class="home-result-spec" style="color:#e0a0a0">Link non più valido — chiedi al medico il nuovo link per ricollegare</div></div>
+    </div>`;
+  }).join('');
+}
+
+function pfFilter(q){
+  if(!_pfData) return;
+  q = (q||'').trim().toLowerCase();
+  const all = _pfData.medici || [];
+  pfRender(!q ? all : all.filter(it => [it.medico_nome, it.medico_spec, it.centro_nome].filter(Boolean).join(' ').toLowerCase().includes(q)));
+}
+
+async function pfAddCurrent(){
+  if(!bk.centroToken) return;
+  if(!isOnline()){ showToast('Serve la connessione per aggiungere al portafoglio'); return; }
+  const btn = document.getElementById('bk-add-portfolio');
+  if(btn) btn.disabled = true;
+  let stored = '';
+  try{ stored = localStorage.getItem('pf_token') || ''; }catch(e){}
+  try{
+    const r = await fetch('/api/add-to-portfolio', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ centro_token: bk.centroToken, portfolio_token: stored || undefined })
+    });
+    const out = await r.json().catch(()=>({}));
+    if(!r.ok || !out.ok) throw new Error(out.error || ('HTTP '+r.status));
+    const tok = out.portfolio_token;
+    if(tok){ try{ localStorage.setItem('pf_token', tok); }catch(e){} }
+    if(!stored && tok){
+      showToast('Portafoglio creato ✓');
+      location.href = location.origin + '/p/' + encodeURIComponent(tok);
+    } else {
+      showToast('Aggiunto al portafoglio ✓');
+    }
+  }catch(e){
+    console.error('[Delphi~Med] pfAddCurrent:', e.message);
+    showToast('Errore: ' + (e.message || 'aggiunta non riuscita'));
+  }finally{
+    if(btn) btn.disabled = false;
+  }
+}
 function bkRenderHero(m){
   const fullName = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
   bk.medicoNome = fullName;
@@ -6531,6 +6649,8 @@ async function bkInit(){
             _bcard.parentNode.insertBefore(_lockedEl, _bcard);
             _lockedEl.style.marginTop = '0';
             _lockedEl.style.marginBottom = '20px';
+            const _addBtn = document.getElementById('bk-add-portfolio');
+            if(_addBtn){ _addBtn.style.display = 'inline-flex'; _bcard.parentNode.insertBefore(_addBtn, _bcard); }
           }
         }
         const { data: tipiDB } = await supabaseClient.from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');

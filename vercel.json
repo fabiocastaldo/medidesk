@@ -26,6 +26,7 @@
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/m/(.*)", "destination": "/api/medico?slug=$1" },
     { "source": "/c/(.*)", "destination": "/medidesk.html" },
+    { "source": "/p/(.*)", "destination": "/medidesk.html" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/((?!api/).*)", "destination": "/medidesk.html" }
   ]
