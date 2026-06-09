@@ -321,6 +321,10 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .day-tab.holiday .dt-num{color:var(--warm)}
 .dt-hol-dot{width:6px;height:6px;border-radius:50%;background:var(--warm);display:inline-block}
 .dt-chiuso-dot{width:6px;height:6px;border-radius:50%;background:var(--ink3);display:inline-block}
+.day-tab.chiusura:not(.active){background:#f0f0f0;opacity:.75}
+.day-tab.chiusura:not(.active) .dt-num{color:var(--ink3)}
+.dt-chiuso-icon{display:inline-flex;align-items:center;font-size:11px;color:var(--ink3)}
+.day-tab.active .dt-chiuso-icon{color:#fff}
 
 /* ── FERIE VIEW ── */
 .chiusura-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
@@ -4842,7 +4846,8 @@ function renderAgenda(){
     const hol=isHoliday(ds);
     const chiuso=isChiusura(ds);
     let tabCls=`day-tab ${ds===S.selectedDay?'active':''}`;
-    if(hol.isHoliday) tabCls+=' holiday';
+    if(hol.isHoliday && !chiuso) tabCls+=' holiday';
+    if(chiuso) tabCls+=' chiusura';
     const dayAppts = S.appuntamenti.filter(a=>a.data===ds && !a.cancelled);
     const byCentro = {}; dayAppts.forEach(a=>{ const k=String(a.centroId); byCentro[k]=(byCentro[k]||0)+1; });
     const cids = Object.keys(byCentro).sort((x,y)=>byCentro[y]-byCentro[x]);
@@ -4862,7 +4867,7 @@ function renderAgenda(){
       <span class="dt-meta">
         ${metaInner}
         ${hol.isHoliday?'<span class="dt-hol-dot"></span>':''}
-        ${chiuso?'<span class="dt-chiuso-dot"></span>':''}
+        ${chiuso?'<span class="dt-chiuso-icon"><svg class="ic"><use href="#ic-sun"/></svg></span>':''}
       </span>
     </div>`;
   }).join('');
@@ -4888,7 +4893,7 @@ function renderWeekLegend(days){
     if(dayStrs.includes(a.data)) allCentriInWeek.add(String(a.centroId));
   });
   const ferieItem = dayStrs.some(ds=>isChiusura(ds))
-    ? `<span class="month-legend-item"><span class="month-legend-dot" style="background:var(--ink3)"></span>Ferie</span>`
+    ? `<span class="month-legend-item"><span style="display:inline-flex;align-items:center;color:var(--ink3);font-size:13px"><svg class="ic"><use href="#ic-sun"/></svg></span>Ferie</span>`
     : '';
   if(!allCentriInWeek.size && !ferieItem){ container.innerHTML=''; return; }
   const items = [...allCentriInWeek].map(cid=>{
@@ -5040,7 +5045,7 @@ function renderMonthView(){
   let meseHaChiusura = false;
   for(let _d=1; _d<=lastDay.getDate(); _d++){ if(isChiusura(fmt(new Date(y,m,_d)))){ meseHaChiusura=true; break; } }
   const ferieItemM = meseHaChiusura
-    ? `<span class="month-legend-item"><span class="month-legend-dot" style="background:var(--ink3)"></span>Ferie</span>`
+    ? `<span class="month-legend-item"><span style="display:inline-flex;align-items:center;color:var(--ink3);font-size:13px"><svg class="ic"><use href="#ic-sun"/></svg></span>Ferie</span>`
     : '';
   let legendHtml = '';
   if(allCentriInMonth.size || ferieItemM){
