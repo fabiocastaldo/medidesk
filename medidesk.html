@@ -4843,15 +4843,19 @@ function renderAgenda(){
     const chiuso=isChiusura(ds);
     let tabCls=`day-tab ${ds===S.selectedDay?'active':''}`;
     if(hol.isHoliday) tabCls+=' holiday';
-    const centriConTurno = S.centri.filter(c=>c.attivo!==false && (c.turni||[]).some(t=>t.giorno===d.getDay() && (!t.dataFineValidita||t.dataFineValidita>=ds)));
-    const dotsCentri = centriConTurno.slice(0,4).map(c=>`<span style="width:7px;height:7px;border-radius:50%;background:${c.colore};display:inline-block;flex-shrink:0"></span>`).join('');
     const dayAppts = S.appuntamenti.filter(a=>a.data===ds && !a.cancelled);
     const byCentro = {}; dayAppts.forEach(a=>{ const k=String(a.centroId); byCentro[k]=(byCentro[k]||0)+1; });
     const cids = Object.keys(byCentro).sort((x,y)=>byCentro[y]-byCentro[x]);
     const shown = cids.length<=2 ? cids.length : 1;
     const chips = cids.slice(0,shown).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; return `<span class="cc-chip"><span class="cc-dot" style="background:${col}"></span>${byCentro[cid]}</span>`; }).join('');
     const more = cids.length>shown ? `<span class="cc-more">+${cids.length-shown}</span>` : '';
-    const metaInner = chips ? chips+more : dotsCentri;
+    const centriGiornoIds = S.centri.filter(c=>c.attivo!==false && (
+      (c.turni||[]).some(t=>t.giorno===d.getDay() && (!t.dataFineValidita||t.dataFineValidita>=ds))
+      || (c.giornateSingole||[]).some(g=>g.data===ds)
+    )).map(c=>String(c.id));
+    const soloTurno = centriGiornoIds.filter(cid=>!byCentro[cid]);
+    const dotsCentri = soloTurno.slice(0,4).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); return `<span style="width:7px;height:7px;border-radius:50%;background:${c.colore};display:inline-block;flex-shrink:0"></span>`; }).join('');
+    const metaInner = chips + more + dotsCentri;
     return `<div class="${tabCls}${ds===today?' is-today':''}" onclick="selectDay('${ds}')" title="${hol.isHoliday?hol.name:(chiuso?'Studio chiuso':'')}">
       <span class="dt-dow">${DAYS_IT[d.getDay()]}</span>
       <span class="dt-num">${d.getDate()}</span>
@@ -4876,6 +4880,9 @@ function renderWeekLegend(days){
   const allCentriInWeek = new Set();
   S.centri.filter(c=>c.attivo!==false && c.turni && c.turni.length).forEach(c=>{
     if(c.turni.some(t=>weekDayNums.includes(t.giorno))) allCentriInWeek.add(String(c.id));
+  });
+  S.centri.filter(c=>c.attivo!==false).forEach(c=>{
+    if((c.giornateSingole||[]).some(g=>dayStrs.includes(g.data))) allCentriInWeek.add(String(c.id));
   });
   S.appuntamenti.forEach(a=>{
     if(dayStrs.includes(a.data)) allCentriInWeek.add(String(a.centroId));
@@ -4969,15 +4976,17 @@ function renderMonthView(){
     const shownM = cidsM.length<=2 ? cidsM.length : 1;
     const apptDots = cidsM.slice(0,shownM).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; const op=(c&&c.attivo===false)?'0.5':'1'; return `<span class="cc-chip" style="opacity:${op}" title="${c?c.nome:''} (${byCentroM[cid]})"><span class="cc-dot" style="background:${col}"></span>${byCentroM[cid]}</span>`; }).join('');
     const extra = cidsM.length>shownM ? `<span class="cc-more">+${cidsM.length-shownM}</span>` : '';
-    // Pallini turni (fallback se nessun appuntamento: mostra centri con turni pianificati)
-    const centriConTurno = !apptDots ? S.centri.filter(c =>
+    // Pallini turni: centri con turno O giornata singola in questa data, SENZA appuntamenti
+    const centriConTurno = S.centri.filter(c =>
       c.attivo !== false &&
-      (c.turni||[]).some(t => t.giorno === date.getDay() && (!t.dataFineValidita || t.dataFineValidita >= ds))
-    ) : [];
+      !byCentroM[String(c.id)] &&
+      ( (c.turni||[]).some(t => t.giorno === date.getDay() && (!t.dataFineValidita || t.dataFineValidita >= ds))
+        || (c.giornateSingole||[]).some(g => g.data === ds) )
+    );
     const turniDots = centriConTurno.slice(0,4).map(c =>
       `<span class="mc-dot mc-dot-turno" style="background:${c.colore}" title="${c.nome}"></span>`
     ).join('');
-    const dotsHtml = apptDots || turniDots;
+    const dotsHtml = apptDots + turniDots;
     // Avviso turno su festività
     const turniWarn = hol.isHoliday && dayAppts.length ? `<span class="mc-holiday-warn" title="Appuntamenti in festività">⚠️</span>` : '';
     let cls = 'mc-day';
@@ -5016,6 +5025,10 @@ function renderMonthView(){
   const allCentriInMonth = new Set();
   // Tutti i centri attivi con turni configurati (sempre visibili nella legenda)
   S.centri.filter(c=>c.attivo!==false && c.turni && c.turni.length).forEach(c=>allCentriInMonth.add(String(c.id)));
+  // Centri con giornate singole nel mese corrente
+  S.centri.filter(c=>c.attivo!==false).forEach(c=>{
+    if((c.giornateSingole||[]).some(g=>{ const gd=new Date(g.data+'T12:00:00'); return gd.getFullYear()===y && gd.getMonth()===m; })) allCentriInMonth.add(String(c.id));
+  });
   // Centri con appuntamenti nel mese corrente
   S.appuntamenti.forEach(a=>{
     const date=new Date(a.data+'T12:00:00');
