@@ -1,6 +1,10 @@
+import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
+
 const rateMap = new Map();
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
+
+const bedrock = new AnthropicBedrock({ awsRegion: process.env.AWS_REGION || 'eu-central-1' });
 
 function checkInMemoryRateLimit(ip) {
   const now = Date.now();
@@ -72,11 +76,6 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Account non autorizzato' });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'API key not configured' });
-  }
-
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
   if (!checkInMemoryRateLimit(ip)) {
     return res.status(429).json({ error: "Troppe richieste. Riprova tra un'ora." });
@@ -114,27 +113,17 @@ Anni di esperienza: ${esperienza != null ? esperienza : 'non indicati'}
 Note libere (aree di expertise, prestazioni, patologie trattate, titoli, approccio):
 ${note || '(nessuna nota fornita)'}`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 800,
-        system,
-        messages: [{ role: 'user', content: userContent }]
-      })
+    const data = await bedrock.messages.create({
+      model: process.env.BEDROCK_MODEL_ID || 'eu.anthropic.claude-sonnet-4-6',
+      max_tokens: 800,
+      system,
+      messages: [{ role: 'user', content: userContent }]
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data.error?.message || 'Errore Anthropic' });
-    }
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('genera-presentazione error:', err);
+    const status = Number.isInteger(err?.status) ? err.status : 500;
+    res.status(status).json({ error: 'Si è verificato un errore. Riprova.' });
   }
 }
