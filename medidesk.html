@@ -2231,11 +2231,14 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <p>Bozza manuale, con raffinamento AI opzionale</p>
         </div>
         <div id="nv-referto-box" style="display:none;margin-bottom:8px">
-          <textarea class="form-textarea" id="nv-referto" rows="6" placeholder="Scrivi qui la bozza del referto…"></textarea>
+          <p style="font-size:11px;color:var(--ink3);margin-bottom:8px">Spunti: Motivo della visita · Anamnesi · Esame obiettivo · Diagnosi · Terapia · Follow-up</p>
+          <textarea class="form-textarea" id="nv-referto" rows="6" placeholder="Scrivi qui la bozza del referto…" oninput="aggiornaNvAnteprima()"></textarea>
           <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
             <button class="btn btn-secondary" id="btn-ai-nv-referto" type="button" onclick="generaRefertoModale()" style="font-size:12px;padding:6px 12px;display:flex;align-items:center;gap:6px"><svg class="ic" style="width:14px;height:14px"><use href="#ic-sparkles"/></svg>Ottimizza con AI</button>
             <span style="font-size:11px;color:var(--ink3)">La bozza verrà riscritta come referto professionale.</span>
           </div>
+          <div style="font-size:10px;text-transform:uppercase;color:var(--ink3);margin-top:10px;margin-bottom:4px">Anteprima</div>
+          <div id="nv-referto-preview" class="referto-testo" style="display:none;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)"></div>
         </div>
         <div style="text-align:center;color:var(--ink3);font-size:12px;margin:4px 0 12px">— oppure —</div>
         <div class="upload-area" onclick="document.getElementById('referto-input').click()">
@@ -5402,12 +5405,13 @@ function _buildVisitaHTML(paz, v, i){
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">';
     h+='<button class="btn btn-sm btn-secondary" onclick="toggleRefertoEdit(\''+pid+'\',\''+vid+'\')">Modifica</button>';
     h+='<button class="btn btn-sm btn-secondary" onclick="downloadRefertoPDF(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button>';
+    h+='<button class="btn btn-sm btn-secondary" onclick="copiaReferto(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button>';
     h+='</div>';
   }else if(_rAttiva){
     h+='<button class="btn btn-sm btn-secondary" onclick="toggleRefertoEdit(\''+pid+'\',\''+vid+'\')">Scrivi referto</button>';
   }else if(v.referto){
     h+='<div class="referto-testo" id="ref-view-'+pid+'-'+vid+'">'+mdToSafeHtml(v.referto)+'</div>';
-    h+='<div style="margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="downloadRefertoPDF(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button></div>';
+    h+='<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-secondary" onclick="downloadRefertoPDF(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="copiaReferto(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button></div>';
   }else{
     h+='<div style="font-size:11px;color:var(--ink3);font-style:italic">Refertazione disattivata (riattivabile dalle Impostazioni).</div>';
   }
@@ -5624,6 +5628,17 @@ function downloadRefertoPDF(pid, vid){
     const dataStr=(v.data||'').replace(/\//g,'-');
     doc.save(('Referto_'+paz.cognome+'_'+paz.nome+'_'+dataStr+'.pdf').replace(/\s/g,'_'));
   }catch(e){ showToast('Errore PDF: '+e.message); }
+}
+
+function copiaReferto(pid, vid){
+  pid=String(pid); vid=String(vid);
+  const paz=S.pazienti.find(p=>String(p.id)===String(pid)); if(!paz) return;
+  const v=(paz.visite||[]).find(x=>String(x.id)===String(vid));
+  if(!v||!v.referto){ showToast('Nessun referto da copiare'); return; }
+  const el=document.getElementById('ref-view-'+pid+'-'+vid);
+  const testo=mdToPlain(el?.dataset.md??v.referto??'');
+  if(!testo){ showToast('Nessun referto da copiare'); return; }
+  navigator.clipboard.writeText(testo).then(()=>showToast('Referto copiato ✓')).catch(()=>showToast('Copia non supportata'));
 }
 
 function openDeletePazienteModal(pazienteId){
@@ -6026,6 +6041,8 @@ function resetVisitaUpload(){
   if(nvr) nvr.value='';
   const nvrBox = document.getElementById('nv-referto-box');
   if(nvrBox) nvrBox.style.display='none';
+  const nvrPrev = document.getElementById('nv-referto-preview');
+  if(nvrPrev){ nvrPrev.style.display='none'; nvrPrev.innerHTML=''; }
   ['ex-nome','ex-cognome','ex-nascita','ex-data-visita','ex-luogo','ex-clinica','ex-tipo-referto'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value='';
@@ -6189,6 +6206,22 @@ function toggleNvReferto(){
   box.style.display=open?'none':'block';
   const lbl=card?.querySelector('strong');
   if(lbl) lbl.textContent=open?'Scrivi il referto':'Chiudi editor';
+  if(open){
+    const prev=document.getElementById('nv-referto-preview');
+    if(prev){ prev.style.display='none'; prev.innerHTML=''; }
+  } else {
+    aggiornaNvAnteprima();
+  }
+}
+
+function aggiornaNvAnteprima(){
+  const ta=document.getElementById('nv-referto');
+  const prev=document.getElementById('nv-referto-preview');
+  if(!ta||!prev) return;
+  const val=ta.value.trim();
+  if(!val){ prev.style.display='none'; prev.innerHTML=''; return; }
+  prev.innerHTML=mdToSafeHtml(val);
+  prev.style.display='block';
 }
 
 async function generaRefertoModale(){
@@ -6214,6 +6247,7 @@ async function generaRefertoModale(){
     }
     const data=await res.json();
     ta.value=data.content.map(i=>i.text||'').join('').trim();
+    aggiornaNvAnteprima();
   }catch(err){
     showToast(err.message);
   }finally{
