@@ -2966,6 +2966,7 @@ async function loadCentriFromDB(user){
       giornateSingole: (c.disponibilita_singole || []).map(g => ({ id: g.id, data: g.data, inizio: (g.inizio||'').substring(0,5), fine: (g.fine||'').substring(0,5), slot: g.durata_slot, centroId: String(c.id) }))
     }));
     save();
+    S.centri.filter(c => c.attivo !== false).forEach(c => _linkOpen.add(String(c.id)));
     console.log('[Delphi~Med] Centri caricati da DB:', S.centri.length);
   } catch(e){ console.error('[Delphi~Med] loadCentriFromDB:', e.message); }
 }
