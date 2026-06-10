@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   let appt;
   try {
     const r = await fetch(
-      `${base}/appuntamenti?id=eq.${encodeURIComponent(id)}&cancellation_token=eq.${encodeURIComponent(token)}&select=id,data,ora,centro_id,medico_id`,
+      `${base}/appuntamenti?id=eq.${encodeURIComponent(id)}&cancellation_token=eq.${encodeURIComponent(token)}&select=id,data,ora,tipo_visita,centro_id,medico_id`,
       { headers }
     );
     const rows = await r.json();
@@ -36,13 +36,13 @@ export default async function handler(req, res) {
   if (appt.centro_id) {
     try {
       const r = await fetch(
-        `${base}/centri?id=eq.${encodeURIComponent(appt.centro_id)}&select=nome,via,citta,provincia`,
+        `${base}/centri?id=eq.${encodeURIComponent(appt.centro_id)}&select=nome,via,cap,citta,provincia`,
         { headers }
       );
       const rows = await r.json();
       const c = Array.isArray(rows) ? rows[0] : null;
       if (c) {
-        const addr = [c.via, c.citta, c.provincia].filter(Boolean).join(', ');
+        const addr = [c.via, [c.cap, c.citta].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', ');
         location = [c.nome, addr].filter(Boolean).join(', ');
       }
     } catch (_) {}
@@ -62,7 +62,16 @@ export default async function handler(req, res) {
     } catch (_) {}
   }
 
-  const ics = buildICS({ apptId: appt.id, data: appt.data, ora: appt.ora, medicoNome, location });
+  const tv = (appt.tipo_visita || '').trim();
+  const summary = tv && medicoNome ? `${tv} — ${medicoNome}`
+    : tv                           ? tv
+    : medicoNome                   ? `Visita medica — ${medicoNome}`
+    :                                'Visita medica';
+  const description = medicoNome
+    ? `Prenotazione confermata con ${medicoNome}`
+    : 'Prenotazione confermata';
+
+  const ics = buildICS({ apptId: appt.id, data: appt.data, ora: appt.ora, summary, description, location });
 
   res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="appuntamento.ics"');

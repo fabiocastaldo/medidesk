@@ -17,6 +17,7 @@
 
 import { Resend } from 'resend';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
+import { buildICS } from '../lib/ics-builder.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -220,7 +221,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
   let centro = {};
   try {
     const r = await fetch(
-      `${base}/centri?id=eq.${encodeURIComponent(appt.centro_id)}&select=id,nome,email_segreteria`,
+      `${base}/centri?id=eq.${encodeURIComponent(appt.centro_id)}&select=id,nome,email_segreteria,via,cap,citta,provincia`,
       { headers }
     );
     if (r.ok) { const rows = await r.json(); centro = rows?.[0] || {}; }
@@ -228,6 +229,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
 
   return {
     ok: true,
+    apptId:            appt.id,
     apptMedicoId:      appt.medico_id,
     emailPaziente:     appt.email_paziente,
     pazienteNome:      [appt.nome_paziente, appt.cognome_paziente].filter(Boolean).join(' '),
@@ -239,6 +241,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     medicoEmail:       medico.email || null,
     medicoSlug:        medico.slug || null,
     centroNome:        centro.nome || '',
+    centroIndirizzo:   [centro.via, [centro.cap, centro.citta].filter(Boolean).join(' '), centro.provincia].filter(Boolean).join(', '),
     centroEmail:       centro.email_segreteria || null,
     notificaNuovaPrenotazione: medico.notifica_nuova_prenotazione !== false
   };
@@ -341,6 +344,7 @@ export default async function handler(req, res) {
   }
 
   const base = `${supabaseUrl}/rest/v1`;
+  const icsHost = (req.headers['x-forwarded-host'] || req.headers.host || 'delphi-med.com').split(',')[0].trim();
   const dbHeaders = {
     'apikey': serviceKey,
     'Authorization': `Bearer ${serviceKey}`,
@@ -378,7 +382,7 @@ export default async function handler(req, res) {
 
   // ── Per-tipo: lookup DB + costruzione payload email ───────────────────────────
 
-  let to, subject, html, replyTo, medicoIdAudit, targetType, targetId;
+  let to, subject, html, replyTo, medicoIdAudit, targetType, targetId, icsAttachment;
 
   if (tipo === 'conferma_appt_anon') {
     const appt = await lookupAppt(authCtx.apptIdFromToken, null, supabaseUrl, serviceKey);
@@ -386,7 +390,11 @@ export default async function handler(req, res) {
     const dataFmt = formatDateIt(appt.data);
     to            = appt.emailPaziente;
     subject       = `Conferma appuntamento con ${appt.medicoNome}`;
-    html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken) });
+    html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost });
+    if (appt.apptId && appt.data && appt.ora) {
+      const _ics = buildICS({ apptId: appt.apptId, data: appt.data, ora: appt.ora, summary: buildIcsSummary(appt.tipoVisita, appt.medicoNome), description: appt.medicoNome ? `Prenotazione confermata con ${appt.medicoNome}` : 'Prenotazione confermata', location: [appt.centroNome, appt.centroIndirizzo].filter(Boolean).join(', ') });
+      icsAttachment = { filename: 'appuntamento.ics', content: Buffer.from(_ics).toString('base64'), contentType: 'text/calendar; charset=utf-8' };
+    }
     replyTo       = appt.medicoEmail;
     medicoIdAudit = appt.apptMedicoId;
     targetType    = 'appuntamento';
@@ -432,7 +440,11 @@ export default async function handler(req, res) {
     const dataFmt = formatDateIt(appt.data);
     to            = appt.emailPaziente;
     subject       = `Conferma appuntamento con ${appt.medicoNome}`;
-    html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken) });
+    html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost });
+    if (appt.apptId && appt.data && appt.ora) {
+      const _ics = buildICS({ apptId: appt.apptId, data: appt.data, ora: appt.ora, summary: buildIcsSummary(appt.tipoVisita, appt.medicoNome), description: appt.medicoNome ? `Prenotazione confermata con ${appt.medicoNome}` : 'Prenotazione confermata', location: [appt.centroNome, appt.centroIndirizzo].filter(Boolean).join(', ') });
+      icsAttachment = { filename: 'appuntamento.ics', content: Buffer.from(_ics).toString('base64'), contentType: 'text/calendar; charset=utf-8' };
+    }
     replyTo       = appt.medicoEmail;
     medicoIdAudit = authCtx.medicoId;
     targetType    = 'appuntamento';
@@ -522,6 +534,7 @@ export default async function handler(req, res) {
   try {
     const payload = { from: 'noreply@delphi-med.com', to: [to], subject, html };
     if (replyTo) payload.reply_to = replyTo;
+    if (icsAttachment) payload.attachments = [icsAttachment];
     const { data: sendData, error: sendErr } = await resend.emails.send(payload);
     if (sendErr) {
       console.error('[send-email] resend error:', sendErr.message, { tipo, to: redactEmail(to) });
@@ -563,8 +576,43 @@ function medArt(n){ if(!n || n === 'il medico') return 'il medico'; return (_med
 function medArtMai(n){ const s = medArt(n); return s.charAt(0).toUpperCase() + s.slice(1); }
 function medDi(n){ if(!n || n === 'il medico') return 'del medico'; return (_medFem(n) ? 'della ' : 'del ') + n; }
 
-function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione }) {
+function buildIcsSummary(tipoVisita, medicoNome) {
+  const tv = (tipoVisita || '').trim();
+  const mn = (medicoNome || '').trim();
+  if (tv && mn) return `${tv} — ${mn}`;
+  if (mn) return `Visita medica — ${mn}`;
+  return tv || 'Visita medica';
+}
+
+function buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_id, codice_cancellazione, ics_host }) {
+  if (!data_raw || !ora) return { googleUrl: '', icsUrl: '' };
+  const [y, m, d] = data_raw.split('-');
+  const [hh, mm] = ora.split(':');
+  const dtStart = `${y}${m}${d}T${hh}${mm}00`;
+  const totalMin = parseInt(hh, 10) * 60 + parseInt(mm, 10) + 30;
+  const endH = String(Math.floor(totalMin / 60)).padStart(2, '0');
+  const endM = String(totalMin % 60).padStart(2, '0');
+  const dtEnd = `${y}${m}${d}T${endH}${endM}00`;
+  const loc = [centro_nome, centro_indirizzo].filter(Boolean).join(', ');
+  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Visita medica')}&dates=${dtStart}/${dtEnd}&ctz=Europe%2FRome&location=${encodeURIComponent(loc)}`;
+  const icsUrl = (appt_id && codice_cancellazione)
+    ? `https://${ics_host}/api/ics?id=${encodeURIComponent(appt_id)}&token=${encodeURIComponent(codice_cancellazione)}`
+    : '';
+  return { googleUrl, icsUrl };
+}
+
+function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione, data_raw, appt_id, centro_indirizzo, ics_host }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
+  const { googleUrl, icsUrl } = buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_id, codice_cancellazione, ics_host });
+  const webcalUrl = icsUrl ? icsUrl.replace(/^https:\/\//, 'webcal://') : '';
+  const btnStyle = 'display:inline-block;padding:8px 16px;background:#f1f6fd;border:1px solid #d3e3f4;border-radius:6px;text-decoration:none;color:#15487F;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;';
+  const calSection = googleUrl
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;"><tr><td>` +
+      `<p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#888;margin:0 0 10px;">Aggiungi al calendario</p>` +
+      `<a href="${googleUrl}" target="_blank" style="${btnStyle}">Google Calendar</a>` +
+      (webcalUrl ? `&#160;&#160;<a href="${webcalUrl}" style="${btnStyle}">Apple&#8202;/&#8202;Outlook (.ics)</a>` : '') +
+      `</td></tr></table>`
+    : '';
   const body =
     emailTitle('Appuntamento confermato') +
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 18px;">Gentile <strong>${paziente_nome}</strong>,</p>` +
@@ -575,6 +623,7 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
       detailRow('Ora', ora) +
       detailRow('Tipo visita', tipo_visita, { last: true })
     ) +
+    calSection +
     noteBox('<strong>Ricorda di portare</strong> la tua documentazione sanitaria: tessera sanitaria, referti e risultati di esami precedenti, e ogni altro documento rilevante per la visita.') +
     `<p style="font-size:13px;color:#555;line-height:1.6;text-align:center;margin:24px auto 12px;max-width:480px;">Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile: lo slot torner&agrave; subito disponibile per un altro paziente che ne ha bisogno.</p>` +
     ctaButton(cancelUrl, 'Cancella l&rsquo;appuntamento');
