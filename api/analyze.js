@@ -101,9 +101,15 @@ export default async function handler(req, res) {
       }
       const visiteTesto = visite.map((v, i) => {
         const header = `VISITA ${i+1}${v.data ? ' — '+v.data : ''}`;
-        return header + '\n' + (v.clinica || '(nessuna sintesi disponibile)');
+        const parti = [];
+        const cl = (v.clinica || '').trim();
+        const rf = (v.referto || '').trim();
+        if (cl) parti.push('NOTE CLINICHE:\n' + cl);
+        if (rf) parti.push('REFERTO:\n' + rf);
+        if (!parti.length) parti.push('(nessun contenuto clinico disponibile)');
+        return header + '\n' + parti.join('\n\n');
       }).join('\n\n---\n\n');
-      const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi le sintesi di ${visite.length} visite di un paziente${eta ? ' di '+eta+' anni' : ''}, in ordine cronologico.
+      const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi i dati di ${visite.length} visite di un paziente${eta ? ' di '+eta+' anni' : ''}, in ordine cronologico. Per ciascuna visita possono essere presenti note cliniche e/o un referto redatto dal medico.
 
 I dati anagrafici del paziente (nome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza. Inizia direttamente dal contenuto clinico.
 
@@ -122,7 +128,7 @@ Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
       messages = [{ role: 'user', content: prompt }];
 
     } else if (mode === 'sintesi-referti') {
-      const { eta, files } = req.body;
+      const { eta, files, refertiTesto } = req.body;
       if (!Array.isArray(files) || !files.length) {
         return res.status(400).json({ error: 'Campo files mancante o non valido' });
       }
@@ -133,7 +139,10 @@ Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
         }
       }
       const n = files.length;
-      const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi ${n>1 ? n+' referti' : 'un referto'} di un paziente${eta ? ' di '+eta+' anni' : ''}, forniti come immagini/documenti.
+      const refertiValidi = Array.isArray(refertiTesto)
+        ? refertiTesto.filter(r => r && typeof r.testo === 'string' && r.testo.trim())
+        : [];
+      const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi ${n>1 ? n+' referti' : 'un referto'} di un paziente${eta ? ' di '+eta+' anni' : ''}, forniti come immagini/documenti${refertiValidi.length ? ', oltre ad alcuni referti redatti in formato testo' : ''}.
 
 I dati anagrafici del paziente (nome, cognome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza. Inizia direttamente dal contenuto clinico.
 
@@ -151,6 +160,12 @@ Rispondi SOLO con la storia clinica in testo. NESSUN JSON, nessuna introduzione,
         type: f.type === 'application/pdf' ? 'document' : 'image',
         source: { type: 'base64', media_type: f.type, data: f.base64 }
       }));
+      if (refertiValidi.length) {
+        const bloccoTesti = refertiValidi
+          .map((r, i) => `REFERTO TESTO ${i+1}${r.data ? ' — '+r.data : ''}\n${r.testo.trim()}`)
+          .join('\n\n---\n\n');
+        contentBlocks.push({ type: 'text', text: 'REFERTI IN FORMATO TESTO:\n\n' + bloccoTesti });
+      }
       contentBlocks.push({ type: 'text', text: prompt });
       messages = [{ role: 'user', content: contentBlocks }];
 
