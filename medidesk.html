@@ -262,6 +262,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .storia-testo>:first-child{margin-top:0}
 .storia-testo>:last-child{margin-bottom:0}
 .storia-testo{font-size:13px;line-height:1.7;color:var(--ink2);white-space:pre-wrap}
+.referto-testo h3,.referto-testo h4,.referto-testo h5,.referto-testo h6{margin:14px 0 6px;font-weight:600;line-height:1.3;color:var(--ink)}
+.referto-testo h3{font-size:16px}
+.referto-testo h4{font-size:15px}
+.referto-testo h5{font-size:14px}
+.referto-testo h6{font-size:13px;color:var(--ink2)}
+.referto-testo p{margin:0 0 8px;line-height:1.55}
+.referto-testo ul,.referto-testo ol{margin:6px 0 10px;padding-left:20px}
+.referto-testo li{margin:2px 0;line-height:1.5}
+.referto-testo hr{border:0;border-top:1px solid var(--border);margin:12px 0}
+.referto-testo strong{font-weight:600}
+.referto-testo>:first-child{margin-top:0}
+.referto-testo>:last-child{margin-bottom:0}
+.referto-testo{font-size:13px;line-height:1.7;color:var(--ink2);white-space:pre-wrap}
 .extracted-fields{display:flex;flex-direction:column;gap:8px}
 .field-row{display:flex;gap:8px;align-items:flex-start}
 .field-key{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);min-width:110px;padding-top:3px}
@@ -1680,6 +1693,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
 
       <div style="margin-bottom:24px">
+        <div class="section-title">Refertazione</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Scrittura referto nel fascicolo</div>
+              <div class="notif-toggle-desc">Area di redazione referto con ausilio AI nelle visite del fascicolo.</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-refertazione"><span class="toggle-slider"></span></label>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
         <div class="section-title">Aspetto</div>
         <div class="card"><div class="card-body">
           <div class="notif-toggle-label" style="margin-bottom:12px">Tema colore</div>
@@ -2168,7 +2194,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- MODAL NUOVA VISITA -->
 <div class="modal-overlay" id="modal-nuova-visita">
   <div class="modal" style="max-width:560px">
-    <div class="modal-header"><span class="modal-title" id="visita-modal-title">Carica referto</span><button class="modal-close" onclick="closeModal('modal-nuova-visita')">✕</button></div>
+    <div class="modal-header"><span class="modal-title" id="visita-modal-title">Nuova visita</span><button class="modal-close" onclick="closeModal('modal-nuova-visita')">✕</button></div>
     <div class="modal-body">
 
       <!-- STEP 1: Scegli paziente -->
@@ -2199,11 +2225,25 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
         <div class="confirm-box" id="visita-paziente-info" style="margin-bottom:16px"></div>
 
-        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Fotografa o seleziona il referto e salvalo nel fascicolo. La sintesi clinica si genera quando vuoi, dal fascicolo del paziente.</p>
+        <div class="upload-area" id="btn-scrivi-referto-inline" onclick="toggleNvReferto()" style="margin-bottom:8px">
+          <div class="uicon"><svg class="ic"><use href="#ic-edit"/></svg></div>
+          <strong>Scrivi il referto</strong>
+          <p>Bozza manuale, con raffinamento AI opzionale</p>
+        </div>
+        <div id="nv-referto-box" style="display:none;margin-bottom:8px">
+          <p style="font-size:11px;color:var(--ink3);margin-bottom:8px">Spunti: Motivo della visita · Anamnesi · Esame obiettivo · Diagnosi · Terapia · Follow-up</p>
+          <textarea class="form-textarea" id="nv-referto" rows="6" placeholder="Scrivi qui la bozza del referto…"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+            <button class="btn btn-secondary" id="btn-ai-nv-referto" type="button" onclick="generaRefertoModale()" style="font-size:12px;padding:6px 12px;display:flex;align-items:center;gap:6px"><svg class="ic" style="width:14px;height:14px"><use href="#ic-sparkles"/></svg>Ottimizza con AI</button>
+            <span style="font-size:11px;color:var(--ink3)">La bozza verrà riscritta come referto professionale.</span>
+          </div>
+        </div>
+        <div style="text-align:center;color:var(--ink3);font-size:12px;margin:4px 0 12px">— oppure —</div>
         <div class="upload-area" onclick="document.getElementById('referto-input').click()">
           <div class="uicon"><svg class="ic"><use href="#ic-camera"/></svg></div>
           <strong>Clicca per selezionare o fotografare</strong>
           <p>Uno o più file (JPG, PNG, PDF)</p>
+          <p style="font-size:11px;color:var(--ink3);margin-top:8px">Il referto-immagine è opzionale: puoi salvare la visita anche senza.</p>
         </div>
         <input type="file" id="referto-input" accept="image/*,application/pdf" style="display:none" multiple onchange="handleRefertoSelect(this)">
         <div id="referto-preview" style="display:none;margin-top:12px"></div>
@@ -2912,6 +2952,7 @@ async function loadMedicoFromDB(user){
       S.settings.sitoWeb     = data.sito_web           || '';
       S.settings.mostraEmailPazienti    = data.mostra_email_pazienti    !== false;
       S.settings.mostraTelefonoPazienti = data.mostra_telefono_pazienti !== false;
+      S.settings.refertazioneAttiva     = data.refertazione_attiva      !== false;
       S.settings.linkedin    = data.linkedin           || '';
       S.settings.instagram   = data.instagram          || '';
       S.settings.youtube     = data.youtube            || '';
@@ -3041,7 +3082,7 @@ async function loadVisiteFromDB(user){
   if(!isOnline() || !user || !S.medicoId) return;
   try {
     const { data, error } = await supabaseClient.from('visite')
-      .select('id, paziente_id, data_visita, luogo, contenuto_clinico, foto_referto_url, tipo_referto')
+      .select('id, paziente_id, data_visita, luogo, contenuto_clinico, foto_referto_url, tipo_referto, referto_testo')
       .eq('medico_id', S.medicoId)
       .order('created_at', { ascending: false });
     if(error) throw error;
@@ -3049,7 +3090,7 @@ async function loadVisiteFromDB(user){
     (data || []).forEach(v => {
       const paz = S.pazienti.find(p => String(p.id) === String(v.paziente_id));
       if(paz){
-        paz.visite.push({ id:v.id, data:v.data_visita||'', luogo:v.luogo||'', clinica:v.contenuto_clinico||'', tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null });
+        paz.visite.push({ id:v.id, data:v.data_visita||'', luogo:v.luogo||'', clinica:v.contenuto_clinico||'', tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null, referto:v.referto_testo||'' });
       }
     });
     save();
@@ -5345,6 +5386,34 @@ function _buildVisitaHTML(paz, v, i){
     h+='<button class="btn btn-sm btn-secondary" onclick="openFotoRefertoByVisita(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-eye"/></svg>';
     h+=(n>1?'Vedi '+n+' foto':'Vedi foto referto')+'</button></div>';
   }
+  var _rAttiva=S.settings.refertazioneAttiva!==false;
+  var _rEdit=_refEdit.has(pid+'-'+vid);
+  h+='<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">';
+  h+='<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:8px">Referto</div>';
+  if(_rAttiva&&_rEdit){
+    h+='<textarea class="form-textarea" id="ref-ta-'+pid+'-'+vid+'" style="min-height:140px;white-space:pre-wrap"></textarea>';
+    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">';
+    h+='<button class="btn btn-sm btn-secondary" id="btn-ai-ref-'+pid+'-'+vid+'" onclick="generaRefertoAI(\''+pid+'\',\''+vid+'\')">Ottimizza con AI</button>';
+    h+='<button class="btn btn-sm btn-primary" onclick="salvaReferto(\''+pid+'\',\''+vid+'\')">Salva</button>';
+    h+='<button class="btn btn-sm" onclick="toggleRefertoEdit(\''+pid+'\',\''+vid+'\')">Annulla</button>';
+    h+='</div>';
+    h+='<div style="font-size:11px;color:var(--ink3);margin-top:8px">L\'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div>';
+  }else if(_rAttiva&&v.referto){
+    h+='<div class="referto-testo" id="ref-view-'+pid+'-'+vid+'">'+escapeHtml(v.referto)+'</div>';
+    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">';
+    h+='<button class="btn btn-sm btn-secondary" onclick="toggleRefertoEdit(\''+pid+'\',\''+vid+'\')">Modifica</button>';
+    h+='<button class="btn btn-sm btn-secondary" onclick="downloadRefertoPDF(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button>';
+    h+='<button class="btn btn-sm btn-secondary" onclick="copiaReferto(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button>';
+    h+='</div>';
+  }else if(_rAttiva){
+    h+='<button class="btn btn-sm btn-secondary" onclick="toggleRefertoEdit(\''+pid+'\',\''+vid+'\')">Scrivi referto</button>';
+  }else if(v.referto){
+    h+='<div class="referto-testo" id="ref-view-'+pid+'-'+vid+'">'+escapeHtml(v.referto)+'</div>';
+    h+='<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-secondary" onclick="downloadRefertoPDF(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="copiaReferto(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button></div>';
+  }else{
+    h+='<div style="font-size:11px;color:var(--ink3);font-style:italic">Refertazione disattivata (riattivabile dalle Impostazioni).</div>';
+  }
+  h+='</div>';
   h+='</div>';
   h+='</div>';
   return h;
@@ -5378,6 +5447,7 @@ function showPazienteDetail(id){
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
       <button type="button" class="btn-del-paz" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:none;color:var(--warm);font-size:14px;cursor:pointer;padding:10px 4px;min-height:44px" data-pazid="${escapeAttr(id)}" data-action="delete-paziente"><svg class="ic"><use href="#ic-trash"/></svg> Elimina paziente</button>
     </div>`;
+  _initPazienteModal(p);
   openModal('modal-paziente');
 }
 function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
@@ -5406,7 +5476,7 @@ async function openFotoRefertoByVisita(pazId, visitaId){
 }
 
 function openVisitaForPaziente(pazId){
-  document.getElementById('visita-modal-title').textContent = 'Carica referto';
+  document.getElementById('visita-modal-title').textContent = 'Nuova visita';
   V.selectedPazienteId = null;
   V.isNewPaziente = false;
   resetVisitaUpload();
@@ -5434,6 +5504,139 @@ async function deleteVisita(pazId, visitaId){
   renderPazienti();
   showPazienteDetail(pazId);
   showToast('Visita eliminata ✓');
+}
+
+let _refEdit = new Set();
+
+function _initPazienteModal(paz){
+  (paz.visite||[]).forEach(v => {
+    const pid=String(paz.id), vid=String(v.id);
+    const viewEl=document.getElementById('ref-view-'+pid+'-'+vid);
+    if(viewEl && v.referto) viewEl.dataset.md=v.referto;
+    const ta=document.getElementById('ref-ta-'+pid+'-'+vid);
+    if(ta) ta.value=v.referto||'';
+  });
+}
+
+function toggleRefertoEdit(pid, vid){
+  pid=String(pid); vid=String(vid);
+  if(S.settings.refertazioneAttiva===false) return;
+  const k=pid+'-'+vid;
+  if(_refEdit.has(k)) _refEdit.delete(k); else _refEdit.add(k);
+  const paz=S.pazienti.find(p=>String(p.id)===pid); if(!paz) return;
+  renderPazienti();
+  showPazienteDetail(pid);
+}
+
+async function generaRefertoAI(pid, vid){
+  pid=String(pid); vid=String(vid);
+  const ta=document.getElementById('ref-ta-'+pid+'-'+vid); if(!ta) return;
+  const bozza=ta.value.trim();
+  if(!bozza){ showToast('Scrivi prima una bozza'); return; }
+  const paz=S.pazienti.find(p=>String(p.id)===pid); if(!paz) return;
+  const v=(paz.visite||[]).find(x=>String(x.id)===vid); if(!v) return;
+  const eta=etaDaNascita(paz.nascita);
+  const btn=document.getElementById('btn-ai-ref-'+pid+'-'+vid);
+  if(btn){ btn.disabled=true; btn.textContent='Ottimizzo…'; }
+  try{
+    const _jwt=await getAuthJwt();
+    const res=await fetch('/api/genera-referto',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
+      body:JSON.stringify({bozza, eta, tipo:v.tipo||'', data:v.data||''})
+    });
+    if(!res.ok){
+      const e=await res.json().catch(()=>({}));
+      throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));
+    }
+    const data=await res.json();
+    ta.value=data.content.map(i=>i.text||'').join('').trim();
+  }catch(err){
+    showToast(err.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='Ottimizza con AI'; }
+  }
+}
+
+async function salvaReferto(pid, vid){
+  pid=String(pid); vid=String(vid);
+  const ta=document.getElementById('ref-ta-'+pid+'-'+vid); if(!ta) return;
+  const testo=ta.value.trim();
+  const paz=S.pazienti.find(p=>String(p.id)===pid); if(!paz) return;
+  const v=(paz.visite||[]).find(x=>String(x.id)===vid); if(!v) return;
+  if(!isOnline() || String(vid).startsWith('local-')){
+    showToast('Salvataggio referto disponibile solo online');
+    return;
+  }
+  try{
+    const { error }=await supabaseClient.from('visite').update({referto_testo: testo||null}).eq('id', vid);
+    if(error) throw error;
+  }catch(e){ showToast('Errore: '+e.message); return; }
+  v.referto=testo;
+  _refEdit.delete(pid+'-'+vid);
+  save();
+  renderPazienti();
+  showPazienteDetail(pid);
+  showToast('Referto salvato ✓');
+}
+
+function downloadRefertoPDF(pid, vid){
+  pid=String(pid); vid=String(vid);
+  const paz=S.pazienti.find(p=>String(p.id)===String(pid)); if(!paz) return;
+  const v=(paz.visite||[]).find(x=>String(x.id)===String(vid)); if(!v||!v.referto) return;
+  const el=document.getElementById('ref-view-'+pid+'-'+vid);
+  const testo=mdToPlain(el?.dataset.md??v.referto??'');
+  try{
+    const { jsPDF }=window.jspdf;
+    const doc=new jsPDF({unit:'mm',format:'a4'});
+    const m=S.settings;
+    const nomeDoc=((m.titolo||'')+' '+(m.nomeProf||'')+' '+(m.cognomeProf||'')).trim();
+    const spec=m.spec||m.specializzazione||'';
+    const margin=20, pageW=210, maxW=pageW-margin*2;
+    let y=20;
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
+    doc.text(nomeDoc||'—', margin, y); y+=7;
+    if(spec){ doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(spec,margin,y); y+=5; }
+    doc.setDrawColor(180,180,180); doc.line(margin,y,pageW-margin,y); y+=8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Paziente', margin, y); y+=6;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text('Nome: '+paz.nome+' '+paz.cognome, margin, y); y+=5;
+    if(paz.nascita){ doc.text('Data di nascita: '+paz.nascita, margin, y); y+=5; }
+    y+=3;
+    doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=8;
+    var visitaLabel='Visita: '+(v.data||'N/A');
+    if(v.tipo) visitaLabel+=' — '+v.tipo;
+    if(v.luogo) visitaLabel+=' — '+v.luogo;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.text(visitaLabel, margin, y); y+=7;
+    doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.text('Referto', margin, y); y+=7;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10);
+    doc.splitTextToSize(testo||'—', maxW).forEach(line=>{ if(y>270){doc.addPage();y=20;} doc.text(line,margin,y); y+=5; });
+    y+=5;
+    doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=6;
+    doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
+    if(m.albo){
+      const alboProv=m.alboProvincia?' di '+m.alboProvincia:'';
+      doc.text('Iscrizione Ordine dei Medici'+alboProv+' n. '+m.albo, margin, y); y+=5;
+    }
+    doc.text('Generato da Delphi~Med il '+new Date().toLocaleDateString('it-IT'), margin, y);
+    const dataStr=(v.data||'').replace(/\//g,'-');
+    doc.save(('Referto_'+paz.cognome+'_'+paz.nome+'_'+dataStr+'.pdf').replace(/\s/g,'_'));
+  }catch(e){ showToast('Errore PDF: '+e.message); }
+}
+
+function copiaReferto(pid, vid){
+  pid=String(pid); vid=String(vid);
+  const paz=S.pazienti.find(p=>String(p.id)===String(pid)); if(!paz) return;
+  const v=(paz.visite||[]).find(x=>String(x.id)===String(vid));
+  if(!v||!v.referto){ showToast('Nessun referto da copiare'); return; }
+  const el=document.getElementById('ref-view-'+pid+'-'+vid);
+  const testo=mdToPlain(el?.dataset.md??v.referto??'');
+  if(!testo){ showToast('Nessun referto da copiare'); return; }
+  navigator.clipboard.writeText(testo).then(()=>showToast('Referto copiato ✓')).catch(()=>showToast('Copia non supportata'));
 }
 
 function openDeletePazienteModal(pazienteId){
@@ -5662,7 +5865,7 @@ var V = { selectedPazienteId:null, isNewPaziente:false, refertoFiles:[], _previe
 function openModalVisita(){
   V.selectedPazienteId = null;
   V.isNewPaziente = false;
-  document.getElementById('visita-modal-title').textContent='Carica referto';
+  document.getElementById('visita-modal-title').textContent='Nuova visita';
   // Default data filtro = oggi
   const dEl = document.getElementById('visita-data-filter');
   if(dEl) dEl.value = fmt(new Date());
@@ -5811,6 +6014,8 @@ function goToVisitaUpload(paziente, appt){
     }
   }
   visitaStep(2);
+  document.getElementById('extracted-data').style.display = 'block';
+  document.getElementById('btn-salva-visita').style.display = 'inline-block';
 }
 
 function visitaBackToStep1(){
@@ -5830,6 +6035,10 @@ function resetVisitaUpload(){
   });
   const sb = document.getElementById('btn-salva-visita');
   if(sb) sb.style.display='none';
+  const nvr = document.getElementById('nv-referto');
+  if(nvr) nvr.value='';
+  const nvrBox = document.getElementById('nv-referto-box');
+  if(nvrBox) nvrBox.style.display='none';
   ['ex-nome','ex-cognome','ex-nascita','ex-data-visita','ex-luogo','ex-clinica','ex-tipo-referto'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value='';
@@ -5851,10 +6060,7 @@ function renderRefertoPreview(){
   const prev = document.getElementById('referto-preview');
   if(!prev) return;
   if(!V.refertoFiles.length){
-    prev.innerHTML=''; prev.style.display='none';
-    document.getElementById('extracted-data').style.display='none';
-    document.getElementById('btn-salva-visita').style.display='none';
-    return;
+    prev.innerHTML=''; prev.style.display='none'; return;
   }
   prev.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">`+
     V.refertoFiles.map((f,idx)=>{
@@ -5887,7 +6093,8 @@ async function saveVisita(){
     const clinica = document.getElementById('ex-clinica').value.trim();
     const _tipoRaw = document.getElementById('ex-tipo-referto').value.trim();
     const tipoReferto = _tipoRaw ? _tipoRaw.charAt(0).toUpperCase() + _tipoRaw.slice(1) : '';
-    const visita = { id: Date.now(), data: dataVisita, luogo, clinica, tipo: tipoReferto, foto_url: null };
+    const refertoModale = (document.getElementById('nv-referto')?.value || '').trim();
+    const visita = { id: Date.now(), data: dataVisita, luogo, clinica, tipo: tipoReferto, foto_url: null, referto: refertoModale };
 
     let authUser = null;
     if(isOnline()){ try{ const r = await supabaseClient.auth.getUser(); authUser = r.data.user; }catch(e){} }
@@ -5897,7 +6104,7 @@ async function saveVisita(){
     if(V.isNewPaziente){
       const nome = capitalizeName(document.getElementById('ex-nome').value.trim());
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
-      if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return; }
+      if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return null; }
       const nascita = document.getElementById('ex-nascita').value.trim();
       paz = S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
       if(!paz){
@@ -5918,7 +6125,7 @@ async function saveVisita(){
       }
     } else {
       paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
-      if(!paz){ showToast('Errore: paziente non trovato'); return; }
+      if(!paz){ showToast('Errore: paziente non trovato'); return null; }
       showToast('Visita aggiunta ✓');
     }
 
@@ -5938,7 +6145,7 @@ async function saveVisita(){
           }
           if(uploadedPaths.length === 0){
             const cont = confirm('Upload foto non riuscito.\nVuoi salvare la visita senza foto?');
-            if(!cont) return;
+            if(!cont) return null;
           } else {
             visita.foto_url = uploadedPaths.length === 1 ? uploadedPaths[0] : JSON.stringify(uploadedPaths);
           }
@@ -5951,7 +6158,8 @@ async function saveVisita(){
           luogo:             luogo       || null,
           contenuto_clinico: clinica     || null,
           foto_referto_url:  visita.foto_url || null,
-          tipo_referto:      tipoReferto || null
+          tipo_referto:      tipoReferto || null,
+          referto_testo:     refertoModale || null
         }).select('id').single();
         if(vErr){
           // Rollback: elimina tutte le foto già caricate
@@ -5963,7 +6171,7 @@ async function saveVisita(){
           throw vErr;
         }
         visita.id = dbV.id;
-      } catch(e){ console.error('[Delphi~Med] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return; }
+      } catch(e){ console.error('[Delphi~Med] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return null; }
     }
 
     paz.visite = paz.visite||[];
@@ -5971,9 +6179,11 @@ async function saveVisita(){
     save();
     closeModal('modal-nuova-visita');
     renderPazienti(); updateStats(); renderDashboard();
+    return { paz, visita };
   } catch(err){
     console.error('saveVisita error:', err.message);
     showToast('Errore salvataggio: '+err.message);
+    return null;
   } finally {
     if(btnSalva){ btnSalva.disabled = false; btnSalva.textContent = 'Salva nel fascicolo'; }
   }
@@ -5981,6 +6191,47 @@ async function saveVisita(){
 
 function resetVisitaModal(){
   resetVisitaUpload();
+}
+
+function toggleNvReferto(){
+  if(S.settings.refertazioneAttiva===false){ showToast('Attiva la refertazione dalle Impostazioni'); return; }
+  const box=document.getElementById('nv-referto-box');
+  const card=document.getElementById('btn-scrivi-referto-inline');
+  if(!box) return;
+  const open=box.style.display!=='none';
+  box.style.display=open?'none':'block';
+  const lbl=card?.querySelector('strong');
+  if(lbl) lbl.textContent=open?'Scrivi il referto':'Chiudi editor';
+}
+
+async function generaRefertoModale(){
+  const ta=document.getElementById('nv-referto'); if(!ta) return;
+  const bozza=ta.value.trim();
+  if(!bozza){ showToast('Scrivi prima una bozza'); return; }
+  const tipo=(document.getElementById('ex-tipo-referto')?.value||'').trim();
+  const nascita=(document.getElementById('ex-nascita')?.value||'').trim();
+  const eta=etaDaNascita(nascita);
+  const dataV=(document.getElementById('ex-data-visita')?.value||'').trim();
+  const btn=document.getElementById('btn-ai-nv-referto');
+  if(btn){ btn.disabled=true; btn.textContent='Ottimizzo…'; }
+  try{
+    const _jwt=await getAuthJwt();
+    const res=await fetch('/api/genera-referto',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
+      body:JSON.stringify({bozza,eta,tipo,data:dataV})
+    });
+    if(!res.ok){
+      const e=await res.json().catch(()=>({}));
+      throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));
+    }
+    const data=await res.json();
+    ta.value=data.content.map(i=>i.text||'').join('').trim();
+  }catch(err){
+    showToast(err.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML='<svg class="ic" style="width:14px;height:14px"><use href="#ic-sparkles"></use></svg>Ottimizza con AI'; }
+  }
 }
 
 // ── DASHBOARD ──
@@ -7695,6 +7946,7 @@ function renderImpostazioni(){
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
   chk('imp-mostra-email',    S.settings.mostraEmailPazienti    !== false);
   chk('imp-mostra-telefono', S.settings.mostraTelefonoPazienti !== false);
+  chk('imp-refertazione',    S.settings.refertazioneAttiva     !== false);
   const curSkin = localStorage.getItem('skin') || 'marine';
   document.querySelectorAll('.skin-swatch').forEach(b => b.classList.toggle('is-active', b.dataset.skin === curSkin));
   const sogliaEl = document.getElementById('setting-soglia-anni');
@@ -7714,7 +7966,8 @@ async function saveImpostazione(toggleId){
     'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' },
     'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' },
     'imp-mostra-email':    { key: 'mostraEmailPazienti',    col: 'mostra_email_pazienti' },
-    'imp-mostra-telefono': { key: 'mostraTelefonoPazienti', col: 'mostra_telefono_pazienti' }
+    'imp-mostra-telefono': { key: 'mostraTelefonoPazienti', col: 'mostra_telefono_pazienti' },
+    'imp-refertazione':    { key: 'refertazioneAttiva',     col: 'refertazione_attiva' }
   };
   const m = mapping[toggleId];
   if(!m){ console.warn('[Delphi~Med] saveImpostazione: toggle sconosciuto', toggleId); return; }
