@@ -2225,7 +2225,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
         <div class="confirm-box" id="visita-paziente-info" style="margin-bottom:16px"></div>
 
-        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Fotografa o seleziona il referto e salvalo nel fascicolo. La sintesi clinica si genera quando vuoi, dal fascicolo del paziente.</p>
+        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Importa un referto/esame da foto o file, oppure scrivi il referto direttamente.</p>
         <div class="upload-area" onclick="document.getElementById('referto-input').click()">
           <div class="uicon"><svg class="ic"><use href="#ic-camera"/></svg></div>
           <strong>Clicca per selezionare o fotografare</strong>
@@ -2255,6 +2255,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-nuova-visita')">Annulla</button>
+      <button class="btn btn-secondary" id="btn-scrivi-referto" style="display:none" onclick="salvaVisitaEScriviReferto()">Scrivi referto</button>
       <button class="btn btn-primary" id="btn-salva-visita" style="display:none" onclick="saveVisita()">Salva nel fascicolo</button>
     </div>
   </div>
@@ -5991,6 +5992,7 @@ function goToVisitaUpload(paziente, appt){
   visitaStep(2);
   document.getElementById('extracted-data').style.display = 'block';
   document.getElementById('btn-salva-visita').style.display = 'inline-block';
+  document.getElementById('btn-scrivi-referto').style.display = 'inline-block';
 }
 
 function visitaBackToStep1(){
@@ -6010,6 +6012,8 @@ function resetVisitaUpload(){
   });
   const sb = document.getElementById('btn-salva-visita');
   if(sb) sb.style.display='none';
+  const sbr = document.getElementById('btn-scrivi-referto');
+  if(sbr) sbr.style.display='none';
   ['ex-nome','ex-cognome','ex-nascita','ex-data-visita','ex-luogo','ex-clinica','ex-tipo-referto'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value='';
@@ -6074,7 +6078,7 @@ async function saveVisita(){
     if(V.isNewPaziente){
       const nome = capitalizeName(document.getElementById('ex-nome').value.trim());
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
-      if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return; }
+      if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return null; }
       const nascita = document.getElementById('ex-nascita').value.trim();
       paz = S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
       if(!paz){
@@ -6095,7 +6099,7 @@ async function saveVisita(){
       }
     } else {
       paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
-      if(!paz){ showToast('Errore: paziente non trovato'); return; }
+      if(!paz){ showToast('Errore: paziente non trovato'); return null; }
       showToast('Visita aggiunta ✓');
     }
 
@@ -6115,7 +6119,7 @@ async function saveVisita(){
           }
           if(uploadedPaths.length === 0){
             const cont = confirm('Upload foto non riuscito.\nVuoi salvare la visita senza foto?');
-            if(!cont) return;
+            if(!cont) return null;
           } else {
             visita.foto_url = uploadedPaths.length === 1 ? uploadedPaths[0] : JSON.stringify(uploadedPaths);
           }
@@ -6140,7 +6144,7 @@ async function saveVisita(){
           throw vErr;
         }
         visita.id = dbV.id;
-      } catch(e){ console.error('[Delphi~Med] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return; }
+      } catch(e){ console.error('[Delphi~Med] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return null; }
     }
 
     paz.visite = paz.visite||[];
@@ -6148,12 +6152,26 @@ async function saveVisita(){
     save();
     closeModal('modal-nuova-visita');
     renderPazienti(); updateStats(); renderDashboard();
+    return { paz, visita };
   } catch(err){
     console.error('saveVisita error:', err.message);
     showToast('Errore salvataggio: '+err.message);
+    return null;
   } finally {
     if(btnSalva){ btnSalva.disabled = false; btnSalva.textContent = 'Salva nel fascicolo'; }
   }
+}
+
+async function salvaVisitaEScriviReferto(){
+  const r = await saveVisita();
+  if(!r || !r.paz || !r.visita) return;
+  if(S.settings.refertazioneAttiva===false){
+    showToast('Attiva la refertazione dalle Impostazioni per scrivere il referto');
+    showPazienteDetail(String(r.paz.id));
+    return;
+  }
+  _refEdit.add(String(r.paz.id)+'-'+String(r.visita.id));
+  showPazienteDetail(String(r.paz.id));
 }
 
 function resetVisitaModal(){
