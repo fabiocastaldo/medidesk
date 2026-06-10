@@ -272,8 +272,10 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
   if (!chiusura) return { ok: false, status: 404, error: 'Chiusura non trovata' };
   // Check a
   if (chiusura.medico_id !== userId) return { ok: false, status: 403, error: 'Accesso non autorizzato alla chiusura' };
-  // Check b
-  if (!Array.isArray(chiusura.centri_ids) || !chiusura.centri_ids.includes(centroId)) {
+  // Check b — vincolo solo se la chiusura è circoscritta a centri specifici.
+  // centri_ids vuoto = chiusura globale (vale per tutti i centri del medico): nessun vincolo qui;
+  // l'ownership resta garantita dai check a (chiusura.medico_id) e c (centro.medico_id).
+  if (Array.isArray(chiusura.centri_ids) && chiusura.centri_ids.length && !chiusura.centri_ids.includes(centroId)) {
     return { ok: false, status: 400, error: 'Il centro specificato non è incluso in questa chiusura' };
   }
 
@@ -549,18 +551,24 @@ function buildHtmlCancellazioneMedico({ paziente_nome, medico_nome, centro_nome,
   const body =
     emailTitle('Appuntamento annullato') +
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 20px;">Gentile <strong>${paziente_nome}</strong>,</p>` +
-    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">la informiamo che l&apos;appuntamento del <strong>${dataFmt}</strong> alle ore <strong>${ora}</strong> presso <strong>${centro_nome}</strong> con il medico <strong>${medico_nome}</strong> &egrave; stato annullato.</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">la informiamo che l&apos;appuntamento del <strong>${dataFmt}</strong> alle ore <strong>${ora}</strong> presso <strong>${centro_nome}</strong> con <strong>${medArt(medico_nome)}</strong> &egrave; stato annullato.</p>` +
     riprenota +
     `<p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Ci scusiamo per l&apos;inconveniente.<br><br>Cordiali saluti.</p>`;
   return emailShell(body);
 }
+
+// Articolo + titolo del medico: "il Dr." / "la Dr.ssa" / "del" / "della". Fallback 'il medico'.
+function _medFem(n){ return /ssa/i.test((n || '').split(' ')[0]); }
+function medArt(n){ if(!n || n === 'il medico') return 'il medico'; return (_medFem(n) ? 'la ' : 'il ') + n; }
+function medArtMai(n){ const s = medArt(n); return s.charAt(0).toUpperCase() + s.slice(1); }
+function medDi(n){ if(!n || n === 'il medico') return 'del medico'; return (_medFem(n) ? 'della ' : 'del ') + n; }
 
 function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
   const body =
     emailTitle('Appuntamento confermato') +
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 18px;">Gentile <strong>${paziente_nome}</strong>,</p>` +
-    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">La tua prenotazione con <strong>${medico_nome}</strong> &egrave; confermata.<br>Di seguito il riepilogo del tuo appuntamento.</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">La tua prenotazione con <strong>${medArt(medico_nome)}</strong> &egrave; confermata.<br>Di seguito il riepilogo del tuo appuntamento.</p>` +
     detailCard(
       detailRow('Centro medico', centro_nome) +
       detailRow('Data', dataFmt) +
@@ -576,12 +584,12 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
 function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_visita, medico_nome, centro_nome }) {
   const LABELS = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento' };
   const INTRO  = {
-    nuova_prenotazione: `&Egrave; appena arrivata una nuova prenotazione online per ${medico_nome}. Vi giriamo i dettagli per la vostra agenda.`,
-    appuntamento_manuale: `${medico_nome} ha inserito un nuovo appuntamento. Di seguito i dettagli.`,
-    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento di ${medico_nome}: lo slot &egrave; di nuovo disponibile.`
+    nuova_prenotazione: `&Egrave; appena arrivata una nuova prenotazione online per ${medArt(medico_nome)}. Vi giriamo i dettagli per la vostra agenda.`,
+    appuntamento_manuale: `${medArtMai(medico_nome)} ha inserito un nuovo appuntamento. Di seguito i dettagli.`,
+    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento ${medDi(medico_nome)}: lo slot &egrave; di nuovo disponibile.`
   };
   const label = LABELS[evento] || evento;
-  const intro = INTRO[evento] || `Vi inoltriamo un aggiornamento relativo all&apos;agenda di ${medico_nome}.`;
+  const intro = INTRO[evento] || `Vi inoltriamo un aggiornamento relativo all&apos;agenda ${medDi(medico_nome)}.`;
   const rows =
     detailRow('Paziente', paziente_nome) +
     detailRow('Medico', medico_nome) +

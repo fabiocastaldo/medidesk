@@ -2314,7 +2314,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-mail-chiusura')">Chiudi</button>
-      <button class="btn btn-primary" onclick="copyTutteMail()">Copia tutte</button>
+      <button class="btn btn-primary" onclick="inviaMailChiusuraSelezionati()">Invia ora</button>
     </div>
   </div>
 </div>
@@ -7390,13 +7390,17 @@ async function saveChiusura(){
   renderChiusure();
   if(S.agendaView==='month') renderAgenda();
   showToast('Chiusura salvata ✓');
-  // Mostra bozza mail
-  const centriAssociati=selCentri.length
-    ? S.centri.filter(c=>selCentri.some(id=>String(id)===String(c.id)))
-    : S.centri.filter(c=>c.attivo!==false);
-  if(centriAssociati.length && S.settings.notifChiusuraCentro){
-    await inviaMailChiusuraAiCentri(nuova, centriAssociati);
-    showMailBozzaChiusura(nuova, centriAssociati);
+  // Notifica ai centri (invio esplicito, non più bozza automatica)
+  if(S.settings.notifChiusuraCentro){
+    const attiviMail = S.centri.filter(c=>c.attivo!==false);
+    if(attiviMail.length){
+      if(String(nuova.id).startsWith('local-')){
+        showToast('Chiusura salvata in locale: la notifica ai centri sarà possibile quando sarai online');
+      } else {
+        const preselMail = selCentri.length ? selCentri.map(String) : attiviMail.map(c=>String(c.id));
+        openMailChiusuraModal(nuova, attiviMail, preselMail);
+      }
+    }
   }
 }
 
@@ -7406,10 +7410,10 @@ async function inviaMailChiusuraAiCentri(ch, centri){
   const centriConEmail = centri.filter(c=>c.email && c.email.trim());
   if(!centriConEmail.length){ return; }
   const _jwt = await getAuthJwt();
-  let inviate = 0;
+  let inviate = 0, fallite = 0;
   for(const c of centriConEmail){
     try {
-      await fetch('/api/send-email', {
+      const r = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
         body: JSON.stringify({
@@ -7418,10 +7422,17 @@ async function inviaMailChiusuraAiCentri(ch, centri){
           centro_id: c.id
         })
       });
-      inviate++;
-    } catch(e){ console.error('[Delphi~Med] mail chiusura centro:', e.message); }
+      if(r.ok){ inviate++; }
+      else {
+        fallite++;
+        let msg=''; try { msg=(await r.json()).error||''; } catch(_){}
+        console.error('[Delphi~Med] mail chiusura centro', c.nome, r.status, msg);
+      }
+    } catch(e){ fallite++; console.error('[Delphi~Med] mail chiusura centro:', e.message); }
   }
-  if(inviate>0) showToast(`Mail inviate a ${inviate} centro/i ✓`);
+  if(inviate && !fallite) showToast(`Mail inviate a ${inviate} centro/i ✓`);
+  else if(inviate && fallite) showToast(`Inviate a ${inviate} centro/i, ${fallite} non riuscite`);
+  else showToast('Invio mail non riuscito');
 }
 
 async function deleteChiusura(id){
@@ -7478,36 +7489,41 @@ async function loadChiusureFromDB(user){
   } catch(e){ console.error('[Delphi~Med] loadChiusureFromDB:', e.message); }
 }
 
-function showMailBozzaChiusura(ch, centri){
+function openMailChiusuraModal(ch, centri, preselezione){
   const medico=S.settings;
   const titolo=medico.titolo||'Dr.';
   const nomeCompleto=`${titolo} ${medico.nomeProf||''} ${medico.cognomeProf||''}`.trim();
-  const bozze=centri.map(c=>{
-    const testo=`Oggetto: Comunicazione chiusura studio — ${formatDate(ch.data_inizio)}${ch.data_inizio!==ch.data_fine?' – '+formatDate(ch.data_fine):''}
-
-Gentile Segreteria di ${c.nome},
-
-comunichiamo che ${nomeCompleto} non sarà disponibile presso il vostro ambulatorio nel seguente periodo:
-
-Dal ${formatDate(ch.data_inizio)} al ${formatDate(ch.data_fine)}
-Motivo: ${ch.etichetta||'Chiusura studio'}
-
-Durante questo periodo non saranno accettate prenotazioni.
-
-Cordiali saluti,
-${nomeCompleto}`;
-    return {centro:c.nome, testo};
+  const pre=new Set((preselezione||[]).map(String));
+  const righe=centri.map((c,i)=>{
+    const haEmail=!!(c.email && c.email.trim());
+    const testo=`Oggetto: Comunicazione chiusura studio — ${formatDate(ch.data_inizio)}${ch.data_inizio!==ch.data_fine?' – '+formatDate(ch.data_fine):''}\n\nGentile Segreteria di ${c.nome},\n\ncomunichiamo che ${nomeCompleto} non sarà disponibile presso il vostro ambulatorio nel seguente periodo:\n\nDal ${formatDate(ch.data_inizio)} al ${formatDate(ch.data_fine)}\nMotivo: ${ch.etichetta||'Chiusura studio'}\n\nDurante questo periodo non saranno accettate prenotazioni.\n\nCordiali saluti,\n${nomeCompleto}`;
+    return {c, i, haEmail, testo};
   });
-  document.getElementById('mail-chiusura-body').innerHTML=bozze.map((b,i)=>`
-    <div style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <strong style="font-size:13px">${b.centro}</strong>
-        <button class="btn btn-sm btn-secondary" onclick="copyMailChiusura(${i})"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button>
+  window._mailChiusura={ch, righe};
+  window._mailBozze=righe.map(r=>({centro:r.c.nome, testo:r.testo}));
+  const bodyHtml=righe.map(r=>`
+    <div style="border:1px solid var(--border);border-radius:var(--r-sm);padding:10px;margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:${r.haEmail?'pointer':'default'}">
+        <input type="checkbox" data-mail-idx="${r.i}" ${r.haEmail?'':'disabled'} ${(r.haEmail && pre.has(String(r.c.id)))?'checked':''} style="accent-color:${r.c.colore}">
+        <span style="width:10px;height:10px;border-radius:50%;background:${r.c.colore};display:inline-block;flex-shrink:0"></span>
+        <strong>${escapeHtml(r.c.nome)}</strong>
+        <span style="margin-left:auto;font-size:11px;color:${r.haEmail?'var(--ink3)':'var(--warm)'}">${r.haEmail?escapeHtml(r.c.email):'Nessun indirizzo email'}</span>
+      </label>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px">
+        <button class="btn btn-sm btn-secondary" onclick="copyMailChiusura(${r.i})"><svg class="ic"><use href="#ic-copy"/></svg>Copia testo</button>
       </div>
-      <div class="mail-bozza-block" id="mail-bozza-${i}">${b.testo}</div>
     </div>`).join('');
-  window._mailBozze=bozze;
+  document.getElementById('mail-chiusura-body').innerHTML=`<div style="font-size:12px;color:var(--ink3);margin-bottom:10px">Seleziona i centri da avvisare della chiusura, poi premi «Invia ora». I centri senza indirizzo email non sono selezionabili: per quelli puoi copiare il testo.</div>${bodyHtml}`;
   openModal('modal-mail-chiusura');
+}
+
+async function inviaMailChiusuraSelezionati(){
+  const dati=window._mailChiusura;
+  if(!dati||!dati.ch) return;
+  const sel=[...document.querySelectorAll('#mail-chiusura-body input[data-mail-idx]:checked')].map(el=>dati.righe[+el.dataset.mailIdx].c);
+  if(!sel.length){ showToast('Seleziona almeno un centro'); return; }
+  closeModal('modal-mail-chiusura');
+  await inviaMailChiusuraAiCentri(dati.ch, sel);
 }
 
 function copyMailChiusura(i){
