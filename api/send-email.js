@@ -604,14 +604,14 @@ function buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_
 function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione, data_raw, appt_id, centro_indirizzo, ics_host }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
   const { googleUrl, icsUrl } = buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_id, codice_cancellazione, ics_host });
-  const webcalUrl = icsUrl ? icsUrl.replace(/^https:\/\//, 'webcal://') : '';
   const btnStyle = 'display:inline-block;padding:8px 16px;background:#f1f6fd;border:1px solid #d3e3f4;border-radius:6px;text-decoration:none;color:#15487F;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;';
   const calSection = googleUrl
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;"><tr><td>` +
+    ? `<div style="margin-bottom:28px;">` +
       `<p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#888;margin:0 0 10px;">Aggiungi al calendario</p>` +
       `<a href="${googleUrl}" target="_blank" style="${btnStyle}">Google Calendar</a>` +
-      (webcalUrl ? `&#160;&#160;<a href="${webcalUrl}" style="${btnStyle}">Apple&#8202;/&#8202;Outlook (.ics)</a>` : '') +
-      `</td></tr></table>`
+      (icsUrl ? `&#160;&#160;<a href="${icsUrl}" style="${btnStyle}">Apple&#8202;/&#8202;Outlook (.ics)</a>` : '') +
+      `<p style="font-size:12px;color:#888;margin:8px 0 0;">Il file <em>appuntamento.ics</em> &egrave; allegato a questa email.</p>` +
+      `</div>`
     : '';
   const body =
     emailTitle('Appuntamento confermato') +
