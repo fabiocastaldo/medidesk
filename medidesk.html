@@ -4077,6 +4077,8 @@ function openAddTurno(centroId){
   document.getElementById('turno-frequenza').value = '1';
   document.getElementById('turno-inizio-validita').value = todayLocalISO();
   document.getElementById('turno-fine-validita').value = '';
+  document.getElementById('turno-fine-validita').min = todayLocalISO();
+  document.getElementById('turno-inizio-validita').onchange = function(){ const d=this.value; const al=document.getElementById('turno-fine-validita'); al.min = d || ''; if(al.value && d && al.value < d) al.value=''; };
   openModal('modal-turno');
 }
 function onTurnoFrequenzaChange(){
@@ -7333,6 +7335,8 @@ function openModalChiusura(){
   document.getElementById('chiusura-etichetta').value='';
   document.getElementById('chiusura-inizio').value='';
   document.getElementById('chiusura-fine').value='';
+  document.getElementById('chiusura-fine').min='';
+  document.getElementById('chiusura-inizio').onchange = function(){ const d=this.value; const al=document.getElementById('chiusura-fine'); al.min = d || ''; if(al.value && d && al.value < d) al.value=''; };
   const checkWrap=document.getElementById('chiusura-centri-check');
   checkWrap.innerHTML=S.centri.filter(c=>c.attivo!==false).map(c=>`
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
