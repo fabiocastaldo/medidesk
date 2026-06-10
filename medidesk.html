@@ -2225,7 +2225,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
         <div class="confirm-box" id="visita-paziente-info" style="margin-bottom:16px"></div>
 
-        <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Importa un referto/esame da foto o file, oppure scrivi il referto direttamente.</p>
+        <div class="upload-area" id="btn-scrivi-referto-inline" onclick="toggleNvReferto()" style="margin-bottom:8px">
+          <div class="uicon"><svg class="ic"><use href="#ic-edit"/></svg></div>
+          <strong>Scrivi il referto</strong>
+          <p>Bozza manuale, con raffinamento AI opzionale</p>
+        </div>
+        <div id="nv-referto-box" style="display:none;margin-bottom:8px">
+          <textarea class="form-textarea" id="nv-referto" rows="6" placeholder="Scrivi qui la bozza del referto…"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+            <button class="btn btn-secondary" id="btn-ai-nv-referto" type="button" onclick="generaRefertoModale()" style="font-size:12px;padding:6px 12px;display:flex;align-items:center;gap:6px"><svg class="ic" style="width:14px;height:14px"><use href="#ic-sparkles"/></svg>Ottimizza con AI</button>
+            <span style="font-size:11px;color:var(--ink3)">La bozza verrà riscritta come referto professionale.</span>
+          </div>
+        </div>
+        <div style="text-align:center;color:var(--ink3);font-size:12px;margin:4px 0 12px">— oppure —</div>
         <div class="upload-area" onclick="document.getElementById('referto-input').click()">
           <div class="uicon"><svg class="ic"><use href="#ic-camera"/></svg></div>
           <strong>Clicca per selezionare o fotografare</strong>
@@ -2255,7 +2267,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-nuova-visita')">Annulla</button>
-      <button class="btn btn-secondary" id="btn-scrivi-referto" style="display:none" onclick="salvaVisitaEScriviReferto()">Scrivi referto</button>
       <button class="btn btn-primary" id="btn-salva-visita" style="display:none" onclick="saveVisita()">Salva nel fascicolo</button>
     </div>
   </div>
@@ -5992,7 +6003,6 @@ function goToVisitaUpload(paziente, appt){
   visitaStep(2);
   document.getElementById('extracted-data').style.display = 'block';
   document.getElementById('btn-salva-visita').style.display = 'inline-block';
-  document.getElementById('btn-scrivi-referto').style.display = 'inline-block';
 }
 
 function visitaBackToStep1(){
@@ -6012,8 +6022,10 @@ function resetVisitaUpload(){
   });
   const sb = document.getElementById('btn-salva-visita');
   if(sb) sb.style.display='none';
-  const sbr = document.getElementById('btn-scrivi-referto');
-  if(sbr) sbr.style.display='none';
+  const nvr = document.getElementById('nv-referto');
+  if(nvr) nvr.value='';
+  const nvrBox = document.getElementById('nv-referto-box');
+  if(nvrBox) nvrBox.style.display='none';
   ['ex-nome','ex-cognome','ex-nascita','ex-data-visita','ex-luogo','ex-clinica','ex-tipo-referto'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value='';
@@ -6068,7 +6080,8 @@ async function saveVisita(){
     const clinica = document.getElementById('ex-clinica').value.trim();
     const _tipoRaw = document.getElementById('ex-tipo-referto').value.trim();
     const tipoReferto = _tipoRaw ? _tipoRaw.charAt(0).toUpperCase() + _tipoRaw.slice(1) : '';
-    const visita = { id: Date.now(), data: dataVisita, luogo, clinica, tipo: tipoReferto, foto_url: null };
+    const refertoModale = (document.getElementById('nv-referto')?.value || '').trim();
+    const visita = { id: Date.now(), data: dataVisita, luogo, clinica, tipo: tipoReferto, foto_url: null, referto: refertoModale };
 
     let authUser = null;
     if(isOnline()){ try{ const r = await supabaseClient.auth.getUser(); authUser = r.data.user; }catch(e){} }
@@ -6132,7 +6145,8 @@ async function saveVisita(){
           luogo:             luogo       || null,
           contenuto_clinico: clinica     || null,
           foto_referto_url:  visita.foto_url || null,
-          tipo_referto:      tipoReferto || null
+          tipo_referto:      tipoReferto || null,
+          referto_testo:     refertoModale || null
         }).select('id').single();
         if(vErr){
           // Rollback: elimina tutte le foto già caricate
@@ -6162,20 +6176,49 @@ async function saveVisita(){
   }
 }
 
-async function salvaVisitaEScriviReferto(){
-  const r = await saveVisita();
-  if(!r || !r.paz || !r.visita) return;
-  if(S.settings.refertazioneAttiva===false){
-    showToast('Attiva la refertazione dalle Impostazioni per scrivere il referto');
-    showPazienteDetail(String(r.paz.id));
-    return;
-  }
-  _refEdit.add(String(r.paz.id)+'-'+String(r.visita.id));
-  showPazienteDetail(String(r.paz.id));
-}
-
 function resetVisitaModal(){
   resetVisitaUpload();
+}
+
+function toggleNvReferto(){
+  if(S.settings.refertazioneAttiva===false){ showToast('Attiva la refertazione dalle Impostazioni'); return; }
+  const box=document.getElementById('nv-referto-box');
+  const card=document.getElementById('btn-scrivi-referto-inline');
+  if(!box) return;
+  const open=box.style.display!=='none';
+  box.style.display=open?'none':'block';
+  const lbl=card?.querySelector('strong');
+  if(lbl) lbl.textContent=open?'Scrivi il referto':'Chiudi editor';
+}
+
+async function generaRefertoModale(){
+  const ta=document.getElementById('nv-referto'); if(!ta) return;
+  const bozza=ta.value.trim();
+  if(!bozza){ showToast('Scrivi prima una bozza'); return; }
+  const tipo=(document.getElementById('ex-tipo-referto')?.value||'').trim();
+  const nascita=(document.getElementById('ex-nascita')?.value||'').trim();
+  const eta=etaDaNascita(nascita);
+  const dataV=(document.getElementById('ex-data-visita')?.value||'').trim();
+  const btn=document.getElementById('btn-ai-nv-referto');
+  if(btn){ btn.disabled=true; btn.textContent='Ottimizzo…'; }
+  try{
+    const _jwt=await getAuthJwt();
+    const res=await fetch('/api/genera-referto',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
+      body:JSON.stringify({bozza,eta,tipo,data:dataV})
+    });
+    if(!res.ok){
+      const e=await res.json().catch(()=>({}));
+      throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));
+    }
+    const data=await res.json();
+    ta.value=data.content.map(i=>i.text||'').join('').trim();
+  }catch(err){
+    showToast(err.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML='<svg class="ic" style="width:14px;height:14px"><use href="#ic-sparkles"></use></svg>Ottimizza con AI'; }
+  }
 }
 
 // ── DASHBOARD ──
