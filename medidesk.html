@@ -3009,6 +3009,7 @@ async function loadCentriFromDB(user){
       colore:    c.colore           || '#0D9488',
       attivo:    c.attivo !== false,
       booking_token: c.booking_token || null,
+      gestione: c.gestione || 'delphi',
       turni:     (c.turni || []).map(t => ({
         id:     t.id,
         giorno: t.giorno,
@@ -7065,10 +7066,10 @@ async function bkInit(){
       bk.medicoEmail = m.email_pubblica || '';
       bkRenderHero(m);
       const { data: centriDB } = await supabaseClient
-        .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
+        .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true).neq('gestione', 'centro');
       S.centri = (centriDB||[]).map(c=>({
         id: c.id, nome: c.nome, indirizzo: [c.via, [c.cap, c.citta].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', '), colore: c.colore||'#0D9488',
-        attivo: true, email: c.email_segreteria||'',
+        attivo: true, gestione: c.gestione || 'delphi', email: c.email_segreteria||'',
         turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:(t.inizio||'').substring(0,5), fine:(t.fine||'').substring(0,5), slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
         giornateSingole: (c.disponibilita_singole || []).map(g => ({ id: g.id, data: g.data, inizio: (g.inizio||'').substring(0,5), fine: (g.fine||'').substring(0,5), slot: g.durata_slot, centroId: String(c.id) }))
       }));
@@ -7167,7 +7168,7 @@ function renderBkCentri(){
   const noEl=document.getElementById('bk-no-centri');
   const _today=new Date().toLocaleDateString('en-CA');
   const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
-  const eligibili=S.centri.filter(c=>c.attivo!==false && ((c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
+  const eligibili=S.centri.filter(c=>c.attivo!==false && c.gestione!=='centro' && ((c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
   if(!eligibili.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
   const MAX_DATE=4;
