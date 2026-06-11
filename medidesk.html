@@ -2254,13 +2254,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
             <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" style="flex:1"></div>
-            <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome" style="flex:1"></div>
+            <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome" style="flex:1" oninput="capFirstInput(this)"></div>
             <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" style="flex:1"></div>
-            <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1"></div>
+            <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1" oninput="capFirstInput(this)"></div>
           </div>
           <div class="form-group" style="margin-top:14px">
             <label class="form-label">Note (opzionale)</label>
-            <textarea class="form-textarea" id="ex-clinica" style="min-height:140px"></textarea>
+            <textarea class="form-textarea" id="ex-clinica" style="min-height:140px" oninput="capFirstInput(this)"></textarea>
           </div>
         </div>
       </div>
@@ -5754,8 +5754,8 @@ function emailStoria(pazId){
   window.open('mailto:?subject='+subject+'&body='+encodeURIComponent(testo),'_blank');
 }
 
-function downloadStoriaPDF(pazId){
-  const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return;
+function _buildStoriaPDFDoc(pazId){
+  const paz=S.pazienti.find(p=>String(p.id)===String(pazId)); if(!paz) return null;
   const _se=document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo'); const testo=mdToPlain(_se?.dataset.md ?? _se?.textContent ?? '');
   try {
     const { jsPDF } = window.jspdf;
@@ -5784,8 +5784,23 @@ function downloadStoriaPDF(pazId){
     doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=6;
     doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
     doc.text('Generato da Delphi~Med il '+new Date().toLocaleDateString('it-IT'), margin, y);
-    doc.save(('StoriaClinica_'+paz.cognome+'_'+paz.nome+'.pdf').replace(/\s/g,'_'));
-  } catch(e){ showToast('Errore PDF: '+e.message); }
+    return { doc, paz };
+  } catch(e){ showToast('Errore PDF: '+e.message); return null; }
+}
+
+function downloadStoriaPDF(pazId){
+  const r=_buildStoriaPDFDoc(pazId); if(!r) return;
+  r.doc.save(('StoriaClinica_'+r.paz.cognome+'_'+r.paz.nome+'.pdf').replace(/\s/g,'_'));
+}
+
+function stampaStoria(pazId){
+  const r=_buildStoriaPDFDoc(pazId); if(!r) return;
+  try{
+    r.doc.autoPrint();
+    const url=r.doc.output('bloburl');
+    const w=window.open(url, '_blank');
+    if(!w){ showToast('Sblocca i popup per stampare'); }
+  }catch(e){ showToast('Errore stampa: '+e.message); }
 }
 
 async function sintetizzaStoria(pazId){
@@ -5808,7 +5823,7 @@ async function sintetizzaStoria(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const data=await res.json();
     const testo=data.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button></div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${err.message}</div>`;
@@ -5867,7 +5882,7 @@ async function sintetizzaReferti(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const dataR=await res.json();
     const testo=dataR.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button></div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${err.message}</div>`;
@@ -6327,6 +6342,15 @@ function renderDateStrip(){
 }
 
 // ── SETTINGS ──
+function capFirstInput(el){
+  const v=el.value;
+  if(v && v.charAt(0)!==v.charAt(0).toUpperCase()){
+    const pos=el.selectionStart;
+    el.value=v.charAt(0).toUpperCase()+v.slice(1);
+    try{ el.setSelectionRange(pos,pos); }catch(e){}
+  }
+}
+
 function capitalizeName(str){
   if(!str) return str;
   return str.trim().replace(/\s+/g,' ').toLowerCase()
