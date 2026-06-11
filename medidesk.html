@@ -5673,6 +5673,14 @@ function copiaReferto(pid, vid){
   navigator.clipboard.writeText(testo).then(()=>showToast('Referto copiato ✓')).catch(()=>showToast('Copia non supportata'));
 }
 
+function copiaStoria(pazId){
+  pazId=String(pazId);
+  const _se=document.getElementById('storia-container-'+pazId)?.querySelector('.storia-testo');
+  const testo=mdToPlain(_se?.dataset.md ?? _se?.textContent ?? '');
+  if(!testo){ showToast('Nessuna sintesi da copiare'); return; }
+  navigator.clipboard.writeText(testo).then(()=>showToast('Sintesi copiata ✓')).catch(()=>showToast('Copia non supportata'));
+}
+
 function openDeletePazienteModal(pazienteId){
   const p = S.pazienti.find(x => String(x.id) === String(pazienteId));
   if(!p) return;
@@ -5841,7 +5849,7 @@ async function sintetizzaStoria(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const data=await res.json();
     const testo=data.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${err.message}</div>`;
@@ -5900,7 +5908,7 @@ async function sintetizzaReferti(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const dataR=await res.json();
     const testo=dataR.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${err.message}</div>`;
