@@ -5589,6 +5589,10 @@ function pdfSafe(t){
     .replace(/[\s\S]/g, ch => {
       const cp = ch.codePointAt(0);
       if(cp === 0x0A || cp === 0x0D || cp === 0x09) return ch; // a capo / tab
+      if(cp === 0x7F) return '?';                            // DEL
+      if(cp === 0xA0) return ' ';                            // NBSP -> spazio normale
+      if(cp === 0xAD) return '';                             // soft hyphen -> rimosso
+      if(cp >= 0x80 && cp <= 0x9F) return '?';               // control C1 (non cp1252)
       if(cp >= 0x20 && cp <= 0xFF) return ch;                  // ASCII + Latin-1 (accentate, µ U+00B5, °)
       if('€‘’“”–—•…‰‹›‚„†‡ˆ˜™ŠšŽžŒœŸƒ'.includes(ch)) return ch; // stampabili cp1252 0x80-0x9F (em-dash, bullet, virgolette curve, ellissi, euro, ...)
       return '?';
