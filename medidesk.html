@@ -5787,7 +5787,7 @@ async function sintetizzaStoria(pazId){
     const res=await fetch('/api/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt1},
-      body:JSON.stringify({mode:'storia', eta, visite:sorted.map(v=>({data:v.data, clinica:v.clinica})), max_tokens:2000})
+      body:JSON.stringify({mode:'storia', eta, visite:sorted.map(v=>({data:v.data, clinica:v.clinica, referto:v.referto})), max_tokens:2000})
     });
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const data=await res.json();
@@ -5841,11 +5841,12 @@ async function sintetizzaReferti(pazId){
     if(!files.length) throw new Error('Nessun referto leggibile');
 
     const eta=etaDaNascita(p.nascita);
+    const refertiTesto=(p.visite||[]).map(v=>({data:v.data||'', testo:(v.referto||'').trim()})).filter(x=>x.testo);
     const _jwt=await getAuthJwt();
     const res=await fetch('/api/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
-      body:JSON.stringify({mode:'sintesi-referti', eta, files, max_tokens:4096})
+      body:JSON.stringify({mode:'sintesi-referti', eta, files, refertiTesto, max_tokens:4096})
     });
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const dataR=await res.json();
