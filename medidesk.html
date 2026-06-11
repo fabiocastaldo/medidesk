@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -2254,7 +2254,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
             <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" style="flex:1"></div>
-            <div class="field-row"><span class="field-key">Tipo referto</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome (opzionale)" style="flex:1"></div>
+            <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1"></div>
           </div>
@@ -5403,13 +5403,14 @@ function _buildVisitaHTML(paz, v, i){
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">';
     h+='<button class="btn btn-sm btn-secondary" onclick="toggleRefertoEdit(\''+pid+'\',\''+vid+'\')">Modifica</button>';
     h+='<button class="btn btn-sm btn-secondary" onclick="downloadRefertoPDF(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button>';
+    h+='<button class="btn btn-sm btn-secondary" onclick="stampaReferto(\''+pid+'\',\''+vid+'\')">Stampa</button>';
     h+='<button class="btn btn-sm btn-secondary" onclick="copiaReferto(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button>';
     h+='</div>';
   }else if(_rAttiva){
     h+='<button class="btn btn-sm btn-secondary" onclick="toggleRefertoEdit(\''+pid+'\',\''+vid+'\')">Scrivi referto</button>';
   }else if(v.referto){
     h+='<div class="referto-testo" id="ref-view-'+pid+'-'+vid+'">'+escapeHtml(v.referto)+'</div>';
-    h+='<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-secondary" onclick="downloadRefertoPDF(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="copiaReferto(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button></div>';
+    h+='<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-secondary" onclick="downloadRefertoPDF(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaReferto(\''+pid+'\',\''+vid+'\')">Stampa</button><button class="btn btn-sm btn-secondary" onclick="copiaReferto(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button></div>';
   }else{
     h+='<div style="font-size:11px;color:var(--ink3);font-style:italic">Refertazione disattivata (riattivabile dalle Impostazioni).</div>';
   }
@@ -5580,10 +5581,10 @@ async function salvaReferto(pid, vid){
   showToast('Referto salvato ✓');
 }
 
-function downloadRefertoPDF(pid, vid){
+function _buildRefertoPDFDoc(pid, vid){
   pid=String(pid); vid=String(vid);
-  const paz=S.pazienti.find(p=>String(p.id)===String(pid)); if(!paz) return;
-  const v=(paz.visite||[]).find(x=>String(x.id)===String(vid)); if(!v||!v.referto) return;
+  const paz=S.pazienti.find(p=>String(p.id)===String(pid)); if(!paz) return null;
+  const v=(paz.visite||[]).find(x=>String(x.id)===String(vid)); if(!v||!v.referto) return null;
   const el=document.getElementById('ref-view-'+pid+'-'+vid);
   const testo=mdToPlain(el?.dataset.md??v.referto??'');
   try{
@@ -5623,9 +5624,24 @@ function downloadRefertoPDF(pid, vid){
       doc.text('Iscrizione Ordine dei Medici'+alboProv+' n. '+m.albo, margin, y); y+=5;
     }
     doc.text('Generato da Delphi~Med il '+new Date().toLocaleDateString('it-IT'), margin, y);
-    const dataStr=(v.data||'').replace(/\//g,'-');
-    doc.save(('Referto_'+paz.cognome+'_'+paz.nome+'_'+dataStr+'.pdf').replace(/\s/g,'_'));
-  }catch(e){ showToast('Errore PDF: '+e.message); }
+    return { doc, paz, v };
+  }catch(e){ showToast('Errore PDF: '+e.message); return null; }
+}
+
+function downloadRefertoPDF(pid, vid){
+  const r=_buildRefertoPDFDoc(pid, vid); if(!r) return;
+  const dataStr=(r.v.data||'').replace(/\//g,'-');
+  r.doc.save(('Referto_'+r.paz.cognome+'_'+r.paz.nome+'_'+dataStr+'.pdf').replace(/\s/g,'_'));
+}
+
+function stampaReferto(pid, vid){
+  const r=_buildRefertoPDFDoc(pid, vid); if(!r) return;
+  try{
+    r.doc.autoPrint();
+    const url=r.doc.output('bloburl');
+    const w=window.open(url, '_blank');
+    if(!w){ showToast('Sblocca i popup per stampare'); }
+  }catch(e){ showToast('Errore stampa: '+e.message); }
 }
 
 function copiaReferto(pid, vid){
@@ -6093,7 +6109,12 @@ async function saveVisita(){
     const luogo = document.getElementById('ex-luogo').value.trim();
     const clinica = document.getElementById('ex-clinica').value.trim();
     const _tipoRaw = document.getElementById('ex-tipo-referto').value.trim();
-    const tipoReferto = _tipoRaw ? _tipoRaw.charAt(0).toUpperCase() + _tipoRaw.slice(1) : '';
+    if(!_tipoRaw){
+      showToast('Inserisci il tipo di referto');
+      document.getElementById('ex-tipo-referto')?.focus();
+      return null;
+    }
+    const tipoReferto = _tipoRaw.charAt(0).toUpperCase() + _tipoRaw.slice(1);
     const refertoModale = (document.getElementById('nv-referto')?.value || '').trim();
     const visita = { id: Date.now(), data: dataVisita, luogo, clinica, tipo: tipoReferto, foto_url: null, referto: refertoModale };
 
