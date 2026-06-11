@@ -5581,6 +5581,20 @@ async function salvaReferto(pid, vid){
   showToast('Referto salvato ✓');
 }
 
+function pdfSafe(t){
+  if(!t) return '';
+  const MAP={'→':'->','←':'<-','⇒':'=>','⇐':'<=','≥':'>=','≤':'<=','±':'+/-','×':'x','−':'-','✓':'v','✔':'v'};
+  return String(t)
+    .replace(/[→←⇒⇐≥≤±×−✓✔]/g, c => MAP[c] || c)
+    .replace(/[\s\S]/g, ch => {
+      const cp = ch.codePointAt(0);
+      if(cp === 0x0A || cp === 0x0D || cp === 0x09) return ch; // a capo / tab
+      if(cp >= 0x20 && cp <= 0xFF) return ch;                  // ASCII + Latin-1 (accentate, µ U+00B5, °)
+      if(cp === 0x20AC) return ch;                             // €
+      return '?';
+    });
+}
+
 function _buildRefertoPDFDoc(pid, vid){
   pid=String(pid); vid=String(vid);
   const paz=S.pazienti.find(p=>String(p.id)===String(pid)); if(!paz) return null;
@@ -5615,7 +5629,7 @@ function _buildRefertoPDFDoc(pid, vid){
     doc.setFont('helvetica','bold'); doc.setFontSize(11);
     doc.text('Referto', margin, y); y+=7;
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.splitTextToSize(testo||'—', maxW).forEach(line=>{ if(y>270){doc.addPage();y=20;} doc.text(line,margin,y); y+=5; });
+    doc.splitTextToSize(pdfSafe(testo)||'—', maxW).forEach(line=>{ if(y>270){doc.addPage();y=20;} doc.text(line,margin,y); y+=5; });
     y+=5;
     doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=6;
     doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
@@ -5779,7 +5793,7 @@ function _buildStoriaPDFDoc(pazId){
     doc.setFont('helvetica','bold'); doc.setFontSize(11);
     doc.text('Storia clinica sintetizzata', margin, y); y+=7;
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
-    doc.splitTextToSize(testo||'—', maxW).forEach(line=>{ if(y>275){doc.addPage();y=20;} doc.text(line,margin,y); y+=5; });
+    doc.splitTextToSize(pdfSafe(testo)||'—', maxW).forEach(line=>{ if(y>275){doc.addPage();y=20;} doc.text(line,margin,y); y+=5; });
     y+=5;
     doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=6;
     doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
