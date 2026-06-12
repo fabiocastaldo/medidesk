@@ -2465,6 +2465,29 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
+<!-- MODAL IMPORTA GIORNATA -->
+<div class="modal-overlay" id="modal-import-agenda">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Importa giornata</span><button class="modal-close" onclick="closeModal('modal-import-agenda')">&#10005;</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Centro: <strong id="import-centro-label"></strong></p>
+      <div class="form-group">
+        <label class="form-label">Foto / PDF dell'agenda</label>
+        <input class="form-input" id="import-file" type="file" accept="image/*,application/pdf">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Oppure incolla il testo della lista</label>
+        <textarea class="form-input" id="import-text" rows="4" placeholder="Incolla qui la lista..."></textarea>
+      </div>
+      <button class="btn btn-primary" id="import-estrai-btn" onclick="importEstrai()">Estrai</button>
+      <div id="import-review" style="margin-top:16px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import-agenda')">Chiudi</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL ELIMINAZIONE PAZIENTE -->
 <div class="modal-overlay" id="modal-delete-paziente">
   <div class="modal">
@@ -4022,6 +4045,7 @@ function renderCentroCard(c, isActive){
           <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
         </div>
         ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
+        ${isActive && c.gestione==='centro'?`<button class="btn btn-sm btn-secondary" onclick="importaGiornata('${c.id}')">Importa</button>`:''}
         <div class="centro-actions">
           <button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro"><svg class="ic"><use href="#ic-edit"/></svg></button>
           <button class="centro-act" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
@@ -4134,6 +4158,124 @@ async function setCentroGestione(id, value){
     showToast('Errore: ' + e.message); renderCentri();
   }
 }
+let _importCentroId = null;
+
+function importaGiornata(centroId){
+  if(!isOnline()){ showToast('Serve la connessione per importare'); return; }
+  const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
+  _importCentroId = centroId;
+  const lbl = document.getElementById('import-centro-label'); if(lbl) lbl.textContent = c.nome;
+  const f = document.getElementById('import-file'); if(f) f.value = '';
+  const t = document.getElementById('import-text'); if(t) t.value = '';
+  const rv = document.getElementById('import-review'); if(rv) rv.innerHTML = '';
+  openModal('modal-import-agenda');
+}
+
+async function importEstrai(){
+  if(!isOnline() || !S.medicoId){ showToast('Connessione richiesta'); return; }
+  const fileEl = document.getElementById('import-file');
+  const textEl = document.getElementById('import-text');
+  const file = (fileEl && fileEl.files && fileEl.files[0]) ? fileEl.files[0] : null;
+  const text = ((textEl && textEl.value) || '').trim();
+  if(!file && !text){ showToast('Carica un file o incolla del testo'); return; }
+  const ALLOWED = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+  if(file && !ALLOWED.includes(file.type)){ showToast('Formato non supportato (immagine o PDF)'); return; }
+  const btn = document.getElementById('import-estrai-btn');
+  const rv = document.getElementById('import-review');
+  if(btn){ btn.disabled = true; btn.textContent = 'Estrazione...'; }
+  if(rv) rv.innerHTML = '<div class="ai-processing" style="margin-top:12px"><div class="spinner"></div><span>Estrazione in corso...</span></div>';
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if(!user) throw new Error('Utente non autenticato');
+    let filePath = null, body = null;
+    if(file){
+      const base64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
+      const ext = (file.name.split('.').pop()||'bin').toLowerCase();
+      filePath = user.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.' + ext;
+      const { error: upErr } = await supabaseClient.storage.from('import-agenda').upload(filePath, file, { contentType: file.type });
+      if(upErr) throw upErr;
+      body = { file: { base64, type: file.type } };
+    } else {
+      body = { text };
+    }
+    const { data: inboxRow, error: inboxErr } = await supabaseClient.from('import_inbox').insert({
+      medico_id: S.medicoId,
+      centro_id: _importCentroId,
+      sorgente: 'upload',
+      file_path: filePath,
+      raw_text: file ? null : text,
+      stato: 'proposta'
+    }).select('id').single();
+    if(inboxErr) throw inboxErr;
+    const _jwt = await getAuthJwt();
+    const resp = await fetch('/api/import-agenda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
+      body: JSON.stringify(body)
+    });
+    if(!resp.ok){ const e = await resp.json().catch(()=>({})); throw new Error(e.error || ('HTTP ' + resp.status)); }
+    const data = await resp.json();
+    const raw = (data.content||[]).map(i=>i.text||'').join('').trim();
+    let payload;
+    try { payload = JSON.parse(raw.replace(/^```json/,'').replace(/^```/,'').replace(/```$/,'').trim()); }
+    catch(e){ throw new Error('Risposta non interpretabile'); }
+    try { await supabaseClient.from('import_inbox').update({ payload }).eq('id', inboxRow.id); } catch(_){}
+    renderImportReview(payload);
+  } catch(err){
+    console.error('[Delphi~Med] importEstrai:', err.message);
+    if(rv) rv.innerHTML = '';
+    showToast('Errore: ' + err.message);
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = 'Estrai'; }
+  }
+}
+
+function renderImportReview(payload){
+  const rv = document.getElementById('import-review'); if(!rv) return;
+  const righe = Array.isArray(payload.righe) ? payload.righe : [];
+  const c = S.centri.find(x=>String(x.id)===String(_importCentroId));
+  const centroNome = c ? c.nome : '';
+  let centroWarn = '';
+  const craw = (payload.centro_raw||'').toLowerCase(), cn = centroNome.toLowerCase();
+  if(craw && cn && !craw.includes(cn) && !cn.includes(craw)){
+    centroWarn = '<div style="font-size:12px;color:#b45309;margin-bottom:8px">Estratto centro "' + escapeHtml(payload.centro_raw) + '" ma stai importando in "' + escapeHtml(centroNome) + '". Verifica.</div>';
+  }
+  const dataStr = payload.data ? formatDate(payload.data) : 'non rilevata';
+  const head = '<div style="font-size:13px;margin-bottom:8px"><strong>Giornata:</strong> ' + escapeHtml(dataStr) + ' \u00b7 <strong>' + righe.length + '</strong> righe estratte</div>' + centroWarn;
+  if(!righe.length && payload.n_visite_fallback != null){
+    rv.innerHTML = head + '<div style="font-size:13px;color:var(--ink2);padding:12px;border:1px solid var(--border);border-radius:var(--r-sm)">Giornata leggibile solo come <strong>' + payload.n_visite_fallback + '</strong> visite (dettaglio non disponibile). Verr\u00e0 gestita come blocco di occupazione.</div>' + _importHint();
+    return;
+  }
+  if(!righe.length){
+    rv.innerHTML = head + '<div style="font-size:13px;color:var(--ink3);padding:12px">Nessuna riga estratta.</div>';
+    return;
+  }
+  const rows = righe.map(function(r){
+    const conf = typeof r.confidenza==='number' ? r.confidenza : 0;
+    const rowStyle = conf < 0.6 ? 'opacity:.5' : '';
+    const confColor = conf < 0.6 ? 'var(--ink3)' : (conf < 0.95 ? '#b45309' : '#0a8074');
+    const badge = !r.e_appuntamento
+      ? '<span style="font-size:10px;color:var(--ink3)">non-appunt.</span>'
+      : (r.stato==='cancellato' ? '<span style="font-size:10px;color:#b91c1c">cancellato</span>' : '');
+    return '<tr style="border-top:1px solid var(--border);' + rowStyle + '">'
+      + '<td style="padding:5px 4px">' + escapeHtml(r.ora||'-') + '</td>'
+      + '<td style="padding:5px 4px">' + escapeHtml(r.nome||'-') + '</td>'
+      + '<td style="padding:5px 4px">' + escapeHtml(r.tipo_catalogo||r.tipo||'-') + '</td>'
+      + '<td style="padding:5px 4px;text-align:right;color:' + confColor + ';font-weight:600">' + Math.round(conf*100) + '%</td>'
+      + '<td style="padding:5px 4px">' + badge + '</td>'
+      + '</tr>';
+  }).join('');
+  rv.innerHTML = head
+    + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+    + '<thead><tr style="text-align:left;color:var(--ink3);font-size:11px;text-transform:uppercase">'
+    + '<th>Ora</th><th>Paziente</th><th>Prestazione</th><th style="text-align:right">Conf.</th><th></th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table>' + _importHint();
+}
+
+function _importHint(){
+  return '<div style="font-size:12px;color:var(--ink3);margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">Anteprima in sola lettura. La conferma in agenda riga per riga arriver\u00e0 nel prossimo aggiornamento.</div>';
+}
+
 function copyBookingLink(id){
   const c = S.centri.find(x=>String(x.id)===String(id)); if(!c||!c.booking_token) return;
   navigator.clipboard.writeText(centroBookingUrl(c)); showToast('Link copiato ✓');
