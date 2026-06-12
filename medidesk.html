@@ -5395,34 +5395,12 @@ async function markAllSeen(){
   renderPending();
 }
 
-function _buildVisitaHTML(paz, v, i){
+function _buildRefertoInner(paz, v){
   var pid=String(paz.id), vid=String(v.id);
-  var h='<div class="visita-item">';
-  // ── Header (sempre visibile, click per espandere)
-  h+='<div class="visita-header" onclick="toggleV(\'vv-'+pid+'-'+i+'\')">';
-  h+='<div>';
-  h+='<div class="visita-date"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-calendar"/></svg>'+escapeHtml(v.data||'N/A')+(v.tipo?' · '+escapeHtml(v.tipo):'')+'</div>';
-  h+='<div style="font-size:12px;color:var(--ink3)">'+escapeHtml(v.luogo||'')+'</div>';
-  h+='</div>';
-  h+='<div style="display:flex;align-items:center;gap:6px">';
-  h+='<button type="button" class="btn-del-visita" style="color:var(--warm);background:none;border:none;padding:10px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;flex-shrink:0"';
-  h+=' data-pazid="'+pid+'" data-visid="'+vid+'" data-action="delete-visita" title="Elimina visita">';
-  h+='<svg class="ic" style="width:16px;height:16px"><use href="#ic-trash"/></svg></button>';
-  h+='<span style="color:var(--ink3)">▾</span>';
-  h+='</div>';
-  h+='</div>';
-  // ── Body collassabile: solo testo clinico e foto
-  h+='<div class="visita-body" id="vv-'+pid+'-'+i+'" style="display:none">';
-  h+=escapeHtml(v.clinica||'—');
-  if(v.foto_url){
-    var n=getFotoPaths(v.foto_url).length;
-    h+='<div style="margin-top:10px;white-space:normal">';
-    h+='<button class="btn btn-sm btn-secondary" onclick="openFotoRefertoByVisita(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-eye"/></svg>';
-    h+=(n>1?'Vedi '+n+' foto':'Vedi foto referto')+'</button></div>';
-  }
+  var h='';
   var _rAttiva=S.settings.refertazioneAttiva!==false;
   var _rEdit=_refEdit.has(pid+'-'+vid);
-  h+='<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px">';
+  h+='<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px" id="ref-block-'+pid+'-'+vid+'">';
   h+='<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:8px">Referto</div>';
   if(_rAttiva&&_rEdit){
     h+='<textarea class="form-textarea" id="ref-ta-'+pid+'-'+vid+'" style="min-height:140px;white-space:pre-wrap"></textarea>';
@@ -5449,6 +5427,34 @@ function _buildVisitaHTML(paz, v, i){
     h+='<div style="font-size:11px;color:var(--ink3);font-style:italic">Refertazione disattivata (riattivabile dalle Impostazioni).</div>';
   }
   h+='</div>';
+  return h;
+}
+function _buildVisitaHTML(paz, v, i){
+  var pid=String(paz.id), vid=String(v.id);
+  var h='<div class="visita-item">';
+  // ── Header (sempre visibile, click per espandere)
+  h+='<div class="visita-header" onclick="toggleV(\'vv-'+pid+'-'+i+'\')">';
+  h+='<div>';
+  h+='<div class="visita-date"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-calendar"/></svg>'+escapeHtml(v.data||'N/A')+(v.tipo?' · '+escapeHtml(v.tipo):'')+'</div>';
+  h+='<div style="font-size:12px;color:var(--ink3)">'+escapeHtml(v.luogo||'')+'</div>';
+  h+='</div>';
+  h+='<div style="display:flex;align-items:center;gap:6px">';
+  h+='<button type="button" class="btn-del-visita" style="color:var(--warm);background:none;border:none;padding:10px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;flex-shrink:0"';
+  h+=' data-pazid="'+pid+'" data-visid="'+vid+'" data-action="delete-visita" title="Elimina visita">';
+  h+='<svg class="ic" style="width:16px;height:16px"><use href="#ic-trash"/></svg></button>';
+  h+='<span style="color:var(--ink3)">▾</span>';
+  h+='</div>';
+  h+='</div>';
+  // ── Body collassabile: solo testo clinico e foto
+  h+='<div class="visita-body" id="vv-'+pid+'-'+i+'" style="display:none">';
+  h+=escapeHtml(v.clinica||'—');
+  if(v.foto_url){
+    var n=getFotoPaths(v.foto_url).length;
+    h+='<div style="margin-top:10px;white-space:normal">';
+    h+='<button class="btn btn-sm btn-secondary" onclick="openFotoRefertoByVisita(\''+pid+'\',\''+vid+'\')"><svg class="ic"><use href="#ic-eye"/></svg>';
+    h+=(n>1?'Vedi '+n+' foto':'Vedi foto referto')+'</button></div>';
+  }
+  h+=_buildRefertoInner(paz, v);
   h+='</div>';
   h+='</div>';
   return h;
@@ -5559,8 +5565,14 @@ function toggleRefertoEdit(pid, vid){
   const k=pid+'-'+vid;
   if(_refEdit.has(k)) _refEdit.delete(k); else _refEdit.add(k);
   const paz=S.pazienti.find(p=>String(p.id)===pid); if(!paz) return;
-  renderPazienti();
-  showPazienteDetail(pid);
+  const v=(paz.visite||[]).find(x=>String(x.id)===vid); if(!v) return;
+  const block=document.getElementById('ref-block-'+pid+'-'+vid);
+  if(!block){ renderPazienti(); showPazienteDetail(pid); return; }
+  block.outerHTML=_buildRefertoInner(paz, v);
+  const viewEl=document.getElementById('ref-view-'+pid+'-'+vid);
+  if(viewEl && v.referto) viewEl.dataset.md=v.referto;
+  const ta=document.getElementById('ref-ta-'+pid+'-'+vid);
+  if(ta){ ta.value=v.referto||''; ta.focus(); }
 }
 
 async function generaRefertoAI(pid, vid){
@@ -5610,8 +5622,15 @@ async function salvaReferto(pid, vid){
   v.referto=testo;
   _refEdit.delete(pid+'-'+vid);
   save();
+  const block=document.getElementById('ref-block-'+pid+'-'+vid);
+  if(block){
+    block.outerHTML=_buildRefertoInner(paz, v);
+    const viewEl=document.getElementById('ref-view-'+pid+'-'+vid);
+    if(viewEl && v.referto) viewEl.dataset.md=v.referto;
+  } else {
+    showPazienteDetail(pid);
+  }
   renderPazienti();
-  showPazienteDetail(pid);
   showToast('Referto salvato ✓');
 }
 
