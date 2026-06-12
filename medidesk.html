@@ -220,6 +220,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-booking-body .share-url{flex:1;min-width:160px}
 .centro-booking-acts{display:flex;flex-wrap:wrap;gap:8px}
 .centro-booking-warn{flex:1 1 100%;font-size:12px;line-height:1.4;color:var(--pending-ink);background:var(--pending-bg);border-left:3px solid var(--pending-accent);border-radius:var(--r-sm);padding:8px 10px}
+.centro-gestione{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.centro-gestione-lbl{font-size:13px;font-weight:600;color:var(--ink2)}
+.centro-gestione-sel{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r-sm);background:#fff;color:var(--ink);cursor:pointer}
 .centro-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
 .centro-info{flex:1}
 .centro-nome{font-weight:600}
@@ -431,6 +434,9 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .centro-btn span{font-size:12px;color:var(--ink3)}
 .centro-btn .bk-days{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
 .centro-btn .bk-day{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent)}
+.centro-btn.centro-btn-disabled{cursor:default;border-style:dashed;opacity:.9}
+.centro-btn.centro-btn-disabled:hover{border-color:var(--border);background:#fff}
+.centro-btn .bk-centro-note{margin-top:8px;font-size:12px;line-height:1.4;color:var(--ink3)}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .cal-title{font-weight:600;font-size:16px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:20px}
@@ -4023,6 +4029,14 @@ function renderCentroCard(c, isActive){
         </div>
       </div>
       ${isActive ? `
+      <div class="centro-gestione">
+        <span class="centro-gestione-lbl">Prenotazione online</span>
+        <select class="centro-gestione-sel" onchange="setCentroGestione('${c.id}', this.value)">
+          <option value="delphi" ${c.gestione!=='centro'?'selected':''}>Attiva su Delphi~Med</option>
+          <option value="centro" ${c.gestione==='centro'?'selected':''}>Gestita dal centro (offline)</option>
+        </select>
+      </div>
+      ${c.gestione!=='centro' ? `
       <div class="centro-booking">
         <div class="centro-booking-hdr ${_linkOpen.has(String(c.id))?'open':''}" onclick="toggleCentroLink('${c.id}')">
           <svg class="ic"><use href="#ic-link"/></svg>
@@ -4052,6 +4066,7 @@ function renderCentroCard(c, isActive){
         </div>
         ` : ''}
       </div>
+      ` : ''}
       ` : ''}
       ${turniHtml}${giornateHtml}
     </div>`;
@@ -4100,6 +4115,24 @@ async function revocaBookingLink(id){
   if(error){ console.error('[Delphi~Med] revocaBookingLink:', error.message); showToast('Errore: link non revocato'); return; }
   c.booking_token = null; _linkPending = null; _linkOpen.add(String(id)); save(); renderCentri();
   showToast('Link revocato');
+}
+async function setCentroGestione(id, value){
+  const c = S.centri.find(x=>String(x.id)===String(id)); if(!c) return;
+  const nuovo = value==='centro' ? 'centro' : 'delphi';
+  if(nuovo===(c.gestione||'delphi')) return;
+  if(!isOnline()){
+    c.gestione = nuovo; save(); renderCentri();
+    showToast(nuovo==='centro' ? 'Agenda gestita dal centro' : 'Prenotazione online attiva ✓'); return;
+  }
+  try {
+    const { error } = await supabaseClient.from('centri').update({ gestione: nuovo }).eq('id', id);
+    if(error) throw error;
+    c.gestione = nuovo; save(); renderCentri();
+    showToast(nuovo==='centro' ? 'Agenda gestita dal centro' : 'Prenotazione online attiva ✓');
+  } catch(e){
+    console.error('[Delphi~Med] setCentroGestione:', e.message);
+    showToast('Errore: ' + e.message); renderCentri();
+  }
 }
 function copyBookingLink(id){
   const c = S.centri.find(x=>String(x.id)===String(id)); if(!c||!c.booking_token) return;
@@ -7066,7 +7099,7 @@ async function bkInit(){
       bk.medicoEmail = m.email_pubblica || '';
       bkRenderHero(m);
       const { data: centriDB } = await supabaseClient
-        .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true).neq('gestione', 'centro');
+        .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
       S.centri = (centriDB||[]).map(c=>({
         id: c.id, nome: c.nome, indirizzo: [c.via, [c.cap, c.citta].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', '), colore: c.colore||'#0D9488',
         attivo: true, gestione: c.gestione || 'delphi', email: c.email_segreteria||'',
@@ -7168,11 +7201,14 @@ function renderBkCentri(){
   const noEl=document.getElementById('bk-no-centri');
   const _today=new Date().toLocaleDateString('en-CA');
   const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
-  const eligibili=S.centri.filter(c=>c.attivo!==false && c.gestione!=='centro' && ((c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
+  const eligibili=S.centri.filter(c=>c.attivo!==false && (c.gestione==='centro' || (c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
   if(!eligibili.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
   const MAX_DATE=4;
   el.innerHTML=eligibili.map(c=>{
+    if(c.gestione==='centro'){
+      return `<div class="centro-btn centro-btn-disabled" aria-disabled="true"><strong>${c.nome}</strong><span>${c.indirizzo||''}</span><div class="bk-centro-note">Per prenotare in questo centro contatta direttamente la struttura.</div></div>`;
+    }
     const feriali=[...new Set((c.turni||[]).map(t=>t.giorno))].sort((a,b)=>a-b).map(g=>GIORNI_BK[g]);
     const future=(c.giornateSingole||[]).filter(g=>g.data>=_today).map(g=>g.data).sort();
     const dateChips=future.slice(0,MAX_DATE).map(d=>new Date(d+'T12:00:00').toLocaleDateString('it-IT',{day:'numeric',month:'short'}));
