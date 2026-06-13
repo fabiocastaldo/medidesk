@@ -2921,6 +2921,7 @@ async function showAppView(){
         await migrateLocalVisite();
         await loadPazientiFromDB(user);
         await loadAppuntamentiFromDB(user);
+        await loadBlocchiFromDB(user);
         await loadVisiteFromDB(user);
         await loadChiusureFromDB(user);
         checkArchivioScaduto();
@@ -3156,6 +3157,31 @@ async function migrateLocalVisite(){
   } catch(e){ console.error('[Delphi~Med] migrateLocalVisite:', e.message); }
 }
 
+async function loadBlocchiFromDB(user){
+  if(!isOnline() || !user) return;
+  try {
+    const { data: medico } = await supabaseClient
+      .from('medici').select('id').eq('user_id', user.id).single();
+    if(!medico) return;
+    const { data, error } = await supabaseClient
+      .from('blocchi_occupazione').select('*').eq('medico_id', medico.id).order('data');
+    if(error) throw error;
+    S.blocchi = (data || []).map(b => {
+      const _centro = S.centri.find(c=>String(c.id)===String(b.centro_id));
+      return {
+        id: b.id,
+        centroId: b.centro_id,
+        centroNome: _centro ? _centro.nome : '',
+        data: b.data,
+        nVisite: (b.n_visite==null ? null : b.n_visite),
+        note: b.note || '',
+        importId: b.import_id || null
+      };
+    });
+    console.log('[Delphi~Med] Blocchi occupazione caricati da DB:', S.blocchi.length);
+  } catch(e){ console.error('[Delphi~Med] loadBlocchiFromDB:', e.message); }
+}
+
 async function loadAppuntamentiFromDB(user){
   if(!isOnline() || !user) return;
   try {
@@ -3362,7 +3388,7 @@ var S = {
   areeTematiche: [],
   areeTematicheRecords: [],
   weekOffset:0, selectedDay:null, currentApptId:null,
-  agendaView:'week', monthYear:null, monthMonth:null,
+  agendaView:'week', monthYear:null, monthMonth:null, blocchi:[],
   chiusure:[],
   archivioScaduto: null,
   banners: { scadenzaIgnorata: false }
@@ -4159,6 +4185,8 @@ async function setCentroGestione(id, value){
   }
 }
 let _importCentroId = null;
+let _importInboxId = null;
+let _importRighe = [];
 
 function importaGiornata(centroId){
   if(!isOnline()){ showToast('Serve la connessione per importare'); return; }
@@ -4207,6 +4235,7 @@ async function importEstrai(){
       stato: 'proposta'
     }).select('id').single();
     if(inboxErr) throw inboxErr;
+    _importInboxId = inboxRow.id;
     const _jwt = await getAuthJwt();
     const resp = await fetch('/api/import-agenda', {
       method: 'POST',
@@ -4233,6 +4262,7 @@ async function importEstrai(){
 function renderImportReview(payload){
   const rv = document.getElementById('import-review'); if(!rv) return;
   const righe = Array.isArray(payload.righe) ? payload.righe : [];
+  _importRighe = righe;
   const c = S.centri.find(x=>String(x.id)===String(_importCentroId));
   const centroNome = c ? c.nome : '';
   let centroWarn = '';
@@ -4240,40 +4270,147 @@ function renderImportReview(payload){
   if(craw && cn && !craw.includes(cn) && !cn.includes(craw)){
     centroWarn = '<div style="font-size:12px;color:#b45309;margin-bottom:8px">Estratto centro "' + escapeHtml(payload.centro_raw) + '" ma stai importando in "' + escapeHtml(centroNome) + '". Verifica.</div>';
   }
-  const dataStr = payload.data ? formatDate(payload.data) : 'non rilevata';
-  const head = '<div style="font-size:13px;margin-bottom:8px"><strong>Giornata:</strong> ' + escapeHtml(dataStr) + ' \u00b7 <strong>' + righe.length + '</strong> righe estratte</div>' + centroWarn;
+  const dataVal = payload.data || '';
+  const head = '<div style="font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+    + '<strong>Giornata:</strong> <input type="date" id="imp-data" value="' + escapeAttr(dataVal) + '" style="padding:4px 6px;border:1px solid var(--border);border-radius:var(--r-sm)">'
+    + '<span style="color:var(--ink3)">centro: ' + escapeHtml(centroNome) + '</span>'
+    + '</div>' + centroWarn;
   if(!righe.length && payload.n_visite_fallback != null){
-    rv.innerHTML = head + '<div style="font-size:13px;color:var(--ink2);padding:12px;border:1px solid var(--border);border-radius:var(--r-sm)">Giornata leggibile solo come <strong>' + payload.n_visite_fallback + '</strong> visite (dettaglio non disponibile). Verr\u00e0 gestita come blocco di occupazione.</div>' + _importHint();
+    rv.innerHTML = head
+      + '<div style="font-size:13px;color:var(--ink2);padding:12px;border:1px solid var(--border);border-radius:var(--r-sm)">'
+      + 'Giornata leggibile solo come blocco di occupazione (dettaglio non disponibile).'
+      + '<div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      + '<label>N. visite <input type="number" id="imp-blocco-n" min="0" value="' + (payload.n_visite_fallback) + '" style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--r-sm)"></label>'
+      + '<input type="text" id="imp-blocco-note" placeholder="Nota (facoltativa)" style="flex:1;min-width:140px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--r-sm)">'
+      + '</div></div>'
+      + '<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary" id="import-conferma-btn" onclick="importConferma()">Conferma blocco occupazione</button><button class="btn btn-secondary" onclick="importScarta()">Scarta</button></div>';
     return;
   }
   if(!righe.length){
     rv.innerHTML = head + '<div style="font-size:13px;color:var(--ink3);padding:12px">Nessuna riga estratta.</div>';
     return;
   }
-  const rows = righe.map(function(r){
+  const rows = righe.map(function(r, i){
     const conf = typeof r.confidenza==='number' ? r.confidenza : 0;
-    const rowStyle = conf < 0.6 ? 'opacity:.5' : '';
     const confColor = conf < 0.6 ? 'var(--ink3)' : (conf < 0.95 ? '#b45309' : '#0a8074');
-    const badge = !r.e_appuntamento
+    const isCanc = r.stato==='cancellato';
+    const isAppt = r.e_appuntamento !== false;
+    const preChecked = isAppt && !isCanc && conf >= 0.6;
+    const ora0 = r.ora || '';
+    const naz0 = r.nome || '';
+    const tipo0 = r.tipo_catalogo || r.tipo || '';
+    const conflitto = ora0 && (S.appuntamenti||[]).some(a=>!a.cancelled && String(a.centroId)===String(_importCentroId) && a.data===(payload.data||'') && a.ora===ora0);
+    const badge = !isAppt
       ? '<span style="font-size:10px;color:var(--ink3)">non-appunt.</span>'
-      : (r.stato==='cancellato' ? '<span style="font-size:10px;color:#b91c1c">cancellato</span>' : '');
-    return '<tr style="border-top:1px solid var(--border);' + rowStyle + '">'
-      + '<td style="padding:5px 4px">' + escapeHtml(r.ora||'-') + '</td>'
-      + '<td style="padding:5px 4px">' + escapeHtml(r.nome||'-') + '</td>'
-      + '<td style="padding:5px 4px">' + escapeHtml(r.tipo_catalogo||r.tipo||'-') + '</td>'
-      + '<td style="padding:5px 4px;text-align:right;color:' + confColor + ';font-weight:600">' + Math.round(conf*100) + '%</td>'
-      + '<td style="padding:5px 4px">' + badge + '</td>'
+      : (isCanc ? '<span style="font-size:10px;color:#b91c1c">cancellato</span>' : (conflitto ? '<span style="font-size:10px;color:#b45309">in agenda</span>' : ''));
+    return '<tr style="border-top:1px solid var(--border)">'
+      + '<td style="padding:4px 3px;text-align:center"><input type="checkbox" id="imp-ok-' + i + '"' + (preChecked?' checked':'') + '></td>'
+      + '<td style="padding:4px 3px"><input type="text" id="imp-ora-' + i + '" value="' + escapeAttr(ora0) + '" style="width:52px;padding:3px 4px;border:1px solid var(--border);border-radius:4px"></td>'
+      + '<td style="padding:4px 3px"><input type="text" id="imp-naz-' + i + '" value="' + escapeAttr(naz0) + '" style="width:100%;min-width:90px;padding:3px 4px;border:1px solid var(--border);border-radius:4px"></td>'
+      + '<td style="padding:4px 3px"><input type="text" id="imp-tipo-' + i + '" value="' + escapeAttr(tipo0) + '" style="width:100%;min-width:80px;padding:3px 4px;border:1px solid var(--border);border-radius:4px"></td>'
+      + '<td style="padding:4px 3px;text-align:right;color:' + confColor + ';font-weight:600">' + Math.round(conf*100) + '%</td>'
+      + '<td style="padding:4px 3px">' + badge + '</td>'
       + '</tr>';
   }).join('');
   rv.innerHTML = head
     + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
     + '<thead><tr style="text-align:left;color:var(--ink3);font-size:11px;text-transform:uppercase">'
-    + '<th>Ora</th><th>Paziente</th><th>Prestazione</th><th style="text-align:right">Conf.</th><th></th>'
-    + '</tr></thead><tbody>' + rows + '</tbody></table>' + _importHint();
+    + '<th></th><th>Ora</th><th>Paziente</th><th>Prestazione</th><th style="text-align:right">Conf.</th><th></th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Conferma riga per riga: nulla viene scritto in agenda fino alla conferma. Le righe in conflitto restano, non sovrascrivono nulla.</div>'
+    + '<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary" id="import-conferma-btn" onclick="importConferma()">Conferma in agenda</button><button class="btn btn-secondary" onclick="importScarta()">Scarta</button></div>';
 }
 
-function _importHint(){
-  return '<div style="font-size:12px;color:var(--ink3);margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">Anteprima in sola lettura. La conferma in agenda riga per riga arriver\u00e0 nel prossimo aggiornamento.</div>';
+async function importConferma(){
+  if(!isOnline() || !S.medicoId){ showToast('Connessione richiesta'); return; }
+  const dataEl = document.getElementById('imp-data');
+  const data = dataEl ? dataEl.value : '';
+  if(!data){ showToast('Indica la data della giornata'); return; }
+  const _cC = S.centri.find(x=>String(x.id)===String(_importCentroId));
+  const cNome = _cC ? _cC.nome : '';
+  const btn = document.getElementById('import-conferma-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Salvataggio...'; }
+  try {
+    const bloccoN = document.getElementById('imp-blocco-n');
+    if(bloccoN){
+      const n = parseInt(bloccoN.value, 10);
+      const note = (document.getElementById('imp-blocco-note')||{}).value || '';
+      const { data: ins, error } = await supabaseClient.from('blocchi_occupazione').insert({
+        medico_id: S.medicoId,
+        centro_id: _importCentroId,
+        data: data,
+        n_visite: (isNaN(n) ? null : n),
+        note: note || null,
+        import_id: _importInboxId
+      }).select('id').single();
+      if(error) throw error;
+      S.blocchi.push({ id: ins.id, centroId: _importCentroId, centroNome: cNome, data: data, nVisite: (isNaN(n)?null:n), note: note||'', importId: _importInboxId });
+      await supabaseClient.from('import_inbox').update({ stato: 'confermata' }).eq('id', _importInboxId);
+      save();
+      renderAgenda(); renderDashboard(); updateStats();
+      closeModal('modal-import-agenda');
+      showToast('Blocco occupazione salvato');
+      return;
+    }
+    const righe = Array.isArray(_importRighe) ? _importRighe : [];
+    const daSalvare = [];
+    for(let i=0;i<righe.length;i++){
+      const ok = document.getElementById('imp-ok-'+i);
+      if(!ok || !ok.checked) continue;
+      const ora = ((document.getElementById('imp-ora-'+i)||{}).value || '').trim();
+      const naz = ((document.getElementById('imp-naz-'+i)||{}).value || '').trim();
+      const tipo = ((document.getElementById('imp-tipo-'+i)||{}).value || '').trim();
+      if(!ora){ showToast('Manca l\'ora in una riga selezionata'); if(btn){ btn.disabled=false; btn.textContent='Conferma in agenda'; } return; }
+      daSalvare.push({ ora: ora, naz: naz, tipo: tipo });
+    }
+    if(!daSalvare.length){ showToast('Seleziona almeno una riga'); if(btn){ btn.disabled=false; btn.textContent='Conferma in agenda'; } return; }
+    let okCount = 0;
+    for(const r of daSalvare){
+      const token = generateCancellationToken();
+      const { data: ins, error } = await supabaseClient.from('appuntamenti').insert({
+        medico_id: S.medicoId,
+        centro_id: _importCentroId,
+        data: data,
+        ora: r.ora,
+        nome_paziente: '',
+        cognome_paziente: r.naz,
+        telefono_paziente: null,
+        email_paziente: null,
+        tipo_visita: r.tipo || null,
+        area_tematica: null,
+        note: null,
+        source: 'medico',
+        cancellation_token: token,
+        import_id: _importInboxId
+      }).select('id').single();
+      if(error) throw error;
+      S.appuntamenti.push({
+        id: ins.id, nome: '', cognome: r.naz, tel: '', email: '',
+        tipo: r.tipo, area: '', note: '', data: data, ora: r.ora,
+        centroId: _importCentroId, centroNome: cNome, source: 'medico',
+        per_conto: false, da_centro: false, seen: true,
+        cancelled: false, cancelledAt: null, importId: _importInboxId
+      });
+      okCount++;
+    }
+    await supabaseClient.from('import_inbox').update({ stato: 'confermata' }).eq('id', _importInboxId);
+    save();
+    renderAgenda(); renderDashboard(); updateStats();
+    closeModal('modal-import-agenda');
+    showToast(okCount + ' appuntament' + (okCount===1?'o':'i') + ' importat' + (okCount===1?'o':'i'));
+  } catch(err){
+    console.error('[Delphi~Med] importConferma:', err.message);
+    showToast('Errore: ' + err.message);
+    if(btn){ btn.disabled = false; btn.textContent = 'Conferma in agenda'; }
+  }
+}
+
+async function importScarta(){
+  if(_importInboxId && isOnline()){
+    try { await supabaseClient.from('import_inbox').update({ stato: 'scartata' }).eq('id', _importInboxId); } catch(_){}
+  }
+  closeModal('modal-import-agenda');
+  showToast('Import scartato');
 }
 
 function copyBookingLink(id){
@@ -5096,7 +5233,7 @@ function renderAgenda(){
     )).map(c=>String(c.id));
     const soloTurno = centriGiornoIds.filter(cid=>!byCentro[cid]);
     const dotsCentri = soloTurno.slice(0,4).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); return `<span style="width:7px;height:7px;border-radius:50%;background:${c.colore};display:inline-block;flex-shrink:0"></span>`; }).join('');
-    const metaInner = chips + more + dotsCentri;
+    const _blkDay = (S.blocchi||[]).some(b=>b.data===ds); const _blkDot = _blkDay ? '<span class="cc-dot" style="background:#9aa3af" title="Occupato"></span>' : ''; const metaInner = chips + more + dotsCentri + _blkDot;
     return `<div class="${tabCls}${ds===today?' is-today':''}" onclick="selectDay('${ds}')" title="${hol.isHoliday?hol.name:(chiuso?'Studio chiuso':'')}">
       <span class="dt-dow">${DAYS_IT[d.getDay()]}</span>
       <span class="dt-num">${d.getDate()}</span>
@@ -5230,7 +5367,7 @@ function renderMonthView(){
     const turniDots = centriConTurno.slice(0,4).map(c =>
       `<span class="mc-dot mc-dot-turno" style="background:${c.colore}" title="${c.nome}"></span>`
     ).join('');
-    const dotsHtml = apptDots + turniDots;
+    const _blkDay = (S.blocchi||[]).some(b=>b.data===ds); const _blkDot = _blkDay ? '<span class="mc-dot" style="background:#9aa3af" title="Occupato (agenda del centro)"></span>' : ''; const dotsHtml = apptDots + turniDots + _blkDot;
     // Avviso turno su festività
     const turniWarn = hol.isHoliday && dayAppts.length ? `<span class="mc-holiday-warn" title="Appuntamenti in festività">⚠️</span>` : '';
     let cls = 'mc-day';
@@ -5364,13 +5501,15 @@ function toggleMostraCancellati(){
 function renderDayAppointments(){
   const container = document.getElementById('appointments-container');
   let appts = S.appuntamenti.filter(a=>a.data===S.selectedDay).sort((a,b)=>a.ora.localeCompare(b.ora));
+  const blks = (S.blocchi||[]).filter(b=>b.data===S.selectedDay);
   const hasCancelled = appts.some(a=>a.cancelled);
   if(!_mostraCancellati) appts=appts.filter(a=>!a.cancelled);
-  if(!appts.length){
+  if(!appts.length && !blks.length){
     container.innerHTML=`<div style="text-align:center;padding:40px;color:var(--ink3)"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-sparkles"/></svg>Nessun appuntamento${hasCancelled?' <button class="btn btn-sm btn-secondary" style="margin-top:8px;display:block;margin:8px auto 0" onclick="toggleMostraCancellati()">Mostra cancellati</button>':''}</div>`; return;
   }
   const toggleBtn = hasCancelled ? `<div style="text-align:right;margin-bottom:8px"><button id="btn-mostra-cancellati" class="btn btn-sm btn-secondary" onclick="toggleMostraCancellati()">${_mostraCancellati?'Nascondi cancellati':'Mostra cancellati'}</button></div>` : '';
-  container.innerHTML = toggleBtn + appts.map(a=>{
+  const _blkHtml = blks.map(function(b){ var _col=(function(){var _c=S.centri.find(function(x){return String(x.id)===String(b.centroId);});return _c?_c.colore:'#999';})(); var _nv=(b.nVisite==null?'':(' \u00b7 '+b.nVisite+' visite')); return '<div class="appt-card" style="opacity:.85;border-left:3px solid '+_col+'"><div class="appt-time"><svg class="ic" style="vertical-align:-.15em"><use href="#ic-center"/></svg></div><div class="appt-info"><div class="appt-patient">Occupato'+_nv+'</div><div class="appt-detail">Blocco occupazione (agenda del centro)</div></div>'+(b.centroNome?'<div class="appt-centro" style="background:'+_col+'22;color:'+_col+'">'+escapeHtml(b.centroNome)+'</div>':'')+'</div>'; }).join('');
+  container.innerHTML = toggleBtn + _blkHtml + appts.map(a=>{
     const centro = S.centri.find(c=>String(c.id)===String(a.centroId));
     const isOnlineAppt = a.source==='paziente';
     const centroNomeDisplay = centro ? centro.nome : (a.centroNome||'');
