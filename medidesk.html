@@ -4297,7 +4297,7 @@ function renderImportReview(payload){
     const isAppt = r.e_appuntamento !== false;
     const preChecked = isAppt && !isCanc && conf >= 0.6;
     const ora0 = r.ora || '';
-    const naz0 = r.nome || '';
+    const naz0 = capitalizeName(r.nome || '');
     const tipo0 = r.tipo_catalogo || r.tipo || '';
     const conflitto = ora0 && (S.appuntamenti||[]).some(a=>!a.cancelled && String(a.centroId)===String(_importCentroId) && a.data===(payload.data||'') && a.ora===ora0);
     const badge = !isAppt
@@ -4326,6 +4326,7 @@ async function importConferma(){
   const dataEl = document.getElementById('imp-data');
   const data = dataEl ? dataEl.value : '';
   if(!data){ showToast('Indica la data della giornata'); return; }
+  if(isChiusura(data, _importCentroId)){ if(!confirm('Sei in ferie il ' + formatDate(data) + '. Importare comunque in questa data?')) return; }
   const _cC = S.centri.find(x=>String(x.id)===String(_importCentroId));
   const cNome = _cC ? _cC.nome : '';
   const btn = document.getElementById('import-conferma-btn');
@@ -4358,7 +4359,7 @@ async function importConferma(){
       const ok = document.getElementById('imp-ok-'+i);
       if(!ok || !ok.checked) continue;
       const ora = ((document.getElementById('imp-ora-'+i)||{}).value || '').trim();
-      const naz = ((document.getElementById('imp-naz-'+i)||{}).value || '').trim();
+      const naz = capitalizeName(((document.getElementById('imp-naz-'+i)||{}).value || '').trim());
       const tipo = ((document.getElementById('imp-tipo-'+i)||{}).value || '').trim();
       if(!ora){ showToast('Manca l\'ora in una riga selezionata'); if(btn){ btn.disabled=false; btn.textContent='Conferma in agenda'; } return; }
       daSalvare.push({ ora: ora, naz: naz, tipo: tipo });
