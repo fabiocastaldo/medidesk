@@ -2520,6 +2520,21 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-conferma" style="z-index:99999" onclick="if(event.target===this)_chiudiConferma(false)">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-title" id="conferma-titolo">Conferma</span>
+      <button class="modal-close" onclick="_chiudiConferma(false)">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <p id="conferma-testo" style="margin:0;font-size:14px;color:var(--ink);line-height:1.5"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="conferma-btn-annulla" onclick="_chiudiConferma(false)">Annulla</button>
+      <button class="btn btn-primary" id="conferma-btn-ok" onclick="_chiudiConferma(true)">Conferma</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════ SCRIPT ══════════════ -->
@@ -3753,6 +3768,23 @@ function showPage(id){
 }
 
 // ── MODALS ──
+let _confermaResolve = null;
+function _chiudiConferma(val){
+  closeModal('modal-conferma');
+  const r = _confermaResolve; _confermaResolve = null;
+  if(r) r(val);
+}
+function confermaModale(testo, opts){
+  opts = opts || {};
+  return new Promise(function(res){
+    _confermaResolve = res;
+    const t = document.getElementById('conferma-titolo'); if(t) t.textContent = opts.titolo || 'Conferma';
+    const c = document.getElementById('conferma-testo');  if(c) c.textContent = testo;
+    const ok = document.getElementById('conferma-btn-ok'); if(ok) ok.textContent = opts.ok || 'Conferma';
+    const an = document.getElementById('conferma-btn-annulla'); if(an) an.textContent = opts.annulla || 'Annulla';
+    openModal('modal-conferma');
+  });
+}
 function openModal(id){
   try {
     const m = document.getElementById(id);
@@ -4326,7 +4358,7 @@ async function importConferma(){
   const dataEl = document.getElementById('imp-data');
   const data = dataEl ? dataEl.value : '';
   if(!data){ showToast('Indica la data della giornata'); return; }
-  if(isChiusura(data, _importCentroId)){ if(!confirm('Sei in ferie il ' + formatDate(data) + '. Importare comunque in questa data?')) return; }
+  if(isChiusura(data, _importCentroId)){ if(!(await confermaModale('Sei in ferie il ' + formatDate(data) + '. Importare comunque in questa data?', { ok: 'Importa comunque' }))) return; }
   const _cC = S.centri.find(x=>String(x.id)===String(_importCentroId));
   const cNome = _cC ? _cC.nome : '';
   const btn = document.getElementById('import-conferma-btn');
