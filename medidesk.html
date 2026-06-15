@@ -1341,6 +1341,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-prestazioni" class="page">
       <div class="page-header">
         <div><div class="page-title">Prestazioni</div><div class="page-subtitle">Prezzo al paziente e compenso, per centro</div></div>
+        <button class="btn btn-primary" onclick="openPrestazioneModal()">+ Prestazione</button>
       </div>
       <div id="prestazioni-list"></div>
     </div>
@@ -2087,6 +2088,26 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-appuntamento')">Annulla</button>
       <button class="btn btn-primary" id="appt-save-btn" style="display:none" onclick="saveAppuntamento()">Salva appuntamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRESTAZIONE -->
+<div class="modal-overlay" id="modal-prestazione">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Prestazione</span><button class="modal-close" onclick="closeModal('modal-prestazione')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="prest-centro"></select></div>
+      <div class="form-group"><label class="form-label">Prestazione</label><input class="form-input" id="prest-nome" list="prest-nomi" placeholder="Es. Visita specialistica"><datalist id="prest-nomi"></datalist></div>
+      <div class="form-group"><label class="form-label">Prezzo al paziente (EUR)</label><input class="form-input" id="prest-prezzo" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">Tuo compenso</label><input class="form-input" id="prest-compenso" type="number" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">Tipo compenso</label><select class="form-input" id="prest-tipo"><option value="fisso">Fisso (EUR)</option><option value="percentuale">Percentuale (%)</option></select></div>
+      <div class="form-group"><label class="form-label">Valido dal</label><input class="form-input" id="prest-valido" type="date"></div>
+      <div class="form-group"><label class="form-label"><input type="checkbox" id="prest-attiva" style="margin-right:6px">Attiva</label></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-prestazione')">Annulla</button>
+      <button class="btn btn-primary" onclick="savePrestazione()">Salva</button>
     </div>
   </div>
 </div>
@@ -4084,11 +4105,101 @@ function renderPrestazioni(){
       const prezzo = (p.prezzo!=null) ? (Number(p.prezzo).toFixed(2)+' &euro;') : '&mdash;';
       const comp = (p.tipo==='percentuale') ? (Number(p.compenso).toFixed(0)+'%') : (Number(p.compenso).toFixed(2)+' &euro;');
       const stato = (p.attiva===false) ? ' &middot; sospesa' : '';
-      return `<div style="padding:6px 0"><strong>${escapeAttr(p.tipo_visita)}</strong><div style="font-size:12px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}${stato}</div></div>`;
+      return `<div style="padding:6px 0;display:flex;align-items:center;justify-content:space-between"><div><strong>${escapeAttr(p.tipo_visita)}</strong><div style="font-size:12px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}${stato}</div></div><div class="centro-actions"><button class="centro-act" onclick="openPrestazioneModal('${p.id}')" title="Modifica"><svg class="ic"><use href="#ic-edit"/></svg></button><button class="centro-act centro-act-danger" onclick="removePrestazione('${p.id}')" title="Elimina"><svg class="ic"><use href="#ic-trash"/></svg></button></div></div>`;
     }).join('');
     html += '</div></div>';
   }
   el.innerHTML = html;
+}
+
+let _prestEditId = null;
+
+function openPrestazioneModal(id){
+  const selC = document.getElementById('prest-centro');
+  if(selC) selC.innerHTML = (S.centri||[]).filter(c=>c.attivo!==false).map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
+  const dl = document.getElementById('prest-nomi');
+  if(dl) dl.innerHTML = (S.tipiVisita||[]).map(n=>`<option value="${escapeAttr(n)}"></option>`).join('');
+  const fld = (elId, val) => { const el=document.getElementById(elId); if(el) el.value=val||''; };
+  if(id){
+    const p = (S.prestazioniCentro||[]).find(x=>String(x.id)===String(id));
+    if(!p){ showToast('Prestazione non trovata'); return; }
+    _prestEditId = id;
+    if(selC) selC.value = String(p.centro_id);
+    fld('prest-nome', p.tipo_visita);
+    fld('prest-prezzo', p.prezzo!=null ? p.prezzo : '');
+    fld('prest-compenso', p.compenso!=null ? p.compenso : '');
+    fld('prest-tipo', p.tipo||'fisso');
+    fld('prest-valido', p.valido_dal||'');
+    const cb = document.getElementById('prest-attiva'); if(cb) cb.checked = p.attiva!==false;
+  } else {
+    _prestEditId = null;
+    if(selC && selC.options.length) selC.selectedIndex = 0;
+    fld('prest-nome', '');
+    fld('prest-prezzo', '');
+    fld('prest-compenso', '');
+    fld('prest-tipo', 'fisso');
+    fld('prest-valido', todayLocalISO());
+    const cb = document.getElementById('prest-attiva'); if(cb) cb.checked = true;
+  }
+  openModal('modal-prestazione');
+}
+
+async function savePrestazione(){
+  const centro_id = (document.getElementById('prest-centro')||{}).value;
+  const nome = ((document.getElementById('prest-nome')||{}).value||'').trim();
+  if(!centro_id){ showToast('Seleziona un centro'); return; }
+  if(!nome){ showToast('Inserisci il nome della prestazione'); return; }
+  const prezzo_raw = ((document.getElementById('prest-prezzo')||{}).value||'').trim();
+  const compenso_raw = ((document.getElementById('prest-compenso')||{}).value||'').trim();
+  const tipo = ((document.getElementById('prest-tipo')||{}).value)||'fisso';
+  const valido_dal = ((document.getElementById('prest-valido')||{}).value)||null;
+  const attiva = (document.getElementById('prest-attiva')||{}).checked !== false;
+  const prezzo = prezzo_raw !== '' ? Number(prezzo_raw) : null;
+  const compenso = compenso_raw !== '' ? Number(compenso_raw) : 0;
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+    const medico_id = medico.id;
+    if(!(S.tipiVisita||[]).includes(nome)){
+      const { error: errTV } = await supabaseClient.from('tipi_visita').insert({ medico_id, nome, is_default: false });
+      if(errTV) throw errTV;
+      S.tipiVisita.push(nome);
+      sortTipiVisita();
+      populateTipiVisitaSelects();
+    }
+    const payload = { centro_id, tipo_visita: nome, prezzo, compenso, tipo, valido_dal, attiva };
+    if(_prestEditId){
+      const { error } = await supabaseClient.from('prestazioni_centro').update(payload).eq('id', _prestEditId);
+      if(error) throw error;
+    } else {
+      const { error } = await supabaseClient.from('prestazioni_centro').insert({ ...payload, medico_id });
+      if(error) throw error;
+    }
+    const wasEdit = !!_prestEditId;
+    _prestEditId = null;
+    await loadPrestazioniFromDB(user);
+    renderPrestazioni();
+    closeModal('modal-prestazione');
+    showToast(wasEdit ? 'Prestazione aggiornata ✓' : 'Prestazione aggiunta ✓');
+  } catch(e){
+    console.error('[Delphi~Med] savePrestazione:', e.message);
+    showToast('Errore: ' + e.message);
+  }
+}
+
+async function removePrestazione(id){
+  if(!(await confermaModale('Eliminare questa prestazione?'))) return;
+  try {
+    const { error } = await supabaseClient.from('prestazioni_centro').delete().eq('id', id);
+    if(error) throw error;
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    await loadPrestazioniFromDB(user);
+    renderPrestazioni();
+    showToast('Prestazione eliminata ✓');
+  } catch(e){
+    console.error('[Delphi~Med] removePrestazione:', e.message);
+    showToast('Errore: ' + e.message);
+  }
 }
 
 function renderCentri(){
