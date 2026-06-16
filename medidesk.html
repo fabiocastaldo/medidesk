@@ -2098,7 +2098,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-header"><span class="modal-title">Prestazione</span><button class="modal-close" onclick="closeModal('modal-prestazione')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="prest-centro"></select></div>
-      <div class="form-group"><label class="form-label">Prestazione</label><input class="form-input" id="prest-nome" list="prest-nomi" placeholder="Es. Visita specialistica"><datalist id="prest-nomi"></datalist></div>
+      <div class="form-group"><label class="form-label">Prestazione</label><select class="form-input" id="prest-nome"></select></div>
       <div class="form-group"><label class="form-label">Prezzo al paziente (EUR)</label><input class="form-input" id="prest-prezzo" type="number" step="0.01" min="0" placeholder="0.00"></div>
       <div class="form-group"><label class="form-label">Tuo compenso</label><input class="form-input" id="prest-compenso" type="number" step="0.01" min="0" placeholder="0.00"></div>
       <div class="form-group"><label class="form-label">Tipo compenso</label><select class="form-input" id="prest-tipo"><option value="fisso">Fisso (EUR)</option><option value="percentuale">Percentuale (%)</option></select></div>
@@ -4088,7 +4088,7 @@ function renderPrestazioni(){
   const el = document.getElementById('prestazioni-list'); if(!el) return;
   const centri = (S.centri||[]).filter(c=>c.attivo!==false);
   if(!centri.length){
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink3)">Aggiungi prima un centro, poi configura le sue prestazioni.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink3)">Aggiungi prima un centro e i tuoi tipi visita (nel profilo), poi qui imposti prezzo e compenso per centro.</div>';
     return;
   }
   const rows = S.prestazioniCentro || [];
@@ -4117,8 +4117,15 @@ let _prestEditId = null;
 function openPrestazioneModal(id){
   const selC = document.getElementById('prest-centro');
   if(selC) selC.innerHTML = (S.centri||[]).filter(c=>c.attivo!==false).map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
-  const dl = document.getElementById('prest-nomi');
-  if(dl) dl.innerHTML = (S.tipiVisita||[]).map(n=>`<option value="${escapeAttr(n)}"></option>`).join('');
+  const selN = document.getElementById('prest-nome');
+  if(selN){
+    const names = (S.tipiVisita||[]).slice();
+    if(id){
+      const pe = (S.prestazioniCentro||[]).find(x=>String(x.id)===String(id));
+      if(pe && pe.tipo_visita && !names.includes(pe.tipo_visita)) names.unshift(pe.tipo_visita);
+    }
+    selN.innerHTML = '<option value="">— Seleziona tipo visita —</option>' + names.map(n=>`<option value="${escapeAttr(n)}">${escapeAttr(n)}</option>`).join('');
+  }
   const fld = (elId, val) => { const el=document.getElementById(elId); if(el) el.value=val||''; };
   if(id){
     const p = (S.prestazioniCentro||[]).find(x=>String(x.id)===String(id));
@@ -4148,7 +4155,8 @@ async function savePrestazione(){
   const centro_id = (document.getElementById('prest-centro')||{}).value;
   const nome = ((document.getElementById('prest-nome')||{}).value||'').trim();
   if(!centro_id){ showToast('Seleziona un centro'); return; }
-  if(!nome){ showToast('Inserisci il nome della prestazione'); return; }
+  if(!nome){ showToast('Seleziona la prestazione'); return; }
+  if(!(S.tipiVisita||[]).includes(nome) && !_prestEditId){ showToast('Tipo visita non valido: aggiungilo nel profilo'); return; }
   const prezzo_raw = ((document.getElementById('prest-prezzo')||{}).value||'').trim();
   const compenso_raw = ((document.getElementById('prest-compenso')||{}).value||'').trim();
   const tipo = ((document.getElementById('prest-tipo')||{}).value)||'fisso';
@@ -4160,13 +4168,6 @@ async function savePrestazione(){
     const { data: { user } } = await supabaseClient.auth.getUser();
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     const medico_id = medico.id;
-    if(!(S.tipiVisita||[]).includes(nome)){
-      const { error: errTV } = await supabaseClient.from('tipi_visita').insert({ medico_id, nome, is_default: false });
-      if(errTV) throw errTV;
-      S.tipiVisita.push(nome);
-      sortTipiVisita();
-      populateTipiVisitaSelects();
-    }
     const payload = { centro_id, tipo_visita: nome, prezzo, compenso, tipo, valido_dal, attiva };
     if(_prestEditId){
       const { error } = await supabaseClient.from('prestazioni_centro').update(payload).eq('id', _prestEditId);
@@ -8166,10 +8167,18 @@ async function addTipoVisita(){
 async function removeTipoVisita(idx){
   const t = S.tipiVisita[idx];
   if(TIPI_DEFAULT.includes(t)){ showToast('I tipi predefiniti non si possono rimuovere'); return; }
-  if(!isOnline()){
-    S.tipiVisita.splice(idx,1); save(); renderTipiAree();
-    populateTipiVisitaSelects(); showToast('Rimosso'); return;
-  }
+  if(!isOnline()){ showToast('Connessione necessaria per rimuovere un tipo visita'); return; }
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: med } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+    const { count: nApp } = await supabaseClient.from('appuntamenti')
+      .select('id', { count: 'exact', head: true }).eq('medico_id', med.id).eq('tipo_visita', t);
+    const { count: nPre } = await supabaseClient.from('prestazioni_centro')
+      .select('id', { count: 'exact', head: true }).eq('medico_id', med.id).eq('tipo_visita', t);
+    if((nApp||0) > 0 || (nPre||0) > 0){
+      showToast(`«${t}» in uso (${nApp||0} appunt., ${nPre||0} prestaz.): non rimovibile`); return;
+    }
+  } catch(e){ console.error('[Delphi~Med] removeTipoVisita check:', e.message); showToast('Errore verifica utilizzo'); return; }
   const rec = S.tipiVisitaRecords.find(r => r.nome === t);
   try {
     if(rec){ const { error } = await supabaseClient.from('tipi_visita').delete().eq('id', rec.id); if(error) throw error; }
