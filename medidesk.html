@@ -3257,6 +3257,7 @@ async function loadAppuntamentiFromDB(user){
         da_centro:   a.da_centro || false,
         seen:        a.seen || false,
         cancelled:   a.cancelled === true,
+        erogata:     a.erogata === true,
         cancelledAt: a.cancelled_at || null
       };
     });
@@ -5757,6 +5758,7 @@ function showApptDetail(id){
       <div class="field-row"><span class="field-key">Data</span><span class="field-val">${formatDate(a.data)} alle ${escapeHtml(a.ora)}</span></div>
       <div class="field-row"><span class="field-key">Centro</span><span class="field-val">${escapeHtml(_centroNomeDetail)}</span></div>
       <div class="field-row"><span class="field-key">Tipo visita</span><span class="field-val">${escapeHtml(a.tipo||'—')}</span></div>
+      ${!a.cancelled?`<div class="field-row"><span class="field-key">Erogazione</span><span class="field-val">${a.erogata===true?'<span style="color:#16a34a">Erogata ✓</span>':'Non erogata'}</span></div>`:''}
       ${a.area?`<div class="field-row"><span class="field-key">Area</span><span class="field-val">${escapeHtml(a.area)}</span></div>`:''}
       <div class="field-row"><span class="field-key">Note</span><span class="field-val">${escapeHtml(a.note||'—')}</span></div>
       ${a.tel?`<div class="field-row"><span class="field-key">Telefono</span><span class="field-val">${escapeHtml(a.tel)}</span></div>`:''}
@@ -5766,7 +5768,8 @@ function showApptDetail(id){
       ${a.cancelled?`<div class="field-row"><span class="field-key">Cancellato il</span><span class="field-val">${a.cancelledAt?new Date(a.cancelledAt).toLocaleDateString('it-IT'):'—'}</span></div>`:''}
       ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
     </div>
-    ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${escapeAttr(id)}')">Ripristina appuntamento</button>`:''}`;
+    ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${escapeAttr(id)}')">Ripristina appuntamento</button>`:''}
+    ${!a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="toggleErogata('${escapeAttr(id)}')">${a.erogata===true?'Annulla erogazione':'Segna come erogata'}</button>`:''}`;
   document.getElementById('btn-delete-appt').onclick = ()=>deleteAppuntamento(id);
   openModal('modal-appt-detail');
 }
@@ -5782,6 +5785,23 @@ async function ripristinaAppuntamento(id){
   save(); closeModal('modal-appt-detail');
   renderAgenda(); showToast('Appuntamento ripristinato ✓');
   await sendNotificaCentro('nuova_prenotazione', a);
+}
+
+async function toggleErogata(id){
+  const a=S.appuntamenti.find(x=>String(x.id)===String(id)); if(!a) return;
+  if(a.cancelled){ showToast('Visita cancellata: non marcabile'); return; }
+  const nuovo = !(a.erogata===true);
+  if(isOnline()){
+    try {
+      const {error}=await supabaseClient.from('appuntamenti').update({erogata:nuovo}).eq('id',id);
+      if(error) throw error;
+    } catch(e){ showToast('Errore: '+e.message); return; }
+  }
+  a.erogata=nuovo;
+  save();
+  showApptDetail(id);
+  if(typeof renderDashboard==='function') renderDashboard();
+  showToast(nuovo ? 'Segnata come erogata ✓' : 'Erogazione annullata');
 }
 
 // ── MAIL & ICS ──
@@ -6860,7 +6880,7 @@ function renderDashboard(){
       const c=S.centri.find(x=>String(x.id)===String(a.centroId));
       return `<div class="appt-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showApptDetail('${a.id}')">
         <div class="appt-time">${a.ora}</div>
-        <div class="appt-info"><div class="appt-patient">${a.cognome} ${a.nome}</div><div class="appt-detail">${a.tipo||'Visita'}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}</div></div>
+        <div class="appt-info"><div class="appt-patient">${a.cognome} ${a.nome}</div><div class="appt-detail">${a.tipo||'Visita'}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}${a.erogata===true?' · <span style="color:#16a34a">erogata</span>':''}</div></div>
         ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${c.nome}</div>`:''}
       </div>`;
     }).join('');
