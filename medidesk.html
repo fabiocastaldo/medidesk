@@ -1182,7 +1182,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('agenda')"><span class="icon"><svg class="ic"><use href="#ic-calendar"/></svg></span><span>Agenda</span></div>
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon"><svg class="ic"><use href="#ic-users"/></svg></span><span>Pazienti</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon"><svg class="ic"><use href="#ic-center"/></svg></span><span>Centri</span></div>
-      <div class="nav-item" onclick="showPage('prestazioni')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Prestazioni</span></div>
+      <div class="nav-item" onclick="showPage('prestazioni')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Tariffe</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon"><svg class="ic"><use href="#ic-user"/></svg></span><span>Profilo</span></div>
       <div class="nav-item" onclick="showPage('statistiche')"><span class="icon"><svg class="ic"><use href="#ic-stats"/></svg></span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon"><svg class="ic"><use href="#ic-settings"/></svg></span><span>Impostazioni</span></div>
@@ -1340,8 +1340,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
     <div id="page-prestazioni" class="page">
       <div class="page-header">
-        <div><div class="page-title">Prestazioni</div><div class="page-subtitle">Prezzo al paziente e compenso, per centro</div></div>
-        <button class="btn btn-primary" onclick="openPrestazioneModal()">+ Prestazione</button>
+        <div><div class="page-title">Tariffe</div><div class="page-subtitle">Prezzo al paziente e compenso, per centro</div></div>
+        <button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button>
       </div>
       <div id="prestazioni-list"></div>
     </div>
@@ -1781,7 +1781,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="ma-handle" id="ma-handle" role="button" tabindex="0" aria-label="Apri menu azioni" aria-expanded="false"><span class="ma-grabber"></span></div>
     <div class="ma-panel">
       <button class="ma-item" onclick="showPage('statistiche')"><span class="ma-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="ma-lbl">Statistiche</span></button>
-      <button class="ma-item" onclick="showPage('prestazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="ma-lbl">Prestazioni</span></button>
+      <button class="ma-item" onclick="showPage('prestazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="ma-lbl">Tariffe</span></button>
       <button class="ma-item" onclick="showPage('impostazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-settings"/></svg></span><span class="ma-lbl">Impostazioni</span></button>
       <button class="ma-item" onclick="showPage('manutenzione-archivio')"><span class="ma-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="ma-lbl">Archivio</span></button>
       <button class="ma-item ma-logout" id="mobile-logout-btn" onclick="signOut()"><span class="ma-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="ma-lbl">Esci</span></button>
@@ -2095,10 +2095,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- MODAL PRESTAZIONE -->
 <div class="modal-overlay" id="modal-prestazione">
   <div class="modal">
-    <div class="modal-header"><span class="modal-title">Prestazione</span><button class="modal-close" onclick="closeModal('modal-prestazione')">✕</button></div>
+    <div class="modal-header"><span class="modal-title">Tariffa</span><button class="modal-close" onclick="closeModal('modal-prestazione')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="prest-centro"></select></div>
-      <div class="form-group"><label class="form-label">Prestazione</label><select class="form-input" id="prest-nome"></select></div>
+      <div class="form-group"><label class="form-label">Tipo visita</label><select class="form-input" id="prest-nome"></select></div>
       <div class="form-group"><label class="form-label">Prezzo al paziente (EUR)</label><input class="form-input" id="prest-prezzo" type="number" step="0.01" min="0" placeholder="0.00"></div>
       <div class="form-group"><label class="form-label">Tuo compenso</label><input class="form-input" id="prest-compenso" type="number" step="0.01" min="0" placeholder="0.00"></div>
       <div class="form-group"><label class="form-label">Tipo compenso</label><select class="form-input" id="prest-tipo"><option value="fisso">Fisso (EUR)</option><option value="percentuale">Percentuale (%)</option></select></div>
@@ -4097,7 +4097,7 @@ function renderPrestazioni(){
     const list = rows.filter(p=>String(p.centro_id)===String(c.id));
     html += `<div class="section-title" style="margin-top:20px">${escapeAttr(c.nome)}</div>`;
     if(!list.length){
-      html += '<div class="card"><div class="card-body" style="color:var(--ink3)">Nessuna prestazione configurata.</div></div>';
+      html += '<div class="card"><div class="card-body" style="color:var(--ink3)">Nessuna tariffa configurata.</div></div>';
       continue;
     }
     html += '<div class="card"><div class="card-body">';
@@ -4129,7 +4129,7 @@ function openPrestazioneModal(id){
   const fld = (elId, val) => { const el=document.getElementById(elId); if(el) el.value=val||''; };
   if(id){
     const p = (S.prestazioniCentro||[]).find(x=>String(x.id)===String(id));
-    if(!p){ showToast('Prestazione non trovata'); return; }
+    if(!p){ showToast('Tariffa non trovata'); return; }
     _prestEditId = id;
     if(selC) selC.value = String(p.centro_id);
     fld('prest-nome', p.tipo_visita);
@@ -4155,7 +4155,7 @@ async function savePrestazione(){
   const centro_id = (document.getElementById('prest-centro')||{}).value;
   const nome = ((document.getElementById('prest-nome')||{}).value||'').trim();
   if(!centro_id){ showToast('Seleziona un centro'); return; }
-  if(!nome){ showToast('Seleziona la prestazione'); return; }
+  if(!nome){ showToast('Seleziona il tipo visita'); return; }
   if(!(S.tipiVisita||[]).includes(nome) && !_prestEditId){ showToast('Tipo visita non valido: aggiungilo nel profilo'); return; }
   const prezzo_raw = ((document.getElementById('prest-prezzo')||{}).value||'').trim();
   const compenso_raw = ((document.getElementById('prest-compenso')||{}).value||'').trim();
@@ -4181,7 +4181,7 @@ async function savePrestazione(){
     await loadPrestazioniFromDB(user);
     renderPrestazioni();
     closeModal('modal-prestazione');
-    showToast(wasEdit ? 'Prestazione aggiornata ✓' : 'Prestazione aggiunta ✓');
+    showToast(wasEdit ? 'Tariffa aggiornata ✓' : 'Tariffa aggiunta ✓');
   } catch(e){
     console.error('[Delphi~Med] savePrestazione:', e.message);
     showToast('Errore: ' + e.message);
@@ -4189,14 +4189,14 @@ async function savePrestazione(){
 }
 
 async function removePrestazione(id){
-  if(!(await confermaModale('Eliminare questa prestazione?'))) return;
+  if(!(await confermaModale('Eliminare questa tariffa?'))) return;
   try {
     const { error } = await supabaseClient.from('prestazioni_centro').delete().eq('id', id);
     if(error) throw error;
     const { data: { user } } = await supabaseClient.auth.getUser();
     await loadPrestazioniFromDB(user);
     renderPrestazioni();
-    showToast('Prestazione eliminata ✓');
+    showToast('Tariffa eliminata ✓');
   } catch(e){
     console.error('[Delphi~Med] removePrestazione:', e.message);
     showToast('Errore: ' + e.message);
@@ -4532,7 +4532,7 @@ function renderImportReview(payload){
   rv.innerHTML = head
     + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
     + '<thead><tr style="text-align:left;color:var(--ink3);font-size:11px;text-transform:uppercase">'
-    + '<th></th><th>Ora</th><th>Paziente</th><th>Prestazione</th><th style="text-align:right">Conf.</th><th></th>'
+    + '<th></th><th>Ora</th><th>Paziente</th><th>Tipo visita</th><th style="text-align:right">Conf.</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>'
     + '<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Conferma riga per riga: nulla viene scritto in agenda fino alla conferma. Le righe in conflitto restano, non sovrascrivono nulla.</div>'
     + '<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary" id="import-conferma-btn" onclick="importConferma()">Conferma in agenda</button><button class="btn btn-secondary" onclick="importScarta()">Scarta</button></div>';
@@ -8181,7 +8181,7 @@ async function removeTipoVisita(idx){
     if((nApp||0) > 0 || (nPre||0) > 0){
       const parts = [];
       if((nApp||0) > 0) parts.push(`${nApp} ${nApp===1?'appuntamento':'appuntamenti'}`);
-      if((nPre||0) > 0) parts.push(`${nPre} ${nPre===1?'prestazione':'prestazioni'}`);
+      if((nPre||0) > 0) parts.push(`${nPre} ${nPre===1?'tariffa':'tariffe'}`);
       await confermaModale(`«${t}» è in uso in ${parts.join(' e ')}. Rimuovi prima quegli utilizzi, poi potrai eliminare il tipo visita.`, { titolo:'Impossibile rimuovere', ok:'Ho capito', soloOk:true });
       return;
     }
