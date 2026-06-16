@@ -3813,7 +3813,7 @@ function confermaModale(testo, opts){
     const t = document.getElementById('conferma-titolo'); if(t) t.textContent = opts.titolo || 'Conferma';
     const c = document.getElementById('conferma-testo');  if(c) c.textContent = testo;
     const ok = document.getElementById('conferma-btn-ok'); if(ok) ok.textContent = opts.ok || 'Conferma';
-    const an = document.getElementById('conferma-btn-annulla'); if(an) an.textContent = opts.annulla || 'Annulla';
+    const an = document.getElementById('conferma-btn-annulla'); if(an){ an.textContent = opts.annulla || 'Annulla'; an.style.display = opts.soloOk ? 'none' : ''; }
     openModal('modal-conferma');
   });
 }
@@ -8166,7 +8166,10 @@ async function addTipoVisita(){
 
 async function removeTipoVisita(idx){
   const t = S.tipiVisita[idx];
-  if(TIPI_DEFAULT.includes(t)){ showToast('I tipi predefiniti non si possono rimuovere'); return; }
+  if(TIPI_DEFAULT.includes(t)){
+    await confermaModale('I tipi visita predefiniti non si possono rimuovere.', { titolo:'Impossibile rimuovere', ok:'Ho capito', soloOk:true });
+    return;
+  }
   if(!isOnline()){ showToast('Connessione necessaria per rimuovere un tipo visita'); return; }
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -8176,9 +8179,14 @@ async function removeTipoVisita(idx){
     const { count: nPre } = await supabaseClient.from('prestazioni_centro')
       .select('id', { count: 'exact', head: true }).eq('medico_id', med.id).eq('tipo_visita', t);
     if((nApp||0) > 0 || (nPre||0) > 0){
-      showToast(`«${t}» in uso (${nApp||0} appunt., ${nPre||0} prestaz.): non rimovibile`); return;
+      const parts = [];
+      if((nApp||0) > 0) parts.push(`${nApp} ${nApp===1?'appuntamento':'appuntamenti'}`);
+      if((nPre||0) > 0) parts.push(`${nPre} ${nPre===1?'prestazione':'prestazioni'}`);
+      await confermaModale(`«${t}» è in uso in ${parts.join(' e ')}. Rimuovi prima quegli utilizzi, poi potrai eliminare il tipo visita.`, { titolo:'Impossibile rimuovere', ok:'Ho capito', soloOk:true });
+      return;
     }
   } catch(e){ console.error('[Delphi~Med] removeTipoVisita check:', e.message); showToast('Errore verifica utilizzo'); return; }
+  if(!(await confermaModale(`Rimuovere il tipo visita «${t}»? L'operazione non è reversibile.`, { titolo:'Rimuovere tipo visita', ok:'Rimuovi' }))) return;
   const rec = S.tipiVisitaRecords.find(r => r.nome === t);
   try {
     if(rec){ const { error } = await supabaseClient.from('tipi_visita').delete().eq('id', rec.id); if(error) throw error; }
