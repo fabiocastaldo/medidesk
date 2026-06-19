@@ -1595,7 +1595,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
 
         <!-- Compensi (M3b) -->
-        <div class="card" style="margin-top:16px">
+        <div class="card" style="margin-top:16px;margin-bottom:14px">
           <div class="card-header"><span style="font-weight:600">Compensi</span></div>
           <div id="chart-compensi" style="padding:8px"></div>
         </div>
@@ -9813,7 +9813,7 @@ function _renderCompensi(effettuate){
   }
   const totErogato = Object.values(groups).reduce((s,v)=>s+v.erogato,0);
   const totPerso   = Object.values(groups).reduce((s,v)=>s+v.perso,  0);
-  const fmt = n => n.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmt = n => { const r = Math.round((n + Number.EPSILON) * 100) / 100; return r.toLocaleString('it-IT', r % 1 === 0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2, maximumFractionDigits:2}); };
   let h = '<div style="display:flex;gap:24px;margin-bottom:12px;flex-wrap:wrap">';
   h += '<div><div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Erogato</div>';
   h += '<div style="font-size:22px;font-weight:300">&#8364;&nbsp;'+fmt(totErogato)+'</div></div>';
