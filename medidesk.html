@@ -9890,6 +9890,7 @@ function _renderCompensiDelta(){
   h+='</div>';
   if(!cids.length){
     h+='<div class="chart-empty">Nessuna visita erogata n&eacute; incasso registrato in questo mese.</div>';
+    h+='<div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-secondary" onclick="downloadCompensiPDF()" style="font-size:12px">Esporta PDF</button><button class="btn btn-secondary" onclick="downloadCompensiXLSX()" style="font-size:12px">Esporta Excel</button></div>';
     box.innerHTML=h; return;
   }
   h+='<table style="width:100%;border-collapse:collapse;font-size:13px">';
