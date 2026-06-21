@@ -2809,6 +2809,7 @@ async function signIn(){
 
 async function signOut(){
   if(!isOnline()){ showToast('Modalità offline — nessun account attivo'); return; }
+  _refertiKey = null;
   await supabaseClient.auth.signOut();
   // onAuthStateChange (SIGNED_OUT) gestirà il cambio di vista
 }
@@ -6031,6 +6032,60 @@ function getFotoPaths(fotoUrl){
   if(!fotoUrl) return [];
   try { const arr = JSON.parse(fotoUrl); return Array.isArray(arr) ? arr : [fotoUrl]; }
   catch(e){ return [fotoUrl]; }
+}
+
+// ── Cifratura referti (AES-256-GCM, envelope DEK via KMS) ──
+let _refertiKey = null;
+
+function _mimeFromExt(path){
+  const ext = String(path||'').split('.').pop().toLowerCase();
+  switch(ext){
+    case 'jpg': case 'jpeg': return 'image/jpeg';
+    case 'png': return 'image/png';
+    case 'webp': return 'image/webp';
+    case 'gif': return 'image/gif';
+    case 'pdf': return 'application/pdf';
+    default: return 'application/octet-stream';
+  }
+}
+
+async function _getRefertiKey(){
+  if(_refertiKey) return _refertiKey;
+  const { data:{ session } } = await supabaseClient.auth.getSession();
+  if(!session?.access_token) throw new Error('Sessione non valida');
+  const res = await fetch('/api/fotoreferti-key', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${session.access_token}` }
+  });
+  if(!res.ok) throw new Error('Impossibile ottenere la chiave di cifratura referti');
+  const { dek } = await res.json();
+  if(!dek) throw new Error('Chiave di cifratura referti mancante');
+  const bin = atob(dek);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  _refertiKey = await crypto.subtle.importKey('raw', bytes, { name:'AES-GCM' }, false, ['encrypt','decrypt']);
+  return _refertiKey;
+}
+
+async function _encryptReferto(file){
+  const buf = await file.arrayBuffer();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await _getRefertiKey();
+  const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, buf);
+  const ctBytes = new Uint8Array(ct);
+  const combined = new Uint8Array(iv.length + ctBytes.length);
+  combined.set(iv, 0);
+  combined.set(ctBytes, iv.length);
+  return new Blob([combined], { type:'application/octet-stream' });
+}
+
+async function _decryptReferto(arrayBuffer, path){
+  const bytes = new Uint8Array(arrayBuffer);
+  const iv = bytes.subarray(0, 12);
+  const ct = bytes.subarray(12);
+  const key = await _getRefertiKey();
+  const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+  return new Blob([plain], { type: _mimeFromExt(path) });
 }
 
 async function openFotoReferto(fotoUrl){
