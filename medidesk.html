@@ -6090,12 +6090,75 @@ async function _decryptReferto(arrayBuffer, path){
 
 async function openFotoReferto(fotoUrl){
   if(!isOnline()){ showToast('Connessione richiesta'); return; }
-  for(const path of getFotoPaths(fotoUrl)){
+  const paths = getFotoPaths(fotoUrl);
+  if(!paths.length) return;
+
+  // Viewer in-app (riuso classi dei modali esistenti per coerenza visiva)
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML =
+    '<div class="modal" style="max-width:900px">'
+    + '<div class="modal-header"><span class="modal-title">Referti</span>'
+    + '<button class="modal-close" type="button" aria-label="Chiudi">✕</button></div>'
+    + '<div class="modal-body" id="referti-viewer-body">'
+    + '<div class="ai-processing" style="margin:8px 0"><div class="spinner"></div><span>Decifratura referti in corso…</span></div>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>overlay.classList.add('open'));
+
+  const objectUrls = [];
+  let closed = false;
+  let escHandler = null;
+  function closeViewer(){
+    if(closed) return;
+    closed = true;
+    objectUrls.forEach(u=>URL.revokeObjectURL(u));
+    if(escHandler) document.removeEventListener('keydown', escHandler);
+    overlay.remove();
+  }
+  escHandler = (e)=>{ if(e.key === 'Escape') closeViewer(); };
+  document.addEventListener('keydown', escHandler);
+  overlay.querySelector('.modal-close').addEventListener('click', closeViewer);
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeViewer(); });
+
+  let okCount = 0;
+  const frag = document.createDocumentFragment();
+  for(const path of paths){
+    if(closed) break;
     try {
       const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 3600);
       if(error) throw error;
-      window.open(data.signedUrl, '_blank');
-    } catch(e){ showToast('Errore apertura foto: '+e.message); return; }
+      const resp = await fetch(data.signedUrl);
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      const buf = await resp.arrayBuffer();
+      const blob = await _decryptReferto(buf, path);
+      const url = URL.createObjectURL(blob);
+      objectUrls.push(url);
+      if(closed){ break; }
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-bottom:14px';
+      if(blob.type === 'application/pdf'){
+        wrap.innerHTML = '<iframe src="' + url + '" style="width:100%;height:80vh;border:1px solid var(--border);border-radius:8px"></iframe>'
+          + '<div style="margin-top:6px"><a href="' + url + '" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">Apri PDF</a></div>';
+      } else {
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.cssText = 'max-width:100%;height:auto;border-radius:8px;display:block';
+        wrap.appendChild(img);
+      }
+      frag.appendChild(wrap);
+      okCount++;
+    } catch(e){ console.log('[Delphi~Med] referto saltato:', path, e.message); }
+  }
+
+  if(closed) return;
+  const body = overlay.querySelector('#referti-viewer-body');
+  if(!body) return;
+  body.innerHTML = '';
+  if(okCount === 0){
+    body.innerHTML = '<div class="chart-empty">Nessuna foto leggibile.</div>';
+  } else {
+    body.appendChild(frag);
   }
 }
 
@@ -6527,15 +6590,18 @@ async function sintetizzaReferti(pazId){
   try{
     const files=[];
     for(const path of usePaths){
-      const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 600);
-      if(error) throw error;
-      const resp=await fetch(data.signedUrl);
-      const blob=await resp.blob();
-      let type=blob.type;
-      if(!ALLOWED.has(type)){ const ext=(path.split('.').pop()||'').toLowerCase(); type=TYPE_BY_EXT[ext]||''; }
-      if(!ALLOWED.has(type)) continue;
-      const base64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
-      files.push({ base64, type });
+      try {
+        const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 600);
+        if(error) throw error;
+        const resp=await fetch(data.signedUrl);
+        const buf=await resp.arrayBuffer();
+        const blob=await _decryptReferto(buf, path);
+        let type=blob.type;
+        if(!ALLOWED.has(type)){ const ext=(path.split('.').pop()||'').toLowerCase(); type=TYPE_BY_EXT[ext]||''; }
+        if(!ALLOWED.has(type)) continue;
+        const base64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
+        files.push({ base64, type });
+      } catch(e){ console.log('[Delphi~Med] sintesi referto saltato:', path, e.message); }
     }
     if(!files.length) throw new Error('Nessun referto leggibile');
 
@@ -6843,8 +6909,9 @@ async function saveVisita(){
           for(const file of V.refertoFiles){
             const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
             const path = `${authUser.id}/${paz.id}/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+            const enc = await _encryptReferto(file);
             const { error: upErr } = await supabaseClient.storage
-              .from('fotoreferti').upload(path, file, { contentType: file.type });
+              .from('fotoreferti').upload(path, enc, { contentType: 'application/octet-stream' });
             if(upErr) console.error('[Delphi~Med] foto upload:', upErr.message);
             else uploadedPaths.push(path);
           }
@@ -8847,7 +8914,8 @@ async function generateFullBackupZip(){
           if(error) throw error;
           const resp = await fetch(data.signedUrl);
           if(!resp.ok) throw new Error('HTTP ' + resp.status);
-          const blob = await resp.blob();
+          const buf = await resp.arrayBuffer();
+          const blob = await _decryptReferto(buf, path);
           const ext = path.split('.').pop() || 'bin';
           const safeCognome = (p.cognome||'').replace(/[^a-zA-Z0-9_-]/g, '_');
           const safeNome = (p.nome||'').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -8989,7 +9057,8 @@ ${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.sli
         if(error) throw error;
         const resp = await fetch(data.signedUrl);
         if(!resp.ok) throw new Error('HTTP ' + resp.status);
-        const blob = await resp.blob();
+        const buf = await resp.arrayBuffer();
+        const blob = await _decryptReferto(buf, paths[i]);
         const ext = paths[i].split('.').pop() || 'bin';
         const safeData = (v.data||'undated').replace(/[^a-zA-Z0-9-]/g, '_');
         refertiFolder.file(`${safeData}_${i+1}.${ext}`, blob);
