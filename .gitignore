@@ -21,3 +21,8 @@ config.js
 *.log
 
 .vercel
+
+# Workflow temp (file di servizio, mai committare)
+_check.*
+_diff.txt
+/*.ps1
