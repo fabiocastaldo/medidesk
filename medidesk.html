@@ -6145,6 +6145,10 @@ async function openFotoReferto(fotoUrl){
         img.src = url;
         img.style.cssText = 'max-width:100%;height:auto;border-radius:8px;display:block';
         wrap.appendChild(img);
+        const link = document.createElement('div');
+        link.style.cssText = 'margin-top:6px';
+        link.innerHTML = '<a href="' + url + '" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">Apri immagine</a>';
+        wrap.appendChild(link);
       }
       frag.appendChild(wrap);
       okCount++;
