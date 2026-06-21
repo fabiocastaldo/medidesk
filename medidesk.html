@@ -2809,6 +2809,7 @@ async function signIn(){
 
 async function signOut(){
   if(!isOnline()){ showToast('Modalità offline — nessun account attivo'); return; }
+  _refertiKey = null;
   await supabaseClient.auth.signOut();
   // onAuthStateChange (SIGNED_OUT) gestirà il cambio di vista
 }
@@ -6033,14 +6034,135 @@ function getFotoPaths(fotoUrl){
   catch(e){ return [fotoUrl]; }
 }
 
+// ── Cifratura referti (AES-256-GCM, envelope DEK via KMS) ──
+let _refertiKey = null;
+
+function _mimeFromExt(path){
+  const ext = String(path||'').split('.').pop().toLowerCase();
+  switch(ext){
+    case 'jpg': case 'jpeg': return 'image/jpeg';
+    case 'png': return 'image/png';
+    case 'webp': return 'image/webp';
+    case 'gif': return 'image/gif';
+    case 'pdf': return 'application/pdf';
+    default: return 'application/octet-stream';
+  }
+}
+
+async function _getRefertiKey(){
+  if(_refertiKey) return _refertiKey;
+  const { data:{ session } } = await supabaseClient.auth.getSession();
+  if(!session?.access_token) throw new Error('Sessione non valida');
+  const res = await fetch('/api/fotoreferti-key', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${session.access_token}` }
+  });
+  if(!res.ok) throw new Error('Impossibile ottenere la chiave di cifratura referti');
+  const { dek } = await res.json();
+  if(!dek) throw new Error('Chiave di cifratura referti mancante');
+  const bin = atob(dek);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  _refertiKey = await crypto.subtle.importKey('raw', bytes, { name:'AES-GCM' }, false, ['encrypt','decrypt']);
+  return _refertiKey;
+}
+
+async function _encryptReferto(file){
+  const buf = await file.arrayBuffer();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await _getRefertiKey();
+  const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, buf);
+  const ctBytes = new Uint8Array(ct);
+  const combined = new Uint8Array(iv.length + ctBytes.length);
+  combined.set(iv, 0);
+  combined.set(ctBytes, iv.length);
+  return new Blob([combined], { type:'application/octet-stream' });
+}
+
+async function _decryptReferto(arrayBuffer, path){
+  const bytes = new Uint8Array(arrayBuffer);
+  const iv = bytes.subarray(0, 12);
+  const ct = bytes.subarray(12);
+  const key = await _getRefertiKey();
+  const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+  return new Blob([plain], { type: _mimeFromExt(path) });
+}
+
 async function openFotoReferto(fotoUrl){
   if(!isOnline()){ showToast('Connessione richiesta'); return; }
-  for(const path of getFotoPaths(fotoUrl)){
+  const paths = getFotoPaths(fotoUrl);
+  if(!paths.length) return;
+
+  // Viewer in-app (riuso classi dei modali esistenti per coerenza visiva)
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML =
+    '<div class="modal" style="max-width:900px">'
+    + '<div class="modal-header"><span class="modal-title">Referti</span>'
+    + '<button class="modal-close" type="button" aria-label="Chiudi">✕</button></div>'
+    + '<div class="modal-body" id="referti-viewer-body">'
+    + '<div class="ai-processing" style="margin:8px 0"><div class="spinner"></div><span>Decifratura referti in corso…</span></div>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(()=>overlay.classList.add('open'));
+
+  const objectUrls = [];
+  let closed = false;
+  let escHandler = null;
+  function closeViewer(){
+    if(closed) return;
+    closed = true;
+    objectUrls.forEach(u=>URL.revokeObjectURL(u));
+    if(escHandler) document.removeEventListener('keydown', escHandler);
+    overlay.remove();
+  }
+  escHandler = (e)=>{ if(e.key === 'Escape') closeViewer(); };
+  document.addEventListener('keydown', escHandler);
+  overlay.querySelector('.modal-close').addEventListener('click', closeViewer);
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeViewer(); });
+
+  let okCount = 0;
+  const frag = document.createDocumentFragment();
+  for(const path of paths){
+    if(closed) break;
     try {
       const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 3600);
       if(error) throw error;
-      window.open(data.signedUrl, '_blank');
-    } catch(e){ showToast('Errore apertura foto: '+e.message); return; }
+      const resp = await fetch(data.signedUrl);
+      if(!resp.ok) throw new Error('HTTP ' + resp.status);
+      const buf = await resp.arrayBuffer();
+      const blob = await _decryptReferto(buf, path);
+      const url = URL.createObjectURL(blob);
+      objectUrls.push(url);
+      if(closed){ break; }
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-bottom:14px';
+      if(blob.type === 'application/pdf'){
+        wrap.innerHTML = '<iframe src="' + url + '" style="width:100%;height:80vh;border:1px solid var(--border);border-radius:8px"></iframe>'
+          + '<div style="margin-top:6px"><a href="' + url + '" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">Apri PDF</a></div>';
+      } else {
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.cssText = 'max-width:100%;height:auto;border-radius:8px;display:block';
+        wrap.appendChild(img);
+        const link = document.createElement('div');
+        link.style.cssText = 'margin-top:6px';
+        link.innerHTML = '<a href="' + url + '" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">Apri immagine</a>';
+        wrap.appendChild(link);
+      }
+      frag.appendChild(wrap);
+      okCount++;
+    } catch(e){ console.log('[Delphi~Med] referto saltato:', path, e.message); }
+  }
+
+  if(closed) return;
+  const body = overlay.querySelector('#referti-viewer-body');
+  if(!body) return;
+  body.innerHTML = '';
+  if(okCount === 0){
+    body.innerHTML = '<div class="chart-empty">Nessuna foto leggibile.</div>';
+  } else {
+    body.appendChild(frag);
   }
 }
 
@@ -6472,15 +6594,18 @@ async function sintetizzaReferti(pazId){
   try{
     const files=[];
     for(const path of usePaths){
-      const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 600);
-      if(error) throw error;
-      const resp=await fetch(data.signedUrl);
-      const blob=await resp.blob();
-      let type=blob.type;
-      if(!ALLOWED.has(type)){ const ext=(path.split('.').pop()||'').toLowerCase(); type=TYPE_BY_EXT[ext]||''; }
-      if(!ALLOWED.has(type)) continue;
-      const base64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
-      files.push({ base64, type });
+      try {
+        const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 600);
+        if(error) throw error;
+        const resp=await fetch(data.signedUrl);
+        const buf=await resp.arrayBuffer();
+        const blob=await _decryptReferto(buf, path);
+        let type=blob.type;
+        if(!ALLOWED.has(type)){ const ext=(path.split('.').pop()||'').toLowerCase(); type=TYPE_BY_EXT[ext]||''; }
+        if(!ALLOWED.has(type)) continue;
+        const base64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
+        files.push({ base64, type });
+      } catch(e){ console.log('[Delphi~Med] sintesi referto saltato:', path, e.message); }
     }
     if(!files.length) throw new Error('Nessun referto leggibile');
 
@@ -6788,8 +6913,9 @@ async function saveVisita(){
           for(const file of V.refertoFiles){
             const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
             const path = `${authUser.id}/${paz.id}/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+            const enc = await _encryptReferto(file);
             const { error: upErr } = await supabaseClient.storage
-              .from('fotoreferti').upload(path, file, { contentType: file.type });
+              .from('fotoreferti').upload(path, enc, { contentType: 'application/octet-stream' });
             if(upErr) console.error('[Delphi~Med] foto upload:', upErr.message);
             else uploadedPaths.push(path);
           }
@@ -8792,7 +8918,8 @@ async function generateFullBackupZip(){
           if(error) throw error;
           const resp = await fetch(data.signedUrl);
           if(!resp.ok) throw new Error('HTTP ' + resp.status);
-          const blob = await resp.blob();
+          const buf = await resp.arrayBuffer();
+          const blob = await _decryptReferto(buf, path);
           const ext = path.split('.').pop() || 'bin';
           const safeCognome = (p.cognome||'').replace(/[^a-zA-Z0-9_-]/g, '_');
           const safeNome = (p.nome||'').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -8934,7 +9061,8 @@ ${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.sli
         if(error) throw error;
         const resp = await fetch(data.signedUrl);
         if(!resp.ok) throw new Error('HTTP ' + resp.status);
-        const blob = await resp.blob();
+        const buf = await resp.arrayBuffer();
+        const blob = await _decryptReferto(buf, paths[i]);
         const ext = paths[i].split('.').pop() || 'bin';
         const safeData = (v.data||'undated').replace(/[^a-zA-Z0-9-]/g, '_');
         refertiFolder.file(`${safeData}_${i+1}.${ext}`, blob);
