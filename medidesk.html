@@ -2976,7 +2976,6 @@ async function showAppView(){
         await loadTipiVisitaFromDB(user);
         await loadAreeTematicheFromDB(user);
         await loadPrestazioniFromDB(user);
-        await migrateLocalVisite();
         await loadPazientiFromDB(user);
         await loadAppuntamentiFromDB(user);
         await loadBlocchiFromDB(user);
@@ -3176,43 +3175,23 @@ async function loadVisiteFromDB(user){
       .order('created_at', { ascending: false });
     if(error) throw error;
     S.pazienti.forEach(p => { p.visite = []; });
-    (data || []).forEach(v => {
+    const _needKey = (data||[]).some(r => r.contenuto_clinico || r.referto_testo);
+    if(_needKey){ try { await _getRefertiKey(); } catch(_){} }
+    for(const v of (data || [])){
       const paz = S.pazienti.find(p => String(p.id) === String(v.paziente_id));
       if(paz){
-        paz.visite.push({ id:v.id, data:v.data_visita||'', luogo:v.luogo||'', clinica:v.contenuto_clinico||'', tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null, referto:v.referto_testo||'' });
+        let _clinica = '';
+        try { _clinica = await _decryptText(v.contenuto_clinico); }
+        catch(e){ _clinica = ''; console.warn('[Delphi~Med] clinica non decifrabile, riga saltata:', v.id); }
+        let _referto = '';
+        try { _referto = await _decryptText(v.referto_testo); }
+        catch(e){ _referto = ''; console.warn('[Delphi~Med] referto non decifrabile, riga saltata:', v.id); }
+        paz.visite.push({ id:v.id, data:v.data_visita||'', luogo:v.luogo||'', clinica:_clinica, tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null, referto:_referto });
       }
-    });
+    }
     save();
     console.log('[Delphi~Med] Visite caricate da DB:', (data||[]).length);
   } catch(e){ console.error('[Delphi~Med] loadVisiteFromDB:', e.message); }
-}
-
-async function migrateLocalVisite(){
-  if(!isOnline() || !S.medicoId) return;
-  if(localStorage.getItem('visite_migrated')) return;
-  const toMigrate = [];
-  (S.pazienti || []).forEach(p => {
-    if(!String(p.id).includes('-')) return;
-    (p.visite || []).forEach(v => {
-      if(String(v.id).includes('-')) return; // già in DB
-      toMigrate.push({
-        paziente_id:       p.id,
-        medico_id:         S.medicoId,
-        data_visita:       v.data  || null,
-        luogo:             v.luogo || null,
-        contenuto_clinico: v.clinica || null,
-        foto_referto_url:  null
-      });
-    });
-  });
-  if(!toMigrate.length){ localStorage.setItem('visite_migrated', '1'); return; }
-  try {
-    const { error } = await supabaseClient.from('visite').insert(toMigrate);
-    if(error) throw error;
-    localStorage.setItem('visite_migrated', '1');
-    showToast(`Migrazione ${toMigrate.length} ${toMigrate.length===1?'visita':'visite'} completata ✓`);
-    console.log('[Delphi~Med] Visite migrate:', toMigrate.length);
-  } catch(e){ console.error('[Delphi~Med] migrateLocalVisite:', e.message); }
 }
 
 async function loadBlocchiFromDB(user){
@@ -6087,6 +6066,35 @@ async function _decryptReferto(arrayBuffer, path){
   return new Blob([plain], { type: _mimeFromExt(path) });
 }
 
+async function _encryptText(plaintext){
+  if(plaintext == null || plaintext === '') return null;
+  const key = await _getRefertiKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder().encode(String(plaintext));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, enc));
+  const out = new Uint8Array(iv.length + ct.length);
+  out.set(iv, 0);
+  out.set(ct, iv.length);
+  // base64 a chunk: evita lo stack overflow di String.fromCharCode(...spread) su testi lunghi
+  let bin = '';
+  const CH = 0x8000;
+  for(let i=0; i<out.length; i+=CH){ bin += String.fromCharCode.apply(null, out.subarray(i, i+CH)); }
+  return btoa(bin);
+}
+
+async function _decryptText(b64){
+  if(b64 == null || b64 === '') return '';
+  const key = await _getRefertiKey();
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for(let i=0; i<bin.length; i++){ buf[i] = bin.charCodeAt(i); }
+  const iv = buf.subarray(0, 12);
+  const ct = buf.subarray(12);
+  // decrypt STRICT: su fallimento (dato legacy in chiaro, corrotto) crypto.subtle.decrypt throwa.
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+  return new TextDecoder().decode(pt);
+}
+
 async function openFotoReferto(fotoUrl){
   if(!isOnline()){ showToast('Connessione richiesta'); return; }
   const paths = getFotoPaths(fotoUrl);
@@ -6271,7 +6279,8 @@ async function salvaReferto(pid, vid){
     return;
   }
   try{
-    const { error }=await supabaseClient.from('visite').update({referto_testo: testo||null}).eq('id', vid);
+    const _refertoEnc = await _encryptText(testo);
+    const { error }=await supabaseClient.from('visite').update({referto_testo: _refertoEnc}).eq('id', vid);
     if(error) throw error;
   }catch(e){ showToast('Errore: '+e.message); return; }
   v.referto=testo;
@@ -6926,15 +6935,17 @@ async function saveVisita(){
           }
           if(btnSalva) btnSalva.textContent = 'Salvataggio...';
         }
+        const _clinicaEnc = await _encryptText(clinica);
+        const _refertoEnc = await _encryptText(refertoModale);
         const { data: dbV, error: vErr } = await supabaseClient.from('visite').insert({
           paziente_id:       paz.id,
           medico_id:         S.medicoId,
           data_visita:       dataVisita  || null,
           luogo:             luogo       || null,
-          contenuto_clinico: clinica     || null,
+          contenuto_clinico: _clinicaEnc,
           foto_referto_url:  visita.foto_url || null,
           tipo_referto:      tipoReferto || null,
-          referto_testo:     refertoModale || null
+          referto_testo:     _refertoEnc
         }).select('id').single();
         if(vErr){
           // Rollback: elimina tutte le foto già caricate
