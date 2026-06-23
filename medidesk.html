@@ -180,6 +180,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .modal-title{font-family:'DM Serif Display',serif;font-size:20px}
 .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink3);padding:4px}
 .modal-body{padding:24px}
+#conferma-testo{white-space:pre-line}
 .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 
 /* ── PAZIENTI ── */
@@ -3842,15 +3843,13 @@ function openModal(id){
         const noCenters = !S.centri.length;
         const noTurns = S.centri.length && !centriOk.length;
         if(noCenters){
-          if(confirm('Non hai ancora aggiunto centri.\n\nVai alla sezione Centri per crearne uno?')){
-            showPage('centri');
-          }
+          confermaModale('Non hai ancora aggiunto centri.\n\nVai alla sezione Centri per crearne uno?', { titolo:'Nessun centro', ok:'Vai ai centri' })
+            .then(function(ok){ if(ok) showPage('centri'); });
           return;
         }
         if(noTurns){
-          if(confirm('I tuoi centri non hanno turni configurati.\n\nVai alla sezione Centri per aggiungerli?')){
-            showPage('centri');
-          }
+          confermaModale('I tuoi centri non hanno turni configurati.\n\nVai alla sezione Centri per aggiungerli?', { titolo:'Nessun turno', ok:'Vai ai centri' })
+            .then(function(ok){ if(ok) showPage('centri'); });
           return;
         }
       }
@@ -3873,7 +3872,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
   m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); });
 });
 // Event delegation in capture phase: intercetta prima di onclick inline su visita-header
-// (necessario su mobile: stopPropagation blocca toggleV, confirm() non viene interrotto da DOM changes)
+// (necessario su mobile: stopPropagation blocca toggleV prima dell'onclick inline)
 document.getElementById('modal-paziente').addEventListener('click', function(e){
   const btn = e.target.closest('[data-action]');
   if(!btn) return;
@@ -4887,7 +4886,7 @@ async function deleteGiornataSingola(centroId, data, inizio){
   const idx=(c.giornateSingole||[]).findIndex(g=>g.data===data && g.inizio===inizio);
   if(idx===-1) return;
   const g=c.giornateSingole[idx];
-  if(!confirm(`Eliminare la giornata del ${formatDate(data)}?`)) return;
+  if(!(await confermaModale(`Eliminare la giornata del ${formatDate(data)}?`, { titolo:'Eliminare giornata', ok:'Elimina' }))) return;
   if(!isOnline()){ c.giornateSingole.splice(idx,1); save(); renderCentri(); return; }
   try {
     if(g.id){
@@ -4899,7 +4898,7 @@ async function deleteGiornataSingola(centroId, data, inizio){
 }
 
 async function deleteCentro(id){
-  if(!confirm('Eliminare questo centro e tutti i suoi turni?\n\nGli appuntamenti e i fascicoli dei pazienti verranno conservati.')) return;
+  if(!(await confermaModale('Eliminare questo centro e tutti i suoi turni?\n\nGli appuntamenti e i fascicoli dei pazienti verranno conservati.', { titolo:'Eliminare centro', ok:'Elimina centro' }))) return;
   // Null out centroId in local state (gli appuntamenti rimangono, il DB fa SET NULL via FK)
   S.appuntamenti.forEach(a=>{ if(String(a.centroId)===String(id)) a.centroId=null; });
   if(!isOnline()){
@@ -5381,7 +5380,7 @@ async function deleteAppuntamento(id){
   if(appt.cancelled){ showToast('Appuntamento già cancellato'); return; }
   const dataLabel = formatDate(appt.data);
   const oraLabel = (appt.ora||'').substring(0,5);
-  if(!confirm(`Sei sicuro di voler cancellare l'appuntamento di ${appt.cognome} ${appt.nome} del ${dataLabel} alle ${oraLabel}?\n\nIl paziente e il centro riceveranno una mail di notifica.`)) return;
+  if(!(await confermaModale(`Sei sicuro di voler cancellare l'appuntamento di ${appt.cognome} ${appt.nome} del ${dataLabel} alle ${oraLabel}?\n\nIl paziente e il centro riceveranno una mail di notifica.`, { titolo:'Cancellare appuntamento', ok:'Cancella appuntamento' }))) return;
   const cancelledAt = new Date().toISOString();
   try {
     if(isOnline() && !String(id).startsWith('local-')){
@@ -6182,7 +6181,7 @@ function openVisitaForPaziente(pazId){
   openModal('modal-nuova-visita');
 }
 async function deleteVisita(pazId, visitaId){
-  if(!confirm('Eliminare questa visita?')) return;
+  if(!(await confermaModale('Eliminare questa visita?', { titolo:'Eliminare visita', ok:'Elimina' }))) return;
   const paz = S.pazienti.find(p=>String(p.id)===String(pazId));
   if(!paz) return;
   const visita = (paz.visite||[]).find(v=>String(v.id)===String(visitaId));
@@ -6582,7 +6581,7 @@ async function sintetizzaReferti(pazId){
   const MAX_FILES=20;
   let usePaths=paths;
   if(paths.length>MAX_FILES){
-    if(!confirm(`Questo paziente ha ${paths.length} referti: ne verranno inviati ${MAX_FILES} per non superare i limiti dell'AI. Continuare?`)){ if(btn) btn.disabled=false; return; }
+    if(!(await confermaModale(`Questo paziente ha ${paths.length} referti: ne verranno inviati ${MAX_FILES} per non superare i limiti dell'AI. Continuare?`, { titolo:'Troppi referti', ok:'Continua' }))){ if(btn) btn.disabled=false; return; }
     usePaths=paths.slice(0,MAX_FILES);
   }
 
@@ -6920,7 +6919,7 @@ async function saveVisita(){
             else uploadedPaths.push(path);
           }
           if(uploadedPaths.length === 0){
-            const cont = confirm('Upload foto non riuscito.\nVuoi salvare la visita senza foto?');
+            const cont = await confermaModale('Upload foto non riuscito.\nVuoi salvare la visita senza foto?', { titolo:'Upload non riuscito', ok:'Salva senza foto' });
             if(!cont) return null;
           } else {
             visita.foto_url = uploadedPaths.length === 1 ? uploadedPaths[0] : JSON.stringify(uploadedPaths);
@@ -7275,10 +7274,10 @@ async function saveSettings(){
   const _slugImpactChanged = S.settings.nomeProf !== _prevNome ||
                              S.settings.cognomeProf !== _prevCogn ||
                              S.settings.spec !== _prevSpec;
-  if(_slugImpactChanged && !confirm(
+  if(_slugImpactChanged && !(await confermaModale(
     'Attenzione: modificare nome, cognome, specializzazione o provincia dell\'Ordine potrebbe cambiare il tuo URL pubblico di prenotazione. ' +
     'Tutti i link già condivisi (biglietti da visita, WhatsApp, social) potrebbero smettere di funzionare.\n\nVuoi procedere comunque?'
-  )) return;
+  , { titolo:'Modifica URL pubblico', ok:'Procedi comunque' }))) return;
   save(); updateDoctorName(); updateShareLink();
   if(isOnline()){
     try {
@@ -7408,7 +7407,7 @@ async function uploadFotoProfilo(file){
 }
 
 async function removeFotoProfilo(){
-  if(!confirm('Rimuovere la foto profilo?')) return;
+  if(!(await confermaModale('Rimuovere la foto profilo?', { titolo:'Rimuovere foto', ok:'Rimuovi' }))) return;
   try {
     if(isOnline()){
       const { data: { user } } = await supabaseClient.auth.getUser();
@@ -7488,9 +7487,9 @@ function updateDoctorName(){
   const m=document.getElementById('mobile-doctor'); if(m) m.textContent=name;
 }
 
-function resetAllData(){
-  if(!confirm('Cancellare TUTTI i dati (centri, appuntamenti, pazienti)?\n\nQuesta azione non è reversibile.')) return;
-  if(!confirm('Sei davvero sicuro? Verrà cancellato tutto.')) return;
+async function resetAllData(){
+  if(!(await confermaModale('Cancellare TUTTI i dati (centri, appuntamenti, pazienti)?\n\nQuesta azione non è reversibile.', { titolo:'Reset dati', ok:'Cancella tutto' }))) return;
+  if(!(await confermaModale('Sei davvero sicuro? Verrà cancellato tutto.', { titolo:'Conferma definitiva', ok:'Sì, cancella tutto' }))) return;
   localStorage.removeItem('medidesk_v2');
   localStorage.removeItem('medidesk_ui');
   location.reload();
@@ -8482,7 +8481,7 @@ async function saveChiusura(){
     }).join('\n');
     const piu = conflitti.length>10 ? `\n…e altri ${conflitti.length-10}` : '';
     const msg = `Attenzione: ci sono ${conflitti.length} appuntamenti prenotati nel periodo di chiusura:\n\n${lista}${piu}\n\nVuoi salvare comunque la chiusura?\n(Gli appuntamenti NON verranno cancellati automaticamente: dovrai gestirli a mano.)`;
-    if(!confirm(msg)) return;
+    if(!(await confermaModale(msg, { titolo:'Appuntamenti in conflitto', ok:'Salva comunque' }))) return;
   }
   if(isOnline() && S.medicoId){
     try {
@@ -8549,7 +8548,7 @@ async function inviaMailChiusuraAiCentri(ch, centri){
 }
 
 async function deleteChiusura(id){
-  if(!confirm('Eliminare questo periodo di chiusura?')) return;
+  if(!(await confermaModale('Eliminare questo periodo di chiusura?', { titolo:'Eliminare chiusura', ok:'Elimina' }))) return;
   S.chiusure = (S.chiusure||[]).filter(ch=>String(ch.id)!==String(id));
   save();
   if(isOnline() && !String(id).startsWith('local-')){
@@ -10579,7 +10578,7 @@ async function exportArchivioPazientiScaduti(){
 async function confirmDeleteArchivioScaduto(){
   const checked = [...document.querySelectorAll('.archivio-paziente-chk:checked')].map(el => el.dataset.pazid);
   if(!checked.length){ showToast('Nessun paziente selezionato'); return; }
-  if(!confirm(`Eliminare ${checked.length} pazient${checked.length===1?'e':'i'} selezionat${checked.length===1?'o':'i'} e tutte le visite? L'operazione è irreversibile.`)) return;
+  if(!(await confermaModale(`Eliminare ${checked.length} pazient${checked.length===1?'e':'i'} selezionat${checked.length===1?'o':'i'} e tutte le visite? L'operazione è irreversibile.`, { titolo:'Eliminare pazienti', ok:'Elimina' }))) return;
   const pazIds = checked.map(String);
   const pazList = S.pazienti.filter(p => pazIds.includes(String(p.id)));
   let errors = 0;
