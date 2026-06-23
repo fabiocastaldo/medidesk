@@ -26,3 +26,6 @@ config.js
 _check.*
 _diff.txt
 /*.ps1
+
+# Dependencies (Vercel reinstalla da package.json)
+node_modules/
