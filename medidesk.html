@@ -4220,15 +4220,22 @@ async function removePrestazione(id){
 }
 
 let _importRows = [];
+let _importCentroId = null;
+let _importValidoDal = null;
+
+function _resetImportSelection(){
+  _importRows = [];
+  const f = document.getElementById('import-file'); if(f) f.value='';
+  const rev = document.getElementById('import-review'); if(rev) rev.innerHTML='';
+  const btn = document.getElementById('import-confirm'); if(btn) btn.disabled = true;
+}
 
 function openImportListino(){
   const sel = document.getElementById('import-centro');
   if(sel) sel.innerHTML = (S.centri||[]).filter(c=>c.attivo!==false)
     .map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
-  _importRows = [];
-  const f = document.getElementById('import-file'); if(f) f.value='';
-  const rev = document.getElementById('import-review'); if(rev) rev.innerHTML='';
-  const btn = document.getElementById('import-confirm'); if(btn) btn.disabled = true;
+  if(sel) sel.onchange = _resetImportSelection;
+  _resetImportSelection();
   openModal('modal-import-listino');
 }
 
@@ -4255,6 +4262,7 @@ async function handleImportFile(ev){
   }
   const catalog = S.tipiVisita || [];
   const validoDal = todayLocalISO();
+  _importCentroId = centroId; _importValidoDal = validoDal;
   const num = v => { const s=String(v).trim().replace(',','.'); if(s==='') return {empty:true}; const n=Number(s); return isFinite(n)?{n}:{bad:true}; };
   _importRows = [];
   aoa.slice(1).forEach(row=>{
@@ -4294,10 +4302,33 @@ function _renderImportReview(){
   });
   h += '</tbody></table>';
   rev.innerHTML = h;
-  if(btn) btn.disabled = true;
+  if(btn) btn.disabled = (nOk === 0);
 }
 
-function confermaImportListino(){ showToast('Import disponibile al prossimo step'); }
+async function confermaImportListino(){
+  const ok = _importRows.filter(r=>r.status==='ok');
+  if(!ok.length){ showToast('Niente da importare'); return; }
+  if(!isOnline()){ showToast('Connessione richiesta per importare'); return; }
+  const btn = document.getElementById('import-confirm'); if(btn) btn.disabled = true;
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+    const medico_id = medico.id;
+    const payload = ok.map(r=>({ medico_id, centro_id:_importCentroId, tipo_visita:r.tipo, prezzo:r.prezzo, compenso:r.compenso, tipo:'fisso', valido_dal:_importValidoDal, attiva:true }));
+    const { error } = await supabaseClient.from('prestazioni_centro').insert(payload);
+    if(error) throw error;
+    const n = payload.length;
+    const skipped = _importRows.length - n;
+    await loadPrestazioniFromDB(user);
+    renderPrestazioni();
+    closeModal('modal-import-listino');
+    showToast(n+' tariff'+(n===1?'a importata':'e importate')+(skipped? (', '+skipped+' saltat'+(skipped===1?'a':'e')) : '')+' ✓');
+  } catch(e){
+    console.error('[Delphi~Med] confermaImportListino:', e.message);
+    showToast('Errore: '+e.message);
+    if(btn) btn.disabled = false;
+  }
+}
 
 function renderCentri(){
   const el = document.getElementById('centri-list'); if(!el) return;
