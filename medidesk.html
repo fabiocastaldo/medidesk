@@ -1344,8 +1344,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-prestazioni" class="page">
       <div class="page-header">
         <div><div class="page-title">Tariffe</div><div class="page-subtitle">Prezzo al paziente e compenso, per centro</div></div>
-        <button class="btn btn-secondary" onclick="openImportListino()">Importa listino</button>
-        <button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="openImportListino()">Importa listino</button><button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button></div>
       </div>
       <div id="prestazioni-list"></div>
     </div>
@@ -2131,8 +2130,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-header"><span class="modal-title">Importa listino tariffe</span><button class="modal-close" onclick="closeModal('modal-import-listino')">✕</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="import-centro"></select></div>
-      <div class="form-group" style="font-size:12px;color:var(--ink3)">File .xlsx con colonne tipo_visita, compenso, prezzo (opzionale). La prima riga è l'intestazione.</div>
-      <div class="form-group"><input type="file" id="import-file" accept=".xlsx,.xls" onchange="handleImportFile(event)"></div>
+      <div class="form-group" style="font-size:12px;color:var(--ink3)">File Excel (.xlsx, .xls, .xlsm, .xlsb) con colonne tipo_visita, compenso, prezzo (opzionale). La prima riga è l'intestazione.</div>
+      <div class="form-group"><input type="file" id="import-file" accept=".xlsx,.xls,.xlsm,.xlsb" onchange="handleImportFile(event)"></div>
       <div id="import-review" style="margin-top:12px"></div>
     </div>
     <div class="modal-footer">
