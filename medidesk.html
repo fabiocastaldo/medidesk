@@ -1344,6 +1344,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-prestazioni" class="page">
       <div class="page-header">
         <div><div class="page-title">Tariffe</div><div class="page-subtitle">Prezzo al paziente e compenso, per centro</div></div>
+        <button class="btn btn-secondary" onclick="openImportListino()">Importa listino</button>
         <button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button>
       </div>
       <div id="prestazioni-list"></div>
@@ -2120,6 +2121,23 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-prestazione')">Annulla</button>
       <button class="btn btn-primary" onclick="savePrestazione()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORT LISTINO -->
+<div class="modal-overlay" id="modal-import-listino">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Importa listino tariffe</span><button class="modal-close" onclick="closeModal('modal-import-listino')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="import-centro"></select></div>
+      <div class="form-group" style="font-size:12px;color:var(--ink3)">File .xlsx con colonne tipo_visita, compenso, prezzo (opzionale). La prima riga è l'intestazione.</div>
+      <div class="form-group"><input type="file" id="import-file" accept=".xlsx,.xls" onchange="handleImportFile(event)"></div>
+      <div id="import-review" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import-listino')">Annulla</button>
+      <button class="btn btn-primary" id="import-confirm" onclick="confermaImportListino()" disabled>Conferma import</button>
     </div>
   </div>
 </div>
@@ -4201,6 +4219,86 @@ async function removePrestazione(id){
     showToast('Errore: ' + e.message);
   }
 }
+
+let _importRows = [];
+
+function openImportListino(){
+  const sel = document.getElementById('import-centro');
+  if(sel) sel.innerHTML = (S.centri||[]).filter(c=>c.attivo!==false)
+    .map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
+  _importRows = [];
+  const f = document.getElementById('import-file'); if(f) f.value='';
+  const rev = document.getElementById('import-review'); if(rev) rev.innerHTML='';
+  const btn = document.getElementById('import-confirm'); if(btn) btn.disabled = true;
+  openModal('modal-import-listino');
+}
+
+async function handleImportFile(ev){
+  const file = ev.target.files && ev.target.files[0];
+  const rev = document.getElementById('import-review');
+  if(!file) return;
+  const centroId = (document.getElementById('import-centro')||{}).value;
+  if(!centroId){ showToast('Seleziona prima un centro'); ev.target.value=''; return; }
+  let aoa;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buf), { type:'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    aoa = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  } catch(e){ showToast('File non leggibile: '+e.message); return; }
+  const head = (aoa[0]||[]).map(h=>String(h).trim().toLowerCase());
+  const iTipo = head.indexOf('tipo_visita');
+  const iComp = head.indexOf('compenso');
+  const iPrezzo = head.indexOf('prezzo');
+  if(iTipo<0 || iComp<0){
+    if(rev) rev.innerHTML = '<div style="color:#dc2626;font-size:13px">Intestazione non valida: servono le colonne <strong>tipo_visita</strong> e <strong>compenso</strong> (prezzo opzionale).</div>';
+    return;
+  }
+  const catalog = S.tipiVisita || [];
+  const validoDal = todayLocalISO();
+  const num = v => { const s=String(v).trim().replace(',','.'); if(s==='') return {empty:true}; const n=Number(s); return isFinite(n)?{n}:{bad:true}; };
+  _importRows = [];
+  aoa.slice(1).forEach(row=>{
+    if(!row || !row.some(c=>String(c).trim()!=='')) return;
+    const rawTipo = String(row[iTipo]||'').trim();
+    if(rawTipo==='') return;
+    const resolved = catalog.find(n=>n===rawTipo) || catalog.find(n=>n.toLowerCase()===rawTipo.toLowerCase()) || null;
+    const comp = num(row[iComp]);
+    let prezzo = null;
+    if(iPrezzo>=0){ const p=num(row[iPrezzo]); if(p.n!=null) prezzo=p.n; }
+    let status, nota;
+    if(comp.empty){ status='compenso'; nota='compenso mancante'; }
+    else if(comp.bad){ status='compenso'; nota='compenso non numerico'; }
+    else if(!resolved){ status='catalogo'; nota='tipo non a catalogo'; }
+    else if((S.prestazioniCentro||[]).some(p=>String(p.centro_id)===String(centroId) && p.tipo_visita===resolved && (p.valido_dal||'')===validoDal)){ status='conflitto'; nota='già presente (saltata)'; }
+    else { status='ok'; nota=''; }
+    _importRows.push({ raw:rawTipo, tipo:resolved, compenso:(comp.n!=null?comp.n:null), prezzo, status, nota });
+  });
+  _renderImportReview();
+}
+
+function _renderImportReview(){
+  const rev = document.getElementById('import-review'); if(!rev) return;
+  const btn = document.getElementById('import-confirm');
+  if(!_importRows.length){ rev.innerHTML='<div style="color:var(--ink3);font-size:13px">Nessuna riga valida nel file.</div>'; if(btn) btn.disabled=true; return; }
+  const nOk = _importRows.filter(r=>r.status==='ok').length;
+  const nConf = _importRows.filter(r=>r.status==='conflitto').length;
+  const nCat = _importRows.filter(r=>r.status==='catalogo').length;
+  const nComp = _importRows.filter(r=>r.status==='compenso').length;
+  const color = { ok:'#16a34a', conflitto:'#d97706', catalogo:'#dc2626', compenso:'#dc2626' };
+  let h = `<div style="font-size:12px;color:var(--ink3);margin-bottom:8px">${nOk} da importare &middot; ${nConf} già presenti &middot; ${nCat} fuori catalogo &middot; ${nComp} compenso mancante</div>`;
+  h += '<table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>';
+  _importRows.forEach(r=>{
+    const comp = (r.compenso!=null) ? (Number(r.compenso).toFixed(2)+' &euro;') : '—';
+    const prezzo = (r.prezzo!=null) ? (Number(r.prezzo).toFixed(2)+' &euro;') : '—';
+    h += `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>${escapeHtml(r.raw)}</strong><div style="font-size:11px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}</div></td><td style="text-align:right;padding:6px 0;font-size:11px;color:${color[r.status]||'var(--ink3)'}">${escapeHtml(r.nota||'pronta')}</td></tr>`;
+  });
+  h += '</tbody></table>';
+  rev.innerHTML = h;
+  if(btn) btn.disabled = true;
+}
+
+function confermaImportListino(){ showToast('Import disponibile al prossimo step'); }
 
 function renderCentri(){
   const el = document.getElementById('centri-list'); if(!el) return;
