@@ -2961,9 +2961,9 @@ let _pollingInterval = null;
 let _realtimeChannel = null;
 let _bootstrapDone = false;
 async function showAppView(){
-  console.log('[Delphi~Med] showAppView() eseguita');
   if(_bootstrapDone){ console.log('[Delphi~Med] showAppView: bootstrap già eseguito, skip'); return; }
   _bootstrapDone = true;
+  console.log('[Delphi~Med] showAppView() bootstrap eseguito');
   document.getElementById('view-home').style.display    = 'none';
   document.getElementById('view-auth').style.display    = 'none';
   document.getElementById('view-booking').style.display = 'none';
