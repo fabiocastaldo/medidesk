@@ -4202,6 +4202,10 @@ async function savePrestazione(){
   const attiva = (document.getElementById('prest-attiva')||{}).checked !== false;
   const prezzo = prezzo_raw !== '' ? Number(prezzo_raw) : null;
   const compenso = compenso_raw !== '' ? Number(compenso_raw) : 0;
+  if(!_prestEditId && (S.prestazioniCentro||[]).some(p=>String(p.centro_id)===String(centro_id) && p.tipo_visita===nome && (p.valido_dal||'')===(valido_dal||''))){
+    showToast('Tariffa già presente per questo tipo, centro e data.');
+    return;
+  }
   if(tipo==='fisso' && prezzo!=null && compenso>prezzo){
     const _eurC = n => Number(n).toLocaleString('it-IT', Number(n)%1===0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2,maximumFractionDigits:2});
     if(!(await confermaModale('Il compenso ('+_eurC(compenso)+' €) supera il prezzo al paziente ('+_eurC(prezzo)+' €). Salvare comunque?', { titolo:'Compenso elevato', ok:'Salva comunque' }))) return;
@@ -4346,8 +4350,9 @@ function _renderImportReview(){
   let h = `<div style="font-size:12px;color:var(--ink3);margin-bottom:8px">${nOk} da importare &middot; ${nConf} già presenti &middot; ${nDup} duplicate nel file &middot; ${nCat} fuori catalogo &middot; ${nComp} compenso mancante</div>`;
   h += '<table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>';
   _importRows.forEach(r=>{
-    const comp = (r.compenso!=null) ? (Number(r.compenso).toFixed(2)+' &euro;') : '—';
-    const prezzo = (r.prezzo!=null) ? (Number(r.prezzo).toFixed(2)+' &euro;') : '—';
+    const _eurR = n => Number(n).toLocaleString('it-IT', Number(n)%1===0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2,maximumFractionDigits:2});
+    const comp = (r.compenso!=null) ? (_eurR(r.compenso)+' &euro;') : '—';
+    const prezzo = (r.prezzo!=null) ? (_eurR(r.prezzo)+' &euro;') : '—';
     h += `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>${escapeHtml(r.raw)}</strong><div style="font-size:11px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}</div></td><td style="text-align:right;padding:6px 0;font-size:11px;color:${color[r.status]||'var(--ink3)'}">${escapeHtml(r.nota||'pronta')}</td></tr>`;
   });
   h += '</tbody></table>';
