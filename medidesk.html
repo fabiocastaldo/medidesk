@@ -1344,7 +1344,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-prestazioni" class="page">
       <div class="page-header">
         <div><div class="page-title">Tariffe</div><div class="page-subtitle">Prezzo al paziente e compenso, per centro</div></div>
-        <button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="openImportListino()">Importa listino</button><button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button></div>
       </div>
       <div id="prestazioni-list"></div>
     </div>
@@ -2109,17 +2109,34 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <div class="modal">
     <div class="modal-header"><span class="modal-title">Tariffa</span><button class="modal-close" onclick="closeModal('modal-prestazione')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="prest-centro"></select></div>
+      <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="prest-centro"><option value="">— Seleziona centro —</option></select></div>
       <div class="form-group"><label class="form-label">Tipo visita</label><select class="form-input" id="prest-nome"></select></div>
-      <div class="form-group"><label class="form-label">Prezzo al paziente (EUR)</label><input class="form-input" id="prest-prezzo" type="number" step="0.01" min="0" placeholder="0.00"></div>
-      <div class="form-group"><label class="form-label">Tuo compenso</label><input class="form-input" id="prest-compenso" type="number" step="0.01" min="0" placeholder="0.00"></div>
-      <div class="form-group"><label class="form-label">Tipo compenso</label><select class="form-input" id="prest-tipo"><option value="fisso">Fisso (EUR)</option><option value="percentuale">Percentuale (%)</option></select></div>
+      <div class="form-group"><label class="form-label">Prezzo al paziente (EUR)</label><input class="form-input" id="prest-prezzo" type="number" step="0.01" min="0" placeholder="0.00" oninput="_prestPreview()"></div>
+      <div class="form-group"><label class="form-label" id="prest-compenso-label">Tuo compenso</label><input class="form-input" id="prest-compenso" type="number" step="0.01" min="0" placeholder="0.00" oninput="_prestPreview()"><div id="prest-preview" style="font-size:12px;color:var(--ink3);margin-top:4px;display:none"></div></div>
+      <div class="form-group"><label class="form-label">Tipo compenso</label><select class="form-input" id="prest-tipo" onchange="_prestPreview()"><option value="fisso">Fisso (EUR)</option><option value="percentuale">Percentuale (%)</option></select></div>
       <div class="form-group"><label class="form-label">Valido dal</label><input class="form-input" id="prest-valido" type="date"></div>
       <div class="form-group"><label class="form-label"><input type="checkbox" id="prest-attiva" style="margin-right:6px">Attiva</label></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-prestazione')">Annulla</button>
       <button class="btn btn-primary" onclick="savePrestazione()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORT LISTINO -->
+<div class="modal-overlay" id="modal-import-listino">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Importa listino tariffe</span><button class="modal-close" onclick="closeModal('modal-import-listino')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="import-centro"></select></div>
+      <div class="form-group" style="font-size:12px;color:var(--ink3)">File Excel (.xlsx, .xls, .xlsm, .xlsb) con colonne tipo_visita, compenso, prezzo (opzionale). La prima riga è l'intestazione.</div>
+      <div class="form-group"><input type="file" id="import-file" accept=".xlsx,.xls,.xlsm,.xlsb" onchange="handleImportFile(event)"></div>
+      <div id="import-review" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-import-listino')">Annulla</button>
+      <button class="btn btn-primary" id="import-confirm" onclick="confermaImportListino()" disabled>Conferma import</button>
     </div>
   </div>
 </div>
@@ -4101,8 +4118,11 @@ function renderPrestazioni(){
     }
     html += '<div class="card"><div class="card-body">';
     html += list.map(p=>{
-      const prezzo = (p.prezzo!=null) ? (Number(p.prezzo).toFixed(2)+' &euro;') : '&mdash;';
-      const comp = (p.tipo==='percentuale') ? (Number(p.compenso).toFixed(0)+'%') : (Number(p.compenso).toFixed(2)+' &euro;');
+      const _eur = n => Number(n).toLocaleString('it-IT', Number(n)%1===0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2,maximumFractionDigits:2});
+      const prezzo = (p.prezzo!=null) ? (_eur(p.prezzo)+' &euro;') : '&mdash;';
+      let comp;
+      if(p.tipo==='percentuale'){ comp = (p.prezzo!=null) ? (_eur((Number(p.compenso)/100)*Number(p.prezzo))+' &euro; ('+Number(p.compenso).toFixed(0)+'%)') : (Number(p.compenso).toFixed(0)+'% (prezzo mancante)'); }
+      else { comp = _eur(p.compenso)+' &euro;'; }
       const stato = (p.attiva===false) ? ' &middot; sospesa' : '';
       return `<div style="padding:6px 0;display:flex;align-items:center;justify-content:space-between"><div><strong>${escapeAttr(p.tipo_visita)}</strong><div style="font-size:12px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}${stato}</div></div><div class="centro-actions"><button class="centro-act" onclick="openPrestazioneModal('${p.id}')" title="Modifica"><svg class="ic"><use href="#ic-edit"/></svg></button><button class="centro-act centro-act-danger" onclick="removePrestazione('${p.id}')" title="Elimina"><svg class="ic"><use href="#ic-trash"/></svg></button></div></div>`;
     }).join('');
@@ -4115,7 +4135,7 @@ let _prestEditId = null;
 
 function openPrestazioneModal(id){
   const selC = document.getElementById('prest-centro');
-  if(selC) selC.innerHTML = (S.centri||[]).filter(c=>c.attivo!==false).map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
+  if(selC) selC.innerHTML = '<option value="">— Seleziona centro —</option>' + (S.centri||[]).filter(c=>c.attivo!==false).map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
   const selN = document.getElementById('prest-nome');
   if(selN){
     const names = (S.tipiVisita||[]).slice();
@@ -4147,6 +4167,7 @@ function openPrestazioneModal(id){
     fld('prest-valido', todayLocalISO());
     const cb = document.getElementById('prest-attiva'); if(cb) cb.checked = true;
   }
+  _prestPreview();
   openModal('modal-prestazione');
 }
 
@@ -4163,6 +4184,12 @@ async function savePrestazione(){
   const attiva = (document.getElementById('prest-attiva')||{}).checked !== false;
   const prezzo = prezzo_raw !== '' ? Number(prezzo_raw) : null;
   const compenso = compenso_raw !== '' ? Number(compenso_raw) : 0;
+  if(tipo==='fisso' && prezzo!=null && compenso>prezzo){
+    if(!(await confermaModale('Il compenso ('+compenso+' €) supera il prezzo al paziente ('+prezzo+' €). Salvare comunque?', { titolo:'Compenso elevato', ok:'Salva comunque' }))) return;
+  }
+  if(tipo==='percentuale' && compenso>100){
+    if(!(await confermaModale('La percentuale supera il 100% (incasseresti più del prezzo). Salvare comunque?', { titolo:'Percentuale elevata', ok:'Salva comunque' }))) return;
+  }
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
@@ -4187,6 +4214,21 @@ async function savePrestazione(){
   }
 }
 
+function _prestPreview(){
+  const box = document.getElementById('prest-preview'); if(!box) return;
+  const tipo = ((document.getElementById('prest-tipo')||{}).value)||'fisso';
+  const lbl = document.getElementById('prest-compenso-label');
+  if(tipo!=='percentuale'){ if(lbl) lbl.textContent='Tuo compenso'; box.style.display='none'; return; }
+  if(lbl) lbl.textContent='Tuo compenso (%)';
+  const prezzo = parseFloat((document.getElementById('prest-prezzo')||{}).value);
+  const perc = parseFloat((document.getElementById('prest-compenso')||{}).value);
+  box.style.display='block';
+  if(!isFinite(perc)){ box.textContent='Inserisci la percentuale.'; return; }
+  if(!isFinite(prezzo)){ box.textContent='Inserisci il prezzo per vedere il compenso in euro.'; return; }
+  const eur = (perc/100)*prezzo;
+  box.textContent='= '+eur.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+' € su prezzo '+prezzo.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+}
+
 async function removePrestazione(id){
   if(!(await confermaModale('Eliminare questa tariffa?'))) return;
   try {
@@ -4199,6 +4241,117 @@ async function removePrestazione(id){
   } catch(e){
     console.error('[Delphi~Med] removePrestazione:', e.message);
     showToast('Errore: ' + e.message);
+  }
+}
+
+let _importRows = [];
+let _listinoCentroId = null;
+let _listinoValidoDal = null;
+
+function _resetImportSelection(){
+  _importRows = [];
+  const f = document.getElementById('import-file'); if(f) f.value='';
+  const rev = document.getElementById('import-review'); if(rev) rev.innerHTML='';
+  const btn = document.getElementById('import-confirm'); if(btn) btn.disabled = true;
+}
+
+function openImportListino(){
+  const sel = document.getElementById('import-centro');
+  if(sel) sel.innerHTML = '<option value="">— Seleziona centro —</option>' + (S.centri||[]).filter(c=>c.attivo!==false)
+    .map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
+  if(sel) sel.onchange = _resetImportSelection;
+  _resetImportSelection();
+  openModal('modal-import-listino');
+}
+
+async function handleImportFile(ev){
+  const file = ev.target.files && ev.target.files[0];
+  const rev = document.getElementById('import-review');
+  if(!file) return;
+  const centroId = (document.getElementById('import-centro')||{}).value;
+  if(!centroId){ showToast('Seleziona prima un centro'); ev.target.value=''; return; }
+  let aoa;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buf), { type:'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    aoa = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+  } catch(e){ showToast('File non leggibile: '+e.message); return; }
+  const head = (aoa[0]||[]).map(h=>String(h).trim().toLowerCase());
+  const iTipo = head.indexOf('tipo_visita');
+  const iComp = head.indexOf('compenso');
+  const iPrezzo = head.indexOf('prezzo');
+  if(iTipo<0 || iComp<0){
+    if(rev) rev.innerHTML = '<div style="color:#dc2626;font-size:13px">Intestazione non valida: servono le colonne <strong>tipo_visita</strong> e <strong>compenso</strong> (prezzo opzionale).</div>';
+    return;
+  }
+  const catalog = S.tipiVisita || [];
+  const validoDal = todayLocalISO();
+  _listinoCentroId = centroId; _listinoValidoDal = validoDal;
+  const num = v => { const s=String(v).trim().replace(',','.'); if(s==='') return {empty:true}; const n=Number(s); return isFinite(n)?{n}:{bad:true}; };
+  _importRows = [];
+  aoa.slice(1).forEach(row=>{
+    if(!row || !row.some(c=>String(c).trim()!=='')) return;
+    const rawTipo = String(row[iTipo]||'').trim();
+    if(rawTipo==='') return;
+    const resolved = catalog.find(n=>n===rawTipo) || catalog.find(n=>n.toLowerCase()===rawTipo.toLowerCase()) || null;
+    const comp = num(row[iComp]);
+    let prezzo = null;
+    if(iPrezzo>=0){ const p=num(row[iPrezzo]); if(p.n!=null) prezzo=p.n; }
+    let status, nota;
+    if(comp.empty){ status='compenso'; nota='compenso mancante'; }
+    else if(comp.bad){ status='compenso'; nota='compenso non numerico'; }
+    else if(!resolved){ status='catalogo'; nota='tipo non a catalogo'; }
+    else if((S.prestazioniCentro||[]).some(p=>String(p.centro_id)===String(centroId) && p.tipo_visita===resolved && (p.valido_dal||'')===validoDal)){ status='conflitto'; nota='già presente (saltata)'; }
+    else { status='ok'; nota=''; }
+    _importRows.push({ raw:rawTipo, tipo:resolved, compenso:(comp.n!=null?comp.n:null), prezzo, status, nota });
+  });
+  _renderImportReview();
+}
+
+function _renderImportReview(){
+  const rev = document.getElementById('import-review'); if(!rev) return;
+  const btn = document.getElementById('import-confirm');
+  if(!_importRows.length){ rev.innerHTML='<div style="color:var(--ink3);font-size:13px">Nessuna riga valida nel file.</div>'; if(btn) btn.disabled=true; return; }
+  const nOk = _importRows.filter(r=>r.status==='ok').length;
+  const nConf = _importRows.filter(r=>r.status==='conflitto').length;
+  const nCat = _importRows.filter(r=>r.status==='catalogo').length;
+  const nComp = _importRows.filter(r=>r.status==='compenso').length;
+  const color = { ok:'#16a34a', conflitto:'#d97706', catalogo:'#dc2626', compenso:'#dc2626' };
+  let h = `<div style="font-size:12px;color:var(--ink3);margin-bottom:8px">${nOk} da importare &middot; ${nConf} già presenti &middot; ${nCat} fuori catalogo &middot; ${nComp} compenso mancante</div>`;
+  h += '<table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>';
+  _importRows.forEach(r=>{
+    const comp = (r.compenso!=null) ? (Number(r.compenso).toFixed(2)+' &euro;') : '—';
+    const prezzo = (r.prezzo!=null) ? (Number(r.prezzo).toFixed(2)+' &euro;') : '—';
+    h += `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>${escapeHtml(r.raw)}</strong><div style="font-size:11px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}</div></td><td style="text-align:right;padding:6px 0;font-size:11px;color:${color[r.status]||'var(--ink3)'}">${escapeHtml(r.nota||'pronta')}</td></tr>`;
+  });
+  h += '</tbody></table>';
+  rev.innerHTML = h;
+  if(btn) btn.disabled = (nOk === 0);
+}
+
+async function confermaImportListino(){
+  const ok = _importRows.filter(r=>r.status==='ok');
+  if(!ok.length){ showToast('Niente da importare'); return; }
+  if(!isOnline()){ showToast('Connessione richiesta per importare'); return; }
+  const btn = document.getElementById('import-confirm'); if(btn) btn.disabled = true;
+  try {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
+    const medico_id = medico.id;
+    const payload = ok.map(r=>({ medico_id, centro_id:_listinoCentroId, tipo_visita:r.tipo, prezzo:r.prezzo, compenso:r.compenso, tipo:'fisso', valido_dal:_listinoValidoDal, attiva:true }));
+    const { error } = await supabaseClient.from('prestazioni_centro').insert(payload);
+    if(error) throw error;
+    const n = payload.length;
+    const skipped = _importRows.length - n;
+    await loadPrestazioniFromDB(user);
+    renderPrestazioni();
+    closeModal('modal-import-listino');
+    showToast(n+' tariff'+(n===1?'a importata':'e importate')+(skipped? (', '+skipped+' saltat'+(skipped===1?'a':'e')) : '')+' ✓');
+  } catch(e){
+    console.error('[Delphi~Med] confermaImportListino:', e.message);
+    showToast('Errore: '+e.message);
+    if(btn) btn.disabled = false;
   }
 }
 
