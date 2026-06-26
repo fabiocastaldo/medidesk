@@ -2109,7 +2109,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <div class="modal">
     <div class="modal-header"><span class="modal-title">Tariffa</span><button class="modal-close" onclick="closeModal('modal-prestazione')">✕</button></div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="prest-centro"></select></div>
+      <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="prest-centro"><option value="">— Seleziona centro —</option></select></div>
       <div class="form-group"><label class="form-label">Tipo visita</label><select class="form-input" id="prest-nome"></select></div>
       <div class="form-group"><label class="form-label">Prezzo al paziente (EUR)</label><input class="form-input" id="prest-prezzo" type="number" step="0.01" min="0" placeholder="0.00"></div>
       <div class="form-group"><label class="form-label">Tuo compenso</label><input class="form-input" id="prest-compenso" type="number" step="0.01" min="0" placeholder="0.00"></div>
@@ -4118,8 +4118,9 @@ function renderPrestazioni(){
     }
     html += '<div class="card"><div class="card-body">';
     html += list.map(p=>{
-      const prezzo = (p.prezzo!=null) ? (Number(p.prezzo).toFixed(2)+' &euro;') : '&mdash;';
-      const comp = (p.tipo==='percentuale') ? (Number(p.compenso).toFixed(0)+'%') : (Number(p.compenso).toFixed(2)+' &euro;');
+      const _eur = n => Number(n).toLocaleString('it-IT', Number(n)%1===0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2,maximumFractionDigits:2});
+      const prezzo = (p.prezzo!=null) ? (_eur(p.prezzo)+' &euro;') : '&mdash;';
+      const comp = (p.tipo==='percentuale') ? (Number(p.compenso).toFixed(0)+'%') : (_eur(p.compenso)+' &euro;');
       const stato = (p.attiva===false) ? ' &middot; sospesa' : '';
       return `<div style="padding:6px 0;display:flex;align-items:center;justify-content:space-between"><div><strong>${escapeAttr(p.tipo_visita)}</strong><div style="font-size:12px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}${stato}</div></div><div class="centro-actions"><button class="centro-act" onclick="openPrestazioneModal('${p.id}')" title="Modifica"><svg class="ic"><use href="#ic-edit"/></svg></button><button class="centro-act centro-act-danger" onclick="removePrestazione('${p.id}')" title="Elimina"><svg class="ic"><use href="#ic-trash"/></svg></button></div></div>`;
     }).join('');
@@ -4132,7 +4133,7 @@ let _prestEditId = null;
 
 function openPrestazioneModal(id){
   const selC = document.getElementById('prest-centro');
-  if(selC) selC.innerHTML = (S.centri||[]).filter(c=>c.attivo!==false).map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
+  if(selC) selC.innerHTML = '<option value="">— Seleziona centro —</option>' + (S.centri||[]).filter(c=>c.attivo!==false).map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
   const selN = document.getElementById('prest-nome');
   if(selN){
     const names = (S.tipiVisita||[]).slice();
@@ -4232,7 +4233,7 @@ function _resetImportSelection(){
 
 function openImportListino(){
   const sel = document.getElementById('import-centro');
-  if(sel) sel.innerHTML = (S.centri||[]).filter(c=>c.attivo!==false)
+  if(sel) sel.innerHTML = '<option value="">— Seleziona centro —</option>' + (S.centri||[]).filter(c=>c.attivo!==false)
     .map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeAttr(capitalizeWords(c.nome))}</option>`).join('');
   if(sel) sel.onchange = _resetImportSelection;
   _resetImportSelection();
