@@ -1343,8 +1343,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
     <div id="page-prestazioni" class="page">
       <div class="page-header">
-        <div><div class="page-title">Prestazioni</div><div class="page-subtitle">Tipi di visita e aree · prezzi e compensi per centro</div></div>
-        <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="openImportListino()">Importa listino</button><button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button></div>
+        <div><div class="page-title">Prestazioni</div><div class="page-subtitle">Tipi di visita e aree · catalogo delle prestazioni</div></div>
       </div>
 
       <div style="margin-top:32px">
@@ -1371,6 +1370,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div></div>
       </div>
 
+      <div class="page-header" style="margin-top:40px">
+        <div><div class="page-title">Tariffe</div><div class="page-subtitle">Prezzo al paziente e compenso, per centro</div></div>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="openImportListino()">Importa listino</button><button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button></div>
+      </div>
       <div id="prestazioni-list"></div>
     </div>
     <div id="page-profilo" class="page">
@@ -8522,7 +8525,7 @@ function renderTipiAree(){
 
 async function addTipoVisita(){
   const inp = document.getElementById('new-tipo-visita');
-  const v = capitalizeName(inp.value.trim()); if(!v) return;
+  const v = capitalizeName(inp.value.trim()); if(!v){ showToast('Inserisci il tipo di visita'); return; }
   if(S.tipiVisita.some(t=>t.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
   if(!isOnline()){
     S.tipiVisita.push(v); sortTipiVisita(); inp.value=''; save(); renderTipiAree();
@@ -8574,7 +8577,7 @@ async function removeTipoVisita(idx){
 
 async function addArea(){
   const inp = document.getElementById('new-area');
-  const v = capitalizeName(inp.value.trim()); if(!v) return;
+  const v = capitalizeName(inp.value.trim()); if(!v){ showToast("Inserisci l'area tematica"); return; }
   if(S.areeTematiche.some(a=>a.toLowerCase()===v.toLowerCase())){ showToast('Già presente'); return; }
   if(!isOnline()){
     S.areeTematiche.push(v); inp.value=''; save(); renderTipiAree();
