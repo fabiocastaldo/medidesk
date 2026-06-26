@@ -4220,8 +4220,8 @@ async function removePrestazione(id){
 }
 
 let _importRows = [];
-let _importCentroId = null;
-let _importValidoDal = null;
+let _listinoCentroId = null;
+let _listinoValidoDal = null;
 
 function _resetImportSelection(){
   _importRows = [];
@@ -4262,7 +4262,7 @@ async function handleImportFile(ev){
   }
   const catalog = S.tipiVisita || [];
   const validoDal = todayLocalISO();
-  _importCentroId = centroId; _importValidoDal = validoDal;
+  _listinoCentroId = centroId; _listinoValidoDal = validoDal;
   const num = v => { const s=String(v).trim().replace(',','.'); if(s==='') return {empty:true}; const n=Number(s); return isFinite(n)?{n}:{bad:true}; };
   _importRows = [];
   aoa.slice(1).forEach(row=>{
@@ -4314,7 +4314,7 @@ async function confermaImportListino(){
     const { data: { user } } = await supabaseClient.auth.getUser();
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     const medico_id = medico.id;
-    const payload = ok.map(r=>({ medico_id, centro_id:_importCentroId, tipo_visita:r.tipo, prezzo:r.prezzo, compenso:r.compenso, tipo:'fisso', valido_dal:_importValidoDal, attiva:true }));
+    const payload = ok.map(r=>({ medico_id, centro_id:_listinoCentroId, tipo_visita:r.tipo, prezzo:r.prezzo, compenso:r.compenso, tipo:'fisso', valido_dal:_listinoValidoDal, attiva:true }));
     const { error } = await supabaseClient.from('prestazioni_centro').insert(payload);
     if(error) throw error;
     const n = payload.length;
