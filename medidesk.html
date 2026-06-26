@@ -82,9 +82,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 
 /* ── BUTTONS ── */
 .btn{padding:9px 18px;border-radius:var(--r-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
-.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
-.btn-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--border)}.btn-secondary:hover{background:var(--surface2)}
-.btn-warm{background:var(--warm);color:#fff}.btn-warm:hover{opacity:.88}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:not(:disabled):hover{background:var(--accent2)}
+.btn-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--border)}.btn-secondary:not(:disabled):hover{background:var(--surface2)}
+.btn-warm{background:var(--warm);color:#fff}.btn-warm:not(:disabled):hover{opacity:.88}
 .btn-sm{padding:6px 12px;font-size:12px}
 .btn-icon{padding:8px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--border);cursor:pointer;font-size:16px;line-height:1}
 
@@ -4121,9 +4122,13 @@ function renderPrestazioni(){
     return;
   }
   const rows = S.prestazioniCentro || [];
+  const oggi = todayLocalISO();
   let html = '';
   for(const c of centri){
-    const list = rows.filter(p=>String(p.centro_id)===String(c.id));
+    const _byTipo = {};
+    rows.filter(p => String(p.centro_id)===String(c.id) && (p.valido_dal||'') <= oggi)
+        .forEach(p => { const k = p.tipo_visita; if(!_byTipo[k] || (p.valido_dal||'') > (_byTipo[k].valido_dal||'')) _byTipo[k] = p; });
+    const list = Object.values(_byTipo);
     html += `<div class="section-title" style="margin-top:20px">${escapeAttr(c.nome)}</div>`;
     if(!list.length){
       html += '<div class="card"><div class="card-body" style="color:var(--ink3)">Nessuna tariffa configurata.</div></div>';
@@ -4197,8 +4202,13 @@ async function savePrestazione(){
   const attiva = (document.getElementById('prest-attiva')||{}).checked !== false;
   const prezzo = prezzo_raw !== '' ? Number(prezzo_raw) : null;
   const compenso = compenso_raw !== '' ? Number(compenso_raw) : 0;
+  if(!_prestEditId && (S.prestazioniCentro||[]).some(p=>String(p.centro_id)===String(centro_id) && p.tipo_visita===nome && (p.valido_dal||'')===(valido_dal||''))){
+    showToast('Tariffa già presente per questo tipo, centro e data.');
+    return;
+  }
   if(tipo==='fisso' && prezzo!=null && compenso>prezzo){
-    if(!(await confermaModale('Il compenso ('+compenso+' €) supera il prezzo al paziente ('+prezzo+' €). Salvare comunque?', { titolo:'Compenso elevato', ok:'Salva comunque' }))) return;
+    const _eurC = n => Number(n).toLocaleString('it-IT', Number(n)%1===0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2,maximumFractionDigits:2});
+    if(!(await confermaModale('Il compenso ('+_eurC(compenso)+' €) supera il prezzo al paziente ('+_eurC(prezzo)+' €). Salvare comunque?', { titolo:'Compenso elevato', ok:'Salva comunque' }))) return;
   }
   if(tipo==='percentuale' && compenso>100){
     if(!(await confermaModale('La percentuale supera il 100% (incasseresti più del prezzo). Salvare comunque?', { titolo:'Percentuale elevata', ok:'Salva comunque' }))) return;
@@ -4306,6 +4316,7 @@ async function handleImportFile(ev){
   _listinoCentroId = centroId; _listinoValidoDal = validoDal;
   const num = v => { const s=String(v).trim().replace(',','.'); if(s==='') return {empty:true}; const n=Number(s); return isFinite(n)?{n}:{bad:true}; };
   _importRows = [];
+  const _seenTipi = new Set();
   aoa.slice(1).forEach(row=>{
     if(!row || !row.some(c=>String(c).trim()!=='')) return;
     const rawTipo = String(row[iTipo]||'').trim();
@@ -4318,8 +4329,9 @@ async function handleImportFile(ev){
     if(comp.empty){ status='compenso'; nota='compenso mancante'; }
     else if(comp.bad){ status='compenso'; nota='compenso non numerico'; }
     else if(!resolved){ status='catalogo'; nota='tipo non a catalogo'; }
-    else if((S.prestazioniCentro||[]).some(p=>String(p.centro_id)===String(centroId) && p.tipo_visita===resolved && (p.valido_dal||'')===validoDal)){ status='conflitto'; nota='già presente (saltata)'; }
-    else { status='ok'; nota=''; }
+    else if(_seenTipi.has(resolved)){ status='duplicato'; nota='duplicato nel file (saltata)'; }
+    else if((S.prestazioniCentro||[]).some(p=>String(p.centro_id)===String(centroId) && p.tipo_visita===resolved && (p.valido_dal||'')===validoDal)){ status='conflitto'; nota='già presente (saltata)'; _seenTipi.add(resolved); }
+    else { status='ok'; nota=''; _seenTipi.add(resolved); }
     _importRows.push({ raw:rawTipo, tipo:resolved, compenso:(comp.n!=null?comp.n:null), prezzo, status, nota });
   });
   _renderImportReview();
@@ -4333,12 +4345,14 @@ function _renderImportReview(){
   const nConf = _importRows.filter(r=>r.status==='conflitto').length;
   const nCat = _importRows.filter(r=>r.status==='catalogo').length;
   const nComp = _importRows.filter(r=>r.status==='compenso').length;
-  const color = { ok:'#16a34a', conflitto:'#d97706', catalogo:'#dc2626', compenso:'#dc2626' };
-  let h = `<div style="font-size:12px;color:var(--ink3);margin-bottom:8px">${nOk} da importare &middot; ${nConf} già presenti &middot; ${nCat} fuori catalogo &middot; ${nComp} compenso mancante</div>`;
+  const nDup = _importRows.filter(r=>r.status==='duplicato').length;
+  const color = { ok:'#16a34a', conflitto:'#d97706', catalogo:'#dc2626', compenso:'#dc2626', duplicato:'#d97706' };
+  let h = `<div style="font-size:12px;color:var(--ink3);margin-bottom:8px">${nOk} da importare &middot; ${nConf} già presenti &middot; ${nDup} duplicate nel file &middot; ${nCat} fuori catalogo &middot; ${nComp} compenso mancante</div>`;
   h += '<table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>';
   _importRows.forEach(r=>{
-    const comp = (r.compenso!=null) ? (Number(r.compenso).toFixed(2)+' &euro;') : '—';
-    const prezzo = (r.prezzo!=null) ? (Number(r.prezzo).toFixed(2)+' &euro;') : '—';
+    const _eurR = n => Number(n).toLocaleString('it-IT', Number(n)%1===0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2,maximumFractionDigits:2});
+    const comp = (r.compenso!=null) ? (_eurR(r.compenso)+' &euro;') : '—';
+    const prezzo = (r.prezzo!=null) ? (_eurR(r.prezzo)+' &euro;') : '—';
     h += `<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>${escapeHtml(r.raw)}</strong><div style="font-size:11px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}</div></td><td style="text-align:right;padding:6px 0;font-size:11px;color:${color[r.status]||'var(--ink3)'}">${escapeHtml(r.nota||'pronta')}</td></tr>`;
   });
   h += '</tbody></table>';
