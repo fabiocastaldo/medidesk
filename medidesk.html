@@ -4199,6 +4199,9 @@ async function savePrestazione(){
   if(tipo==='percentuale' && compenso>100){
     if(!(await confermaModale('La percentuale supera il 100% (incasseresti più del prezzo). Salvare comunque?', { titolo:'Percentuale elevata', ok:'Salva comunque' }))) return;
   }
+  if(tipo==='fisso' && (prezzo===null || prezzo===0)){
+    if(!(await confermaModale('Questa prestazione non ha un prezzo impostato: sul link pubblico di prenotazione non mostrerà alcun costo ai pazienti. Salvare comunque?', { titolo:'Nessun prezzo pubblico', ok:'Salva comunque' }))) return;
+  }
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
@@ -5078,6 +5081,8 @@ function populateTipiVisitaSelects(){
   ['appt-tipo','bk-tipo'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.innerHTML=tipiHTML;
   });
+  const _bkTipoEl = document.getElementById('bk-tipo');
+  if(_bkTipoEl) _bkTipoEl.innerHTML = '<option value="">— Seleziona visita —</option>' + tipiHTML;
   ['appt-area','bk-area'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.innerHTML=areaHTML;
   });
@@ -8235,13 +8240,15 @@ async function confirmBooking(){
     const consentHealth = document.getElementById('bk-consent-health')?.checked;
     if(!consentBase || !consentHealth){ showToast('Per procedere è necessario fornire entrambi i consensi'); return; }
   }
+  const _tipoSel = document.getElementById('bk-tipo').value.trim();
+  if(!_tipoSel){ showToast('Seleziona il tipo di visita'); return; }
   const consentTs = new Date().toISOString();
   const cancellationToken = generateCancellationToken();
   const appt={
     id:Date.now(), nome, cognome,
     tel:document.getElementById('bk-tel').value.trim(),
     email:document.getElementById('bk-email').value.trim(),
-    tipo:document.getElementById('bk-tipo').value.trim()||'Prima visita',
+    tipo:document.getElementById('bk-tipo').value.trim(),
     area:document.getElementById('bk-area').value.trim(),
     note:'',
     data:bk.dateStr, ora:bk.ora,
