@@ -1185,7 +1185,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('agenda')"><span class="icon"><svg class="ic"><use href="#ic-calendar"/></svg></span><span>Agenda</span></div>
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon"><svg class="ic"><use href="#ic-users"/></svg></span><span>Pazienti</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon"><svg class="ic"><use href="#ic-center"/></svg></span><span>Centri</span></div>
-      <div class="nav-item" onclick="showPage('prestazioni')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Tariffe</span></div>
+      <div class="nav-item" onclick="showPage('prestazioni')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Prestazioni</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon"><svg class="ic"><use href="#ic-user"/></svg></span><span>Profilo</span></div>
       <div class="nav-item" onclick="showPage('statistiche')"><span class="icon"><svg class="ic"><use href="#ic-stats"/></svg></span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon"><svg class="ic"><use href="#ic-settings"/></svg></span><span>Impostazioni</span></div>
@@ -1343,9 +1343,34 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
     <div id="page-prestazioni" class="page">
       <div class="page-header">
-        <div><div class="page-title">Tariffe</div><div class="page-subtitle">Prezzo al paziente e compenso, per centro</div></div>
+        <div><div class="page-title">Prestazioni</div><div class="page-subtitle">Tipi di visita e aree · prezzi e compensi per centro</div></div>
         <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="openImportListino()">Importa listino</button><button class="btn btn-primary" onclick="openPrestazioneModal()">+ Tariffa</button></div>
       </div>
+
+      <div style="margin-top:32px">
+        <div class="section-title">Tipi di visita</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Personalizza i tipi di visita disponibili al momento della prenotazione.</p>
+          <div id="tipi-visita-list" class="tag-editor"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input class="form-input" id="new-tipo-visita" placeholder="es. Pre-chirurgica" style="flex:1" onkeydown="if(event.key==='Enter')addTipoVisita()" onblur="this.value=capitalizeName(this.value)">
+            <button class="btn btn-primary" onclick="addTipoVisita()">+ Aggiungi</button>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-top:24px">
+        <div class="section-title">Aree tematiche (opzionali)</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Aree di intervento che si possono associare a una visita. Es. Ginocchio, Spalla, Anca.</p>
+          <div id="aree-list" class="tag-editor"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input class="form-input" id="new-area" placeholder="es. Ginocchio" style="flex:1" onkeydown="if(event.key==='Enter')addArea()" onblur="this.value=capitalizeName(this.value)">
+            <button class="btn btn-primary" onclick="addArea()">+ Aggiungi</button>
+          </div>
+        </div></div>
+      </div>
+
       <div id="prestazioni-list"></div>
     </div>
     <div id="page-profilo" class="page">
@@ -1455,30 +1480,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div style="display:flex;gap:8px">
             <input class="form-input" id="new-lingua" placeholder="es. Inglese" style="flex:1" onkeydown="if(event.key==='Enter')addLingua()" onblur="this.value=capitalizeWords(this.value.trim())">
             <button class="btn btn-secondary" onclick="addLingua()">+ Aggiungi</button>
-          </div>
-        </div></div>
-      </div>
-
-      <div style="margin-top:32px">
-        <div class="section-title">Tipi di visita</div>
-        <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Personalizza i tipi di visita disponibili al momento della prenotazione.</p>
-          <div id="tipi-visita-list" class="tag-editor"></div>
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <input class="form-input" id="new-tipo-visita" placeholder="es. Pre-chirurgica" style="flex:1" onkeydown="if(event.key==='Enter')addTipoVisita()" onblur="this.value=capitalizeName(this.value)">
-            <button class="btn btn-primary" onclick="addTipoVisita()">+ Aggiungi</button>
-          </div>
-        </div></div>
-      </div>
-
-      <div style="margin-top:24px">
-        <div class="section-title">Aree tematiche (opzionali)</div>
-        <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Aree di intervento che si possono associare a una visita. Es. Ginocchio, Spalla, Anca.</p>
-          <div id="aree-list" class="tag-editor"></div>
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <input class="form-input" id="new-area" placeholder="es. Ginocchio" style="flex:1" onkeydown="if(event.key==='Enter')addArea()" onblur="this.value=capitalizeName(this.value)">
-            <button class="btn btn-primary" onclick="addArea()">+ Aggiungi</button>
           </div>
         </div></div>
       </div>
@@ -1800,7 +1801,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="ma-handle" id="ma-handle" role="button" tabindex="0" aria-label="Apri menu azioni" aria-expanded="false"><span class="ma-grabber"></span></div>
     <div class="ma-panel">
       <button class="ma-item" onclick="showPage('statistiche')"><span class="ma-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="ma-lbl">Statistiche</span></button>
-      <button class="ma-item" onclick="showPage('prestazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="ma-lbl">Tariffe</span></button>
+      <button class="ma-item" onclick="showPage('prestazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="ma-lbl">Prestazioni</span></button>
       <button class="ma-item" onclick="showPage('impostazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-settings"/></svg></span><span class="ma-lbl">Impostazioni</span></button>
       <button class="ma-item" onclick="showPage('manutenzione-archivio')"><span class="ma-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="ma-lbl">Archivio</span></button>
       <button class="ma-item ma-logout" id="mobile-logout-btn" onclick="signOut()"><span class="ma-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="ma-lbl">Esci</span></button>
@@ -3814,8 +3815,8 @@ function showPage(id){
   if(id==='agenda') setAgendaView('week');
   if(id==='pazienti') renderPazienti();
   if(id==='centri') renderCentri();
-  if(id==='prestazioni') renderPrestazioni();
-  if(id==='profilo'){ loadSettings(); renderTipiAree(); prefillProfiloNome(); }
+  if(id==='prestazioni'){ renderPrestazioni(); renderTipiAree(); }
+  if(id==='profilo'){ loadSettings(); prefillProfiloNome(); }
   if(id==='dashboard'){ renderDashboard(); updateStats(); renderPending(); }
   if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
