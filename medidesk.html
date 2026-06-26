@@ -1699,7 +1699,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
 
       <div style="margin-bottom:24px">
-        <div class="section-title">Visibilità contatti sul link pubblico</div>
+        <div class="section-title">Visibilità sul link pubblico</div>
         <div class="card"><div class="card-body">
           <div class="notif-toggle-row">
             <div class="notif-toggle-info">
@@ -1714,6 +1714,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
               <div class="notif-toggle-desc">Se attivo, il tuo telefono compare sul link pubblico di prenotazione. La segreteria del centro lo vede sempre.</div>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="imp-mostra-telefono"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Tariffe visibili ai pazienti</div>
+              <div class="notif-toggle-desc">Se attiva, il costo della prestazione scelta compare sul link pubblico di prenotazione. La segreteria del centro lo vede sempre.</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mostra-tariffe"><span class="toggle-slider"></span></label>
           </div>
         </div></div>
       </div>
@@ -1896,7 +1903,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           </div>
           <div class="form-group">
             <label class="form-label">Tipo visita / motivo</label>
-            <select class="form-select" id="bk-tipo"></select>
+            <select class="form-select" id="bk-tipo" onchange="bkUpdatePrezzo()"></select>
+            <div id="bk-prezzo-inline" style="display:none;margin-top:8px;font-size:14px;color:var(--ink)"></div>
           </div>
           <div class="form-group">
             <label class="form-label">Area tematica (opzionale)</label>
@@ -3060,6 +3068,7 @@ async function loadMedicoFromDB(user){
       S.settings.sitoWeb     = data.sito_web           || '';
       S.settings.mostraEmailPazienti    = data.mostra_email_pazienti    !== false;
       S.settings.mostraTelefonoPazienti = data.mostra_telefono_pazienti !== false;
+      S.settings.mostraTariffePazienti  = data.mostra_tariffe_pazienti  === true;
       S.settings.refertazioneAttiva     = data.refertazione_attiva      !== false;
       S.settings.linkedin    = data.linkedin           || '';
       S.settings.instagram   = data.instagram          || '';
@@ -7908,6 +7917,10 @@ async function bkInit(){
         const { data: areeDB } = await supabaseClient.from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
         S.areeTematiche = (areeDB||[]).map(r=>r.nome);
         bk.slotOccupati = (data.occupati||[]).map(s=>({ centroId: data.centro.id, data: s.data, ora: (s.ora||'').substring(0,5) }));
+        bk.tariffe = {};
+        (data.centro.prestazioni || []).forEach(r => {
+          (bk.tariffe[String(data.centro.id)] ??= {})[r.tipo_visita] = r.prezzo;
+        });
         if(!document.head.querySelector('meta[name="robots"]')){
           document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
         }
@@ -7968,6 +7981,11 @@ async function bkInit(){
       S.areeTematiche = (areeDB||[]).map(r=>r.nome);
       const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: m.id });
       bk.slotOccupati = (slotDB||[]).map(s=>({ centroId: s.centro_id, data: s.data, ora: (s.ora||'').substring(0,5) }));
+      const { data: tariffeDB } = await supabaseClient.rpc('get_tariffe_pubbliche', { p_medico_id: m.id });
+      bk.tariffe = {};
+      (tariffeDB || []).forEach(r => {
+        (bk.tariffe[r.centro_id] ??= {})[r.tipo_visita] = r.prezzo;
+      });
     } catch(e){ console.error('[Delphi~Med] bkInit anon:', e.message); }
   } else {
     bk.medicoId = S.medicoId || null;
@@ -8130,8 +8148,30 @@ function bkSelectSlot(ora){
     <div class="confirm-row"><span class="confirm-key">Data</span><span>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</span></div>
     <div class="confirm-row"><span class="confirm-key">Orario</span><span>${ora}</span></div>
     ${centro&&centro.indirizzo?`<div class="confirm-row"><span class="confirm-key">Dove</span><span>${centro.indirizzo}</span></div>`:''}
+    <div class="confirm-row" id="bk-prezzo-recap" style="display:none"><span class="confirm-key">Costo</span><span class="bk-prezzo-val"></span></div>
   `;
+  bkUpdatePrezzo();
   bkStep(4);
+}
+
+function bkEur(n){
+  return Number(n).toLocaleString('it-IT', Number(n)%1===0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function bkUpdatePrezzo(){
+  const tipo = (document.getElementById('bk-tipo')?.value || '').trim();
+  const centroKey = String(bk.centroId || '');
+  const pr = ((bk.tariffe || {})[centroKey] || {})[tipo];
+  const inlineEl = document.getElementById('bk-prezzo-inline');
+  const recapEl  = document.getElementById('bk-prezzo-recap');
+  if(pr != null){
+    const txt = bkEur(pr) + ' €';
+    if(inlineEl){ inlineEl.textContent = 'Costo: ' + txt; inlineEl.style.display = 'block'; }
+    if(recapEl){ recapEl.querySelector('.bk-prezzo-val').textContent = txt; recapEl.style.display = ''; }
+  } else {
+    if(inlineEl){ inlineEl.style.display = 'none'; inlineEl.textContent = ''; }
+    if(recapEl){ recapEl.style.display = 'none'; }
+  }
 }
 
 function generateCancellationToken(){
@@ -8917,6 +8957,7 @@ function renderImpostazioni(){
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
   chk('imp-mostra-email',    S.settings.mostraEmailPazienti    !== false);
   chk('imp-mostra-telefono', S.settings.mostraTelefonoPazienti !== false);
+  chk('imp-mostra-tariffe',  S.settings.mostraTariffePazienti  === true);
   chk('imp-refertazione',    S.settings.refertazioneAttiva     !== false);
   const curSkin = localStorage.getItem('skin') || 'marine';
   document.querySelectorAll('.skin-swatch').forEach(b => b.classList.toggle('is-active', b.dataset.skin === curSkin));
@@ -8938,6 +8979,7 @@ async function saveImpostazione(toggleId){
     'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' },
     'imp-mostra-email':    { key: 'mostraEmailPazienti',    col: 'mostra_email_pazienti' },
     'imp-mostra-telefono': { key: 'mostraTelefonoPazienti', col: 'mostra_telefono_pazienti' },
+    'imp-mostra-tariffe':  { key: 'mostraTariffePazienti',  col: 'mostra_tariffe_pazienti' },
     'imp-refertazione':    { key: 'refertazioneAttiva',     col: 'refertazione_attiva' }
   };
   const m = mapping[toggleId];
