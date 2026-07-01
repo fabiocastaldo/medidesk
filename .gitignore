@@ -29,3 +29,5 @@ _diff.txt
 
 # Dependencies (Vercel reinstalla da package.json)
 node_modules/
+.env*.local
+_*.txt
