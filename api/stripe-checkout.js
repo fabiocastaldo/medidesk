@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   }
 
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=id`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) {
@@ -51,6 +51,9 @@ export default async function handler(req, res) {
   const medicoId = medicoData?.[0]?.id;
   if (!medicoId) {
     return res.status(403).json({ error: 'Account non autorizzato' });
+  }
+  if (medicoData[0].stato !== 'approvato') {
+    return res.status(403).json({ error: 'Account non ancora approvato' });
   }
 
   const body = req.body || {};
