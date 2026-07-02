@@ -834,6 +834,30 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   .heatmap-cell{height:28px;font-size:11px}
   .heatmap-label,.heatmap-row-label,.heatmap-row-total{font-size:10.5px}
 }
+.pln-wrap{max-width:1080px;margin:0 auto;padding:24px 16px}
+.pln-head h1{font-size:26px;font-weight:700;margin:0 0 6px}
+.pln-head p{color:var(--ink3,#64748b);margin:0 0 24px}
+.pln-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:14px}
+.pln-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:820px){.pln-grid{grid-template-columns:1fr}}
+.pln-card{position:relative;border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:24px 20px;background:var(--surface,#fff);display:flex;flex-direction:column}
+.pln-hero{border-color:var(--accent,#6366f1);box-shadow:0 8px 30px rgba(99,102,241,.15);transform:translateY(-4px)}
+.pln-ribbon{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--accent,#6366f1);color:#fff;font-size:11px;font-weight:700;letter-spacing:.3px;padding:4px 12px;border-radius:20px;white-space:nowrap}
+.pln-name{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.pln-price{font-size:34px;font-weight:800;line-height:1}
+.pln-price span{font-size:15px;font-weight:600;color:var(--ink3,#64748b)}
+.pln-note{color:var(--ink3,#64748b);font-size:13px;margin-top:4px}
+.pln-desc{font-size:14px;color:var(--ink2,#475569);margin:14px 0}
+.pln-feats{list-style:none;padding:0;margin:16px 0;display:flex;flex-direction:column;gap:8px}
+.pln-feats li{font-size:14px;padding-left:22px;position:relative}
+.pln-feats li:before{content:'✓';position:absolute;left:0;color:var(--accent,#6366f1);font-weight:700}
+.pln-cta{margin-top:auto;padding-top:16px}
+.pln-btn{width:100%}
+.pln-hint{font-size:13px;color:var(--ink3,#64748b)}
+.pln-current{background:#ecfdf5;color:#065f46;font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px}
+.pln-toggle{display:inline-flex;border:1px solid var(--border,#e2e8f0);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.pln-toggle button{border:none;background:none;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink3,#64748b);font-family:inherit}
+.pln-toggle button.on{background:var(--accent,#6366f1);color:#fff}
 </style>
 </head>
 <body>
@@ -1188,6 +1212,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('centri')"><span class="icon"><svg class="ic"><use href="#ic-center"/></svg></span><span>Centri</span></div>
       <div class="nav-item" onclick="showPage('prestazioni')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Prestazioni</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon"><svg class="ic"><use href="#ic-user"/></svg></span><span>Profilo</span></div>
+      <div class="nav-item" onclick="showPage('piani')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Piani</span></div>
       <div class="nav-item" onclick="showPage('statistiche')"><span class="icon"><svg class="ic"><use href="#ic-stats"/></svg></span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon"><svg class="ic"><use href="#ic-settings"/></svg></span><span>Impostazioni</span></div>
       <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon"><svg class="ic"><use href="#ic-archive"/></svg></span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px"><svg class="ic" style="color:#f59e0b"><use href="#ic-alert"/></svg></span></span></div>
@@ -1623,6 +1648,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
       </div>
     </div>
+
+    <!-- PIANI -->
+    <div id="page-piani" class="page"></div>
 
     <!-- MANUTENZIONE ARCHIVIO -->
     <div id="page-manutenzione-archivio" class="page">
@@ -3656,6 +3684,10 @@ loadConfig().then(checkView);
 
 function checkView(){
   const params = new URLSearchParams(location.search);
+  var _sub = params.get('sub');
+  if(_sub === 'success'){ showToast('Abbonamento attivato'); }
+  else if(_sub === 'cancel'){ showToast('Pagamento annullato'); }
+  if(_sub){ params.delete('sub'); var _q = params.toString(); history.replaceState(null,'', location.pathname + (_q ? ('?'+_q) : '') + location.hash); }
   const _legacyDoc = params.get('doc');
   if(_legacyDoc && location.pathname === '/'){
     location.replace(location.origin + '/m/' + encodeURIComponent(_legacyDoc));
@@ -3806,7 +3838,7 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','centri','prestazioni','profilo','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','centri','prestazioni','profilo','piani','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
@@ -3821,6 +3853,7 @@ function showPage(id){
   if(id==='centri') renderCentri();
   if(id==='prestazioni'){ renderPrestazioni(); renderTipiAree(); }
   if(id==='profilo'){ loadSettings(); prefillProfiloNome(); }
+  if(id==='piani') renderPiani();
   if(id==='dashboard'){ renderDashboard(); updateStats(); renderPending(); }
   if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
@@ -10764,6 +10797,86 @@ function goToTurniScadenza(){
     const first = document.querySelector('.turno-scadenza-vicina');
     if(first) first.scrollIntoView({ behavior:'smooth', block:'center' });
   }, 150);
+}
+
+var _piInterval = 'year';
+
+function piani_setInterval(iv){
+  _piInterval = iv;
+  var box = document.getElementById('pln-pro-price');
+  if(box){
+    box.innerHTML = (iv==='year')
+      ? '<div class="pln-price">€450<span>/anno</span></div><div class="pln-note">Due mesi in regalo</div>'
+      : '<div class="pln-price">€45<span>/mese</span></div><div class="pln-note">Meno di mezza visita al mese</div>';
+  }
+  var m=document.getElementById('pln-mtoggle'), y=document.getElementById('pln-ytoggle');
+  if(m&&y){ m.classList.toggle('on', iv==='month'); y.classList.toggle('on', iv==='year'); }
+}
+
+async function piani_checkout(piano, intervallo){
+  var jwt = await getAuthJwt();
+  if(!jwt){ showToast('Sessione scaduta, rientra'); return; }
+  try{
+    var r = await fetch('/api/stripe-checkout', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+jwt },
+      body: JSON.stringify({ piano: piano, intervallo: intervallo })
+    });
+    var d = await r.json().catch(function(){ return {}; });
+    if(!r.ok){ showToast(d.error || 'Errore nel checkout'); return; }
+    if(d.url){ window.location.href = d.url; } else { showToast('Risposta inattesa dal server'); }
+  }catch(e){ showToast('Errore di rete'); }
+}
+
+async function renderPiani(){
+  var el = document.getElementById('page-piani');
+  if(!el) return;
+  el.innerHTML = '<div class="pln-wrap"><div class="pln-note">Caricamento…</div></div>';
+  var piano='free', stato='';
+  try{
+    var res = await supabaseClient.from('medici').select('piano,stato').eq('id', S.medicoId).single();
+    if(res && res.data){ piano = res.data.piano || 'free'; stato = res.data.stato || ''; }
+  }catch(e){}
+  var approved = (stato === 'approvato');
+  function cur(p){ return piano===p ? '<span class="pln-current">Piano attuale</span>' : ''; }
+  function btn(label, onclick, isCurrent){
+    if(isCurrent) return '<button class="btn pln-btn" disabled>Piano attuale</button>';
+    if(!approved)  return '<button class="btn pln-btn" disabled>'+label+'</button>';
+    return '<button class="btn btn-primary pln-btn" onclick="'+onclick+'">'+label+'</button>';
+  }
+  var feats = '<ul class="pln-feats">'
+    + '<li>Cartella clinica multi-centro</li>'
+    + '<li>Agenda multi-centro</li>'
+    + '<li>Refertazione AI-assistita</li>'
+    + '<li>Prenotazione online</li>'
+    + '<li>Riconciliazione compensi</li>'
+    + '<li>Tutto illimitato</li></ul>';
+  el.innerHTML =
+    '<div class="pln-wrap">'
+    + '<div class="pln-head"><h1>Scegli il tuo piano</h1><p>Tutte le funzionalità, sempre. Cambia solo il prezzo.</p></div>'
+    + (approved ? '' : '<div class="pln-warn">Potrai attivare un piano dopo l\'approvazione dell\'account.</div>')
+    + '<div class="pln-grid">'
+      + '<div class="pln-card">'
+        + '<div class="pln-name">Free Trial ' + cur('free') + '</div>'
+        + '<div class="pln-price">Gratis</div><div class="pln-note">45 giorni, tutto incluso</div>'
+        + '<div class="pln-desc">Prova ogni funzionalità per 45 giorni. Nessuna carta richiesta.</div>'
+        + '<div class="pln-cta"><span class="pln-hint">Attivo alla registrazione</span></div>'
+      + '</div>'
+      + '<div class="pln-card pln-hero">'
+        + '<div class="pln-ribbon">Early bird · primi 35</div>'
+        + '<div class="pln-name">Founding ' + cur('founding') + '</div>'
+        + '<div class="pln-price">€35<span>/mese</span></div><div class="pln-note">Prezzo bloccato a vita</div>'
+        + feats
+        + '<div class="pln-cta">' + btn('Attiva Founding', "piani_checkout('founding','month')", piano==='founding') + '</div>'
+      + '</div>'
+      + '<div class="pln-card">'
+        + '<div class="pln-name">Pro ' + cur('pro') + '</div>'
+        + '<div class="pln-toggle"><button id="pln-mtoggle" onclick="piani_setInterval(\'month\')">Mensile</button><button id="pln-ytoggle" class="on" onclick="piani_setInterval(\'year\')">Annuale</button></div>'
+        + '<div id="pln-pro-price"><div class="pln-price">€450<span>/anno</span></div><div class="pln-note">Due mesi in regalo</div></div>'
+        + '<div class="pln-desc">Tutto ciò che c\'è in Founding.</div>'
+        + '<div class="pln-cta">' + btn('Passa a Pro', "piani_checkout('pro', _piInterval)", piano==='pro') + '</div>'
+      + '</div>'
+    + '</div></div>';
 }
 
 function renderArchivioPage(){
