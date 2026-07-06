@@ -3017,6 +3017,18 @@ let _appInitialized = false;
 let _inPasswordRecovery = false;
 let _pollingInterval = null;
 let _realtimeChannel = null;
+async function checkTrialExpiry(){
+  if(!isOnline() || !S.medicoId){ return; }
+  try{
+    var r = await supabaseClient.from('medici').select('piano,created_at').eq('id', S.medicoId).single();
+    if(!r || !r.data){ return; }
+    if(r.data.piano !== 'free'){ _trialExpired = false; return; }
+    var start = new Date(r.data.created_at).getTime();
+    var days  = (Date.now() - start) / 86400000;
+    if(days > 45){ _trialExpired = true; showPage('piani'); }
+  }catch(e){ /* fail-open: non blocca l'accesso su errore query */ }
+}
+
 let _bootstrapDone = false;
 async function showAppView(){
   if(_bootstrapDone){ console.log('[Delphi~Med] showAppView: bootstrap già eseguito, skip'); return; }
@@ -3053,6 +3065,7 @@ async function showAppView(){
   else renderAll();
   startDashboardPolling();
   startRealtimeChannel();
+  await checkTrialExpiry();
 }
 
 async function ensureMedicoRecord(user){
@@ -10800,6 +10813,7 @@ function goToTurniScadenza(){
 }
 
 var _piInterval = 'year';
+var _trialExpired = false;
 
 function piani_setInterval(iv){
   _piInterval = iv;
@@ -10854,6 +10868,7 @@ async function renderPiani(){
   el.innerHTML =
     '<div class="pln-wrap">'
     + '<div class="pln-head"><h1>Scegli il tuo piano</h1><p>Tutte le funzionalità, sempre. Cambia solo il prezzo.</p></div>'
+    + (_trialExpired ? '<div class="pln-warn" style="border-color:#c0392b;color:#c0392b">Il tuo periodo di prova di 45 giorni è terminato. Scegli un piano per continuare a usare tutte le funzionalità.</div>' : '')
     + (approved ? '' : '<div class="pln-warn">Potrai attivare un piano dopo l\'approvazione dell\'account.</div>')
     + '<div class="pln-grid">'
       + '<div class="pln-card">'
