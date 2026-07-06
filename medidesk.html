@@ -10812,7 +10812,7 @@ function goToTurniScadenza(){
   }, 150);
 }
 
-var _piInterval = 'year';
+var _piInterval = 'month';
 var _trialExpired = false;
 
 function piani_setInterval(iv){
@@ -10886,8 +10886,8 @@ async function renderPiani(){
       + '</div>'
       + '<div class="pln-card">'
         + '<div class="pln-name">Pro ' + cur('pro') + '</div>'
-        + '<div class="pln-toggle"><button id="pln-mtoggle" onclick="piani_setInterval(\'month\')">Mensile</button><button id="pln-ytoggle" class="on" onclick="piani_setInterval(\'year\')">Annuale</button></div>'
-        + '<div id="pln-pro-price"><div class="pln-price">€450<span>/anno</span></div><div class="pln-note">Due mesi in regalo</div></div>'
+        + '<div class="pln-toggle"><button id="pln-mtoggle" class="on" onclick="piani_setInterval(\'month\')">Mensile</button><button id="pln-ytoggle" onclick="piani_setInterval(\'year\')">Annuale</button></div>'
+        + '<div id="pln-pro-price"><div class="pln-price">€45<span>/mese</span></div><div class="pln-note">Meno di mezza visita al mese</div></div>'
         + '<div class="pln-desc">Tutto ciò che c\'è in Founding.</div>'
         + '<div class="pln-cta">' + btn('Passa a Pro', "piani_checkout('pro', _piInterval)", piano==='pro') + '</div>'
       + '</div>'
