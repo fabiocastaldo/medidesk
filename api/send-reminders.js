@@ -118,6 +118,8 @@ export default async function handler(req, res) {
 
   // 4. Notifiche turni in scadenza (60gg e 30gg)
   await checkTurniScadenza(base, headers, resend);
+  // 5. Reminder Free Trial in scadenza
+  await checkTrialScadenza(base, headers, resend);
 
   return res.status(200).json({ processed: appointments.length, sent, errors, date: tomorrow });
 }
@@ -251,6 +253,66 @@ async function processScadenzaSoglia(base, headers, { giorni, data, campo }, res
   console.log(`[turni-scadenza] soglia ${giorni}d: ${emailInviate} email inviate, ${turniNotificati} turni notificati`);
 }
 
+// ── REMINDER FREE TRIAL IN SCADENZA ──────────────────────────────────────────
+
+async function checkTrialScadenza(base, headers, resend) {
+  // Soglia: account creato >= 41 giorni fa (trial di 45gg, avviso ~4gg prima)
+  const isoSoglia = new Date(Date.now() - 41 * 24 * 60 * 60 * 1000).toISOString();
+
+  // a) Medici in trial (free) in scadenza, non ancora avvisati
+  let medici;
+  try {
+    const r = await fetch(
+      `${base}/medici?piano=eq.free&trial_reminder_sent_at=is.null&created_at=lte.${encodeURIComponent(isoSoglia)}&deleted_at=is.null&select=id,email,created_at`,
+      { headers }
+    );
+    if (!r.ok) throw new Error(`query medici ${r.status}`);
+    medici = await r.json();
+  } catch (e) {
+    console.error('[send-reminders] trial reminder query medici:', e.message);
+    return;
+  }
+
+  if (!medici.length) {
+    console.log('[send-reminders] nessun trial in scadenza');
+    return;
+  }
+
+  let emailInviate = 0;
+
+  // b) Invia il reminder e marca solo dopo invio riuscito (dedup)
+  for (const medico of medici) {
+    if (!medico.email) continue;
+
+    const subject = 'Il tuo periodo di prova Delphi~Med sta per scadere';
+    const html = buildTrialScadenzaHtml();
+
+    try {
+      const { error: emailErr } = await resend.emails.send({
+        from:    'noreply@delphi-med.com',
+        to:      [medico.email],
+        subject,
+        html
+      });
+      if (emailErr) throw new Error(emailErr.message);
+
+      // Aggiorna trial_reminder_sent_at solo se email OK
+      await fetch(`${base}/medici?id=eq.${medico.id}`, {
+        method:  'PATCH',
+        headers: { ...headers, 'Prefer': 'return=minimal' },
+        body:    JSON.stringify({ trial_reminder_sent_at: new Date().toISOString() })
+      });
+
+      emailInviate++;
+    } catch (e) {
+      console.error('[send-reminders] trial reminder error:', e.message);
+      // NON aggiorna trial_reminder_sent_at: verrà ritentato alla prossima esecuzione
+    }
+  }
+
+  console.log(`[send-reminders] trial reminder: ${emailInviate} email inviate`);
+}
+
 async function auditLogCron(base, headers, medicoId, action, targetType, targetId, details) {
   try {
     await fetch(`${base}/audit_log`, {
@@ -334,6 +396,18 @@ function buildScadenzaHtml({ medico, turni, giorni }) {
     noteBox('<strong>Cosa succede a scadenza</strong><br>&bull; Il turno non generer&agrave; pi&ugrave; nuovi slot prenotabili<br>&bull; Gli appuntamenti gi&agrave; prenotati restano in agenda') +
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">Se vuoi prorogare o modificare la scadenza, accedi a <strong>Delphi~Med &rarr; Centri</strong> e clicca il bottone calendario sul turno interessato.</p>` +
     `<p style="font-size:14px;color:#555;margin:0;">Buon lavoro,<br><strong>Delphi~Med</strong></p>`;
+  return emailShell(body);
+}
+
+function buildTrialScadenzaHtml() {
+  const body =
+    emailTitle('Il tuo periodo di prova sta per scadere') +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 12px;">Gentile Dottoressa, Gentile Dottore,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">la tua <strong>prova gratuita di 45 giorni</strong> di Delphi~Med sta per terminare. Ci auguriamo che questo periodo ti abbia permesso di apprezzare come Delphi~Med possa semplificare la gestione della tua attivit&agrave;.</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per continuare a usare Delphi~Med <strong>senza interruzioni</strong>, ti invitiamo a passare a un piano a pagamento prima della scadenza.</p>` +
+    ctaButton('https://delphi-med.com', 'Vai a Delphi~Med') +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">Accedi al tuo account e apri la pagina <strong>Piani</strong> per scegliere l&rsquo;abbonamento pi&ugrave; adatto alle tue esigenze.</p>` +
+    `<p style="font-size:14px;color:#555;margin:0;">A presto,<br><strong>Delphi~Med</strong></p>`;
   return emailShell(body);
 }
 
