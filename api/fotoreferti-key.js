@@ -1,4 +1,5 @@
 import { KMSClient, GenerateDataKeyCommand, DecryptCommand } from '@aws-sdk/client-kms';
+import { trialExpired } from '../lib/trial-gate.js';
 
 const kms = new KMSClient({ region: process.env.AWS_REGION || 'eu-central-1' });
 
@@ -33,7 +34,7 @@ export default async function handler(req, res) {
   }
 
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,referti_dek`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,referti_dek,piano,created_at`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) {
@@ -42,6 +43,9 @@ export default async function handler(req, res) {
   const medicoData = await medicoRes.json().catch(() => []);
   if (!medicoData?.[0] || medicoData[0].stato !== 'approvato') {
     return res.status(403).json({ error: 'Account non autorizzato' });
+  }
+  if (trialExpired(medicoData[0].piano, medicoData[0].created_at)) {
+    return res.status(403).json({ error: 'Periodo di prova scaduto', code: 'TRIAL_EXPIRED' });
   }
   const medico = medicoData[0];
   const medicoId = String(medico.id);

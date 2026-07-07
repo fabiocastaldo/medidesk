@@ -1,4 +1,5 @@
 import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
+import { trialExpired } from '../lib/trial-gate.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 10;
@@ -65,7 +66,7 @@ export default async function handler(req, res) {
   }
 
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,specializzazione`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,specializzazione,piano,created_at`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) {
@@ -74,6 +75,9 @@ export default async function handler(req, res) {
   const medicoData = await medicoRes.json().catch(() => []);
   if (!medicoData?.[0] || medicoData[0].stato !== 'approvato') {
     return res.status(403).json({ error: 'Account non autorizzato' });
+  }
+  if (trialExpired(medicoData[0].piano, medicoData[0].created_at)) {
+    return res.status(403).json({ error: 'Periodo di prova scaduto', code: 'TRIAL_EXPIRED' });
   }
   const spec = (medicoData[0].specializzazione || '').trim();
 
