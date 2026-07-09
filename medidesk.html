@@ -3017,6 +3017,19 @@ let _appInitialized = false;
 let _inPasswordRecovery = false;
 let _pollingInterval = null;
 let _realtimeChannel = null;
+async function trialGuard(response){
+  try {
+    if (response.status !== 403) return false;
+    const body = await response.clone().json();
+    if (body && body.code === 'TRIAL_EXPIRED'){
+      _trialExpired = true;
+      showPage('piani');
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
 async function checkTrialExpiry(){
   if(!isOnline() || !S.medicoId){ return; }
   try{
@@ -3564,6 +3577,7 @@ async function generaPresentazioneAI(){
       headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
       body: JSON.stringify(payload)
     });
+    if (await trialGuard(r)) return;
     const data = await r.json();
     if(!r.ok) throw new Error(data.error || 'Errore generazione');
     const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').trim();
@@ -4687,6 +4701,7 @@ async function importEstrai(){
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
       body: JSON.stringify(body)
     });
+    if (await trialGuard(resp)) return;
     if(!resp.ok){ const e = await resp.json().catch(()=>({})); throw new Error(e.error || ('HTTP ' + resp.status)); }
     const data = await resp.json();
     const raw = (data.content||[]).map(i=>i.text||'').join('').trim();
@@ -6270,6 +6285,7 @@ async function _getRefertiKey(){
     method: 'POST',
     headers: { 'Authorization': `Bearer ${session.access_token}` }
   });
+  if (await trialGuard(res)) throw new Error('TRIAL_EXPIRED');
   if(!res.ok) throw new Error('Impossibile ottenere la chiave di cifratura referti');
   const { dek } = await res.json();
   if(!dek) throw new Error('Chiave di cifratura referti mancante');
@@ -6490,6 +6506,7 @@ async function generaRefertoAI(pid, vid){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
       body:JSON.stringify({bozza, eta, tipo:v.tipo||'', data:v.data||''})
     });
+    if (await trialGuard(res)) return;
     if(!res.ok){
       const e=await res.json().catch(()=>({}));
       throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));
@@ -6798,6 +6815,7 @@ async function sintetizzaStoria(pazId){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt1},
       body:JSON.stringify({mode:'storia', eta, visite:sorted.map(v=>({data:v.data, clinica:v.clinica, referto:v.referto})), max_tokens:2000})
     });
+    if (await trialGuard(res)) return;
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const data=await res.json();
     const testo=data.content.map(i=>i.text||'').join('').trim();
@@ -6860,6 +6878,7 @@ async function sintetizzaReferti(pazId){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
       body:JSON.stringify({mode:'sintesi-referti', eta, files, refertiTesto, max_tokens:4096})
     });
+    if (await trialGuard(res)) return;
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const dataR=await res.json();
     const testo=dataR.content.map(i=>i.text||'').join('').trim();
@@ -7242,6 +7261,7 @@ async function generaRefertoModale(){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
       body:JSON.stringify({bozza,eta,tipo,data:dataV})
     });
+    if (await trialGuard(res)) return;
     if(!res.ok){
       const e=await res.json().catch(()=>({}));
       throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));
