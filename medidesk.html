@@ -3023,6 +3023,8 @@ async function trialGuard(response){
     const body = await response.clone().json();
     if (body && body.code === 'TRIAL_EXPIRED'){
       _trialExpired = true;
+      document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+      showToast('Il periodo di prova è terminato — scegli un piano per continuare a usare tutte le funzionalità', 4000);
       showPage('piani');
       return true;
     }
@@ -7211,7 +7213,7 @@ async function saveVisita(){
           throw vErr;
         }
         visita.id = dbV.id;
-      } catch(e){ console.error('[Delphi~Med] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return null; }
+      } catch(e){ if(e && e.message === 'TRIAL_EXPIRED'){ return null; } console.error('[Delphi~Med] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return null; }
     }
 
     paz.visite = paz.visite||[];
