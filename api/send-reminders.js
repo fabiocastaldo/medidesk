@@ -1,5 +1,11 @@
 import { Resend } from 'resend';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
+import { smsEnabled, sendSms } from '../lib/sms.js';
+
+// Helper a livello di modulo: un canale è utilizzabile solo se il relativo
+// contatto è presente e non vuoto.
+const hasEmail = a => !!(a.email_paziente && a.email_paziente.trim());
+const hasTel   = a => !!(a.telefono_paziente && a.telefono_paziente.trim());
 
 export default async function handler(req, res) {
   // Auth: CRON_SECRET obbligatorio. Vercel Cron lo inietta automaticamente
@@ -37,18 +43,19 @@ export default async function handler(req, res) {
   let appointments;
   try {
     const r = await fetch(
-      `${base}/appuntamenti?data=eq.${tomorrow}&cancelled=eq.false&reminder_sent=eq.false&email_paziente=not.is.null`,
+      `${base}/appuntamenti?data=eq.${tomorrow}&cancelled=eq.false&or=(and(email_paziente.not.is.null,reminder_sent.eq.false),and(telefono_paziente.not.is.null,sms_sent_at.is.null))`,
       { headers }
     );
     if (!r.ok) throw new Error(`Supabase query failed: ${r.status}`);
     const all = await r.json();
-    appointments = all.filter(a => a.email_paziente && a.email_paziente.trim() !== '');
+    appointments = all.filter(a => hasEmail(a) || hasTel(a));
   } catch (e) {
     console.error('[send-reminders] query appuntamenti:', e.message);
     return res.status(500).json({ error: e.message });
   }
 
   let sent = 0, errors = 0;
+  let smsSent = 0, smsErrors = 0;
 
   if (appointments.length) {
     // 2. Fetch centri e medici in batch (evita N+1)
@@ -89,29 +96,60 @@ export default async function handler(req, res) {
       const dataFmt       = formatDateIt(appt.data);
       const centroIndirizzo = buildAddress(centro);
 
-      const subject = `Promemoria visita di domani — ${medicoNome}`;
-      const html    = buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora: appt.ora, tipoVisita: appt.tipo_visita, centroNome: centro.nome, centroIndirizzo });
+      // Un solo PATCH per riga, a contenuto variabile: ogni canale scrive il
+      // proprio flag di dedup solo su invio riuscito. I due rami sono
+      // indipendenti — il fallimento di uno non salta l'altro.
+      const patch = {};
 
-      try {
-        const { error: emailErr } = await resend.emails.send({
-          from:     'noreply@delphi-med.com',
-          to:       [appt.email_paziente],
-          subject,
-          html,
-          ...(medico.email ? { reply_to: medico.email } : {})
+      // RAMO EMAIL — invariato rispetto a prima (stesso subject/html/reply_to).
+      if (hasEmail(appt) && !appt.reminder_sent) {
+        const subject = `Promemoria visita di domani — ${medicoNome}`;
+        const html    = buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora: appt.ora, tipoVisita: appt.tipo_visita, centroNome: centro.nome, centroIndirizzo });
+        try {
+          const { error: emailErr } = await resend.emails.send({
+            from:     'noreply@delphi-med.com',
+            to:       [appt.email_paziente],
+            subject,
+            html,
+            ...(medico.email ? { reply_to: medico.email } : {})
+          });
+          if (emailErr) throw new Error(emailErr.message);
+          patch.reminder_sent = true;
+          sent++;
+        } catch (e) {
+          console.error(`[send-reminders] appt ${appt.id} email:`, e.message);
+          errors++;
+          // NON aggiorna reminder_sent: verrà ritentato alla prossima esecuzione
+        }
+      }
+
+      // RAMO SMS — inerte senza env Skebby (smsEnabled() false).
+      if (smsEnabled() && hasTel(appt) && !appt.sms_sent_at) {
+        const r = await sendSms({
+          to:   appt.telefono_paziente,
+          text: buildReminderSms({ medicoNome, dataShort: formatDateShort(appt.data), ora: String(appt.ora || '').substring(0, 5), centroNome: centro.nome })
         });
-        if (emailErr) throw new Error(emailErr.message);
-        // Marca come inviato solo se l'email è andata a buon fine
+        if (r.ok) {
+          patch.sms_sent_at = new Date().toISOString();
+          smsSent++;
+        } else if (r.skipped) {
+          // Numero non valido/assente o provider off: niente patch. Domani la
+          // visita è passata, quindi nessun retry infinito.
+          console.log(`[send-reminders] appt ${appt.id} sms skipped: ${r.skipped}`);
+        } else {
+          console.error(`[send-reminders] appt ${appt.id} sms:`, r.error);
+          smsErrors++;
+          // NON aggiorna sms_sent_at: verrà ritentato alla prossima esecuzione
+        }
+      }
+
+      // Un solo PATCH con quanto effettivamente riuscito.
+      if (Object.keys(patch).length) {
         await fetch(`${base}/appuntamenti?id=eq.${appt.id}`, {
           method:  'PATCH',
           headers: { ...headers, 'Prefer': 'return=minimal' },
-          body:    JSON.stringify({ reminder_sent: true })
+          body:    JSON.stringify(patch)
         });
-        sent++;
-      } catch (e) {
-        console.error(`[send-reminders] appt ${appt.id}:`, e.message);
-        errors++;
-        // NON aggiorna reminder_sent: verrà ritentato alla prossima esecuzione
       }
     }
   }
@@ -121,7 +159,7 @@ export default async function handler(req, res) {
   // 5. Reminder Free Trial in scadenza
   await checkTrialScadenza(base, headers, resend);
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, date: tomorrow });
+  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, date: tomorrow });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
@@ -357,6 +395,13 @@ function formatDateIt(dateStr) {
   } catch (_) { return dateStr; }
 }
 
+// 'YYYY-MM-DD' → 'DD/MM'. Split della stringa (niente Date locale-dipendente).
+// Da NON usare formatDateIt per l'SMS: contiene accenti (non GSM-7).
+function formatDateShort(dateStr) {
+  const [, m, d] = String(dateStr || '').split('-');
+  return (d && m) ? `${d}/${m}` : String(dateStr || '');
+}
+
 function buildAddress(centro) {
   return [
     centro.via,
@@ -409,6 +454,20 @@ function buildTrialScadenzaHtml() {
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">Accedi al tuo account e apri la pagina <strong>Piani</strong> per scegliere l&rsquo;abbonamento pi&ugrave; adatto alle tue esigenze.</p>` +
     `<p style="font-size:14px;color:#555;margin:0;">A presto,<br><strong>Delphi~Med</strong></p>`;
   return emailShell(body);
+}
+
+// SMS promemoria: GSM-7, sotto 160 caratteri, senza tipo_visita/area_tematica.
+// Nessun accento, nessuna tilde (Delphi-Med, non Delphi~Med).
+function buildReminderSms({ medicoNome, dataShort, ora, centroNome }) {
+  const centro = centroNome || 'il centro';
+  const build = c => `Promemoria: visita domani ${dataShort} alle ${ora} con ${medicoNome} presso ${c}. Delphi-Med`;
+  let text = build(centro);
+  if (text.length > 155) {
+    const overflow = text.length - 155;
+    const trimmed = centro.slice(0, Math.max(0, centro.length - overflow)).trimEnd();
+    text = build(trimmed);
+  }
+  return text;
 }
 
 function buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora, tipoVisita, centroNome, centroIndirizzo }) {
