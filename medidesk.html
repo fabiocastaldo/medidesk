@@ -506,7 +506,6 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 /* ── BOTTOM NAV (mobile) ── */
 .bottom-nav{display:none}
 .mobile-header{display:none}
-.mobile-actions{display:none}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
@@ -526,18 +525,15 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
   .bottom-nav-item .bn-icon{font-size:22px;line-height:1}
   .bottom-nav-item .bn-label{font-size:10px;font-weight:600;letter-spacing:.3px}
 
-  /* Drawer azioni secondarie — tira su la maniglia per Statistiche/Impostazioni/Esci */
-  .mobile-actions{--ma-panel-h:66px;display:block;position:fixed;left:0;right:0;bottom:var(--nav-h,64px);z-index:99;background:var(--surface);border-top:1px solid var(--border);border-radius:16px 16px 0 0;box-shadow:0 -6px 20px rgba(0,0,0,.10);transform:translateY(var(--ma-panel-h));transition:transform .25s cubic-bezier(.32,.72,0,1)}
-  .mobile-actions.ma-open{transform:translateY(0)}
-  .mobile-actions.ma-dragging{transition:none}
-  .ma-handle{height:26px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent}
-  .ma-handle:active{cursor:grabbing}
-  .ma-grabber{width:38px;height:5px;border-radius:3px;background:var(--ink3)}
-  .ma-panel{height:var(--ma-panel-h);display:flex;align-items:center;justify-content:space-around;padding:0 8px}
-  .ma-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:6px 4px;color:var(--ink2);font-family:'DM Sans',sans-serif}
-  .ma-item .ma-ico{font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;height:22px}
-  .ma-item .ma-lbl{font-size:10px;font-weight:600;letter-spacing:.3px}
-  .ma-item:active{color:var(--brand-mid)}
+  /* Pagina Menu (mobile) — griglia che sostituisce il drawer */
+  .mnu-sec{margin-bottom:24px}
+  .mnu-sec-title{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink3);margin-bottom:10px}
+  .mnu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .mnu-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;aspect-ratio:1/1;min-height:92px;padding:14px 6px;border-radius:18px;background:var(--surface);border:1px solid var(--border);cursor:pointer;color:var(--ink2);font-family:'DM Sans',sans-serif}
+  .mnu-item .mnu-ico{font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;height:28px;color:var(--accent)}
+  .mnu-item .mnu-lbl{font-size:11px;font-weight:600;line-height:1.25;text-align:center}
+  .mnu-item:active{border-color:var(--accent)}
+  .mnu-logout .mnu-ico{color:var(--warm)}
 
   /* Resto */
   .grid-2,.grid-3{grid-template-columns:1fr}
@@ -1201,6 +1197,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <symbol id="ic-hourglass" viewBox="0 0 24 24"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></symbol>
   <symbol id="ic-sparkles" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
   <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+  <symbol id="ic-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
 </svg>
 <div id="view-app" class="app" style="display:none">
   <aside class="sidebar">
@@ -1826,19 +1824,33 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
 
     </div>
-  </main>
 
-  <!-- DRAWER AZIONI SECONDARIE (mobile) — tira su la maniglia per Statistiche / Impostazioni / Esci -->
-  <div class="mobile-actions" id="mobile-actions">
-    <div class="ma-handle" id="ma-handle" role="button" tabindex="0" aria-label="Apri menu azioni" aria-expanded="false"><span class="ma-grabber"></span></div>
-    <div class="ma-panel">
-      <button class="ma-item" onclick="showPage('statistiche')"><span class="ma-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="ma-lbl">Statistiche</span></button>
-      <button class="ma-item" onclick="showPage('prestazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="ma-lbl">Prestazioni</span></button>
-      <button class="ma-item" onclick="showPage('impostazioni')"><span class="ma-ico"><svg class="ic"><use href="#ic-settings"/></svg></span><span class="ma-lbl">Impostazioni</span></button>
-      <button class="ma-item" onclick="showPage('manutenzione-archivio')"><span class="ma-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="ma-lbl">Archivio</span></button>
-      <button class="ma-item ma-logout" id="mobile-logout-btn" onclick="signOut()"><span class="ma-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span><span class="ma-lbl">Esci</span></button>
+    <!-- MENU (mobile) -->
+    <div id="page-menu" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Menu</div>
+          <div class="page-subtitle">Tutte le sezioni</div>
+        </div>
+      </div>
+      <div class="mnu-sec">
+        <div class="mnu-sec-title">Gestione</div>
+        <div class="mnu-grid">
+          <button class="mnu-item" onclick="showPage('prestazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Prestazioni</span></button>
+          <button class="mnu-item" onclick="showPage('statistiche')"><span class="mnu-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="mnu-lbl">Statistiche</span></button>
+          <button class="mnu-item" onclick="showPage('manutenzione-archivio')"><span class="mnu-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="mnu-lbl">Archivio</span></button>
+        </div>
+      </div>
+      <div class="mnu-sec">
+        <div class="mnu-sec-title">Account</div>
+        <div class="mnu-grid">
+          <button class="mnu-item" onclick="showPage('profilo')"><span class="mnu-ico"><svg class="ic"><use href="#ic-user"/></svg></span><span class="mnu-lbl">Profilo</span></button>
+          <button class="mnu-item" onclick="showPage('impostazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-settings"/></svg></span><span class="mnu-lbl">Impostazioni</span></button>
+          <button class="mnu-item mnu-logout" id="mobile-logout-btn" onclick="signOut()"><span class="mnu-ico"><svg class="ic"><use href="#ic-logout"/></svg></span><span class="mnu-lbl">Esci</span></button>
+        </div>
+      </div>
     </div>
-  </div>
+  </main>
 
   <!-- BOTTOM NAVIGATION (visible only on mobile) -->
   <nav class="bottom-nav">
@@ -1858,9 +1870,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <span class="bn-icon"><svg class="ic"><use href="#ic-center"/></svg></span>
       <span class="bn-label">Centri</span>
     </button>
-    <button class="bottom-nav-item" data-page="profilo" onclick="showPage('profilo')">
-      <span class="bn-icon"><svg class="ic"><use href="#ic-user"/></svg></span>
-      <span class="bn-label">Profilo</span>
+    <button class="bottom-nav-item" data-page="menu" onclick="showPage('menu')">
+      <span class="bn-icon"><svg class="ic"><use href="#ic-menu"/></svg></span>
+      <span class="bn-label">Menu</span>
     </button>
   </nav>
 </div>
@@ -3461,7 +3473,7 @@ function updateLogoutButtons(){
   const s = document.getElementById('sidebar-logout-btn');
   const m = document.getElementById('mobile-logout-btn');
   if(s) s.style.display = show ? 'flex'  : 'none';
-  if(m) m.style.display = show ? 'block' : 'none';
+  if(m) m.style.display = show ? '' : 'none';
 }
 
 // ── AUTH UI HELPERS ──
@@ -3791,76 +3803,7 @@ function renderAll(){
 }
 
 // ── NAV ──
-// ── Fase 4: drawer azioni mobile — maniglia trascinabile (drag + tap), snap al rilascio ──
-function initMobileActions(){
-  const sheet  = document.getElementById('mobile-actions');
-  const handle = document.getElementById('ma-handle');
-  const nav    = document.querySelector('.bottom-nav');
-  if(!sheet || !handle) return;
-
-  // altezza nav -> --nav-h (ancora il drawer sopra la bottom-nav, anche post-login/safe-area)
-  function setNavHeight(){
-    if(!nav) return;
-    const h = nav.offsetHeight;
-    if(h > 0) document.documentElement.style.setProperty('--nav-h', h + 'px');
-  }
-  setNavHeight();
-  window.addEventListener('resize', setNavHeight);
-  if('ResizeObserver' in window && nav){ new ResizeObserver(setNavHeight).observe(nav); }
-
-  const H = () => parseFloat(getComputedStyle(sheet).getPropertyValue('--ma-panel-h')) || 66;
-  const isOpen = () => sheet.classList.contains('ma-open');
-  function setOpen(open){
-    sheet.classList.toggle('ma-open', open);
-    handle.setAttribute('aria-expanded', open ? 'true' : 'false');
-  }
-
-  // ── Drag della maniglia (Pointer Events): segue il dito, snap aperto/chiuso al rilascio ──
-  let startY = 0, startT = 0, lastT = 0, dragging = false, moved = 0;
-  handle.addEventListener('pointerdown', e => {
-    dragging = true; moved = 0; startY = e.clientY;
-    startT = isOpen() ? 0 : H(); lastT = startT;   // translate corrente (px): 0=aperto, H=chiuso
-    sheet.classList.add('ma-dragging');            // transizione off -> 1:1 col dito
-    handle.setPointerCapture(e.pointerId);
-  });
-  handle.addEventListener('pointermove', e => {
-    if(!dragging) return;
-    const dy = e.clientY - startY;
-    moved = Math.max(moved, Math.abs(dy));
-    lastT = Math.min(H(), Math.max(0, startT + dy));
-    sheet.style.transform = 'translateY(' + lastT + 'px)';
-  });
-  function endDrag(){
-    if(!dragging) return;
-    dragging = false;
-    sheet.classList.remove('ma-dragging');
-    sheet.style.transform = '';                    // torna al controllo via classe (con transizione)
-    if(moved < 6) setOpen(!isOpen());              // tap -> toggle
-    else setOpen(lastT < H() / 2);                 // drag -> snap secondo posizione finale
-  }
-  handle.addEventListener('pointerup', endDrag);
-  handle.addEventListener('pointercancel', endDrag);
-
-  // accessibilità: Invio/Spazio sulla maniglia = toggle
-  handle.addEventListener('keydown', e => {
-    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); setOpen(!isOpen()); }
-  });
-
-  // tap su un'azione -> chiudi (l'onclick del button naviga prima)
-  const panel = sheet.querySelector('.ma-panel');
-  if(panel) panel.addEventListener('click', () => setOpen(false));
-
-  // tap fuori dal drawer -> chiudi
-  document.addEventListener('pointerdown', e => {
-    if(isOpen() && !sheet.contains(e.target)) setOpen(false);
-  });
-}
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', initMobileActions);
 document.addEventListener('DOMContentLoaded',()=>{const fy=document.getElementById('footer-year');if(fy)fy.textContent=new Date().getFullYear();});
-} else {
-  initMobileActions();
-}
 
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -3873,7 +3816,9 @@ function showPage(id){
     }
   });
   // Sync bottom nav
-  const bnItem = document.querySelector(`.bottom-nav-item[data-page="${id}"]`);
+  const _menuPages = ['profilo','statistiche','prestazioni','impostazioni','manutenzione-archivio'];
+  const bnKey = _menuPages.includes(id) ? 'menu' : id;
+  const bnItem = document.querySelector(`.bottom-nav-item[data-page="${bnKey}"]`);
   if(bnItem) bnItem.classList.add('active');
   // Scroll to top on mobile
   window.scrollTo({top:0,behavior:'smooth'});
