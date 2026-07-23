@@ -2799,7 +2799,7 @@ async function signUp(){
 }
 
 function buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordineProvincia, approveLink }){
-  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function esc(s){ return escapeHtml(s); }
   return `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#f0f4f4;font-family:Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
@@ -6769,7 +6769,7 @@ async function sintetizzaStoria(pazId){
     container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
   } catch(err){
-    container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${err.message}</div>`;
+    container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${escapeHtml(err.message)}</div>`;
   } finally{
     if(btn) btn.disabled=false;
   }
@@ -6832,7 +6832,7 @@ async function sintetizzaReferti(pazId){
     container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
   } catch(err){
-    container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${err.message}</div>`;
+    container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${escapeHtml(err.message)}</div>`;
   } finally{
     if(btn) btn.disabled=false;
   }
@@ -6885,8 +6885,8 @@ function renderVisitaPazienti(){
     return `<div class="paziente-pick" onclick="visitaSelectFromAppt('${a.id}')">
       <div class="avatar-sm">${ini.toUpperCase()}</div>
       <div class="info">
-        <strong>${a.cognome} ${a.nome}</strong>
-        <span>${a.tipo||'Visita'}${a.area?' · '+a.area:''}</span>
+        <strong>${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</strong>
+        <span>${escapeHtml(a.tipo||'Visita')}${a.area?' · '+escapeHtml(a.area):''}</span>
       </div>
       <span class="ora">${a.ora}</span>
     </div>`;
@@ -6910,7 +6910,7 @@ function renderVisitaSearchResults(){
     return `<div class="paziente-pick" onclick="visitaSelectExisting('${p.id}')">
       <div class="avatar-sm">${ini.toUpperCase()}</div>
       <div class="info">
-        <strong>${p.cognome} ${p.nome}</strong>
+        <strong>${escapeHtml(p.cognome)} ${escapeHtml(p.nome)}</strong>
         <span>${n} ${n===1?'visita':'visite'} in archivio</span>
       </div>
     </div>`;
@@ -6967,7 +6967,7 @@ function goToVisitaUpload(paziente, appt){
   const infoEl = document.getElementById('visita-paziente-info');
   if(paziente){
     infoEl.innerHTML = `
-      <div class="confirm-row"><span class="confirm-key">Paziente</span><span><strong>${paziente.cognome} ${paziente.nome}</strong></span></div>
+      <div class="confirm-row"><span class="confirm-key">Paziente</span><span><strong>${escapeHtml(paziente.cognome)} ${escapeHtml(paziente.nome)}</strong></span></div>
       ${appt ? `<div class="confirm-row"><span class="confirm-key">Appuntamento</span><span>${formatDate(appt.data)} ore ${appt.ora}</span></div>` : ''}
     `;
     // Nascondi i campi anagrafici (già noti) ma li lascio editabili nascosti
@@ -7356,9 +7356,18 @@ function renderSlugPreview(){
 }
 function buildSocialRow(st){
   const links=[];
-  const addLink=(icon,href,title)=>links.push(`<a href="${href}" class="bk-social-link" title="${title}" target="_blank" rel="noopener">${SOCIAL_ICONS[icon]}</a>`);
-  if(st.email)     links.push(`<a href="mailto:${st.email}" class="bk-social-link" title="Email">${SOCIAL_ICONS.email}</a>`);
-  if(st.telefono)  links.push(`<a href="tel:${st.telefono}" class="bk-social-link" title="Telefono">${SOCIAL_ICONS.phone}</a>`);
+  const safeUrl=(v)=>{
+    const s=String(v||'').trim();
+    if(!s) return '';
+    const bare=s.replace(/[\x00-\x20\x7f]+/g,'').toLowerCase();
+    if(/^(javascript|data|vbscript):/.test(bare)) return '';
+    if(/^https?:\/\//i.test(s)) return s;
+    if(s.indexOf('.')!==-1 && !/\s/.test(s)) return 'https://'+s;
+    return '';
+  };
+  const addLink=(icon,href,title)=>{ const u=safeUrl(href); if(!u) return; links.push(`<a href="${escapeAttr(u)}" class="bk-social-link" title="${escapeAttr(title)}" target="_blank" rel="noopener">${SOCIAL_ICONS[icon]}</a>`); };
+  if(st.email)     links.push(`<a href="mailto:${escapeAttr(st.email)}" class="bk-social-link" title="Email">${SOCIAL_ICONS.email}</a>`);
+  if(st.telefono)  links.push(`<a href="tel:${escapeAttr(st.telefono)}" class="bk-social-link" title="Telefono">${SOCIAL_ICONS.phone}</a>`);
   if(st.sitoWeb){  const u=st.sitoWeb.startsWith('http')?st.sitoWeb:'https://'+st.sitoWeb; addLink('web',u,'Sito web'); }
   if(st.linkedin){ const u=st.linkedin.startsWith('http')?st.linkedin:'https://linkedin.com/in/'+st.linkedin; addLink('linkedin',u,'LinkedIn'); }
   if(st.instagram){const u=st.instagram.replace(/^@/,''); addLink('instagram','https://instagram.com/'+u,'Instagram'); }
@@ -7888,7 +7897,7 @@ function bkRenderHero(m){
       if(m.anni_esperienza) tags.push(m.anni_esperienza+' anni di esperienza');
       if(m.numero_iscrizione_ordine) tags.push('Albo n. '+m.numero_iscrizione_ordine+(m.provincia_ordine?' ('+m.provincia_ordine+')':''));
       (m.lingue||[]).forEach(l=>tags.push(l));
-      tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+      tagsEl.innerHTML = tags.map(t=>`<span class="bk-tag">${escapeHtml(t)}</span>`).join('');
     }
   }
   const socialEl = document.getElementById('bk-social-row');
@@ -8032,7 +8041,7 @@ async function bkInit(){
     document.getElementById('bk-doctor-spec').textContent=[...new Set([S.settings.spec, ...(S.settings.specAltre || [])].filter(Boolean))].join(' · ');
     const avatarEl=document.getElementById('bk-avatar-display');
     const ini=fullName.trim().split(/\s+/).filter(w=>!/^(Dr\.|Dott\.|Dott\.ssa|Prof\.|Prof\.ssa)$/.test(w)).map(w=>w[0]||'').join('').substring(0,2).toUpperCase()||'M';
-    if(S.settings.foto_url){ avatarEl.innerHTML=`<img src="${S.settings.foto_url}" alt="${fullName}">`; }
+    if(S.settings.foto_url){ avatarEl.innerHTML=`<img src="${escapeAttr(S.settings.foto_url)}" alt="${escapeAttr(fullName)}">`; }
     else { avatarEl.textContent=ini; }
     const tagsEl=document.getElementById('bk-hero-tags');
     if(tagsEl){
@@ -8040,7 +8049,7 @@ async function bkInit(){
       if(S.settings.esperienza) tags.push(S.settings.esperienza+' anni di esperienza');
       if(S.settings.albo) tags.push('Albo n. '+S.settings.albo+(S.settings.alboProvincia?' ('+S.settings.alboProvincia+')':''));
       (S.settings.lingue||[]).forEach(l=>tags.push(l));
-      tagsEl.innerHTML=tags.map(t=>`<span class="bk-tag">${t}</span>`).join('');
+      tagsEl.innerHTML=tags.map(t=>`<span class="bk-tag">${escapeHtml(t)}</span>`).join('');
     }
     const socialEl=document.getElementById('bk-social-row');
     if(socialEl) socialEl.innerHTML=buildSocialRow({
@@ -8107,7 +8116,7 @@ function renderBkCentri(){
   const MAX_DATE=4;
   el.innerHTML=eligibili.map(c=>{
     if(c.gestione==='centro'){
-      return `<div class="centro-btn centro-btn-disabled" aria-disabled="true"><strong>${c.nome}</strong><span>${c.indirizzo||''}</span><div class="bk-centro-note">Per prenotare in questo centro contatta direttamente la struttura.</div></div>`;
+      return `<div class="centro-btn centro-btn-disabled" aria-disabled="true"><strong>${escapeHtml(c.nome)}</strong><span>${escapeHtml(c.indirizzo||'')}</span><div class="bk-centro-note">Per prenotare in questo centro contatta direttamente la struttura.</div></div>`;
     }
     const feriali=[...new Set((c.turni||[]).map(t=>t.giorno))].sort((a,b)=>a-b).map(g=>GIORNI_BK[g]);
     const future=(c.giornateSingole||[]).filter(g=>g.data>=_today).map(g=>g.data).sort();
@@ -8116,8 +8125,8 @@ function renderBkCentri(){
     const chips=[...feriali, ...dateChips, ...(extra>0?['+'+extra]:[])];
     const days=chips.length?`<div class="bk-days">${chips.map(x=>`<span class="bk-day">${x}</span>`).join('')}</div>`:'';
     return `<div class="centro-btn" onclick="bkSelectCentro('${c.id}')">
-      <strong>${c.nome}</strong>
-      <span>${c.indirizzo||''}</span>
+      <strong>${escapeHtml(c.nome)}</strong>
+      <span>${escapeHtml(c.indirizzo||'')}</span>
       ${days}
     </div>`;
   }).join('');
@@ -8180,10 +8189,10 @@ function bkSelectSlot(ora){
   const centro=S.centri.find(c=>String(c.id)===String(bk.centroId));
   const d=new Date(bk.dateStr+'T12:00:00');
   document.getElementById('bk-confirm-summary').innerHTML=`
-    <div class="confirm-row"><span class="confirm-key">Centro</span><span>${centro?centro.nome:'—'}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Centro</span><span>${centro?escapeHtml(centro.nome):'—'}</span></div>
     <div class="confirm-row"><span class="confirm-key">Data</span><span>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</span></div>
     <div class="confirm-row"><span class="confirm-key">Orario</span><span>${ora}</span></div>
-    ${centro&&centro.indirizzo?`<div class="confirm-row"><span class="confirm-key">Dove</span><span>${centro.indirizzo}</span></div>`:''}
+    ${centro&&centro.indirizzo?`<div class="confirm-row"><span class="confirm-key">Dove</span><span>${escapeHtml(centro.indirizzo)}</span></div>`:''}
     <div class="confirm-row" id="bk-prezzo-recap" style="display:none"><span class="confirm-key">Costo</span><span class="bk-prezzo-val"></span></div>
   `;
   bkUpdatePrezzo();
@@ -8816,13 +8825,14 @@ function renderChiusure(){
   el.innerHTML=sorted.map(ch=>{
     const centriAssoc=(ch.centri_ids||[]).map(cid=>{
       const c=S.centri.find(x=>String(x.id)===String(cid));
-      return c?`<span class="chiusura-centro-tag" style="background:${c.colore}22;color:${c.colore}">${c.nome}</span>`:'';
+      const col=/^#[0-9a-fA-F]{3,8}$/.test(String((c&&c.colore)||''))?c.colore:'#0D9488';
+      return c?`<span class="chiusura-centro-tag" style="background:${col}22;color:${col}">${escapeHtml(c.nome)}</span>`:'';
     }).filter(Boolean).join('');
     return `<div class="chiusura-card">
       <div class="chiusura-icon"><svg class="ic"><use href="#ic-sun"/></svg></div>
       <div class="chiusura-info">
         <div class="chiusura-range">${formatDate(ch.data_inizio)} — ${formatDate(ch.data_fine)}</div>
-        <div class="chiusura-label">${ch.etichetta||'Chiusura'}</div>
+        <div class="chiusura-label">${escapeHtml(ch.etichetta||'Chiusura')}</div>
         <div class="chiusura-centri">${centriAssoc||'<span class="chiusura-centro-tag">Tutti i centri</span>'}</div>
       </div>
       <button class="btn btn-sm btn-secondary" style="color:var(--warm);flex-shrink:0" onclick="deleteChiusura('${ch.id}')"><svg class="ic"><use href="#ic-trash"/></svg></button>
@@ -8957,8 +8967,8 @@ function _renderPazientiCards(list){
     return `<div class="paziente-card" onclick="showPazienteDetail('${p.id}')">
       <div class="paziente-avatar">${initials.toUpperCase()}</div>
       <div class="paziente-info">
-        <div class="paziente-name">${p.cognome} ${p.nome}</div>
-        <div class="paziente-meta">${p.nascita?'Nato/a il '+p.nascita:''}</div>
+        <div class="paziente-name">${escapeHtml(p.cognome)} ${escapeHtml(p.nome)}</div>
+        <div class="paziente-meta">${p.nascita?'Nato/a il '+escapeHtml(p.nascita):''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span style="font-size:12px;color:var(--accent);font-weight:500">${n} ${n===1?'visita':'visite'}</span>
