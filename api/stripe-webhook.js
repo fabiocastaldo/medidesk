@@ -1,4 +1,6 @@
-// api/stripe-webhook.js — webhook Stripe (TEST MODE). Web-style handler per raw body deterministico.
+// api/stripe-webhook.js — webhook Stripe (TEST MODE). Node-style handler (req, res) per raw body deterministico.
+// Idempotente: lo stato dell'abbonamento viene riletto da Stripe (subscriptions.retrieve),
+// mai dedotto dal payload dell'evento, che puo' essere stale su replay o consegna fuori ordine.
 // Verifica firma via SDK, poi upsert subscriptions + gating medici via PostgREST service_role.
 // Gestisce customer.subscription.created/updated/deleted; 200 sul resto (no retry storm).
 import Stripe from 'stripe';
@@ -93,9 +95,19 @@ export default async function handler(req, res) {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-      case 'customer.subscription.deleted':
-        await applySubscription(event.data.object);
+      case 'customer.subscription.deleted': {
+        const subId = event.data.object?.id;
+        if (!subId) {
+          console.warn('[stripe-webhook] evento senza subscription id, ignorato:', event.id);
+          break;
+        }
+        // Lo stato corrente lo chiede a Stripe, non lo deduce dall'evento:
+        // il payload puo' essere gia' superato (replay o consegna fuori ordine).
+        // Cosi' la scrittura e' idempotente per costruzione.
+        const fresh = await stripe.subscriptions.retrieve(subId);
+        await applySubscription(fresh);
         break;
+      }
       default:
         break;
     }
