@@ -32,6 +32,36 @@ async function applySubscription(sub) {
   };
   const nowIso = new Date().toISOString();
 
+  // Guardia per-medico: subscriptions ha una riga sola per medico (on_conflict=medico_id).
+  // Un evento terminale in ritardo su una subscription gia' superata la riscriverebbe
+  // all'indietro. Se la riga punta a un'altra subscription ancora viva, l'evento si ignora.
+  // Headers dedicati: sHeaders porta Prefer return=minimal, che su GET puo' svuotare il corpo.
+  if (isDeleted) {
+    const rGet = await fetch(
+      `${base}/subscriptions?medico_id=eq.${encodeURIComponent(medicoId)}&select=stripe_subscription_id,status`,
+      {
+        headers: {
+          'apikey':        process.env.SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+        }
+      }
+    );
+    if (!rGet.ok) throw new Error(`get subscriptions ${rGet.status}: ${await rGet.text().catch(() => '')}`);
+    const rows = await rGet.json().catch(() => null);
+    const cur  = Array.isArray(rows) ? rows[0] : null;
+    const curTerminale = !cur || cur.status === 'canceled' || cur.status === 'incomplete_expired';
+    if (cur && cur.stripe_subscription_id && cur.stripe_subscription_id !== sub.id && !curTerminale) {
+      console.warn('[stripe-webhook] evento terminale su subscription superata, ignorato:', JSON.stringify({
+        evento:       sub.id,
+        eventoStatus: sub.status,
+        riga:         cur.stripe_subscription_id,
+        rigaStatus:   cur.status,
+        medico:       medicoId
+      }));
+      return;
+    }
+  }
+
   const r1 = await fetch(`${base}/subscriptions?on_conflict=medico_id`, {
     method: 'POST',
     headers: sHeaders,
