@@ -52,6 +52,10 @@ export default async function handler(req, res) {
   if (!medicoId) {
     return res.status(403).json({ error: 'Account non autorizzato' });
   }
+
+  if (medicoData[0].piano === 'founding') {
+    return res.status(403).json({ error: 'Il piano Founding non prevede il passaggio a Pro. Per cambiare piano disdici e iscriviti al listino corrente.' });
+  }
   if (medicoData[0].stato !== 'approvato') {
     return res.status(403).json({ error: 'Account non ancora approvato' });
   }
