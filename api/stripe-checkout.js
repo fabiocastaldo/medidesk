@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   }
 
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,piano`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) {
@@ -54,6 +54,10 @@ export default async function handler(req, res) {
   }
   if (medicoData[0].stato !== 'approvato') {
     return res.status(403).json({ error: 'Account non ancora approvato' });
+  }
+
+  if (medicoData[0].piano === 'vip') {
+    return res.status(403).json({ error: 'Il tuo piano non prevede abbonamenti a pagamento' });
   }
 
   const body = req.body || {};
