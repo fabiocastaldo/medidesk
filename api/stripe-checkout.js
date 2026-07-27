@@ -74,7 +74,11 @@ export default async function handler(req, res) {
   }
   const priceId = process.env[envName];
   if (!priceId) {
-    return res.status(500).json({ error: `Price ID non configurato (${envName})` });
+    if (piano === 'founding') {
+      return res.status(403).json({ error: 'Offerta Founding esaurita', code: 'FOUNDING_SOLD_OUT' });
+    }
+    console.error('[stripe-checkout] price non configurato per', piano, intervallo);
+    return res.status(500).json({ error: 'Piano temporaneamente non disponibile' });
   }
 
   const stripe = new Stripe(stripeKey);
