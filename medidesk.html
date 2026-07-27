@@ -10814,7 +10814,14 @@ async function piani_checkout(piano, intervallo){
       body: JSON.stringify({ piano: piano, intervallo: intervallo })
     });
     var d = await r.json().catch(function(){ return {}; });
-    if(!r.ok){ showToast(d.error || 'Errore nel checkout'); return; }
+    if(!r.ok){
+      if(d.code === 'FOUNDING_SOLD_OUT'){
+        var fc = document.getElementById('pln-founding-cta');
+        if(fc) fc.innerHTML = '<button class="btn pln-btn" disabled>Offerta esaurita</button>';
+      }
+      showToast(d.error || 'Errore nel checkout');
+      return;
+    }
     if(d.url){ window.location.href = d.url; } else { showToast('Risposta inattesa dal server'); }
   }catch(e){ showToast('Errore di rete'); }
 }
@@ -10861,7 +10868,7 @@ async function renderPiani(){
         + '<div class="pln-name">Founding ' + cur('founding') + '</div>'
         + '<div class="pln-price">€35<span>/mese</span></div><div class="pln-note">Prezzo bloccato a vita</div>'
         + feats
-        + '<div class="pln-cta">' + btn('Attiva Founding', "piani_checkout('founding','month')", piano==='founding') + '</div>'
+        + '<div class="pln-cta" id="pln-founding-cta">' + btn('Attiva Founding', "piani_checkout('founding','month')", piano==='founding') + '</div>'
       + '</div>'
       + '<div class="pln-card">'
         + '<div class="pln-name">Pro ' + cur('pro') + '</div>'
