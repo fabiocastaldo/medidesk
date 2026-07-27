@@ -10829,10 +10829,11 @@ async function renderPiani(){
     if(res && res.data){ piano = res.data.piano || 'free'; stato = res.data.stato || ''; }
   }catch(e){}
   var approved = (stato === 'approvato');
+  var isVip = (piano === 'vip');
   function cur(p){ return piano===p ? '<span class="pln-current">Piano attuale</span>' : ''; }
   function btn(label, onclick, isCurrent){
     if(isCurrent) return '<button class="btn pln-btn" disabled>Piano attuale</button>';
-    if(!approved)  return '<button class="btn pln-btn" disabled>'+label+'</button>';
+    if(!approved || isVip)  return '<button class="btn pln-btn" disabled>'+label+'</button>';
     return '<button class="btn btn-primary pln-btn" onclick="'+onclick+'">'+label+'</button>';
   }
   var feats = '<ul class="pln-feats">'
@@ -10847,6 +10848,7 @@ async function renderPiani(){
     + '<div class="pln-head"><h1>Scegli il tuo piano</h1><p>Tutte le funzionalità, sempre. Cambia solo il prezzo.</p></div>'
     + (_trialExpired ? '<div class="pln-warn" style="border-color:#c0392b;color:#c0392b">Il tuo periodo di prova di 45 giorni è terminato. Scegli un piano per continuare a usare tutte le funzionalità.</div>' : '')
     + (approved ? '' : '<div class="pln-warn">Potrai attivare un piano dopo l\'approvazione dell\'account.</div>')
+    + (isVip ? '<div class="pln-warn">Il tuo account ha accesso completo a tutte le funzionalità. Nessun abbonamento necessario.</div>' : '')
     + '<div class="pln-grid">'
       + '<div class="pln-card">'
         + '<div class="pln-name">Free Trial ' + cur('free') + '</div>'
