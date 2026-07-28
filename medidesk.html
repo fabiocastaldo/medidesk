@@ -3422,6 +3422,7 @@ function startRealtimeChannel(){
         da_centro:  r.da_centro || false,
         seen:       r.seen || false,
         cancelled:   r.cancelled === true,
+        erogata:     r.erogata === true,
         cancelledAt: r.cancelled_at || null
       });
       save();
@@ -3456,6 +3457,7 @@ function startRealtimeChannel(){
       local.da_centro  = r.da_centro || false;
       local.seen       = r.seen || false;
       local.cancelled   = r.cancelled === true;
+      local.erogata     = r.erogata === true;
       local.cancelledAt = r.cancelled_at || null;
       save();
       renderDashboard(); updateStats(); renderPending(); renderAgenda();
