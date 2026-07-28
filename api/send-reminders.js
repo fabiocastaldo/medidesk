@@ -7,6 +7,36 @@ import { smsEnabled, sendSms } from '../lib/sms.js';
 const hasEmail = a => !!(a.email_paziente && a.email_paziente.trim());
 const hasTel   = a => !!(a.telefono_paziente && a.telefono_paziente.trim());
 
+// Retry in-run: UN solo ritentativo dopo un breve delay, poi l'errore residuo
+// si registra e finisce nell'alert admin. Budget maxDuration alzato a 60s in
+// vercel.json: il delay scatta solo sui fallimenti.
+const RETRY_DELAY_MS = 1000;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Invio email con 1 ritentativo. Ritorna sempre un oggetto, non lancia mai.
+async function sendEmailWithRetry(resend, payload) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const { error } = await resend.emails.send(payload);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    } catch (e) {
+      if (attempt >= 2) return { ok: false, error: e.message };
+      await sleep(RETRY_DELAY_MS);
+    }
+  }
+}
+
+// Invio SMS con 1 ritentativo. sendSms non lancia mai; skipped non si ritenta.
+async function sendSmsWithRetry(args) {
+  let r = await sendSms(args);
+  if (!r.ok && !r.skipped) {
+    await sleep(RETRY_DELAY_MS);
+    r = await sendSms(args);
+  }
+  return r;
+}
+
 export default async function handler(req, res) {
   // Auth: CRON_SECRET obbligatorio. Vercel Cron lo inietta automaticamente
   // come header Authorization: Bearer <CRON_SECRET> nelle chiamate scheduled.
@@ -31,6 +61,10 @@ export default async function handler(req, res) {
   }
   const resend = new Resend(resendApiKey);
 
+  // Errori residui DOPO il retry, per l'alert admin di fine run.
+  // Nessun dato personale: solo id di riga (etichettati) ed error message.
+  const runErrors = [];
+
   const tomorrow = getTomorrowRome();
   const base    = `${supabaseUrl}/rest/v1`;
   const headers = {
@@ -51,7 +85,7 @@ export default async function handler(req, res) {
     appointments = all.filter(a => hasEmail(a) || hasTel(a));
   } catch (e) {
     console.error('[send-reminders] query appuntamenti:', e.message);
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: 'Internal error' });
   }
 
   let sent = 0, errors = 0;
@@ -105,27 +139,28 @@ export default async function handler(req, res) {
       if (hasEmail(appt) && !appt.reminder_sent) {
         const subject = `Promemoria visita di domani — ${medicoNome}`;
         const html    = buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora: appt.ora, tipoVisita: appt.tipo_visita, centroNome: centro.nome, centroIndirizzo });
-        try {
-          const { error: emailErr } = await resend.emails.send({
-            from:     'noreply@delphi-med.com',
-            to:       [appt.email_paziente],
-            subject,
-            html,
-            ...(medico.email ? { reply_to: medico.email } : {})
-          });
-          if (emailErr) throw new Error(emailErr.message);
+        const er = await sendEmailWithRetry(resend, {
+          from:     'noreply@delphi-med.com',
+          to:       [appt.email_paziente],
+          subject,
+          html,
+          ...(medico.email ? { reply_to: medico.email } : {})
+        });
+        if (er.ok) {
           patch.reminder_sent = true;
           sent++;
-        } catch (e) {
-          console.error(`[send-reminders] appt ${appt.id} email:`, e.message);
+        } else {
+          console.error(`[send-reminders] appt ${appt.id} email:`, er.error);
           errors++;
-          // NON aggiorna reminder_sent: verrà ritentato alla prossima esecuzione
+          // La query filtra sulla data di DOMANI: questa riga non sarà mai
+          // rivista da una run successiva. Il rimedio è l'alert admin.
+          runErrors.push({ ramo: 'promemoria-email', ref: `appuntamenti.id ${appt.id}`, msg: er.error });
         }
       }
 
       // RAMO SMS — inerte senza env Skebby (smsEnabled() false).
       if (smsEnabled() && hasTel(appt) && !appt.sms_sent_at) {
-        const r = await sendSms({
+        const r = await sendSmsWithRetry({
           to:   appt.telefono_paziente,
           text: buildReminderSms({ medicoNome, dataShort: formatDateShort(appt.data), ora: String(appt.ora || '').substring(0, 5), centroNome: centro.nome })
         });
@@ -139,7 +174,9 @@ export default async function handler(req, res) {
         } else {
           console.error(`[send-reminders] appt ${appt.id} sms:`, r.error);
           smsErrors++;
-          // NON aggiorna sms_sent_at: verrà ritentato alla prossima esecuzione
+          // La query filtra sulla data di DOMANI: nessuna run successiva
+          // rivedrà questa riga. Il rimedio è l'alert admin.
+          runErrors.push({ ramo: 'promemoria-sms', ref: `appuntamenti.id ${appt.id}`, msg: r.error });
         }
       }
 
@@ -155,27 +192,45 @@ export default async function handler(req, res) {
   }
 
   // 4. Notifiche turni in scadenza (60gg e 30gg)
-  await checkTurniScadenza(base, headers, resend);
+  await checkTurniScadenza(base, headers, resend, runErrors);
   // 5. Reminder Free Trial in scadenza
-  await checkTrialScadenza(base, headers, resend);
+  await checkTrialScadenza(base, headers, resend, runErrors);
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, date: tomorrow });
+  // 6. Alert admin: UNA sola email aggregata se restano errori dopo il retry.
+  // Copre tutti i rami (promemoria, turni, trial). Niente retry sull'alert
+  // stesso: se fallisce resta il console.error nei Runtime Log.
+  if (runErrors.length) {
+    try {
+      const { error: alertErr } = await resend.emails.send({
+        from:    'noreply@delphi-med.com',
+        to:      ['fb.castaldo@gmail.com'],
+        subject: `[Delphi~Med] send-reminders: ${runErrors.length} error${runErrors.length === 1 ? 'e residuo' : 'i residui'} dopo retry`,
+        html:    buildAlertHtml(runErrors)
+      });
+      if (alertErr) throw new Error(alertErr.message);
+      console.log(`[send-reminders] alert admin inviato (${runErrors.length} errori)`);
+    } catch (e) {
+      console.error('[send-reminders] alert admin FALLITO:', e.message);
+    }
+  }
+
+  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
 
-async function checkTurniScadenza(base, headers, resend) {
+async function checkTurniScadenza(base, headers, resend, runErrors) {
   const todayUTC = getTodayUTC();
   const soglie = [
     { giorni: 60, data: addDaysToDateStr(todayUTC, 60), campo: 'notified_60d_at' },
     { giorni: 30, data: addDaysToDateStr(todayUTC, 30), campo: 'notified_30d_at' },
   ];
   for (const soglia of soglie) {
-    await processScadenzaSoglia(base, headers, soglia, resend);
+    await processScadenzaSoglia(base, headers, soglia, resend, runErrors);
   }
 }
 
-async function processScadenzaSoglia(base, headers, { giorni, data, campo }, resend) {
+async function processScadenzaSoglia(base, headers, { giorni, data, campo }, resend, runErrors) {
   console.log(`[turni-scadenza] soglia ${giorni}d: processing (data target: ${data})`);
   // a) Query turni per la data-soglia non ancora notificati
   let turni;
@@ -188,6 +243,7 @@ async function processScadenzaSoglia(base, headers, { giorni, data, campo }, res
     turni = await r.json();
   } catch (e) {
     console.error(`[turni-scadenza] soglia ${giorni}d query turni:`, e.message);
+    runErrors.push({ ramo: `turni-${giorni}d`, ref: 'query turni', msg: e.message });
     return;
   }
 
@@ -252,15 +308,21 @@ async function processScadenzaSoglia(base, headers, { giorni, data, campo }, res
       : `Promemoria: hai ${count} turni in scadenza tra ${giorni} giorni`;
     const html = buildScadenzaHtml({ medico, turni: medicoTurni, giorni });
 
+    const er = await sendEmailWithRetry(resend, {
+      from:    'noreply@delphi-med.com',
+      to:      [medico.email],
+      subject,
+      html
+    });
+    if (!er.ok) {
+      console.error(`[turni-scadenza] soglia ${giorni}d medico ${medico.id}:`, er.error);
+      // La query filtra su data_fine_validita puntuale che trasla ogni giorno:
+      // per la soglia 60d la riga non sarà mai rivista (la 30d la riacchiappa
+      // un mese dopo); per la 30d non c'è alcuna rete. Rimedio: alert admin.
+      runErrors.push({ ramo: `turni-${giorni}d`, ref: `medici.id ${medico.id}`, msg: er.error });
+      continue;
+    }
     try {
-      const { error: emailErr } = await resend.emails.send({
-        from:    'noreply@delphi-med.com',
-        to:      [medico.email],
-        subject,
-        html
-      });
-      if (emailErr) throw new Error(emailErr.message);
-
       // Aggiorna notified_Xd_at solo se email OK
       const ids = medicoTurni.map(t => t.id);
       await fetch(`${base}/turni?id=in.(${ids.join(',')})`, {
@@ -282,8 +344,10 @@ async function processScadenzaSoglia(base, headers, { giorni, data, campo }, res
       emailInviate++;
       turniNotificati += count;
     } catch (e) {
-      console.error(`[turni-scadenza] soglia ${giorni}d medico ${medico.id}:`, e.message);
-      // NON aggiorna notified_Xd_at: verrà ritentato domani
+      // Email GIÀ inviata: qui falliscono solo PATCH/audit. Non si ritenta
+      // l'invio (doppione) — si registra per l'alert admin.
+      console.error(`[turni-scadenza] soglia ${giorni}d medico ${medico.id} post-invio:`, e.message);
+      runErrors.push({ ramo: `turni-${giorni}d-postinvio`, ref: `medici.id ${medico.id}`, msg: e.message });
     }
   }
 
@@ -293,7 +357,7 @@ async function processScadenzaSoglia(base, headers, { giorni, data, campo }, res
 
 // ── REMINDER FREE TRIAL IN SCADENZA ──────────────────────────────────────────
 
-async function checkTrialScadenza(base, headers, resend) {
+async function checkTrialScadenza(base, headers, resend, runErrors) {
   // Soglia: account creato >= 41 giorni fa (trial di 45gg, avviso ~4gg prima)
   const isoSoglia = new Date(Date.now() - 41 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -325,26 +389,30 @@ async function checkTrialScadenza(base, headers, resend) {
     const subject = 'Il tuo periodo di prova Delphi~Med sta per scadere';
     const html = buildTrialScadenzaHtml();
 
+    const er = await sendEmailWithRetry(resend, {
+      from:    'noreply@delphi-med.com',
+      to:      [medico.email],
+      subject,
+      html
+    });
+    if (!er.ok) {
+      console.error('[send-reminders] trial reminder error:', er.error);
+      // Qui la query (created_at lte + flag is.null) rivede DAVVERO la riga
+      // alla prossima run — l'alert copre comunque anche questo ramo.
+      runErrors.push({ ramo: 'trial', ref: `medici.id ${medico.id}`, msg: er.error });
+      continue;
+    }
     try {
-      const { error: emailErr } = await resend.emails.send({
-        from:    'noreply@delphi-med.com',
-        to:      [medico.email],
-        subject,
-        html
-      });
-      if (emailErr) throw new Error(emailErr.message);
-
       // Aggiorna trial_reminder_sent_at solo se email OK
       await fetch(`${base}/medici?id=eq.${medico.id}`, {
         method:  'PATCH',
         headers: { ...headers, 'Prefer': 'return=minimal' },
         body:    JSON.stringify({ trial_reminder_sent_at: new Date().toISOString() })
       });
-
       emailInviate++;
     } catch (e) {
-      console.error('[send-reminders] trial reminder error:', e.message);
-      // NON aggiorna trial_reminder_sent_at: verrà ritentato alla prossima esecuzione
+      console.error('[send-reminders] trial reminder post-invio:', e.message);
+      runErrors.push({ ramo: 'trial-postinvio', ref: `medici.id ${medico.id}`, msg: e.message });
     }
   }
 
@@ -453,6 +521,19 @@ function buildTrialScadenzaHtml() {
     ctaButton('https://delphi-med.com', 'Vai a Delphi~Med') +
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">Accedi al tuo account e apri la pagina <strong>Piani</strong> per scegliere l&rsquo;abbonamento pi&ugrave; adatto alle tue esigenze.</p>` +
     `<p style="font-size:14px;color:#555;margin:0;">A presto,<br><strong>Delphi~Med</strong></p>`;
+  return emailShell(body);
+}
+
+// Alert admin: elenco errori residui. SOLO id etichettati ed error message,
+// nessun dato personale di pazienti o medici.
+function buildAlertHtml(runErrors) {
+  const rows = runErrors.map(x =>
+    `<tr><td style="padding:6px 0;border-bottom:1px solid #e2edf8;font-size:13px;color:#111;"><strong>${esc(x.ramo)}</strong> &mdash; ${esc(x.ref)}: ${esc(x.msg)}</td></tr>`
+  ).join('');
+  const body =
+    emailTitle('send-reminders: errori residui') +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 16px;">La run del cron ha registrato <strong>${runErrors.length} error${runErrors.length === 1 ? 'e' : 'i'}</strong> ancora present${runErrors.length === 1 ? 'e' : 'i'} dopo il ritentativo in-run. Dettagli completi nei Runtime Log di Vercel.</p>` +
+    detailCard(rows);
   return emailShell(body);
 }
 

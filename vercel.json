@@ -7,7 +7,8 @@
   ],
   "regions": ["fra1"],
   "functions": {
-    "api/analyze.js": { "maxDuration": 300 }
+    "api/analyze.js": { "maxDuration": 300 },
+    "api/send-reminders.js": { "maxDuration": 60 }
   },
   "headers": [
     {
