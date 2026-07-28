@@ -10828,14 +10828,31 @@ async function piani_checkout(piano, intervallo){
   }catch(e){ showToast('Errore di rete'); }
 }
 
+async function piani_upgradeAnnual(){
+  if(!(await confermaModale('Passare al piano annuale (€490/anno)? L\'importo viene addebitato subito sul metodo di pagamento esistente, scontato della quota non goduta del mese in corso.', { titolo:'Passa all\'annuale', ok:'Conferma' }))) return;
+  var jwt = await getAuthJwt();
+  if(!jwt){ showToast('Sessione scaduta, rientra'); return; }
+  try{
+    var r = await fetch('/api/stripe-checkout', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+jwt },
+      body: JSON.stringify({ piano:'pro', intervallo:'year' })
+    });
+    var d = await r.json().catch(function(){ return {}; });
+    if(!r.ok){ showToast(d.error || 'Errore nell\'aggiornamento del piano'); return; }
+    showToast('Piano annuale attivato ✓');
+    setTimeout(renderPiani, 4000);
+  }catch(e){ showToast('Errore di rete'); }
+}
+
 async function renderPiani(){
   var el = document.getElementById('page-piani');
   if(!el) return;
   el.innerHTML = '<div class="pln-wrap"><div class="pln-note">Caricamento…</div></div>';
-  var piano='free', stato='';
+  var piano='free', stato='', subIntervallo='';
   try{
-    var res = await supabaseClient.from('medici').select('piano,stato').eq('id', S.medicoId).single();
-    if(res && res.data){ piano = res.data.piano || 'free'; stato = res.data.stato || ''; }
+    var res = await supabaseClient.from('medici').select('piano,stato,sub_intervallo').eq('id', S.medicoId).single();
+    if(res && res.data){ piano = res.data.piano || 'free'; stato = res.data.stato || ''; subIntervallo = res.data.sub_intervallo || ''; }
   }catch(e){}
   var approved = (stato === 'approvato');
   var isVip = (piano === 'vip');
@@ -10877,7 +10894,9 @@ async function renderPiani(){
         + '<div class="pln-toggle"><button id="pln-mtoggle" class="on" onclick="piani_setInterval(\'month\')">Mensile</button><button id="pln-ytoggle" onclick="piani_setInterval(\'year\')">Annuale</button></div>'
         + '<div id="pln-pro-price"><div class="pln-price">€49<span>/mese</span></div><div class="pln-note">Meno di mezza visita al mese</div></div>'
         + '<div class="pln-desc">Tutto ciò che c\'è in Founding.</div>'
-        + '<div class="pln-cta">' + btn('Passa a Pro', "piani_checkout('pro', _piInterval)", piano==='pro') + '</div>'
+        + '<div class="pln-cta">' + (piano==='pro' && subIntervallo==='month'
+            ? '<button class="btn btn-primary pln-btn" onclick="piani_upgradeAnnual()">Passa all\'annuale</button>'
+            : btn('Passa a Pro', "piani_checkout('pro', _piInterval)", piano==='pro')) + '</div>'
       + '</div>'
     + '</div></div>';
 }

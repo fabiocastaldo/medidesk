@@ -87,6 +87,7 @@ async function applySubscription(sub) {
     body: JSON.stringify({
       piano:              pianoEff,
       sub_status:         isDeleted ? 'canceled' : (sub.status || null),
+      sub_intervallo:     isDeleted ? null : (price?.recurring?.interval || null),
       current_period_end: isDeleted ? null : periodEnd
     })
   });
