@@ -68,6 +68,54 @@ export default async function handler(req, res) {
   const piano = String(body.piano || '').trim();
   let intervallo = String(body.intervallo || 'month').trim();
   if (piano === 'founding') intervallo = 'month';
+
+  if (medicoData[0].piano === 'pro') {
+    // Ramo upgrade: un medico gia' Pro non apre un nuovo checkout (mai due subscription
+    // attive). L'unica operazione ammessa e' il passaggio mensile -> annuale, eseguito
+    // come update Stripe-native sulla subscription esistente. Tutto il resto: 403.
+    if (piano !== 'pro' || intervallo !== 'year') {
+      return res.status(403).json({ error: 'Hai già un piano Pro attivo. Da qui è possibile solo il passaggio al piano annuale.' });
+    }
+    const priceYear = process.env.STRIPE_PRICE_PRO_YEAR;
+    if (!priceYear) {
+      console.error('[stripe-checkout] upgrade: STRIPE_PRICE_PRO_YEAR non configurato');
+      return res.status(500).json({ error: 'Piano temporaneamente non disponibile' });
+    }
+    const subRes = await fetch(
+      `${supabaseUrl}/rest/v1/subscriptions?medico_id=eq.${encodeURIComponent(medicoId)}&select=stripe_subscription_id,status`,
+      { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
+    ).catch(() => null);
+    if (!subRes || !subRes.ok) {
+      return res.status(500).json({ error: 'Verifica abbonamento fallita' });
+    }
+    const subRows = await subRes.json().catch(() => []);
+    const subId = subRows?.[0]?.stripe_subscription_id;
+    if (!subId) {
+      return res.status(409).json({ error: 'Nessun abbonamento attivo trovato' });
+    }
+    const stripeUp = new Stripe(stripeKey);
+    try {
+      const fresh = await stripeUp.subscriptions.retrieve(subId);
+      const item = fresh?.items?.data?.[0];
+      if (fresh?.status !== 'active' || item?.price?.recurring?.interval !== 'month') {
+        return res.status(409).json({ error: 'L\'abbonamento attuale non consente il passaggio all\'annuale' });
+      }
+      const updated = await stripeUp.subscriptions.update(subId, {
+        items: [{ id: item.id, price: priceYear }],
+        proration_behavior: 'always_invoice',
+        billing_cycle_anchor: 'now',
+        payment_behavior: 'pending_if_incomplete'
+      });
+      if (updated?.pending_update) {
+        return res.status(402).json({ error: 'Pagamento non riuscito. Verifica il metodo di pagamento e riprova.', code: 'UPGRADE_PAYMENT_FAILED' });
+      }
+      return res.status(200).json({ upgraded: true });
+    } catch (err) {
+      console.error('[stripe-checkout] upgrade error:', err.message);
+      return res.status(500).json({ error: 'Aggiornamento del piano fallito' });
+    }
+  }
+
   const envName = PRICE_MAP[`${piano}:${intervallo}`];
   if (!envName) {
     return res.status(400).json({ error: 'Piano o intervallo non valido' });
