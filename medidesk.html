@@ -10859,7 +10859,7 @@ async function renderPiani(){
   function cur(p){ return piano===p ? '<span class="pln-current">Piano attuale</span>' : ''; }
   function btn(label, onclick, isCurrent){
     if(isCurrent) return '<button class="btn pln-btn" disabled>Piano attuale</button>';
-    if(!approved || isVip)  return '<button class="btn pln-btn" disabled>'+label+'</button>';
+    if(!approved || isVip || piano==='pro')  return '<button class="btn pln-btn" disabled>'+label+'</button>';
     return '<button class="btn btn-primary pln-btn" onclick="'+onclick+'">'+label+'</button>';
   }
   var feats = '<ul class="pln-feats">'
