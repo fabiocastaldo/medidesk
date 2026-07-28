@@ -10845,6 +10845,20 @@ async function piani_upgradeAnnual(){
   }catch(e){ showToast('Errore di rete'); }
 }
 
+async function piani_portal(){
+  var jwt = await getAuthJwt();
+  if(!jwt){ showToast('Sessione scaduta, rientra'); return; }
+  try{
+    var r = await fetch('/api/stripe-portal', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer '+jwt }
+    });
+    var d = await r.json().catch(function(){ return {}; });
+    if(!r.ok){ showToast(d.error || 'Errore nell\'apertura del portale'); return; }
+    if(d.url){ window.location.href = d.url; } else { showToast('Risposta inattesa dal server'); }
+  }catch(e){ showToast('Errore di rete'); }
+}
+
 async function renderPiani(){
   var el = document.getElementById('page-piani');
   if(!el) return;
@@ -10898,7 +10912,9 @@ async function renderPiani(){
             ? '<button class="btn btn-primary pln-btn" onclick="piani_upgradeAnnual()">Passa all\'annuale</button>'
             : btn('Passa a Pro', "piani_checkout('pro', _piInterval)", piano==='pro')) + '</div>'
       + '</div>'
-    + '</div></div>';
+    + '</div>'
+    + ((piano==='pro' || piano==='founding') ? '<div style="text-align:center;margin-top:18px"><button class="btn pln-btn" onclick="piani_portal()">Gestisci abbonamento</button><div class="pln-note" style="margin-top:6px">Fatture, metodo di pagamento e disdetta</div></div>' : '')
+    + '</div>';
 }
 
 function renderArchivioPage(){
