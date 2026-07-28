@@ -91,6 +91,10 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: "Troppe richieste. Riprova tra un'ora." });
   }
 
+  if (!req.body || typeof req.body !== 'object') {
+    return res.status(400).json({ error: 'Richiesta non valida' });
+  }
+
   const reqMax = parseInt(req.body.max_tokens, 10);
   const max_tokens = Math.min(Number.isFinite(reqMax) ? reqMax : 2000, 4096);
   let messages;
