@@ -107,6 +107,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .dash-avatar{width:52px;height:52px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-weight:600;font-size:17px;color:#fff;letter-spacing:.5px;background:linear-gradient(135deg,var(--brand-mid),var(--brand-deep));box-shadow:var(--shadow-soft)}
 .dash-hello{font-family:var(--font-serif);font-style:italic;font-size:16px;color:var(--ink2);line-height:1.1}
 .dash-name{font-family:var(--font-serif);font-size:26px;color:var(--ink);letter-spacing:-.3px;line-height:1.15}
+.dash-plan{display:none;align-items:center;margin-top:5px;padding:2px 9px;border-radius:999px;font-family:var(--font-sans);font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;background:var(--accent-light);color:var(--brand-deep);border:1px solid var(--brand-mid);width:fit-content}
+.dash-plan.trial{background:var(--pending-bg);color:var(--pending-ink);border-color:var(--pending-accent);text-transform:none;letter-spacing:.2px}
+.dash-plan.vip{background:linear-gradient(135deg,var(--brand-mid),var(--brand-deep));color:#fff;border-color:transparent}
 .hero{position:relative;border-radius:var(--radius-lg);padding:22px 24px;margin-bottom:18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:24px;background:radial-gradient(130% 100% at 80% -10%,color-mix(in srgb,var(--brand-bright) 70%,transparent),transparent 62%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%);box-shadow:var(--shadow-soft);color:#fff;overflow:hidden}
 .hero::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(240deg,rgba(255,255,255,.22),rgba(255,255,255,.04) 40%,transparent 75%)}
 .hero>*{position:relative;z-index:1}
@@ -1238,6 +1241,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div>
           <div class="dash-hello" id="dash-hello">Buongiorno,</div>
           <div class="dash-name" id="dash-name">Medico</div>
+          <div class="dash-plan" id="dash-plan"></div>
         </div>
         <span id="today-date" style="display:none"></span>
       </div>
@@ -3068,6 +3072,8 @@ async function loadMedicoFromDB(user){
     if(error) throw error;
     if(data){
       S.medicoId             = data.id;
+      _medicoPiano           = data.piano              || 'free';
+      _medicoCreatedAt       = data.created_at         || null;
       S.settings.titolo      = data.titolo            || '';
       S.settings.nomeProf    = data.nome               || '';
       S.settings.cognomeProf = data.cognome            || '';
@@ -7226,6 +7232,21 @@ function fillGreeting(){
   const eH=document.getElementById('dash-hello'); if(eH) eH.textContent=hello;
   const eN=document.getElementById('dash-name'); if(eN) eN.textContent=full;
   const eA=document.getElementById('dash-avatar'); if(eA) eA.textContent=ini;
+  const eP=document.getElementById('dash-plan');
+  if(eP){
+    let txt='', cls='';
+    if(_medicoPiano==='vip'){ txt='VIP'; cls='vip'; }
+    else if(_medicoPiano==='founding'){ txt='Founding'; }
+    else if(_medicoPiano==='pro'){ txt='Pro'; }
+    else if(_medicoPiano==='free' && _medicoCreatedAt){
+      const g=Math.ceil(45-(Date.now()-new Date(_medicoCreatedAt).getTime())/86400000);
+      txt = g>0 ? ('Prova · '+g+(g===1?' giorno rimasto':' giorni rimasti')) : 'Prova terminata';
+      cls='trial';
+    }
+    eP.className='dash-plan'+(cls?' '+cls:'');
+    if(txt){ eP.textContent=txt; eP.style.display='inline-flex'; }
+    else { eP.textContent=''; eP.style.display='none'; }
+  }
 }
 function renderDateStrip(){
   const el=document.getElementById('date-strip'); if(!el) return;
@@ -10673,6 +10694,8 @@ function goToTurniScadenza(){
 
 var _piInterval = 'month';
 var _trialExpired = false;
+var _medicoPiano = null;
+var _medicoCreatedAt = null;
 
 function piani_setInterval(iv){
   _piInterval = iv;
