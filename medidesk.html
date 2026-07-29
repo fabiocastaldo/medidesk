@@ -2743,10 +2743,6 @@ function todayLocalISO(){
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
-function capitalizeSentences(str){
-  return String(str || '').replace(/(^|[.!?]\s+)(\p{L})/gu, (_, p, l) => p + l.toUpperCase());
-}
-
 async function signUp(){
   const email           = document.getElementById('auth-reg-email').value.trim();
   const password        = document.getElementById('auth-reg-password').value;
@@ -2796,56 +2792,6 @@ async function signUp(){
     setAuthLoading(false);
     showAuthMsg('Errore di rete: ' + e.message, 'error');
   }
-}
-
-function buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordineProvincia, approveLink }){
-  function esc(s){ return escapeHtml(s); }
-  return `<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f0f4f4;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f4;padding:40px 0;">
-<tr><td align="center">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:560px;">
-<tr><td style="background:#0D9488;padding:32px 40px;text-align:center;">
-  <p style="margin:0;font-size:28px;color:#fff;">&#128711;</p>
-  <p style="margin:8px 0 0;color:#fff;font-size:20px;font-weight:700;">Nuova richiesta di registrazione</p>
-  <p style="margin:4px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Delphi~Med &mdash; Pannello di approvazione</p>
-</td></tr>
-<tr><td style="padding:32px 40px;">
-  <p style="font-size:15px;color:#333;margin:0 0 24px;">Un nuovo medico ha richiesto l&rsquo;accesso a Delphi~Med.</p>
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdfb;border:1px solid #ccece9;border-radius:8px;margin-bottom:28px;">
-  <tr><td style="padding:20px 24px;">
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-        <span style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Nome e Cognome</span><br>
-        <strong style="color:#111;font-size:14px;">${esc(nome)} ${esc(cognome)}</strong>
-      </td></tr>
-      <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-        <span style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Email</span><br>
-        <strong style="color:#111;font-size:14px;">${esc(email)}</strong>
-      </td></tr>
-      <tr><td style="padding:8px 0;border-bottom:1px solid #d9f0ee;">
-        <span style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">N&deg; Iscrizione Ordine</span><br>
-        <strong style="color:#111;font-size:14px;">${esc(ordineNumero)}</strong>
-      </td></tr>
-      <tr><td style="padding:8px 0;">
-        <span style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Provincia Ordine</span><br>
-        <strong style="color:#111;font-size:14px;">${esc(ordineProvincia)}</strong>
-      </td></tr>
-    </table>
-  </td></tr>
-  </table>
-  <div style="text-align:center;">
-    <a href="${esc(approveLink)}" style="display:inline-block;background:#0D9488;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px;">&#10003; Approva questo medico</a>
-  </div>
-  <p style="font-size:12px;color:#999;text-align:center;margin-top:20px;word-break:break-all;">Oppure copia: ${esc(approveLink)}</p>
-</td></tr>
-<tr><td style="background:#f8f8f8;border-top:1px solid #eee;padding:16px 40px;text-align:center;">
-  <p style="margin:0;font-size:11px;color:#bbb;">Delphi~Med &mdash; sistema di approvazione automatico</p>
-</td></tr>
-</table>
-</td></tr>
-</table>
-</body></html>`;
 }
 
 async function signIn(){
@@ -7545,8 +7491,6 @@ async function saveSettings(){
     showToast('Salvato ✓');
   }
 }
-function getApiKey(){ return ANTHROPIC_KEY_RUNTIME; }
-
 // ── FOTO PROFILO ──
 function renderFotoProfilo(){
   const preview = document.getElementById('foto-profilo-preview');
@@ -8537,13 +8481,6 @@ async function cancelBookingByToken(apptId){
   }
 }
 
-function bkReset(){
-  bk={centroId:null,dateStr:null,ora:null,calYear:new Date().getFullYear(),calMonth:new Date().getMonth(),medicoId:null,medicoEmail:'',medicoNome:'',slotOccupati:[],_centroData:null};
-  ['bk-nome','bk-cognome','bk-tel','bk-email','bk-tipo'].forEach(id=>document.getElementById(id).value='');
-  ['bk-consent-base','bk-consent-health'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=false; });
-  bkInit();
-}
-
 // ── TIPI VISITA & AREE ──
 function renderTipiAree(){
   const tEl = document.getElementById('tipi-visita-list');
@@ -8900,12 +8837,6 @@ function copyMailChiusura(i){
   const b=window._mailBozze[i];
   if(b) navigator.clipboard.writeText(b.testo).then(()=>showToast('Mail copiata ✓'));
 }
-function copyTutteMail(){
-  if(!window._mailBozze||!window._mailBozze.length) return;
-  const tutto=window._mailBozze.map(b=>`=== ${b.centro} ===\n${b.testo}`).join('\n\n---\n\n');
-  navigator.clipboard.writeText(tutto).then(()=>showToast('Tutte le mail copiate ✓'));
-}
-
 // ── PAZIENTI PER CENTRO ──
 function renderPazienti(){
   const el=document.getElementById('pazienti-list'); if(!el) return;
@@ -9954,57 +9885,6 @@ function _niceTopValue(max){
   if(max <= 100) return 100;
   const mag = Math.pow(10, Math.floor(Math.log10(max)));
   return Math.ceil(max/mag) * mag;
-}
-
-// ── DONUT CHART ──
-function _renderDonut(containerId, data, centerLabel){
-  const el = document.getElementById(containerId);
-  if(!el) return;
-  const total = data.reduce((s,d)=>s+d.value,0);
-  if(total === 0){
-    el.innerHTML = '<div class="chart-empty">Nessun dato disponibile</div>';
-    return;
-  }
-  const size = 140, cx = 70, cy = 70, r = 55, rInner = 38;
-  let acc = 0;
-  const slices = data.map(d=>{
-    const start = (acc/total) * Math.PI * 2 - Math.PI/2;
-    acc += d.value;
-    const end = (acc/total) * Math.PI * 2 - Math.PI/2;
-    return { ...d, start, end };
-  });
-
-  function arc(s, e){
-    if(data.length === 1){
-      return `M ${cx-r},${cy} A ${r},${r} 0 1,1 ${cx+r},${cy} A ${r},${r} 0 1,1 ${cx-r},${cy}
-              M ${cx-rInner},${cy} A ${rInner},${rInner} 0 1,0 ${cx+rInner},${cy} A ${rInner},${rInner} 0 1,0 ${cx-rInner},${cy} Z`;
-    }
-    const x1 = cx + Math.cos(s)*r, y1 = cy + Math.sin(s)*r;
-    const x2 = cx + Math.cos(e)*r, y2 = cy + Math.sin(e)*r;
-    const x3 = cx + Math.cos(e)*rInner, y3 = cy + Math.sin(e)*rInner;
-    const x4 = cx + Math.cos(s)*rInner, y4 = cy + Math.sin(s)*rInner;
-    const large = (e - s) > Math.PI ? 1 : 0;
-    return `M ${x1.toFixed(2)},${y1.toFixed(2)} A ${r},${r} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} L ${x3.toFixed(2)},${y3.toFixed(2)} A ${rInner},${rInner} 0 ${large},0 ${x4.toFixed(2)},${y4.toFixed(2)} Z`;
-  }
-
-  let svg = `<svg class="donut-svg" viewBox="0 0 ${size} ${size}">`;
-  slices.forEach(s=>{
-    svg += `<path d="${arc(s.start, s.end)}" fill="${s.color||'var(--accent)'}"><title>${escapeHtml(s.label)}: ${s.value} (${Math.round(s.value/total*100)}%)</title></path>`;
-  });
-  svg += `<text class="donut-center-value" x="${cx}" y="${cy-4}">${total}</text>`;
-  svg += `<text class="donut-center-label" x="${cx}" y="${cy+14}">${centerLabel||'totale'}</text>`;
-  svg += `</svg>`;
-
-  const legend = slices.map(s=>{
-    const pct = Math.round(s.value/total*100);
-    return `<div class="donut-legend-row">
-      <span class="donut-legend-color" style="background:${s.color||'var(--accent)'}"></span>
-      <span class="donut-legend-label">${escapeHtml(s.label)}</span>
-      <span class="donut-legend-value">${s.value} (${pct}%)</span>
-    </div>`;
-  }).join('');
-
-  el.innerHTML = `<div class="donut-wrap">${svg}<div class="donut-legend">${legend}</div></div>`;
 }
 
 // ── ORIGINE PRENOTAZIONI ──
