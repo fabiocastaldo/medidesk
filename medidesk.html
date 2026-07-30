@@ -8441,14 +8441,20 @@ async function loadCancelPage(){
     content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-wifi-off"/></svg></div><h2>Nessuna connessione</h2><p>Impossibile verificare la cancellazione senza connessione.</p>';
     return;
   }
+  // Il token si conserva in variabile e sparisce dalla barra (fuori da log/referrer);
+  // cancelBookingByToken e sendNotificaCentroAnonimo lo leggono da qui.
+  window._cancelToken = token;
+  try { history.replaceState(null, '', location.pathname); } catch(_e){}
   try {
-    const { data: appt, error } = await supabaseClient
-      .from('appuntamenti')
-      .select('id,medico_id,centro_id,nome_paziente,cognome_paziente,data,ora,tipo_visita,cancelled')
-      .eq('cancellation_token', token)
-      .maybeSingle();
+    const r = await fetch('/api/cancel-appointment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'lookup', token })
+    });
+    const payload = await r.json().catch(()=>({}));
+    const appt = r.ok ? payload.appt : null;
     loading.style.display='none'; content.style.display='block';
-    if(error||!appt){
+    if(!appt){
       content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Codice non valido</h2><p>Non è stato trovato nessun appuntamento con questo codice.</p>'; return;
     }
     if(appt.cancelled){
@@ -8484,10 +8490,18 @@ async function loadCancelPage(){
 }
 async function cancelBookingByToken(apptId){
   try {
-    const token = new URLSearchParams(window.location.search).get('cancel');
-    const { error }=await supabaseClient.from('appuntamenti')
-      .update({ cancelled:true, cancelled_at:new Date().toISOString() }).eq('id',apptId);
-    if(error) throw error;
+    const token = window._cancelToken || new URLSearchParams(window.location.search).get('cancel');
+    const r = await fetch('/api/cancel-appointment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel', token })
+    });
+    if(!r.ok){
+      const payload = await r.json().catch(()=>({}));
+      if(payload.error==='gia_cancellato') throw new Error('appuntamento già cancellato');
+      if(payload.error==='termine_scaduto') throw new Error('termine di cancellazione scaduto');
+      throw new Error('cancellazione non riuscita');
+    }
     const local=S.appuntamenti.find(a=>String(a.id)===String(apptId));
     if(local){ local.cancelled=true; local.cancelledAt=new Date().toISOString(); save(); }
     document.getElementById('cancel-content').innerHTML=
