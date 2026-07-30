@@ -2188,8 +2188,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="import-centro"></select></div>
       <div class="form-group" style="font-size:12px;color:var(--ink3)">File Excel (.xlsx, .xls, .xlsm, .xlsb) con colonne tipo_visita, compenso, prezzo (opzionale). La prima riga è l'intestazione.</div>
-      <div class="form-group"><input type="file" id="import-file" accept=".xlsx,.xls,.xlsm,.xlsb" onchange="handleImportFile(event)"></div>
-      <div id="import-review" style="margin-top:12px"></div>
+      <div class="form-group"><input type="file" id="import-listino-file" accept=".xlsx,.xls,.xlsm,.xlsb" onchange="handleImportFile(event)"></div>
+      <div id="import-listino-review" style="margin-top:12px"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-import-listino')">Annulla</button>
@@ -4237,8 +4237,8 @@ let _listinoValidoDal = null;
 
 function _resetImportSelection(){
   _importRows = [];
-  const f = document.getElementById('import-file'); if(f) f.value='';
-  const rev = document.getElementById('import-review'); if(rev) rev.innerHTML='';
+  const f = document.getElementById('import-listino-file'); if(f) f.value='';
+  const rev = document.getElementById('import-listino-review'); if(rev) rev.innerHTML='';
   const btn = document.getElementById('import-confirm'); if(btn) btn.disabled = true;
 }
 
@@ -4253,7 +4253,7 @@ function openImportListino(){
 
 async function handleImportFile(ev){
   const file = ev.target.files && ev.target.files[0];
-  const rev = document.getElementById('import-review');
+  const rev = document.getElementById('import-listino-review');
   if(!file) return;
   const centroId = (document.getElementById('import-centro')||{}).value;
   if(!centroId){ showToast('Seleziona prima un centro'); ev.target.value=''; return; }
@@ -4299,7 +4299,7 @@ async function handleImportFile(ev){
 }
 
 function _renderImportReview(){
-  const rev = document.getElementById('import-review'); if(!rev) return;
+  const rev = document.getElementById('import-listino-review'); if(!rev) return;
   const btn = document.getElementById('import-confirm');
   if(!_importRows.length){ rev.innerHTML='<div style="color:var(--ink3);font-size:13px">Nessuna riga valida nel file.</div>'; if(btn) btn.disabled=true; return; }
   const nOk = _importRows.filter(r=>r.status==='ok').length;
