@@ -1,649 +1,77 @@
-# Delphi~Med — Roadmap & TODO
-
-## Decisioni di design
-
-### Filosofia del prodotto
-- **Strumento del medico, non marketplace.** Delphi~Med è un'agenda digitale personale per il medico specialista libero professionista: gestisce appuntamenti, pazienti e studio in più ambulatori. Non è una piattaforma pubblica di ricerca medici.
-- **No recensioni pubbliche.** Il profilo del medico esiste per la pagina di prenotazione condivisa direttamente ai pazienti (link/WhatsApp/QR). La home pubblica ha una barra di ricerca per nome/specializzazione, ma l'acquisizione parte sempre dal medico.
-- **Single-file HTML.** Nessun build system, nessun framework: tutto in `medidesk.html` per massima portabilità e semplicità di deployment.
-- **Online-first con Supabase.** I dati clinici (pazienti, appuntamenti, visite) vivono su Supabase e vengono letti direttamente dal DB. `localStorage` è usato solo per preferenze UI (tema, ecc.) — non più per dati clinici. *(Batch C — 2026-05-20: rimossa persistenza localStorage per dati clinici, rimosse chiavi legacy `medidesk_v2` e `medidesk_apikey`)*
-- **Pricing futuro**: ~19-29€/mese.
-
-### Scelte tecniche principali
-- **Supabase EU (Frankfurt)** per auth, DB PostgreSQL e storage foto.
-- **RLS** su tutte le tabelle; funzioni SECURITY DEFINER per operazioni anon (prenotazione, ricerca pubblica, slug).
-- **UUID** come chiave primaria; comparazioni sempre via `String(a)===String(b)`.
-- **Slug univoco** generato automaticamente dal trigger `medici_auto_slug()` con cascata: nome-cognome → +spec → +provincia → +albo → fallback random 3 char.
-- **Deploy**: solo `git push origin master` → Vercel rileva e pubblica automaticamente. NON usare `npx vercel --prod`.
-
-### Funzioni SQL SECURITY DEFINER
-- `generate_unique_slug(nome, cognome, specializzazione, provincia, albo, id)` → genera slug univoco con cascata; usata dal trigger `medici_auto_slug()`
-- `search_medici_pubblici(p_query)` → ricerca pubblica su nome/cognome/specializzazione/specializzazioni[]; ritorna citta[] — riscritta 18/05 per query multi-token (tokenizzazione sugli spazi, AND tra token, OR tra campi)
-- `get_slot_occupati(p_medico_id)` → slot prenotati del medico; usata da `bkInit` per bloccare slot occupati
-- `get_dati_notifica_cancellazione(p_appt_id, p_token)` → ritorna (notifica_cancellazione, centro_nome, centro_email), autorizzata dal possesso del token di cancellazione
-
----
-
-## ✅ Completato — sessione 2026-05-26 sera tardi (CRON_SECRET + SMTP Resend + P0 #1 approve-doctor JWT)
-
-Sessione monstre. Chiusi housekeeping precedenti + un debt critico (P0 #1).
-
-### CRON_SECRET obbligatorio in produzione ✅ merge `ad41b3c`
-- [x] Generato secret `openssl rand -hex 32`
-- [x] Configurato `CRON_SECRET` su Vercel env vars (Production + Preview, Sensitive). Scoperto vincolo: Sensitive incompatibile con Development env → trade-off accettato (Development non usato per cron)
-- [x] Pulita lista env vars: rimossa duplicata Development, mantenuta una sola entry Sensitive
-- [x] Modificato `api/send-reminders.js` da auth condizionale a obbligatoria: se `CRON_SECRET` non settato → 500 con log esplicito (no più "endpoint aperto"); se header sbagliato → 401 Unauthorized
-- [x] Test preview: 401 senza bearer, 200 con bearer
-- [x] Test produzione post-merge: 401 senza bearer confermato
-
-### SMTP custom Resend per Supabase Auth ✅
-- [x] Discovery problema: mail Supabase Auth (reset password) inviate da `noreply@mail.app.supabase.io` invece che da dominio Delphi~Med
-- [x] Configurato SMTP custom su Supabase Dashboard: host `smtp.resend.com`, port 465, username `resend`, sender `noreply@delphi-med.com`
-- [x] Password SMTP: riusata API key Resend esistente (salvata in password manager con label "Usata da: Vercel SDK + Supabase Auth SMTP")
-- [x] Test funzionale superato: reset password reale → mail arriva da `noreply@delphi-med.com`
-
-### Discovery verifica RLS Supabase + endpoint serverless (parziale)
-- [x] Inventario tabelle: tutte le 12 con RLS attivo. `rate_limits` con 0 policy è corretto (solo service_role)
-- [x] Analisi 6 endpoint serverless `/api/`: 4 puliti (`config`, `analyze`, `ics`, `send-reminders`), 2 P0 critici (`send-email`, `approve-doctor`)
-- [ ] **Da completare in sessione futura**: policy dettagliata `pazienti`/`visite`/`turni`, `storage.objects` per bucket, `audit_log`, function RPC `check_rate_limit`
-
-### P0 #1 ✅ `/api/approve-doctor.js` con JWT firmato + nuovo `/api/register-doctor.js` (merge `ce9b515`)
-
-Risolto debt CRITICO: il vecchio "token" di approve-doctor era lo user_id UUID prevedibile, chiunque registrato poteva auto-approvarsi e ottenere medico verificato.
-
-**Setup secret + tabella:**
-- [x] Generato `APPROVE_TOKEN_SECRET` `openssl rand -hex 32`
-- [x] Configurato su Vercel env vars (Production + Preview, Sensitive)
-- [x] Creata tabella `approve_tokens` in Supabase: `jti TEXT PK`, `user_id UUID`, `created_at`, `expires_at`, `used_at`. RLS abilitato senza policy (solo service_role)
-
-**Nuovo `/api/register-doctor.js` (321 righe):**
-- [x] Riceve POST con dati registrazione dal frontend
-- [x] Rate limit 5/h per IP, validazione input server-authoritative (specchio del frontend ma autoritativo)
-- [x] `auth.admin.createUser` con `email_confirm: true` (salta verifica Supabase, autoritativa solo l'approvazione admin)
-- [x] INSERT su `medici` con `stato: 'in_attesa'` + INSERT default `tipi_visita`
-- [x] Rollback dell'utente Auth se INSERT medici fallisce
-- [x] Genera JWT HMAC-SHA256 firmato con `crypto` nativo Node (zero dipendenze), payload `{user_id, jti, exp}` con scadenza 7gg
-- [x] INSERT su `approve_tokens` con `jti` univoco
-- [x] Manda email admin **direttamente via Resend** (bypassa send-email vulnerabile)
-- [x] Risponde `{ok: true}` al client (zero leak)
-
-**Modifica `signUp()` frontend in `medidesk.html`:**
-- [x] Sostituita chiamata `auth.signUp` + `insert medici` + `fetch send-email` con un'unica `fetch('/api/register-doctor', ...)`
-- [x] Rimosso flag `_isRegistering` ormai morto (semplificato anche listener `onAuthStateChange`)
-- [x] Net -36 righe nel file principale
-
-**Riscrittura `/api/approve-doctor.js` (271 righe):**
-- [x] Verifica firma JWT con `crypto.timingSafeEqual` (no timing attack)
-- [x] Verifica expiry
-- [x] UPDATE atomico `WHERE used_at IS NULL` per garantire monouso anche con click multipli simultanei
-- [x] PATCH `medici stato='approvato'` + recupero dati per email
-- [x] Manda email approvazione **direttamente via Resend** (bypassa send-email)
-- [x] Pagine HTML di errore informative (token non valido, scaduto, già usato, medico non trovato)
-
-**Test end-to-end (6/6 superati su preview):**
-- [x] Test 1: registrazione lato browser via nuovo endpoint
-- [x] Test 2: email admin con JWT firmato (`eyJ...`, non più UUID)
-- [x] Test 3: approve con JWT valido → 200 + medico approvato
-- [x] Test 4: email approvazione al medico (bypassa send-email)
-- [x] Test 5: token monouso, secondo click → 409 "già usato"
-- [x] Test 6: login medico con `email_confirm: true` server-side
-- [x] Verifica produzione: `curl /api/approve-doctor?token=fake` → 401 ✅
-
-**Effetti collaterali positivi:** registrazione e approvazione non passano più dall'endpoint vulnerabile `send-email`. Quando si affronterà P0 #2, l'impatto sarà limitato (resta solo conferma appuntamento + cancellazione medico da fixare).
-
-### Verifica differita
-- [ ] Mattina 27/05: log Vercel del cron run 17:00 UTC 26/05. Atteso: status 200 + righe `[turni-scadenza] soglia 60d: processing` e `[turni-scadenza] soglia 30d: processing` (verifica Mini-fix #4). Se 401 → indagine.
-
----
-
-
-
-### Housekeeping
-- [x] `.claude/settings.local.json` rimosso dall'index Git (la regola `.claude/` era già in `.gitignore` ma il file era tracciato da commit precedenti). Commit `824adb8` su master.
-- [x] Seconda app authenticator Supabase configurata (ridondanza 2FA). Due Google Authenticator distinte; verificare se sync cloud Google Account attivo per scenario "perdita telefono".
-
-### Mini-fix Batch E debt minor
-- [x] **Plurale "turno/i" in banner e email scadenza turni** → sostituito con ternario corretto su radice + desinenza. Branch `fix/plurale-turni-scadenza`, merge `b26065d`. Coperti sia `medidesk.html` (banner urgente + promemoria) sia `api/send-reminders.js` (template email).
-- [x] **Log di osservabilità cron `processScadenzaSoglia`** → aggiunta riga `console.log` di ingresso con data target per garantire visibilità di entrambe le soglie nei log Vercel a prescindere dall'esito. Analisi del codice ha confermato che il bug originale ("soglia 60d mai loggata") probabilmente non esisteva. Fix difensiva. Branch `fix/log-ingresso-cron-scadenza`, merge `2e1850a`.
-
-### Sicurezza CRON_SECRET ✅ obbligatorio in produzione
-Risolto debt aperto da settimane. Endpoint `/api/send-reminders` non più pubblicamente chiamabile.
-
-**Lavoro su Vercel env vars:**
-- [x] Generato nuovo secret hex 32 byte (`openssl rand -hex 32`)
-- [x] Pulita lista env vars: rimossa duplicata entry Development non-sensitive, mantenuta una sola entry Production+Preview Sensitive
-- [x] Scoperto vincolo Vercel: variabili Sensitive incompatibili con environment Development. Scelto trade-off: Sensitive ON + Development OFF (Development env irrilevante perché `vercel dev` non supporta cron scheduled)
-
-**Lavoro su codice (`api/send-reminders.js`):**
-- [x] Modificata logica auth da condizionale a obbligatoria
-- [x] Se `CRON_SECRET` non settato → 500 con log esplicito (no più "endpoint aperto")
-- [x] Se settato ma header sbagliato → 401 Unauthorized
-- [x] Branch `fix/cron-secret-obbligatorio`, merge `ad41b3c`
-
-**Test superati:**
-- [x] Preview Vercel: 401 senza bearer, 200 con bearer
-- [x] Produzione post-merge: 401 senza bearer confermato
-
-### Verifica differita
-- [ ] Mattina 27/05: controllare log Vercel del run cron 17:00 UTC 26/05. Deve mostrare status 200 + nuove righe `[turni-scadenza] soglia 60d: processing` e `[turni-scadenza] soglia 30d: processing`. Se 401 → indagine su autoinjection Vercel.
-
----
-
-### Nuova pagina Statistiche (branch feat/statistiche → master, merge commit 790a599)
-- [x] Voce 📊 in sidebar desktop (sopra Impostazioni) e in top-bar mobile (sostituisce toggle tema rimosso, già presente in Impostazioni)
-- [x] Filtro periodo: Ultimi 30gg / Trimestre / Anno / Tutto
-- [x] 4 KPI card: Visite effettuate, Cancellate, Prime visite, Ore lavorate (stima da `durata_slot`)
-- [x] Sparkline adattiva in ogni KPI: giornaliera (30gg), settimanale (trimestre), mensile (anno/tutto)
-- [x] Bar chart SVG verticale "Visite effettuate per mese" con asse Y, griglia e label
-- [x] Heatmap giorno×fascia oraria (CSS grid, scala teal, totali riga/colonna, intro esplicativa)
-- [x] Grafici bar list: Per centro (colore centro), Tipo di visita, Area tematica
-- [x] Grafici bar list: Origine prenotazioni (online vs manuale), Cancellate di più (paziente vs medico)
-- [x] Box insights automatici (💡) con 8 regole: trend volume, giorno più pieno, fascia oraria, centro principale, tasso cancellazione, online vs manuale, prime visite, ore lavorate — tutte con confronto vs periodo precedente (delta punti percentuali / visite / ore)
-- [x] Card "👥 Pazienti più frequenti": top 10 ultimi 12 mesi fissi, soglia 4 visite, medaglie 🥇🥈🥉, click apre scheda paziente (`showPazienteDetail`)
-- [x] CSS responsive: KPI 2×2 su mobile, stats-grid-2 a colonna singola, heatmap celle più piccole
-- [x] Zero query DB aggiuntive — tutto calcolato lato client da `S.appuntamenti`
-
----
-
-## ✅ Completato — sessione 2026-05-18 (legenda settimana + orari + apertura agenda)
-
-### Migliorie UI
-- [x] Legenda centri sotto il calendario settimanale: `renderWeekLegend(days)` popola `#week-legend-container` con i centri che hanno turni nella settimana corrente o appuntamenti registrati; riusa classi CSS `month-legend` già esistenti
-- [x] `showPage('agenda')` chiama `setAgendaView('week')` invece di `renderAgenda()` — elimina il caso in cui lo stato salvato `'ferie'` o `'month'` lasciava `#view-week` visibile ma vuoto
-
-### Bug fix — Normalizzazione orari HH:MM
-- [x] **Pagina cancellazione paziente** (`loadCancelPage`): `appt.ora` normalizzato a HH:MM prima di costruire `apptDate` — fix si propaga a preview HTML e mail al centro via `window._cancelApptData`
-- [x] **Turni medico loggato** (`loadCentriFromDB`): `inizio`/`fine` passano per `.substring(0,5)` nel map dei turni
-- [x] **Turni medico pubblico** (`bkInit`): stessa normalizzazione nel map inline dei centri pubblici
-
----
-
-## ✅ Completato — sessione 2026-05-18 (notifica cancellazione centro + realtime UPDATE agenda)
-
-### Bug risolti
-
-| Data | Bug | Causa | Fix |
-|------|-----|-------|-----|
-| 18/05 | Email cancellazione centro non partiva | sendNotificaCentroAnonimo faceva SELECT dirette su medici/centri bloccate da RLS in modalità anonima | nuova RPC SECURITY DEFINER get_dati_notifica_cancellazione(appt_id, token) |
-| 18/05 | Agenda medico non aggiornata live alla cancellazione paziente | canale realtime ascoltava solo INSERT | aggiunto handler UPDATE con toast su transizione attivo→cancellato |
-| 18/05 | Email cancellazione centro non partiva (paziente cancella) | sendNotificaCentroAnonimo faceva SELECT dirette su medici/centri bloccate da RLS in modalità anonima | nuova RPC SECURITY DEFINER get_dati_notifica_cancellazione(appt_id, token) |
-| 18/05 | Agenda medico non aggiornata live alla cancellazione paziente | canale realtime ascoltava solo INSERT | aggiunto handler UPDATE con toast su transizione attivo→cancellato |
-| 18/05 | Codice cancellazione mostrato in chiaro al paziente | retaggio iniziale, ridondante visto che esiste il bottone "Cancella" nella mail | rimosso box token dalla schermata conferma + dal template mail in api/send-email.js |
-| 18/05 | Testo mail cancellazione centro diceva "dal paziente" anche se cancellava il medico | sendNotificaCentro aveva il testo errato | corretto in "dal medico" |
-| 18/05 | Appuntamenti cancellati non visibili come tali nella vista Mese | renderMonthView non applicava la classe appt-cancelled né il filtro | uniformato comportamento alla vista Settimana con badge "Cancellato" e barrato |
-| 18/05 | Ricerca medici pubblica non funzionava con stringhe miste ("fabio c") | la RPC search_medici_pubblici cercava il pattern intero in un singolo campo | riscritta con tokenizzazione sugli spazi e AND tra token / OR tra campi |
-| 18/05 | Conflitti ferie ↔ appuntamenti non segnalati | nessun controllo in saveChiusura | confirm() che elenca i conflitti prima di salvare |
-| 18/05 | Eliminazione appuntamenti era hard-delete (rischio cancellazioni accidentali) | DELETE fisico dal DB | passato a soft-delete con cancelled=true, allineato al flusso paziente |
-
----
-
-## ✅ Completato — sessione 2026-05-18 (bug fix mapping appuntamenti)
-
-### Bug fix critico — Appuntamenti cancellati appaiono come attivi
-- [x] `loadAppuntamentiFromDB()`: aggiunto mapping di `cancelled: a.cancelled === true` e `cancelledAt: a.cancelled_at || null` — prima questi campi erano omessi, `S.appuntamenti[].cancelled` era sempre `undefined`, il guard `!a.cancelled` passava per tutti gli appuntamenti cancellati (visibili in agenda, slot marcati occupati invece di liberi)
-- [x] `cancellation_token` non mappato: non viene mai letto da `S.appuntamenti[]` (usato solo come variabile locale in `confirmBooking()` e come filtro DB diretto in `loadCancelPage()`)
-
----
-
-## ✅ Completato — sessione 2026-05-18 (bug fix + UX cancellazione)
-
-### Bug fix A — Notifiche email segreteria mai inviate
-- [x] `loadMedicoFromDB()`: aggiunge lettura di `notifica_nuova_prenotazione`, `notifica_cancellazione`, `notifica_appuntamento_manuale` dal DB e li scrive in `S.settings.*` — prima i 3 toggle erano sempre `undefined` e il guard in `sendNotificaCentro()` bloccava ogni invio
-- [x] `bkInit()` (flusso pubblico): i 3 flag letti dall'oggetto medico fetchato via `get_medico_pubblico` → `S.settings.notif*` valorizzati anche senza medico loggato
-- [x] UI `loadSettings()`: 3° toggle usa `=== true` (semantica opt-in esplicita, allineata ai default DB)
-
-### Bug fix B — Slot prenotati appaiono come liberi nella pagina pubblica
-- [x] Normalizzazione ora `"HH:MM:SS"` → `"HH:MM"` via `.substring(0,5)` in entrambi i punti che popolano `bk.slotOccupati` (`bkInit` + `confirmBooking` catch `isSlotTaken`) — prima il confronto con `minToTime()` falliva sempre
-
-### Miglioria mail conferma paziente — link cancellazione
-- [x] `api/send-email.js`: aggiunto bottone CTA "Cancella l'appuntamento" con URL `https://delphi-med.com/?cancel=<token>` (via `encodeURIComponent`)
-- [x] Paragrafo persuasivo "Se non puoi venire, ti chiediamo gentilmente di cancellare..." sopra al bottone
-- [x] Rimosso codice di cancellazione in chiaro dalla mail (token resta solo nell'URL del link)
-- [x] Rimossa frase errata "rispondi a questa email per cancellare"
-
-### Miglioria UI notifiche profilo medico
-- [x] Rimosso `<p>` obsoleto "Le email reali verranno attivate allo Step 7 con Resend" (Step 7 completato)
-- [x] Aggiunto hint "💾 Ricorda di salvare il profilo per applicare le modifiche" sotto i 3 toggle
-
-### UX pagina di cancellazione
-- [x] Pagina pre-cancellazione (`loadCancelPage`): "Vuoi cancellare questo appuntamento?" → testo persuasivo "Se non puoi venire..." con stile coerente al tema
-- [x] Pagina post-cancellazione (`cancelBookingByToken`): titolo "Appuntamento cancellato", testo "Hai liberato uno slot per un altro paziente. Grazie.", pulsante "Torna alla home" → `https://delphi-med.com`
-
----
-
-## ✅ Completato — sessione 2026-05-18 (Step 7b+7c)
-
-### Step 7c — Reminder email 24h prima della visita (Vercel Cron)
-- [x] `api/send-reminders.js`: query appuntamenti domani (Europe/Rome, robusto al cambio ora legale), batch fetch centri+medici, invia via `www.delphi-med.com/api/send-email`, aggiorna `reminder_sent=true` solo in caso di successo
-- [x] `vercel.json`: cron `0 17 * * *` (19:00 CEST / 17:00 UTC)
-- [x] `CRON_SECRET` configurato su Vercel (Production + Development) via CLI
-- [x] Verifica: 401 senza auth, 200 con secret → `{"processed":1,"sent":1,"errors":0,"date":"2026-05-18"}`
-- [x] Fix URL interno: `www.delphi-med.com` (evita redirect 308 che fa cadere l'header Authorization)
-
-### Step 7b — Email notifica segreteria centro
-- [x] `buildEmailHtml(plainText, headerLabel)`: converte testo plain in HTML con header teal Delphi~Med, escape XSS, footer disclaimer
-- [x] `sendNotificaCentro()`: rimosso placeholder `console.log`/`showToast`, ora chiama `/api/send-email` con header contestuale (Nuova prenotazione / Nuovo appuntamento / Cancellazione)
-- [x] `sendNotificaCentroAnonimo()`: stesso fix per cancellazione pubblica via token
-- [x] I 4 call site esistenti restano invariati (`confirmBooking`, inserimento manuale, ripristino, cancellazione anonima)
-
-### Bug fix prenotazione pubblica
-- [x] Auto-capitalize `bk-nome`/`bk-cognome` al blur nella pagina prenotazione pubblica: estratta `setupCapitalizeListeners()` (con guard `dataset.capListener`) chiamata sia da `init()` che da `showBookingView()`
-- [x] Race condition doppia prenotazione stesso slot: `confirmBooking()` intercetta errore Postgres `23505`, aggiorna `slotOccupati` localmente, ricarica slot freschi dal DB e riporta l'utente allo step 3 con toast esplicativo
-
----
-
-## ✅ Completato — sessione 2026-05-17 (notte)
-
-### Profilo medico — Altre specializzazioni
-- [x] Costante `SPECIALIZZAZIONI_UFFICIALI` (53 voci) estratta dal form di registrazione; usata sia da `#reg-specializzazione` che dal profilo
-- [x] `#setting-spec` (specializzazione principale) convertita da input libero a `<select>` a 53 voci
-- [x] Nuovo campo "Altre specializzazioni" nel profilo: area chip `#spec-altre-list` + tendina `#setting-spec-altre-select`
-- [x] `renderSpecAltre()`: ridisegna chip ed esclude dalla tendina le voci già usate (principale + altre)
-- [x] `addSpecAltra()` / `removeSpecAltra()`: aggiunge/rimuove chip con aggiornamento tendina
-- [x] `onSpecPrincChange()`: se la nuova principale era già tra le altre, la rimuove con toast
-- [x] `loadSettings()`: popola `specAltre` da `data.specializzazioni` (esclude la principale)
-- [x] `saveSettings()`: scrive `specializzazioni: [...new Set([spec, ...specAltre])]` deduplicato su Supabase
-
-### Centri — Modifica centro
-- [x] Bottone ✏️ aggiunto a ogni card centro (sia attivi che disattivati), a sinistra di ⏸/▶
-- [x] `openEditCentro(id)`: popola la modale con i dati del centro e cambia titolo/bottone in "Modifica / Salva modifiche"
-- [x] `openAddCentro()`: resetta il form e ripristina "Aggiungi centro / Salva centro"
-- [x] `closeCentroModal()`: azzera `_centroEditId` — usato da ×, Annulla e dopo il salvataggio
-- [x] `saveCentro()`: gestisce INSERT (nuovo) e UPDATE (modifica) preservando turni, giornate singole e stato attivo
-- [x] `resetCentroForm()`: utility estratta per il reset del form centro
-
----
-
-## ✅ Completato — sessione 2026-05-17 (sera)
-
-### Merge e deploy
-- [x] Merge `feat-specializzazione-centri` → `master` (fast-forward, 3 commit) e push su origin; branch eliminato in locale e remote
-- [x] Step 5 prenotazione (`bk-step-5`): bottone "Prenota un altro appuntamento" → link "Torna alla home" che reindirizza a https://delphi-med.com
-
-### Dominio
-- [x] `delphi-med.it` configurato e funzionante: record A `@` → `76.76.21.21` + CNAME `www` → `8d5de3516bd187e8.vercel-dns-017.com` su Cloudflare (Proxy: DNS only)
-
-### Bug risolti
-- [x] Email approvazione tardiva: l'email al medico ora arriva senza necessità di refresh
-- [x] Errori 406 al login post-approvazione risolti
-- [x] 409 Conflict su `ensureMedicoRecord` risolto
-
----
-
-## ✅ Completato — sessione 2026-05-17 (schema DB + frontend)
-
-### Wipe e migrazione schema DB
-- [x] Wipe totale dati eseguito (tabelle svuotate, si riparte da zero)
-- [x] `centri`: rimosso campo `indirizzo`, aggiunti `via`, `citta`, `provincia`, `cap`
-- [x] `medici`: aggiunti `specializzazione` (TEXT), `specializzazioni` (TEXT[]), `slug`
-- [x] `medici`: aggiunti `notifica_cancellazione_medico` (bool, default true), `nascondi_cancellati` (bool, default false) — 18/05
-- [x] Funzione SQL `generate_unique_slug()` con cascata estesa (SECURITY DEFINER)
-- [x] Trigger `medici_auto_slug()` BEFORE INSERT/UPDATE: genera slug e mantiene `specializzazioni[]` coerente
-- [x] Funzione `search_medici_pubblici(p_query)`: cerca su nome/cognome/specializzazione/specializzazioni[], ritorna citta[]
-- [x] View `medici_pubblici`: filtra stato='approvato' AND slug IS NOT NULL AND specializzazione IS NOT NULL
-- [x] `add-medici-approval.sql` eseguito (campi approvazione, stato default 'approvato' per account legacy) ✅
-
-### Bug risolti
-- [x] Flash dashboard durante registrazione → flag `_isRegistering` + guard in `onAuthStateChange`
-- [x] Box "Registrazione inviata!" non appariva → gestione deterministica SIGNED_OUT post-signUp
-- [x] Capitalize automatico nome/cognome → `onblur` inline sugli input HTML
-- [x] Rebrand completo "Delphi Med" → "Delphi~Med" ovunque (HTML + email admin + email approvazione)
-- [x] Bug ricerca medici non visibili: trigger slug bloccato da RLS → fix SECURITY DEFINER
-- [x] Bug omonimia (es. "Mario Rossi"): cascata slug nome-cognome → +spec → +provincia → +albo
-
-### Branch `feat-specializzazione-centri` (commit `fb125aa`, da mergiare su master)
-- [x] Form registrazione: tendina "Specializzazione" obbligatoria (53 voci ufficiali italiane)
-- [x] `signUp()`: lettura, validazione e INSERT di `specializzazione` in tabella `medici`
-- [x] Modale "Aggiungi centro": 4 campi separati via/città/provincia (110 sigle)/CAP al posto di "indirizzo"
-- [x] `saveCentro()`: INSERT con nuovi campi separati + indirizzo composto per retrocompatibilità locale
-- [x] `loadCentriFromDB()`: mappa via/citta/provincia/cap dal DB, compone stringa indirizzo
-- [x] `homeSearch()`: mostra specializzazione(i) + città dei centri (max 2 + contatore)
-- [x] `saveSettings()`: `confirm()` esplicito se nome/cognome/specializzazione cambiano (impatto slug)
-- [x] Auto-capitalize `onblur` su nome centro e via nella modale centro
-
----
-
-## ✅ Completato — sessione 2026-05-16 (onboarding medici)
-
-### Registrazione medico con approvazione manuale
-- [x] Form registrazione con campi obbligatori: nome, cognome, CF, n° ordine, provincia ordine
-- [x] Validazione password forte: 8+ caratteri, maiuscola, minuscola, numero, carattere speciale — indicatore visivo in tempo reale
-- [x] `supabase.auth.signOut()` dopo `signUp()` per bloccare il login automatico
-- [x] INSERT in `medici` con tutti i campi + `stato: 'in_attesa'`; tipi visita default creati contestualmente
-- [x] Email di notifica all'admin con dati medico e link di approvazione
-- [x] Endpoint `api/approve-doctor.js`: PATCH `stato = 'approvato'` + invio email di benvenuto al medico
-- [x] Blocco login per medici con `stato = 'in_attesa'`
-- [x] Messaggio post-registrazione inline (success box) con pulsante "Torna alla home"
-- [x] Link a Termini di servizio e Privacy policy nel form
-
-### Infrastruttura email
-- [x] Dominio `delphi-med.com` verificato su Resend
-- [x] Mittente: `noreply@delphi-med.com`
-- [x] `api/send-email.js` con modalità generica `{to, subject, html}`
-- [x] `SUPABASE_SERVICE_ROLE_KEY` configurata in Vercel
-
----
-
-## ✅ FEATURE COMPLETATE OGGI (18 maggio 2026)
-
-**Sezione Impostazioni** (branch feat/impostazioni → master)
-- Nuova pagina dedicata accanto a Profilo, con icona ⚙️ in sidebar desktop e top-bar mobile
-- 5 toggle: nuova prenotazione online, cancellazione paziente, cancellazione medico (nuovo), appuntamento manuale, nascondi cancellati (nuovo, persistente)
-- Sezione Aspetto: toggle tema scuro uniforme con gli altri
-- Sezione Esporta dati: download backup JSON completo (profilo + centri + turni + appuntamenti + pazienti + visite + chiusure + tipi_visita + aree_tematiche)
-- Auto-save su ogni toggle, niente bottone Salva
-- Toggle "Cancellazione medico" separato dal toggle paziente: ora la mail al centro su cancellazione del medico è governata da notifica_cancellazione_medico
-
-**Notifiche email espansive**
-- Inserimento manuale appuntamento → mail anche al paziente (oltre al centro)
-- Cancellazione manuale appuntamento → mail al paziente + mail al centro
-- Cancellazione manuale → ora richiede conferma con preview di paziente, data, ora
-- Ferie → invio automatico mail ai centri con email_segreteria
-- Nuovo template lato server: cancellazione_medico in api/send-email.js
-
-**Nuove RPC SQL aggiunte a Supabase**
-- get_dati_notifica_cancellazione(p_appt_id, p_token) — già listata nella sezione SQL del riassunto
-- search_medici_pubblici(p_query) — riscritta per gestire query multi-token
-
-**Nuove colonne aggiunte alla tabella medici**
-- notifica_cancellazione_medico BOOLEAN DEFAULT TRUE
-- nascondi_cancellati BOOLEAN DEFAULT FALSE
-
----
-
-## ✅ Completato — sessione 2026-05-20 (Batch B — Privacy, consenso, diritti GDPR)
-
-Branch `feat/privacy-ux` → `master` (merge commit `29d571e`)
-SQL `batch-b-migrations.sql` eseguito in Supabase SQL Editor.
-
-- [x] **B.1** Drop `medici.codice_fiscale`: rimosso da form registrazione, `signUp()`, INSERT, email admin approvazione
-- [x] **B.2** Campo note prenotazione: textarea → input "Recapito alternativo o orari preferiti" + microcopy
-- [x] **B.3** Toggle "Estrai CF dai referti" (default OFF) in Profilo → Preferenze AI; prompt AI condizionale
-- [x] **B.4** Form prenotazione pubblica: informativa breve + 2 checkbox consenso art. 6 + art. 9 GDPR; `consenso_base_at`/`consenso_health_at` su DB
-- [x] **B.5** Modal eliminazione paziente: avviso conservazione, pulsante Esporta ZIP, Elimina + audit log
-- [x] **B.6** Modal eliminazione account 3-step (conteggi → backup → conferma); soft-delete 30gg su `medici.deleted_at`; banner countdown + Annulla eliminazione
-- [x] **B.7** Tabella `audit_log` con RLS (SELECT+INSERT-only per il medico); helper `auditLog()`
-- [x] **B.8** Soglia conservazione configurabile (default 10 anni) in Impostazioni; modal avviso legale al cambio
-- [x] **B.9** Check archivio scaduto post-login: badge ⚠️ sidebar, banner modale ogni 7gg, pagina "Manutenzione archivio" con lista/esporta/elimina massivo
-
-**TODO futuro**: cron job giornaliero per hard-delete dei medici con `deletion_scheduled_at < NOW()` (DELETE su medici, pazienti, visite, appuntamenti, centri, turni, chiusure + storage fotoreferti/).
-
----
-
-## ✅ Completato — sessione 2026-05-20 (Batch C — Backup ZIP + pulizia localStorage)
-
-Branch `feat/backup-zip` → `master` (merge commit `88325f9`)
-
-- [x] Backup ZIP completo: CSV pazienti (`pazienti.csv`), CSV appuntamenti (`appuntamenti.csv`), CSV visite (`visite.csv`)
-- [x] Cartella referti rinominata in modo leggibile (`referti/`) + `LEGGIMI.html` di orientamento nell'archivio
-- [x] Export singolo paziente (scheda PDF-like + storico visite) — funzione base per Batch B
-- [x] Pulizia localStorage: rimossi tutti i salvataggi di dati clinici (pazienti, appuntamenti, visite) da `save()` / `load()`
-- [x] Rimozione chiavi legacy `medidesk_v2` e `medidesk_apikey` da localStorage
-- [x] App online-first: localStorage ora usato solo per preferenze UI (tema scuro, ecc.)
-
----
-
-## ✅ Completato — sessione 2026-05-20 (Batch A — Sicurezza tecnica)
-
-Branch `feat/security-hardening` → `master` (merge commit `837e273`)
-
-- [x] `escapeHtml` e `escapeAttr` robuste (coprono `&<>"'`), definizioni `_esc` rimosse
-- [x] Tutti gli `innerHTML` con dati DB/utente sanitizzati: `renderDayAppointments`, `showApptDetail`, `renderPending`, `showPazienteDetail`, `_buildVisitaHTML`, `homeSearch`, `bkInit`, `loadCancelPage`
-- [x] Security headers in `vercel.json`: CSP (jsdelivr, Stripe, fonts, vercel.live), HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy
-- [x] `/api/analyze` protetto da JWT Supabase + check `medico.stato='approvato'` (401/403)
-- [x] `getAuthJwt()` helper + Authorization header su entrambe le chiamate `/api/analyze`
-- [x] Rate limiting in-memory su `/api/send-email` (20 req/ora) e `/api/analyze` (10 req/ora + Supabase RPC)
-- [x] `batch-a-migrations.sql`: DDL per tabella `rate_limits` + RPC `check_rate_limit` (da eseguire in Supabase SQL Editor)
-- [x] PII rimosso da tutti i `console.log` (`medidesk.html` + `api/approve-doctor.js`)
-- [x] `generateCancellationToken()` → `crypto.randomUUID()` (UUID v4 crittograficamente sicuro)
-- [x] Deadline cancellazione: 24h → 2h prima dell'appuntamento (check + messaggio + testo email)
-
-**⚠️ Azione manuale ancora pendente**: eseguire `batch-a-migrations.sql` nel SQL Editor di Supabase per attivare il rate limiting persistente su `/api/analyze`. Senza questo, il rate limiting funziona solo in-memory (fail-open, non bloccante).
-
----
-
-## ⚠️ Problemi aperti (noti, non ancora risolti)
-
-### Vercel preview branch feature incostante
-Dal 22/05/2026 i preview Vercel su branch feature triggrano in modo incostante. A volte automatico, a volte richiede push manuale o apertura PR su GitHub. Il 26/05 pomeriggio ha funzionato regolarmente per tutti e tre i branch della sessione (`fix/plurale-turni-scadenza`, `fix/log-ingresso-cron-scadenza`, `fix/cron-secret-obbligatorio`).
-
-Workaround attuale: trigger manuale (Create Deployment) o apertura PR su GitHub.
-
-Da investigare quando ci si torna sopra:
-- Settings → Usage (siamo vicini ai limiti quota?)
-- Settings → Git (impostazioni "Preview Deployments for all branches", "Ignored Build Step")
-- Cercare opzione tipo "Deploy all branches automatically"
-
-### ~~CRON_SECRET solo su Development~~ ✅ RISOLTO 2026-05-26
-La env var `CRON_SECRET` è ora configurata su Production + Preview di Vercel (Sensitive). Il codice di `api/send-reminders.js` è stato modificato per richiederla **obbligatoriamente**: se non settata → 500, se header sbagliato → 401. Vercel Cron inietta automaticamente il bearer nelle chiamate scheduled. Testato sia su preview che produzione (401 senza bearer, 200 con bearer corretto).
-
----
-
-## ✅ Completato — 21 maggio 2026 (Batch D — UI cleanup + minimizzazione GDPR)
-
-Branch `feat/ui-cleanup` → `master` (merge commit `8e68850`)
-SQL `batch-d-migrations.sql` eseguito in Supabase SQL Editor (DROP CF da pazienti e medici).
-
-- [x] **D.6** Rimozione totale CF paziente: drop `pazienti.cf` + `medici.estrai_cf_referti`, rimosso da scheda paziente, prompt AI, form nuova visita, backup ZIP (pazienti.csv, visite.csv), export singolo, ricerca
-- [x] **D.6** Toggle "Estrai CF dai referti" rimosso da Profilo → Preferenze AI (intera sezione rimossa)
-- [x] **D.5** Campo "Recapito alternativo" rimosso dal form pubblico; `note:''` in `confirmBooking()`; backward compat OK
-- [x] **D.1** Frase "Hai tempo fino a 2 ore prima" rimossa dall'email di conferma; link cancellazione mantenuto
-- [x] **D.2** Sezione "Aggiungi al calendario" in email di conferma: Google Calendar (link nativo), Apple Calendar e Outlook (download `.ics` via `/api/ics`); endpoint ICS con autenticazione via cancellation_token; URL ICS dinamica dall'host della request (preview → preview, prod → prod)
-- [x] **D.2** Bottoni Step 5 web: emoji rimossi, Outlook usa endpoint `/api/ics` con `window.location.origin` (stesso comportamento Apple Calendar); Google Calendar con link nativo corretto (`calendar.google.com`)
-- [x] **D.3** Placeholder note appuntamento (lato medico): testo breve "Informazioni organizzative utili al paziente"
-- [x] **D.4** Pulsante toggle tema (🌙/☀️) rimosso dalla sidebar desktop; toggle resta in Impostazioni → Aspetto
-- [x] **Fix** Salvataggio profilo: rimosso `estrai_cf_referti` da `saveSettings()` (causava 400 Bad Request dopo DROP colonna)
-- [x] **Fix** Chip rimovibili (lingue, spec, tipi visita, aree): event delegation con `data-*` attribute — elimina SyntaxError su nomi con apostrofi o virgolette
-
----
-
-## ✅ Verifiche operative completate
-
-### Test recupero password ✅ FATTO 2026-05-26 mattina
-
-Flusso end-to-end testato con successo dopo 2 round di fix:
-- [x] Click "Password dimenticata" sulla home → form richiesta reset
-- [x] Submit → ricezione email reset con link Supabase
-- [x] Click sul link → pagina nuova password (NON dashboard, fix race condition `INITIAL_SESSION`)
-- [x] Submit nuova password → auto-logout
-- [x] Login con nuova password OK
-- [x] Console pulita in tutti i passaggi
-
-Fix necessari emersi al test (commit `2bfaf28` + `b82efb8`):
-- Pannello `#auth-panel-password-recovery` dedicato + funzioni `showPasswordRecoveryView()`, `updatePasswordStrengthRecovery()`, `saveNewPassword()`
-- Flag globale `_inPasswordRecovery` per gestire race condition tra `PASSWORD_RECOVERY` e `INITIAL_SESSION`
-
----
-
-## 🔜 Prossime priorità
-
-### Debt minor accumulati durante test
-
-Stato aggiornato 2026-05-26 sera:
-
-- [x] **Plurale stentato banner ed email (Task 2 Batch E)** → risolto con ternario `${n} turn${n === 1 ? 'o' : 'i'} ricorrent${n === 1 ? 'e' : 'i'}`. File: `medidesk.html` (banner urgente + promemoria) e `api/send-reminders.js` (template email). Merge commit `b26065d`.
-- [x] **Log mancante "soglia 60d" in Vercel logs** → analisi del codice ha confermato che il bug come descritto probabilmente non esisteva (ogni soglia logga sempre o "nessun turno" o "N email inviate"; sospetto filtraggio log Vercel). Aggiunto comunque log di ingresso difensivo `[turni-scadenza] soglia ${giorni}d: processing (data target: ${data})` in `processScadenzaSoglia` per garantire visibilità. Merge commit `2e1850a`.
-- [x] **`saveNewPassword()` — `auditLog()` con `S.medicoId` undefined** → già risolto in sessioni precedenti. Ora usa `supabaseClient.auth.getUser()` e passa `user.id` come `medico_id` (riga 2489-2490 di medidesk.html).
-- [x] **`saveNewPassword()` — errori Supabase in inglese** → già risolto in sessioni precedenti. La chiamata a `translateAuthError(error.message)` è presente alla riga 2484.
-
-**Residuo (priorità molto bassa):**
-
-- [ ] **`translateAuthError()` non gestisce `"Auth session missing!"`** → cade in fallback `return msg` (riga 2987 di medidesk.html), mostrando il messaggio Supabase in inglese. Aggiungere `if(msg.includes('Auth session missing')) return 'Sessione scaduta. Richiedi un nuovo link dall'email.';`. Eventualmente aggiungere anche traduzioni per `Token has expired or is invalid`, `New password should be different from the old password`, `Email rate limit exceeded`.
-
-### UX / Profilo medico
-- [ ] Slug deve cambiare automaticamente quando cambia la specializzazione principale (con warning già esistente)
-- [ ] N° iscrizione albo: prendere automaticamente dalla scheda FNOMCeO (da valutare fattibilità API/scraping)
-- [ ] Logica aggiunta lingue/specializzazioni: invertire — premi "Aggiungi" e poi selezioni dalla dropdown invece di scrivere a mano
-
-### Prodotto — roadmap media priorità
-- [ ] **Aggiungi al calendario** — funzionalità da ridisegnare. Rimossa in Batch D rifiniture perché l'esperienza mobile non era soddisfacente (selettore browser iOS, webcal:// problemi, link Outlook redirect Microsoft). Considerare allegato .ics testato a fondo su iOS Mail, Gmail iOS, Outlook iOS. Implementare solo dopo esperienza one-tap mobile verificata. Endpoint `/api/ics` e `lib/ics-builder.js` già nel codebase pronti per riuso.
-- [ ] Area Account dedicata: dati abbonamento, fatture, cambio email/password (insieme a FASE 5 Stripe)
-- [ ] Statistiche avanzate: tasso ritorno per area tematica, drill-down per centro, export PDF
-- [ ] Sezione Notifiche centralizzata: raggruppa avvisi (turni in scadenza, soglia conservazione, aggiornamenti policy)
-- [ ] Mobile refactor: bottom sheet espandibile con Dashboard/Agenda/Pazienti/Profilo fissi + scroll-up per le altre sezioni
-- [ ] Manutenzione archivio: valutare se integrarla nella futura sezione Notifiche
-- [ ] Modal eliminazione paziente/account: aggiungere reminder "verifica anche altri archivi"
-
-### Batch Statistiche (rimandato post-feedback uso reale)
-
-Implementare solo dopo che un medico in uso reale ne esprime l'esigenza, oppure quando si farà il batch "Statistiche avanzate" già pianificato (drill-down, export PDF, range custom). Questa sezione è il sottoinsieme minimo iniziale; "Statistiche avanzate" è il batch grande successivo.
-
-- [ ] **Toggle "top 10 pazienti frequenti"** in Impostazioni (default OFF). Metrica: numero appuntamenti per paziente nell'ultimo anno. Fonte dati: tabella `appuntamenti` (NON `visite`).
-- [ ] **Multi-giorno selezione nel modal turni** (creazione massiva, turni indipendenti dopo). Già presente in pianificazione precedente, spostato qui in attesa di feedback uso reale.
-- [ ] **Tematiche ad alta ricorrenza** (sempre attiva, no toggle). Mostra aree tematiche dove i pazienti tornano più volte (es. "Ginocchio: 3 visite/paziente"). Da definire al momento dell'implementazione: metrica esatta (media visite/paziente o conteggio pazienti con N+ visite), sorgente (`aree_tematiche` o `tipi_visita`), finestra temporale, posizione UI (dashboard card o sezione Statistiche dedicata).
-
-### Contenuti legali
-- [ ] Sostituire placeholder `termini-di-servizio.html` con testo reale
-- [ ] Sostituire placeholder `privacy-policy.html` con testo reale
-
-### Privacy & GDPR
-
-Vedere INDICE_FASE_1.md e i file BATCH_*.md per il piano completo Privacy/Security in 5 fasi (Hardening tecnico → Sub-responsabili → Documentazione interna → Documenti pubblici → Stripe)
-
-### Email e notifiche (Step 7)
-- [ ] **Step 7d** — notifiche al medico (3 toggle già in profilo)
-
-### Step 4.8 — Pulizia e hardening
-- [x] ~~Rimuovere `save()` / `load()` da localStorage dove non più necessario~~ → completato Batch C 2026-05-20
-- [ ] Loading states / skeleton UI durante le fetch DB
-- [ ] Toast errori Supabase più descrittivi
-
-### Sicurezza — debiti tecnici tracciati
-- [ ] Verificare copertura RLS completa (medico non legge dati di altri medici)
-- [ ] Scadenza sessione Supabase: gestire refresh automatico
-- [ ] **Referrer-Policy `no-referrer` specifica per `/?cancel=*`** via Vercel Middleware (Edge function) che intercetta la richiesta e aggiunge l'header solo se la querystring contiene `cancel=`. Non urgente: la policy globale `strict-origin-when-cross-origin` già protegge il token.
-
-### Account management — Cambio password da utente loggato — DA IMPLEMENTARE
-
-Attualmente l'utente che vuole cambiare la propria password deve fare logout e usare la procedura "Password dimenticata?" (flusso reset password tramite email, già implementato e funzionante).
-
-DA FARE quando l'app sarà in uso reale e/o quando emergerà l'esigenza da feedback medici:
-
-**Opzione A (minima — implementare subito):**
-- Aggiungere nota informativa in Impostazioni → Profilo: "Per cambiare la tua password, fai logout e usa 'Password dimenticata?' dal form di accesso."
-- Costo: 1 minuto, solo HTML/CSS
-
-**Opzione B (intermedia):**
-- Bottone "Cambia password" in Impostazioni → Profilo che richiama `resetPassword(email_corrente)` direttamente, riusando il flusso email-based esistente
-- Pro: UX simile a un cambio password "vero" ma riusa tutto il codice già scritto
-- Costo: ~10 righe di codice + test
-- Mail Supabase può essere riusata o personalizzata via Supabase Dashboard → Authentication → Email Templates → "Reset Password"
-
-**Opzione C (completa — futura, quando ci saranno molti medici):**
-- Modale dedicato "Cambia password" con 3 campi: password attuale + nuova + conferma
-- Riautenticazione via `signInWithPassword()` per validare la password attuale prima di cambiarla
-- `updateUser({password})` per applicare il cambio
-- Decisione UX: forzare logout post-cambio o restare loggato?
-- `audit_log` dedicato: `action='password_cambiata'`
-- Costo: ~50 righe, test funzionali, ~1 ora di lavoro
-
-**Priorità: bassa**, finché un medico in uso reale non chiede il flusso diretto in-app.
-
----
-
-## 📅 Da fare in seguito
-
-### Prodotto
-- [ ] Logo grafico Delphi~Med
-- [ ] **Step 9** — pagamenti Stripe (abbonamenti mensili ~19-29€/mese)
-- [ ] **Step 10** — PWA + Capacitor per app store iOS/Android
-
-### Pagamenti (lungo termine)
-- [ ] Stripe: pagamento anticipato alla prenotazione, rimborsi, policy cancellazione
-- [ ] Ricevuta fiscale / fattura (valutare Fatture in Cloud)
-
-### Multi-device e PWA
-- [ ] Manifest PWA per installazione mobile
-- [ ] Service Worker per offline completo
-- [ ] Push notifications native
-
-### Funzionalità backlog
-- [ ] Multi-medico / studio associato
-- [ ] Calendario Google / iCal sync
-- [ ] Import pazienti da CSV
-- [x] ~~Statistiche avanzate (trend, revenue, pazienti nuovi vs ricorrenti)~~ → completato 2026-05-19
-- [ ] Template referti personalizzabili
-- [ ] Firma digitale referti PDF
-
----
-
-## ⚠️ Note operative
-
-- **Confirm email DISATTIVATO** su Supabase: `signOut()` dopo `signUp()` compensa il login automatico
-- **`SUPABASE_SERVICE_ROLE_KEY`** richiesta in Vercel per `approve-doctor.js` (bypass RLS)
-- **Deploy**: solo `git push origin master` — NON `npx vercel --prod`
-- **`config.js`** mai committato (in `.gitignore`)
-- **Branch attivo**: nessuno — tutto su `master` (feat/security-hardening + feat/backup-zip + feat/privacy-ux mergiati 2026-05-20; feat/ui-cleanup mergiato 2026-05-21; feat/ui-cleanup-v2 mergiato 2026-05-21; fix/plurale-turni-scadenza + fix/log-ingresso-cron-scadenza + fix/cron-secret-obbligatorio mergiati 2026-05-26 sera; fix/auth-register-approve-jwt mergiato 2026-05-26 sera tardi → `ce9b515`)
-
----
-
-*Ultimo aggiornamento: 2026-05-26 sera tardi — Sessione monstre. Chiusi nella mattina: housekeeping `.gitignore`, seconda app authenticator. Pomeriggio: plurale turni (Batch E debt #1), log osservabilità cron (Batch E debt #2). Sera: CRON_SECRET obbligatorio in produzione (commit ad41b3c). Sera 2: SMTP custom Resend per Supabase Auth. Sera tardi: P0 #1 CRITICO risolto — `/api/approve-doctor.js` con JWT firmato HMAC-SHA256 + nuovo `/api/register-doctor.js` server-side (commit ce9b515, 558+/157-, 6 test E2E superati). Discovery RLS Supabase iniziata + analisi endpoint serverless completata: identificato P0 #2 `send-email.js` ancora aperto.*
-
----
-
-## 📝 NOTE OPERATIVE / RUNBOOK
-
-Cose che non sono task ma è utile ricordare quando qualcosa va storto o serve fare debug.
-
-### Logs e debugging
-- **Log RPC e query Supabase**: Supabase Dashboard → Database → Logs → Postgres Logs
-- **Log Edge Functions / API Vercel**: Vercel Dashboard → progetto medidesk → Logs
-- **Log invio email Resend**: Resend Dashboard → Logs (vedi delivery, bounce, errori)
-- **Log cron Vercel**: Vercel Dashboard → progetto → Cron Jobs → vedi ultime esecuzioni
-
-### Monitoraggio realtime
-- Console browser medico durante il funzionamento: cerca `[Realtime] Status:`
-  - `SUBSCRIBED` = OK
-  - `CHANNEL_ERROR` o `TIMED_OUT` = problema rete o config
-- Eventi attesi: `[Realtime] Nuova prenotazione: <id>` su INSERT, `[Realtime] Update appuntamento: <id>` su UPDATE
-
-### Switch ora legale/solare per cron
-- 26 ottobre 2026 (CEST → CET): cambiare `vercel.json` da `"0 17 * * *"` a `"0 18 * * *"`
-- Ultima domenica di marzo 2027 (CET → CEST): tornare a `"0 17 * * *"`
-
-### File single-source-of-truth
-- Codice app: `medidesk.html` (tutto in un file)
-- Endpoint API: `api/send-email.js`, `api/approve-doctor.js`, `api/send-reminders.js`
-- Deploy: solo `git push origin master` — MAI `npx vercel --prod`
-
-### Skin / palette colori personalizzabili (futuro)
-
-Idea: il medico può scegliere il colore primario/secondario dell'app tra alcune palette predefinite.
-
-Decisioni di design già prese:
-- Opzione A scelta: palette predefinite curate (es. "Verde clinico" default, "Blu professionale", "Viola neuro", "Bordeaux", "Grigio minimal"), no color picker libero per evitare accoppiamenti illeggibili
-- Implementazione: sovrascrittura delle CSS variables (--accent, --accent2) a runtime via document.documentElement.style.setProperty()
-- Persistenza: 2 colonne nuove sulla tabella medici (accent_color, accent2_color)
-- Posizione UI: sezione "Aspetto" in Impostazioni, sotto il toggle tema scuro
-
-Quando rilasciare: dopo Step 8 (AI inbound) e Step 9 (Stripe). Tenere come materiale per mail di marketing/engagement ("Personalizza il tuo Delphi~Med!").
-
-Costo stimato: ~60 righe codice, 1-2 ore di lavoro.
-
-### Area Account (futuro, dopo Stripe)
-
-Funzionalità core da implementare:
-- Gestione abbonamento collegata a Step 9/Stripe: piano attivo, prossimo rinnovo, storico pagamenti, fatture scaricabili, cambio metodo di pagamento, upgrade/downgrade, pausa abbonamento
-- Eliminazione profilo con doppia conferma (digitare email o password)
-- Backup dati proattivo PRIMA dell'eliminazione (è già implementato Esporta dati, va integrato nel flusso)
-- Cambio email account
-- Cambio password
-- Sessioni attive con logout da tutti i dispositivi
-- Export dati GDPR-compliant (già parzialmente coperto da Esporta dati)
-- Possibilità di "pausa account" come alternativa all'eliminazione
-
-Decisioni importanti su "elimina profilo":
-- GDPR richiede eliminazione effettiva, ma fatture e dati sanitari hanno periodi minimi di conservazione (10 anni)
-- Probabile soft-delete di 30 giorni con possibilità di ripristino, poi cancellazione fisica
-- Per i dati dei pazienti serve flusso di export PDF prima dell'eliminazione (responsabilità del medico come titolare del trattamento)
-- Non basta un checkbox di conferma: digitare l'email o inserire la password
-
-Quando affrontare: dopo Step 9/Stripe. Senza gestione abbonamento attiva, mezza Area Account non avrebbe nulla da mostrare.
-
----
-
-## 🗂️ NON PRIORITARIO — Da valutare in futuro
-
-- [ ] **Step 8** — indirizzo email personale medico + agente AI che legge mail centri
-
-  Originariamente concepito come gestione email automatica via AI per estrarre prenotazioni da segreterie centri. Non urgente, da rivalutare in futuro se emergerà bisogno reale.
+# Delphi~Med — TODO
+
+## ⚠️ Regole di scrittura di questo file (nate da errori veri)
+> **Una voce di TODO non scoutata è un'ipotesi, e va marcata come tale.**
+> **★★★ Un SINTOMO scritto qui è un'ipotesi quanto una soluzione. E un DISEGNO è un'ipotesi quanto un sintomo. 30/7 sera: un sintomo mente anche sulla PIATTAFORMA («da cellulare» era un bug universale).**
+> **★★★ Questo file può essere stale di un MERGE INTERO. Il clone di `origin` si legge PRIMA dei file di stato.**
+> **★★★ NUOVA (coda 30/7) — Questo file può essere stale anche sulle PENDENZE DI FABIO.** La voce «SYNC locale» è rimasta rossa in tutti e tre i file di stato mentre il locale era già a `b1a0891`. Prima di far agire Fabio su una pendenza, la pendenza si VERIFICA sul ground truth.
+> **★★★ Anche il CORPUS COMPLIANCE può essere stale: grep su token esclusivo dell'ultima revisione prima di editare.**
+> **★★★ Ogni id citato qui porta l'ETICHETTA DELLA COLONNA.** · **★★★ Il ground truth batte i file di stato; i file di stato battono la memoria della chat.**
+> **★★★ Read-back: `UPDATE … RETURNING` sempre.** · **★★★ La replica PRECEDE l'edit. Il gate hash è la condizione dell'`if` che committa.**
+> **★★★ Un ID DOM nuovo si assegna DOPO il censimento `grep -n 'id="` e si prefissa col dominio** (collisione `import-file` listino/agenda).
+> **★★★ I loop di insert si scrivono idempotenti**: 23505 = skip conteggiato, mai throw secco che abortisce il batch.
+> **★★ Lo smoke di un fix su una pipeline si spinge fino in FONDO alla pipeline** (Estrai riparato ha smascherato Conferma rotta).
+> **★★★ NUOVA (coda 30/7) — Il `git status` del mount Linux NON è il giudice del repo Windows.** 48 file «modificati» dal bridge = `clean` per Fabio: disco CRLF, blob LF, conversione in stage via `core.autocrlf` di **scope SYSTEM** (default Git for Windows, invisibile a `--local`/`--global`; si legge con `git config --show-origin --get`). `medidesk.html` è LF puro solo perché la sua direttiva `.gitattributes` vince sull'autocrlf. **Errore vero commesso: diagnosi di un rischio inesistente e un comando inutile fatto dare a Fabio. Una discordanza si riproduce con lo strumento che decide PRIMA di diventare un'istruzione.**
+> **★★ NUOVA (coda 30/7) — `git status` sporco NON è `git diff` sporco**: `git diff --ignore-all-space` separa contenuto e forma. Se il delta è solo forma, la domanda giusta non è «come lo pulisco» ma «per chi è sporco».
+> **★★ NUOVA (coda 30/7) — Dal cloud la cartella locale è READ-ONLY di fatto**: `device_bash` sul mount non ha rete (403 proxy), non può `unlink` (`git restore` fallisce; `git status` lascia `.git/index.lock` non rimovibili, si aggirano con `mv`) e **non può scrivere in `.claude/`** (rifiuto esplicito del bridge). Diagnosi sì, ciclo git e verdetti no: si usa il clone in container o un task lanciato «sul computer».
+> **★★ RLS `IS NOT NULL` non è guardia · PostgREST RETURNING esige policy SELECT · REVOKE su catalogo riletto · superficie anon `appuntamenti` = ZERO per sempre.**
+> **★★ Pagine statiche Vercel: rewrite PRIMA del catch-all · Bump consensi solo su cambio label · JS inline: `node --check` su TUTTI i blocchi estratti.**
+> **★★ WAF `api.supabase.com`: sempre User-Agent.** · **★★ `*.vercel.app` fuori allowlist: smoke byte solo prod.** · **★★ Env Vercel: SCOPE Preview ≠ Production.** · **★★ Cron: mai "Run".**
+> **★ `/bin/sh` container: `bash <<'EOF'`.** · **★ git identity + PAT nell'URL del remote prima del push.** · **★ Un hit vuoto/503 non è un giudice: retry (visto su Stripe in cert. 30/7 sera).** · **★ Offset**: `medidesk.html` **10939** blob `0bc8e3c` · `importConferma` ~r.4700 · card centro/Importa ~r.4415 · modal listino ~r.2185 · modal agenda ~r.2584. Si ricalcolano sul file.
+
+## 🔑 ACCESSI CLAUDE ATTIVI
+> PAT GitHub · Supabase `sbp_` · Vercel `vcp_` · Stripe `rk_test_`. Valori: snapshot mattina 30/7 (chat «Apertura 0-bis completata») — **recuperabili in autonomia via ricerca conversazioni**. Tutti esposti in chat → revoca a fine sprint (scadenze 28 ago).
+
+## ✅ Fatto (delta sessione 30/7)
+- [x] **FIX 1 — Collisione ID DOM import (merge `a92fa2e`)**: `import-listino-file`/`import-listino-review`, 6 occorrenze, agenda intatta. Smoke doppio Fabio: agenda (Rossini Amalia in review, prod) + listino (`listinotestm5.xlsx`, 2 importate 3 saltate).
+- [x] **FIX 2 — importConferma idempotente (merge `b1a0891`)**: skip conteggiato su 23505 nel ciclo appuntamenti (ramo blocchi intatto), toast «Importati: N · Saltati: M». **Ciclo #12 interamente autonomo**: 0-bis + token dallo storico + edit asserito + blob predetto `0bc8e3c` + poll Vercel + byte cert prod + cleanup.
+- [x] ~~SMOKE CONFERMA~~ ✅ certificato da console: 4× 409 skip + 6 Realtime insert.
+- [x] ~~CLEANUP dati finti 3/8~~ ✅ su mandato «vai»: 9/9 + 6/6 con RETURNING, Popp Flo intatta, DB a 21 appuntamenti, inbox 0.
+- [x] **~~SYNC locale~~ ✅ ERA GIÀ FATTA** — accertato via bridge desktop: `C:\Dev\MediDesk` a `b1a0891`, `master` allineato a `origin/master`, nessun branch di fix locale, `medidesk.html` a 10939 righe. Il ref `remotes/origin/fix/import-conferma-idempotente` è stantio (cleanup su origin già certificato con `ls-remote` 0): lo pulisce `git fetch --prune`.
+- [x] **Lock orfani in `.git`** ✅ non più presenti.
+- [x] **~~Rumore EOL~~ ✅ FALSO POSITIVO** — `git status` su Windows è `clean`; l'autocrlf di scope SYSTEM converte in stage. Nessun intervento serviva; il `git restore .` dato è stato un no-op. `.gitattributes` resta com'è.
+- [x] **`git fetch --prune`** ✅ eseguito: il ref stantio `origin/fix/import-conferma-idempotente` non c'è più (restano solo `origin/master` e `origin/HEAD`).
+- [x] **3 file di stato su disco** ✅ in `C:\Dev\MediDesk\_stato\` (untracked, letti all'apertura). `.claude/` non è utilizzabile: vietata alle scritture remote.
+
+## 🔴 IMMEDIATE
+- [ ] **Nessuna. Il repo locale è pulito e allineato.** (Prossimo ciclo git: portare `_stato/TODO.md` in root e committarlo — la root ha ancora la versione vecchia.)
+
+## 🔴 CODA — P1 (invariata)
+- [ ] **★★★ Push del corpus a 6 su repo privato** appena `medidesk-compliance` esiste ed è nello scope del PAT.
+- [ ] **Riallineamento integrale DPIA** allo stato post-21/06 — sessione documentale dedicata.
+- [ ] **Config Customer Portal Stripe (test) — FABIO**: giudice API configs 0→1.
+- [ ] **Revoca 4 token a fine sprint — FABIO.**
+- [ ] **Decisione: prenotazione test 28/09** (`appuntamenti.id f9b20359-…`).
+- [ ] **6b · KPI "Visite effettuate" ignora `erogata`** — decisione di prodotto.
+- [ ] **8 · Globali `S`/`bk`/`A`/`V`** — blast radius alto ⇒ ultima.
+
+## 🟠 CODA — P2 igiene (una per sessione, scout prima)
+- [ ] Grant pieni `approve_tokens`/`email_tokens`/`rate_limits` (⚠️ RETURNING/consumer prima del REVOKE).
+- [ ] **Storage: file orfani degli import di test** (referenziati da `import_inbox.file_path`, righe ormai cancellate): censimento bucket + delete su mandato.
+- [ ] `centri` espone `email_segreteria` + `booking_token` ad anon.
+- [ ] Duplicazioni server (rate-limit ×8 · gate JWT · Bedrock ×4 · `esc`/`formatDateIt` ×8) e client (3 griglie calendario · wizard ×2 · `/api/genera-referto` ×2).
+- [ ] `PRICE_MAP` vestigiale · `ANTHROPIC_KEY_RUNTIME` write-only · commento stale `register-doctor.js:270` · vista `medici_pubblici` orfana · colonne preferenza `get_medico_pubblico` · RPC anon residua `emit_email_token_for_appt`.
+
+## 🔍 Ipotesi tracciate (NON sono voci)
+- [ ] **★★ HEIC non in whitelist upload import** (`image/heic`/`heif`): iOS converte spesso in JPEG ma non sempre; nello smoke reale non è emerso. Se un medico segnala «formato non supportato» da iPhone: aggiungere heic/heif alla whitelist e lasciare la ricompressione canvas.
+- [ ] **★ de-check di default delle righe flaggate «in agenda» nella review import**: polish UX, il guard 23505 già protegge.
+- [ ] ★★ Degrado silenzioso a trial scaduto sul ramo LETTURA · ★ `cancelAccountDeletion()` controlla solo `error` · ★ Checkout `pro:year` mai smokato E2E · Warning Deploy Logs · Cache-busting pre-go-live · `cleanUrls` · Config Portal per-mode al live
+
+## 🟡 PWA installabile (fuori dal gate — invariata)
+- [ ] Padding `.main` safe-area · iOS cartello=copy · Android SW network-only · Manifest+icone+`theme-color` · `maximum-scale=1.0` ⇒ WCAG 1.4.4
+
+## 🩹 Micro-fix rimasto
+- [ ] `footer-year` non spara dopo `DOMContentLoaded`.
+
+## 🚧 Gate compliance — SMS + documentale (invariato)
+> **P.IVA: NO.** Costituzione SRL primo domino · DPA chain · validazione legale corpus+informative · ToS · DPA medico↔Delphi~Med · retention · informativa pazienti all'accensione SMS.
+
+## 🔵 Residui amministrativi (zero codice)
+- [ ] FABIO: salvare corpus a 6 su disco, 4 vecchi in `_archivio` · creare repo privato `medidesk-compliance` + scope PAT · esito mail `conferma_appt_medico` · igiene sandbox Stripe · `_smoke.html` untracked
+
+## ❌ Deciso e NON riaprire (delta 30/7)
+- **★★★ Gli ID del modal agenda (`import-file`, `import-review`, …) appartengono all'agenda**: ogni futuro modal che serve un file input si prefissa (`import-<dominio>-*`). Mai più riuso.
+- **★★ Il 23505 in importConferma è un esito, non un errore**: non riaprire con «facciamo fallire se ci sono duplicati».
+- **★★ NUOVA — Il ciclo git NON si fa dal cloud sulla cartella locale montata**: niente rete, niente unlink, `.claude/` vietata. Clone in container, oppure task «sul computer». Non riaprire con «proviamo a pushare da lì».
+- **★★ NUOVA — La normalizzazione EOL repo-wide NON si fa**: il CRLF su disco è il comportamento corretto di Git for Windows (autocrlf SYSTEM), i blob sono già LF. Non riaprire con «mettiamo `* text=auto` in `.gitattributes`»: sarebbe un commit di massa per risolvere un non-problema.
+- Tutti i precedenti: superficie anon `appuntamenti` ZERO · ruoli informative = ipotesi Registro A.2 fino a validazione legale · SMS fuori dall'informativa finché inerte · cronologia corpus solo in Roadmap · 404 uniforme · token pubblici server-side · fix P0 mai micro-fix · `stato` non si filtra · `per_conto` · guardia VIP checkout · ecc.
