@@ -4726,7 +4726,7 @@ async function importConferma(){
       daSalvare.push({ ora: ora, naz: naz, tipo: tipo });
     }
     if(!daSalvare.length){ showToast('Seleziona almeno una riga'); if(btn){ btn.disabled=false; btn.textContent='Conferma in agenda'; } return; }
-    let okCount = 0;
+    let okCount = 0, skipCount = 0;
     for(const r of daSalvare){
       const token = generateCancellationToken();
       const { data: ins, error } = await supabaseClient.from('appuntamenti').insert({
@@ -4745,7 +4745,10 @@ async function importConferma(){
         cancellation_token: token,
         import_id: _importInboxId
       }).select('id').single();
-      if(error) throw error;
+      if(error){
+        if(error.code === '23505'){ skipCount++; continue; }
+        throw error;
+      }
       S.appuntamenti.push({
         id: ins.id, nome: '', cognome: r.naz, tel: '', email: '',
         tipo: r.tipo, area: '', note: '', data: data, ora: r.ora,
@@ -4759,7 +4762,7 @@ async function importConferma(){
     save();
     renderAgenda(); renderDashboard(); updateStats();
     closeModal('modal-import-agenda');
-    showToast(okCount + ' appuntament' + (okCount===1?'o':'i') + ' importat' + (okCount===1?'o':'i'));
+    showToast('Importati: ' + okCount + (skipCount > 0 ? ' · Saltati (già in agenda): ' + skipCount : ''));
   } catch(err){
     console.error('[Delphi~Med] importConferma:', err.message);
     showToast('Errore: ' + err.message);
