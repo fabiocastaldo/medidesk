@@ -26,6 +26,7 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
+    { "source": "/privacy-medici", "destination": "/privacy-medici.html" },
     { "source": "/termini-di-servizio", "destination": "/termini-di-servizio.html" },
     { "source": "/m/(.*)", "destination": "/api/medico?slug=$1" },
     { "source": "/c/(.*)", "destination": "/medidesk.html" },
