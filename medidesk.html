@@ -8288,58 +8288,33 @@ async function confirmBooking(){
         if(!_r.ok || !_out.ok){ throw new Error(_out.error || 'Servizio temporaneamente non disponibile, riprova tra qualche minuto'); }
         appt.id = _out.appt_id;
       } else {
-      const insertPromise = supabaseClient.from('appuntamenti').insert({
-        medico_id:          bk.medicoId,
-        centro_id:          bk.centroId,
-        data:               bk.dateStr,
-        ora:                bk.ora,
-        nome_paziente:      nome,
-        cognome_paziente:   cognome,
-        telefono_paziente:  appt.tel   || null,
-        email_paziente:     appt.email || null,
-        tipo_visita:        appt.tipo  || null,
-        area_tematica:      appt.area  || null,
-        note:               appt.note  || null,
-        source:             'paziente',
-        cancellation_token: cancellationToken,
-        consenso_base_at:   consentTs,
-        consenso_health_at: consentTs,
-        consenso_versione:  consensoVersioneCorrente(perConto),
-        per_conto:          perConto,
-        da_centro:          !!bk.centroMode
-      }).select('id').single();
+      const fetchPromise = fetch('/api/create-booking', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          medico_id: bk.medicoId,
+          centro_id: bk.centroId,
+          nome, cognome,
+          email: appt.email, tel: appt.tel,
+          tipo: appt.tipo, area: appt.area,
+          note: appt.note,
+          data: bk.dateStr, ora: bk.ora,
+          per_conto: perConto,
+          consenso_versione: consensoVersioneCorrente(perConto)
+        })
+      });
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Servizio temporaneamente non disponibile, riprova tra qualche minuto')), 10000)
       );
-      const { data: inserted, error } = await Promise.race([insertPromise, timeoutPromise]);
-      if(error){
-        if(error.code === '23505' || (error.message && error.message.includes('appuntamenti_slot_unique'))){
-          const err = new Error('Questo orario è appena stato prenotato da un altro paziente. Ti riportiamo alla scelta dello slot.');
-          err.isSlotTaken = true;
-          throw err;
-        }
-        throw error;
+      const _r = await Promise.race([fetchPromise, timeoutPromise]);
+      const _out = await _r.json().catch(()=>({}));
+      if(_r.status === 409 || _out.error === 'slot_taken'){
+        const err = new Error('Questo orario è appena stato prenotato da un altro paziente. Ti riportiamo alla scelta dello slot.');
+        err.isSlotTaken = true;
+        throw err;
       }
-      appt.id = inserted.id;
-      console.log('[Booking] INSERT OK, id:', inserted.id);
-      if(appt.email){
-        try {
-          const { data: tokenData, error: tokenErr } = await supabaseClient
-            .rpc('emit_email_token_for_appt', { p_appt_id: appt.id });
-          if (tokenErr) throw tokenErr;
-          const emailToken = Array.isArray(tokenData) ? tokenData[0]?.jti : tokenData?.jti;
-          if (emailToken) {
-            fetch('/api/send-email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tipo: 'conferma_appt_anon', email_token: emailToken })
-            }).catch(e=>console.error('[Delphi~Med] send-email anon:', e.message));
-          }
-        } catch (e) {
-          console.error('[Delphi~Med] emit_email_token:', e.message);
-          // Soft-fail: appt salvato, email no. La UI mostra comunque "Prenotazione confermata"
-        }
-      }
+      if(!_r.ok || !_out.ok){ throw new Error(_out.error || 'Servizio temporaneamente non disponibile, riprova tra qualche minuto'); }
+      appt.id = _out.appt_id;
+      console.log('[Booking] INSERT OK, id:', appt.id);
       }
     } catch(e){
       console.error('[Delphi~Med] confirmBooking INSERT:', e.message);
