@@ -1106,7 +1106,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </select>
       </div>
       <button class="auth-btn" id="auth-reg-btn" onclick="signUp()">Crea account</button>
-      <p class="auth-legal">Registrandoti accetti i <a href="/termini-di-servizio" target="_blank" rel="noopener">Termini di servizio</a> e la <a href="/privacy-policy" target="_blank" rel="noopener">Privacy policy</a> di Delphi~Med.</p>
+      <p class="auth-legal">Registrandoti accetti i <a href="/termini-di-servizio" target="_blank" rel="noopener">Termini di servizio</a> e dichiari di aver letto l'<a href="/privacy-policy" target="_blank" rel="noopener">Informativa privacy</a> di Delphi~Med.</p>
       </div><!-- /reg-form-content -->
       <div id="reg-success-box" style="display:none">
         <div class="reg-success-inner">
@@ -1961,9 +1961,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           </div>
           <div class="consent-box" style="background:var(--surface2);padding:14px;border-radius:8px;margin:16px 0;font-size:13px">
             <p style="margin:0 0 10px 0"><strong>Informativa breve</strong></p>
-            <p id="bk-info-intro" style="margin:0 0 8px 0">I dati che inserisci (nome, cognome, email, telefono, recapito) sono raccolti da <strong>Delphi~Med</strong> per la gestione del tuo appuntamento, per conto del medico che gestisce questa agenda.</p>
+            <p id="bk-info-intro" style="margin:0 0 8px 0">I dati che inserisci (nome, cognome, email, telefono) sono trattati da <strong>Delphi~Med</strong>, in qualità di titolare del trattamento, per gestire la tua prenotazione: registrazione dell'appuntamento, email di conferma con il link per la cancellazione e promemoria prima della visita, inviati al recapito indicato.</p>
             <p style="margin:0 0 8px 0">Il tipo di visita e l'area tematica possono costituire <strong>dati relativi alla salute</strong> (art. 9 GDPR) e richiedono il tuo consenso esplicito.</p>
-            <p style="margin:0 0 12px 0;font-size:12px;color:var(--ink2)">Titolare: il medico. Responsabile: Delphi~Med. <a href="/privacy-policy" target="_blank" rel="noopener" style="color:var(--accent)">Informativa completa</a></p>
+            <p style="margin:0 0 12px 0;font-size:12px;color:var(--ink2)">Titolare per i dati di prenotazione: Delphi~Med. Per i dati clinici raccolti durante la visita (note, referti) il titolare è il medico, per il quale Delphi~Med opera come responsabile del trattamento. <a href="/privacy-policy" target="_blank" rel="noopener" style="color:var(--accent)">Informativa completa</a></p>
             <label id="bk-row-base" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer">
               <input type="checkbox" id="bk-consent-base" style="margin-top:3px;flex-shrink:0">
               <span id="bk-consent-base-label">Ho letto l'informativa e acconsento al trattamento dei miei dati per la finalità di prenotazione (art. 6 GDPR).</span>
@@ -8202,11 +8202,11 @@ function bkTogglePerConto(){
   if(rowHealth) rowHealth.style.display = on ? 'none'  : 'flex';
   if(auth)      auth.style.display      = on ? 'block' : 'none';
   if(on){
-    if(intro) intro.innerHTML = 'I dati che inserisci sono dell\'interessato (la persona che riceverà la visita) e sono raccolti da <strong>Delphi~Med</strong> per la gestione del suo appuntamento, per conto del medico che gestisce questa agenda.';
+    if(intro) intro.innerHTML = 'I dati che inserisci sono della persona che riceverà la visita (l\'interessato) e sono trattati da <strong>Delphi~Med</strong>, in qualità di titolare del trattamento, per gestire la sua prenotazione: l\'email di conferma e i promemoria sono inviati al recapito indicato. Non sono raccolti dati identificativi di chi effettua la prenotazione.';
     const cb=document.getElementById('bk-consent-base');   if(cb) cb.checked=false;
     const ch=document.getElementById('bk-consent-health'); if(ch) ch.checked=false;
   } else {
-    if(intro) intro.innerHTML = 'I dati che inserisci (nome, cognome, email, telefono, recapito) sono raccolti da <strong>Delphi~Med</strong> per la gestione del tuo appuntamento, per conto del medico che gestisce questa agenda.';
+    if(intro) intro.innerHTML = 'I dati che inserisci (nome, cognome, email, telefono) sono trattati da <strong>Delphi~Med</strong>, in qualità di titolare del trattamento, per gestire la tua prenotazione: registrazione dell\'appuntamento, email di conferma con il link per la cancellazione e promemoria prima della visita, inviati al recapito indicato.';
     const ct=document.getElementById('bk-consent-terzi');  if(ct) ct.checked=false;
   }
 }
