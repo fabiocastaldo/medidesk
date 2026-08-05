@@ -391,174 +391,30 @@ function renderPlancia(){
   renderMediciTab();
   renderSediTab();
   renderTurniTab();
-  renderServiziTab();
+  renderServiziCatalogo();
+  renderAssocServiziTab();
+  renderAssocTurniTab();
 }
 
-function renderServiziTab(){
+function renderServiziCatalogo(){
   const d = _plancia; if(!d) return;
-  const el = document.getElementById('servizi-tbl');
-  const q = (document.getElementById('sv-search').value || '').toLowerCase().trim();
-  const medici = (d.medici||[]).filter(m => !q || (nomeMedico(m) + ' ' + (m.specializzazione||'')).toLowerCase().includes(q));
+  const el = document.getElementById('catalogo-servizi-tbl');
   const servizi = d.servizi || [];
   if(!servizi.length){
     el.innerHTML = '<div class="empty">Nessun servizio. Aggiungi il primo dal modulo qui sopra.</div>';
-  } else if(!medici.length){
-    el.innerHTML = '<div class="empty">' + (q ? 'Nessun medico corrisponde alla ricerca' : 'Nessun medico collegato') + '</div>';
-  } else {
-    el.innerHTML = '<table class="mx"><thead><tr><th>Medico</th>'
-      + servizi.map(s => `<th>${esc(s.nome)}
-          <button class="act-btn" title="Rinomina servizio" onclick="rinominaServizio('${esc(s.id)}','${esc(s.nome).replace(/'/g,'&#39;')}')">✎</button><button class="act-btn act-danger" title="Elimina servizio" onclick="eliminaServizio('${esc(s.id)}','${esc(s.nome).replace(/'/g,'&#39;')}')">✕</button></th>`).join('')
-      + '</tr></thead><tbody>'
-      + medici.map(m => '<tr><td>' + esc(nomeMedico(m)) + '</td>'
-          + servizi.map(s => {
-              const on = (s.medici||[]).includes(String(m.medico_id));
-              return `<td><button class="mx-cell${on ? ' on' : ''}" title="${on ? 'Rimuovi da' : 'Associa a'} ${esc(s.nome)}" onclick="toggleAssociazione('${esc(s.id)}','${esc(m.medico_id)}',${on})">${on ? '✓' : ''}</button></td>`;
-            }).join('')
-          + '</tr>').join('')
-      + '</tbody></table>';
-  }
-  const am = document.getElementById('sv-alt-medico');
-  am.innerHTML = (d.medici||[]).map(m => `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('') || '<option value="">Nessun medico</option>';
-  const asv = document.getElementById('sv-alt-servizio');
-  asv.innerHTML = servizi.map(s => `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('') || '<option value="">Nessun servizio</option>';
-}
-
-async function toggleAssociazione(servizioId, medicoId, attiva){
-  await _serviziCall({ action: attiva ? 'rimuovi' : 'associa', servizio_id: servizioId, medico_id: medicoId },
-    attiva ? 'Associazione rimossa.' : 'Medico associato.');
-}
-
-async function altAssocia(associa){
-  const medicoId = document.getElementById('sv-alt-medico').value;
-  const servizioId = document.getElementById('sv-alt-servizio').value;
-  if(!medicoId || !servizioId){ setBoxMsg('servizio-msg', 'Servono un medico e un servizio.', 'err'); return; }
-  await _serviziCall({ action: associa ? 'associa' : 'rimuovi', servizio_id: servizioId, medico_id: medicoId },
-    associa ? 'Medico associato.' : 'Associazione rimossa.');
-}
-
-async function _serviziCall(payload, msgOk){
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    const res = await fetch('/api/coop-servizi', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const body = await res.json().catch(() => ({}));
-    if(!res.ok){ setBoxMsg('servizio-msg', body.error || 'Operazione non riuscita.', 'err'); return false; }
-    console.log('[Plancia] Servizi:', payload.action, 'ok');
-    if(msgOk) setBoxMsg('servizio-msg', msgOk, 'info');
-    await enterPlancia();
-    switchTab('servizi');
-    return true;
-  } catch(e){
-    console.error('[Plancia] servizi:', e.message);
-    setBoxMsg('servizio-msg', 'Operazione non riuscita. Riprova.', 'err');
-    return false;
-  }
-}
-
-async function creaServizio(){
-  const nome = document.getElementById('servizio-nome').value.trim();
-  if(!nome){ setBoxMsg('servizio-msg', 'Il nome del servizio è obbligatorio.', 'err'); return; }
-  const ok = await _serviziCall({ action: 'crea', nome }, 'Servizio creato.');
-  if(ok) document.getElementById('servizio-nome').value = '';
-}
-
-async function associaAServizio(servizioId){
-  const sel = document.getElementById('sv-sel-' + servizioId);
-  if(!sel || !sel.value){ return; }
-  await _serviziCall({ action: 'associa', servizio_id: servizioId, medico_id: sel.value }, 'Medico associato.');
-}
-
-async function rimuoviDaServizio(servizioId, medicoId){
-  await _serviziCall({ action: 'rimuovi', servizio_id: servizioId, medico_id: medicoId }, 'Associazione rimossa.');
-}
-
-function renderMediciTab(){
-  const d = _plancia; if(!d) return;
-  const q = (document.getElementById('medici-search').value || '').toLowerCase().trim();
-  const rows = (d.medici||[]).filter(m => {
-    if(!q) return true;
-    return (nomeMedico(m) + ' ' + (m.specializzazione||'')).toLowerCase().includes(q);
-  });
-  const el = document.getElementById('medici-tbl');
-  if(!rows.length){
-    el.innerHTML = '<div class="empty">' + (q ? 'Nessun medico corrisponde alla ricerca' : 'Nessun medico collegato. Genera un codice e consegnalo al medico.') + '</div>';
     return;
   }
-  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Specializzazione</th><th>Sedi</th><th>Turni</th></tr></thead><tbody>'
-    + rows.map(m => {
-        const sedi = (m.centri||[]).map(c => esc(c.nome)).join(', ') || '—';
-        const nt = (m.centri||[]).reduce((k,c) => k + (c.turni||[]).length, 0);
-        return `<tr><td style="font-weight:600">${esc(nomeMedico(m))}</td><td>${esc(m.specializzazione||'—')}</td><td>${sedi}</td><td>${nt}</td></tr>`;
-      }).join('')
-    + '</tbody></table>';
-}
-
-function renderSediTab(){
-  const d = _plancia; if(!d) return;
-  const el = document.getElementById('sedi-tbl');
-  if(!(d.sedi||[]).length){
-    el.innerHTML = '<div class="empty">Nessuna sede configurata</div>';
-    return;
-  }
-  const mediciPerSede = {};
-  (d.medici||[]).forEach(m => (m.centri||[]).forEach(c => {
-    if(c.coop_sede_id){ mediciPerSede[c.coop_sede_id] = (mediciPerSede[c.coop_sede_id] || 0) + 1; }
-  }));
-  el.innerHTML = '<table class="tbl"><thead><tr><th>Sede</th><th>Indirizzo</th><th>Medici</th><th>Stato</th></tr></thead><tbody>'
-    + d.sedi.map(s => `<tr>
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Servizio</th><th>Medici associati</th><th style="width:90px"></th></tr></thead><tbody>'
+    + servizi.map(s => `<tr>
         <td style="font-weight:600">${esc(s.nome)}</td>
-        <td>${esc([s.via, s.citta, s.provincia].filter(Boolean).join(', ')) || '—'}</td>
-        <td>${mediciPerSede[s.id] || 0}</td>
-        <td>${s.attiva === false ? 'Sospesa' : 'Attiva'}</td>
+        <td>${(s.medici||[]).length}</td>
+        <td><button class="act-btn" title="Rinomina servizio" onclick="rinominaServizio('${esc(s.id)}','${esc(s.nome).replace(/'/g,'&#39;')}')">✎</button>
+            <button class="act-btn act-danger" title="Elimina servizio" onclick="eliminaServizio('${esc(s.id)}','${esc(s.nome).replace(/'/g,'&#39;')}')">✕</button></td>
       </tr>`).join('')
     + '</tbody></table>';
 }
 
-function renderTurniTab(){
-  const d = _plancia; if(!d) return;
-  const fm = document.getElementById('ft-medico').value;
-  const fs = document.getElementById('ft-sede').value;
-  const el = document.getElementById('turni-tbl');
-  const medici = (d.medici||[]).filter(m => !fm || String(m.medico_id) === fm);
-  if(!medici.length){
-    el.innerHTML = '<div class="empty">Nessun medico collegato</div>';
-    return;
-  }
-  const ordine = [1,2,3,4,5,6,0];
-  el.innerHTML = '<table class="mx"><thead><tr><th>Medico</th>'
-    + ordine.map(g => `<th>${GG[g]}</th>`).join('')
-    + '</tr></thead><tbody>'
-    + medici.map(m => {
-        const celle = ordine.map(g => {
-          let chips = '';
-          (m.centri||[]).forEach(c => {
-            if(fs && String(c.coop_sede_id) !== fs) return;
-            (c.turni||[]).forEach(t => {
-              if(Number(t.giorno) !== g) return;
-              const orario = String(t.inizio).slice(0,5) + '–' + String(t.fine).slice(0,5);
-              chips += `<span class="tchip" title="${esc(c.nome)} · slot ${esc(String(t.durata_slot))} min">${esc(c.nome)} ${esc(orario)}<button title="Elimina turno" onclick="eliminaTurno('${esc(t.id)}','${esc(nomeMedico(m))}','${GG[g]} ${esc(orario)}')">✕</button></span>`;
-            });
-          });
-          chips += `<button class="cell-add" title="Assegna turno a ${esc(nomeMedico(m))} di ${GG[g]}" onclick="preparaTurno('${esc(m.medico_id)}',${g})">+</button>`;
-          return '<td>' + chips + '</td>';
-        }).join('');
-        return `<tr><td>${esc(nomeMedico(m))}</td>${celle}</tr>`;
-      }).join('')
-    + '</tbody></table>';
-}
-
-function preparaTurno(medicoId, giorno){
-  document.getElementById('tf-medico').value = medicoId;
-  document.querySelectorAll('.tf-giorno-chk').forEach(ch => { ch.checked = (parseInt(ch.value) === giorno); });
-  updateTfGiorniLabel();
-  document.getElementById('tab-turni').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  document.getElementById('tf-sede').focus();
-}
-
-function renderServiziTab(){
+function renderAssocServiziTab(){
   const d = _plancia; if(!d) return;
   const el = document.getElementById('servizi-tbl');
   const q = (document.getElementById('sv-search').value || '').toLowerCase().trim();
@@ -570,8 +426,7 @@ function renderServiziTab(){
     el.innerHTML = '<div class="empty">' + (q ? 'Nessun medico corrisponde alla ricerca' : 'Nessun medico collegato') + '</div>';
   } else {
     el.innerHTML = '<table class="mx"><thead><tr><th>Medico</th>'
-      + servizi.map(s => `<th>${esc(s.nome)}
-          <button class="act-btn" title="Rinomina servizio" onclick="rinominaServizio('${esc(s.id)}','${esc(s.nome).replace(/'/g,'&#39;')}')">✎</button><button class="act-btn act-danger" title="Elimina servizio" onclick="eliminaServizio('${esc(s.id)}','${esc(s.nome).replace(/'/g,'&#39;')}')">✕</button></th>`).join('')
+      + servizi.map(s => `<th>${esc(s.nome)}</th>`).join('')
       + '</tr></thead><tbody>'
       + medici.map(m => '<tr><td>' + esc(nomeMedico(m)) + '</td>'
           + servizi.map(s => {
@@ -609,11 +464,10 @@ async function _serviziCall(payload, msgOk){
       body: JSON.stringify(payload)
     });
     const body = await res.json().catch(() => ({}));
-    if(!res.ok){ setBoxMsg('servizio-msg', body.error || 'Operazione non riuscita.', 'err'); return false; }
+    if(!res.ok){ setBoxMsg('servizio-msg', body.error || 'Operazione non riuscita.', 'err'); setBoxMsg('assoc-servizio-msg', body.error || 'Operazione non riuscita.', 'err'); return false; }
     console.log('[Plancia] Servizi:', payload.action, 'ok');
-    if(msgOk) setBoxMsg('servizio-msg', msgOk, 'info');
+    if(msgOk){ setBoxMsg('servizio-msg', msgOk, 'info'); setBoxMsg('assoc-servizio-msg', msgOk, 'info'); }
     await enterPlancia();
-    switchTab('servizi');
     return true;
   } catch(e){
     console.error('[Plancia] servizi:', e.message);
@@ -693,7 +547,7 @@ function renderTurniTab(){
       (c.turni||[]).forEach(t => {
         righe.push({ id: t.id, medico: nomeMedico(m), sede: c.nome, giorno: t.giorno,
           orario: String(t.inizio).slice(0,5) + '–' + String(t.fine).slice(0,5),
-          slot: t.durata_slot, fine_val: t.data_fine_validita });
+          slot: t.durata_slot });
       });
     });
   });
@@ -710,6 +564,44 @@ function renderTurniTab(){
         <td><button class="act-btn act-danger" title="Elimina turno" onclick="eliminaTurno('${esc(r.id)}','${esc(r.medico)}','${GG[r.giorno]||''} ${esc(r.orario)}')">✕</button></td>
       </tr>`).join('')
     + '</tbody></table>';
+}
+
+function renderAssocTurniTab(){
+  const d = _plancia; if(!d) return;
+  const el = document.getElementById('assoc-turni-tbl');
+  const medici = d.medici || [];
+  if(!medici.length){
+    el.innerHTML = '<div class="empty">Nessun medico collegato</div>';
+    return;
+  }
+  const ordine = [1,2,3,4,5,6,0];
+  el.innerHTML = '<table class="mx"><thead><tr><th>Medico</th>'
+    + ordine.map(g => `<th>${GG[g]}</th>`).join('')
+    + '</tr></thead><tbody>'
+    + medici.map(m => {
+        const celle = ordine.map(g => {
+          let chips = '';
+          (m.centri||[]).forEach(c => {
+            (c.turni||[]).forEach(t => {
+              if(Number(t.giorno) !== g) return;
+              const orario = String(t.inizio).slice(0,5) + '–' + String(t.fine).slice(0,5);
+              chips += `<span class="tchip" title="${esc(c.nome)} · slot ${esc(String(t.durata_slot))} min">${esc(c.nome)} ${esc(orario)}<button title="Elimina turno" onclick="eliminaTurno('${esc(t.id)}','${esc(nomeMedico(m))}','${GG[g]} ${esc(orario)}')">✕</button></span>`;
+            });
+          });
+          chips += `<button class="cell-add" title="Assegna turno a ${esc(nomeMedico(m))} di ${GG[g]}" onclick="preparaTurno('${esc(m.medico_id)}',${g})">+</button>`;
+          return '<td>' + chips + '</td>';
+        }).join('');
+        return `<tr><td>${esc(nomeMedico(m))}</td>${celle}</tr>`;
+      }).join('')
+    + '</tbody></table>';
+}
+
+function preparaTurno(medicoId, giorno){
+  document.getElementById('tf-medico').value = medicoId;
+  document.querySelectorAll('.tf-giorno-chk').forEach(ch => { ch.checked = (parseInt(ch.value) === giorno); });
+  updateTfGiorniLabel();
+  document.getElementById('tab-assoc-turni').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('tf-sede').focus();
 }
 
 async function enterPlancia(){
@@ -767,6 +659,7 @@ async function generaCodice(){
 
 function setBoxMsg(id, text, kind){
   const el = document.getElementById(id);
+  if(!el) return;
   if(!text){ el.className = 'hidden'; el.textContent = ''; return; }
   el.className = 'msg ' + (kind === 'err' ? 'msg-err' : 'msg-info');
   el.textContent = text;
@@ -829,7 +722,6 @@ async function assegnaTurno(){
     updateTfGiorniLabel();
     const _dd = document.getElementById('tf-giorni-dd'); if(_dd) _dd.removeAttribute('open');
     await enterPlancia();
-    switchTab('turni');
   } catch(e){
     console.error('[Plancia] assegnaTurno:', e.message);
     setBoxMsg('turno-msg', 'Assegnazione non riuscita. Riprova.', 'err');
@@ -849,8 +741,8 @@ async function eliminaTurno(turnoId, medico, quando){
     if(!res.ok){ setBoxMsg('turno-msg', body.error || 'Eliminazione non riuscita.', 'err'); return; }
     console.log('[Plancia] Turno eliminato:', turnoId);
     setBoxMsg('turno-msg', 'Turno eliminato.', 'info');
+    setBoxMsg('turni-reg-msg', 'Turno eliminato.', 'info');
     await enterPlancia();
-    switchTab('turni');
   } catch(e){
     console.error('[Plancia] eliminaTurno:', e.message);
     setBoxMsg('turno-msg', 'Eliminazione non riuscita. Riprova.', 'err');
