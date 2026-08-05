@@ -49,12 +49,37 @@ export default async function handler(req, res) {
 
   // il turno deve stare su un centro della cooperativa
   const chkRes = await fetch(
-    `${supabaseUrl}/rest/v1/turni?id=eq.${encodeURIComponent(turnoId)}&select=id,centri!inner(cooperativa_id)`,
+    `${supabaseUrl}/rest/v1/turni?id=eq.${encodeURIComponent(turnoId)}&select=id,giorno,inizio,fine,centro_id,data_fine_validita,centri!inner(cooperativa_id)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const chk = (chkRes && chkRes.ok) ? (await chkRes.json().catch(() => []))?.[0] : null;
   if (!chk || String(chk.centri?.cooperativa_id) !== String(seg.cooperativa_id)) {
     return res.status(404).json({ error: 'Turno non trovato' });
+  }
+
+  // guardia: visite future pianificate dentro questo turno
+  if (!b.forza) {
+    const oggi = new Date().toISOString().slice(0, 10);
+    const apRes = await fetch(
+      `${supabaseUrl}/rest/v1/appuntamenti?centro_id=eq.${encodeURIComponent(chk.centro_id)}&data=gte.${oggi}&cancelled=eq.false&select=data,ora`,
+      { headers: srvHeaders }
+    ).catch(() => null);
+    const apps = (apRes && apRes.ok) ? await apRes.json().catch(() => []) : [];
+    const tIni = String(chk.inizio).slice(0, 5);
+    const tFin = String(chk.fine).slice(0, 5);
+    const nelTurno = (apps || []).filter(a => {
+      const d = new Date(a.data + 'T00:00:00');
+      if (d.getDay() !== Number(chk.giorno)) return false;
+      if (chk.data_fine_validita && a.data > chk.data_fine_validita) return false;
+      const ora = String(a.ora).slice(0, 5);
+      return ora >= tIni && ora < tFin;
+    }).length;
+    if (nelTurno > 0) {
+      return res.status(409).json({
+        error: 'Il turno ha ' + nelTurno + ' visite pianificate',
+        visite: nelTurno
+      });
+    }
   }
 
   const delRes = await fetch(

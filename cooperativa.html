@@ -300,10 +300,22 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div class="field" style="min-width:90px;max-width:100px"><label for="tf-inizio">Inizio</label><input id="tf-inizio" type="time" value="09:00"></div>
         <div class="field" style="min-width:90px;max-width:100px"><label for="tf-fine">Fine</label><input id="tf-fine" type="time" value="13:00"></div>
         <div class="field" style="min-width:80px;max-width:90px"><label for="tf-slot">Slot</label><input id="tf-slot" type="number" min="5" max="120" step="5" value="20"></div>
-        <button class="btn" onclick="assegnaTurno()">Assegna turno</button>
+        <div class="field" style="min-width:130px"><label for="tf-dal">Dal</label><input id="tf-dal" type="date"></div>
+        <div class="field" style="min-width:130px"><label for="tf-al">Al <span style="font-weight:400;color:var(--ink3)">(opz.)</span></label><input id="tf-al" type="date"></div>
+        <button class="btn" id="tf-btn" onclick="assegnaTurno()">Assegna turno</button>
+        <button class="btn btn-ghost hidden" id="tf-annulla" style="border:1px solid var(--border)" onclick="annullaModifica()">Annulla modifica</button>
       </div>
       <div id="turno-msg" class="hidden"></div>
-      <p style="font-size:12.5px;color:var(--ink3);margin:12px 0 10px">Il «+» in una cella prepara il modulo qui sopra già puntato su medico e giorno.</p>
+      <div class="toolbar" style="margin-top:14px">
+        <input class="search" id="at-search" type="text" placeholder="Cerca medico" oninput="renderAssocTurniTab()">
+        <div class="field"><label for="at-sede">Sede</label><select id="at-sede" onchange="renderAssocTurniTab()"></select></div>
+        <div class="field"><label for="at-giorno">Giorno</label><select id="at-giorno" onchange="renderAssocTurniTab()">
+          <option value="">Tutti</option>
+          <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
+          <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
+        </select></div>
+        <div class="field"><label for="at-servizio">Servizio</label><select id="at-servizio" onchange="renderAssocTurniTab()"></select></div>
+      </div>
       <div id="assoc-turni-tbl" class="mx-wrap"></div>
     </section>
 
@@ -640,42 +652,105 @@ function renderTurniTab(){
     + '</tbody></table>';
 }
 
+function serviziDelMedico(mid){
+  const d = _plancia; if(!d) return '';
+  return (d.servizi||[]).filter(s => (s.medici||[]).includes(String(mid))).map(s => s.nome).join(', ');
+}
+
+function fmtData(iso){
+  if(!iso) return '';
+  const [y,m,g] = String(iso).slice(0,10).split('-');
+  return g + '/' + m + '/' + y;
+}
+
 function renderAssocTurniTab(){
   const d = _plancia; if(!d) return;
+  const q = (document.getElementById('at-search').value || '').toLowerCase().trim();
+  const fs = document.getElementById('at-sede').value;
+  const fg = document.getElementById('at-giorno').value;
+  const fsv = document.getElementById('at-servizio').value;
+  const selS = document.getElementById('at-sede');
+  if(!selS.options.length || selS.dataset.n !== String((d.sedi||[]).length)){
+    selS.innerHTML = '<option value="">Tutte le sedi</option>' + (d.sedi||[]).map(s => `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('');
+    selS.dataset.n = String((d.sedi||[]).length);
+  }
+  const selSv = document.getElementById('at-servizio');
+  if(!selSv.options.length || selSv.dataset.n !== String((d.servizi||[]).length)){
+    selSv.innerHTML = '<option value="">Tutti i servizi</option>' + (d.servizi||[]).map(s => `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('');
+    selSv.dataset.n = String((d.servizi||[]).length);
+  }
+  let righe = [];
+  (d.medici||[]).forEach(m => {
+    const nome = nomeMedico(m);
+    if(q && !(nome + ' ' + (m.specializzazione||'')).toLowerCase().includes(q)) return;
+    if(fsv){
+      const sv = (d.servizi||[]).find(s => String(s.id) === fsv);
+      if(!sv || !(sv.medici||[]).includes(String(m.medico_id))) return;
+    }
+    (m.centri||[]).forEach(c => {
+      if(fs && String(c.coop_sede_id) !== fs) return;
+      (c.turni||[]).forEach(t => {
+        if(fg !== '' && Number(t.giorno) !== Number(fg)) return;
+        righe.push({ t, medico_id: m.medico_id, nome, sede: c.nome, sede_id: c.coop_sede_id });
+      });
+    });
+  });
+  righe.sort((a,b) => a.nome.localeCompare(b.nome) || a.t.giorno - b.t.giorno || String(a.t.inizio).localeCompare(String(b.t.inizio)));
   const el = document.getElementById('assoc-turni-tbl');
-  const medici = d.medici || [];
-  if(!medici.length){
-    el.innerHTML = '<div class="empty">Nessun medico collegato</div>';
+  if(!righe.length){
+    el.innerHTML = '<div class="empty">Nessun turno' + (q || fs || fg !== '' || fsv ? ' con questi filtri' : ' assegnato') + '</div>';
     return;
   }
-  const ordine = [1,2,3,4,5,6,0];
-  el.innerHTML = '<table class="mx"><thead><tr><th>Medico</th>'
-    + ordine.map(g => `<th>${GG[g]}</th>`).join('')
-    + '</tr></thead><tbody>'
-    + medici.map(m => {
-        const celle = ordine.map(g => {
-          let chips = '';
-          (m.centri||[]).forEach(c => {
-            (c.turni||[]).forEach(t => {
-              if(Number(t.giorno) !== g) return;
-              const orario = String(t.inizio).slice(0,5) + '–' + String(t.fine).slice(0,5);
-              chips += `<span class="tchip" title="${esc(c.nome)} · slot ${esc(String(t.durata_slot))} min">${esc(c.nome)} ${esc(orario)}<button title="Elimina turno" onclick="eliminaTurno('${esc(t.id)}','${esc(nomeMedico(m))}','${GG[g]} ${esc(orario)}')">✕</button></span>`;
-            });
-          });
-          chips += `<button class="cell-add" title="Assegna turno a ${esc(nomeMedico(m))} di ${GG[g]}" onclick="preparaTurno('${esc(m.medico_id)}',${g})">+</button>`;
-          return '<td>' + chips + '</td>';
-        }).join('');
-        return `<tr><td>${esc(nomeMedico(m))}</td>${celle}</tr>`;
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Servizi</th><th>Sede</th><th>Giorno</th><th>Orario</th><th>Dal</th><th>Al</th><th style="width:80px"></th></tr></thead><tbody>'
+    + righe.map(r => {
+        const orario = String(r.t.inizio).slice(0,5) + '–' + String(r.t.fine).slice(0,5);
+        return `<tr>
+          <td style="font-weight:600">${esc(r.nome)}</td>
+          <td style="font-size:12.5px;color:var(--ink2)">${esc(serviziDelMedico(r.medico_id)) || '—'}</td>
+          <td>${esc(r.sede)}</td>
+          <td>${GG[r.t.giorno] || ''}</td>
+          <td>${esc(orario)}</td>
+          <td>${fmtData(r.t.data_inizio_validita) || '—'}</td>
+          <td>${fmtData(r.t.data_fine_validita) || '—'}</td>
+          <td><button class="act-btn" title="Modifica turno" onclick="modificaTurno('${esc(r.t.id)}')">✎</button>
+              <button class="act-btn act-danger" title="Elimina turno" onclick="eliminaTurno('${esc(r.t.id)}','${esc(r.nome)}','${GG[r.t.giorno]||''} ${esc(orario)}')">✕</button></td>
+        </tr>`;
       }).join('')
     + '</tbody></table>';
 }
 
-function preparaTurno(medicoId, giorno){
-  document.getElementById('tf-medico').value = medicoId;
-  document.querySelectorAll('.tf-giorno-chk').forEach(ch => { ch.checked = (parseInt(ch.value) === giorno); });
+let _turnoEdit = null;
+
+function modificaTurno(turnoId){
+  const d = _plancia; if(!d) return;
+  let trovato = null, mid = null, sedeId = null;
+  (d.medici||[]).forEach(m => (m.centri||[]).forEach(c => (c.turni||[]).forEach(t => {
+    if(String(t.id) === String(turnoId)){ trovato = t; mid = m.medico_id; sedeId = c.coop_sede_id; }
+  })));
+  if(!trovato) return;
+  _turnoEdit = turnoId;
+  document.getElementById('tf-medico').value = mid;
+  if(sedeId) document.getElementById('tf-sede').value = sedeId;
+  document.querySelectorAll('.tf-giorno-chk').forEach(ch => { ch.checked = (parseInt(ch.value) === Number(trovato.giorno)); });
   updateTfGiorniLabel();
+  document.getElementById('tf-inizio').value = String(trovato.inizio).slice(0,5);
+  document.getElementById('tf-fine').value = String(trovato.fine).slice(0,5);
+  document.getElementById('tf-slot').value = trovato.durata_slot;
+  document.getElementById('tf-dal').value = trovato.data_inizio_validita ? String(trovato.data_inizio_validita).slice(0,10) : '';
+  document.getElementById('tf-al').value = trovato.data_fine_validita ? String(trovato.data_fine_validita).slice(0,10) : '';
+  document.getElementById('tf-btn').textContent = 'Salva modifiche';
+  document.getElementById('tf-annulla').classList.remove('hidden');
   document.getElementById('tab-assoc-turni').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  document.getElementById('tf-sede').focus();
+}
+
+function annullaModifica(){
+  _turnoEdit = null;
+  document.getElementById('tf-btn').textContent = 'Assegna turno';
+  document.getElementById('tf-annulla').classList.add('hidden');
+  document.querySelectorAll('.tf-giorno-chk').forEach(ch => { ch.checked = false; });
+  updateTfGiorniLabel();
+  document.getElementById('tf-al').value = '';
+  setBoxMsg('turno-msg', '');
 }
 
 async function enterPlancia(){
@@ -781,13 +856,17 @@ async function assegnaTurno(){
         giorni: Array.from(document.querySelectorAll('.tf-giorno-chk:checked')).map(ch => Number(ch.value)),
         inizio: document.getElementById('tf-inizio').value,
         fine: document.getElementById('tf-fine').value,
-        durata_slot: Number(document.getElementById('tf-slot').value)
+        durata_slot: Number(document.getElementById('tf-slot').value),
+        data_inizio_validita: document.getElementById('tf-dal').value || undefined,
+        data_fine_validita: document.getElementById('tf-al').value || undefined,
+        sostituisce_turno_id: _turnoEdit || undefined
       })
     });
     const body = await res.json().catch(() => ({}));
     if(!res.ok){ setBoxMsg('turno-msg', body.error || 'Assegnazione non riuscita.', 'err'); return; }
     console.log('[Plancia] Turni assegnati:', (body.assegnati||[]).join(','), 'conflitti:', (body.conflitti||[]).length);
-    let msg = 'Assegnati: ' + (body.assegnati||[]).join(', ') + '. L\'agenda del medico è aggiornata.';
+    let msg = (_turnoEdit ? 'Turno modificato: ' : 'Assegnati: ') + (body.assegnati||[]).join(', ') + '. L\'agenda del medico è aggiornata.';
+    if(_turnoEdit){ _turnoEdit = null; document.getElementById('tf-btn').textContent = 'Assegna turno'; document.getElementById('tf-annulla').classList.add('hidden'); }
     if(body.conflitti && body.conflitti.length){
       msg += ' Non assegnati per impegni già presenti: ' + body.conflitti.join(', ') + '.';
     }
@@ -802,16 +881,22 @@ async function assegnaTurno(){
   }
 }
 
-async function eliminaTurno(turnoId, medico, quando){
-  if(!window.confirm('Eliminare il turno di ' + medico + ' (' + quando + ')? Gli appuntamenti già presi non verranno cancellati.')) return;
+async function eliminaTurno(turnoId, medico, quando, forza){
+  if(!forza && !window.confirm('Eliminare il turno di ' + medico + ' (' + quando + ')?')) return;
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-turni', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'elimina', turno_id: turnoId })
+      body: JSON.stringify({ action: 'elimina', turno_id: turnoId, forza: !!forza })
     });
     const body = await res.json().catch(() => ({}));
+    if(res.status === 409 && body.visite){
+      if(window.confirm('Attenzione: il turno di ' + medico + ' (' + quando + ') ha ' + body.visite + ' visite pianificate. Eliminarlo comunque? Le visite già prese NON verranno cancellate.')){
+        return eliminaTurno(turnoId, medico, quando, true);
+      }
+      return;
+    }
     if(!res.ok){ setBoxMsg('turno-msg', body.error || 'Eliminazione non riuscita.', 'err'); return; }
     console.log('[Plancia] Turno eliminato:', turnoId);
     setBoxMsg('turno-msg', 'Turno eliminato.', 'info');

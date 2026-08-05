@@ -55,7 +55,7 @@ export default async function handler(req, res) {
 
   const [mediciRes, codiciRes, sediRes, serviziRes] = await Promise.all([
     fetch(
-      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_fine_validita),medici(id,titolo,nome,cognome,specializzazione)`,
+      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_inizio_validita,data_fine_validita),medici(id,titolo,nome,cognome,specializzazione)`,
       { headers: srvHeaders }
     ).catch(() => null),
     fetch(

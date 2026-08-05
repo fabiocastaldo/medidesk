@@ -28,6 +28,7 @@ export default async function handler(req, res) {
   const medicoId = String(b.medico_id || '');
   const sedeId = String(b.sede_id || '');
   const giorni = Array.isArray(b.giorni) ? b.giorni.map(Number) : [Number(b.giorno)];
+  const sostituisce = (typeof b.sostituisce_turno_id === 'string' && /^[0-9a-fA-F-]{36}$/.test(b.sostituisce_turno_id)) ? b.sostituisce_turno_id : null;
   const inizio = String(b.inizio || '');
   const fine = String(b.fine || '');
   const slot = Number(b.durata_slot || 20);
@@ -137,7 +138,20 @@ export default async function handler(req, res) {
     `${supabaseUrl}/rest/v1/turni?select=giorno,inizio,fine,data_inizio_validita,data_fine_validita,centri!inner(medico_id)&centri.medico_id=eq.${encodeURIComponent(medicoId)}`,
     { headers: srvHeaders }
   ).catch(() => null);
-  const esistenti = (exRes && exRes.ok) ? await exRes.json().catch(() => []) : [];
+  let esistenti = (exRes && exRes.ok) ? await exRes.json().catch(() => []) : [];
+  if (sostituisce) {
+    // in modifica il turno sostituito non conta come conflitto
+    const exIdRes = await fetch(
+      `${supabaseUrl}/rest/v1/turni?id=eq.${encodeURIComponent(sostituisce)}&select=id,giorno,inizio,fine,centri!inner(medico_id,cooperativa_id)`,
+      { headers: srvHeaders }
+    ).catch(() => null);
+    const exRow = (exIdRes && exIdRes.ok) ? (await exIdRes.json().catch(() => []))?.[0] : null;
+    if (!exRow || String(exRow.centri?.cooperativa_id) !== String(coopId) || String(exRow.centri?.medico_id) !== String(medicoId)) {
+      return res.status(404).json({ error: 'Turno da modificare non trovato' });
+    }
+    esistenti = esistenti.filter(t =>
+      !(Number(t.giorno) === Number(exRow.giorno) && String(t.inizio) === String(exRow.inizio) && String(t.fine) === String(exRow.fine)));
+  }
 
   const GG = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   const sovrapposto = (g) => {
@@ -175,6 +189,12 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Creazione del turno non riuscita', assegnati, conflitti });
     }
     assegnati.push(g);
+  }
+
+  if (assegnati.length && sostituisce) {
+    await fetch(`${supabaseUrl}/rest/v1/turni?id=eq.${encodeURIComponent(sostituisce)}`, {
+      method: 'DELETE', headers: srvHeaders
+    }).catch(() => null);
   }
 
   if (!assegnati.length) {
