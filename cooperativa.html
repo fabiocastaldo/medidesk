@@ -192,6 +192,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <button class="tab" id="tabbtn-sedi" onclick="switchTab('sedi')">Sedi</button>
       <button class="tab" id="tabbtn-turni" onclick="switchTab('turni')">Turni</button>
       <button class="tab" id="tabbtn-servizi" onclick="switchTab('servizi')">Servizi</button>
+      <button class="tab" id="tabbtn-assoc-servizi" onclick="switchTab('assoc-servizi')">Associa medici ai servizi</button>
+      <button class="tab" id="tabbtn-assoc-turni" onclick="switchTab('assoc-turni')">Associa medici ai turni</button>
     </div>
 
     <section id="tab-medici" class="card-lite">
@@ -225,6 +227,42 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     </section>
 
     <section id="tab-turni" class="card-lite hidden">
+      <div class="toolbar">
+        <div class="field"><label for="ft-medico">Filtro medico</label><select id="ft-medico" onchange="renderTurniTab()"></select></div>
+        <div class="field"><label for="ft-sede">Filtro sede</label><select id="ft-sede" onchange="renderTurniTab()"></select></div>
+      </div>
+      <div id="turni-reg-msg" class="hidden"></div>
+      <div id="turni-tbl"></div>
+    </section>
+
+    <section id="tab-servizi" class="card-lite hidden">
+      <div class="toolbar">
+        <div class="field" style="flex:1"><label for="servizio-nome">Nome servizio</label><input id="servizio-nome" type="text" maxlength="80" placeholder="Es. Cardiologia ambulatoriale" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+        <button class="btn" onclick="creaServizio()">Aggiungi servizio</button>
+      </div>
+      <div id="servizio-msg" class="hidden"></div>
+      <div id="catalogo-servizi-tbl"></div>
+    </section>
+
+    <section id="tab-assoc-servizi" class="card-lite hidden">
+      <div class="toolbar">
+        <input class="search" id="sv-search" type="text" placeholder="Cerca medico" oninput="renderAssocServiziTab()">
+      </div>
+      <p style="font-size:12.5px;color:var(--ink3);margin:0 0 10px">Tocca una cella per associare o rimuovere il medico dal servizio.</p>
+      <div id="assoc-servizio-msg" class="hidden"></div>
+      <div id="servizi-tbl" class="mx-wrap"></div>
+      <details style="margin-top:16px">
+        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--brand-mid)">Modalità alternativa (menu a tendina)</summary>
+        <div class="toolbar" style="margin-top:12px">
+          <div class="field" style="flex:1"><label for="sv-alt-medico">Medico</label><select id="sv-alt-medico"></select></div>
+          <div class="field" style="flex:1"><label for="sv-alt-servizio">Servizio</label><select id="sv-alt-servizio"></select></div>
+          <button class="btn" onclick="altAssocia(true)">Associa</button>
+          <button class="btn btn-ghost" style="border:1px solid var(--border)" onclick="altAssocia(false)">Rimuovi</button>
+        </div>
+      </details>
+    </section>
+
+    <section id="tab-assoc-turni" class="card-lite hidden">
       <div class="toolbar" style="padding-bottom:14px;border-bottom:1px solid var(--border)">
         <div class="field" style="flex:1.4"><label for="tf-medico">Medico</label><select id="tf-medico"></select></div>
         <div class="field" style="flex:1.2"><label for="tf-sede">Sede</label><select id="tf-sede"></select></div>
@@ -242,41 +280,14 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
             </div>
           </details>
         </div>
-        </div>
         <div class="field" style="min-width:90px;max-width:100px"><label for="tf-inizio">Inizio</label><input id="tf-inizio" type="time" value="09:00"></div>
         <div class="field" style="min-width:90px;max-width:100px"><label for="tf-fine">Fine</label><input id="tf-fine" type="time" value="13:00"></div>
         <div class="field" style="min-width:80px;max-width:90px"><label for="tf-slot">Slot</label><input id="tf-slot" type="number" min="5" max="120" step="5" value="20"></div>
         <button class="btn" onclick="assegnaTurno()">Assegna turno</button>
       </div>
       <div id="turno-msg" class="hidden"></div>
-      <div class="toolbar" style="margin-top:14px">
-        <div class="field"><label for="ft-medico">Filtro medico</label><select id="ft-medico" onchange="renderTurniTab()"></select></div>
-        <div class="field"><label for="ft-sede">Filtro sede</label><select id="ft-sede" onchange="renderTurniTab()"></select></div>
-      </div>
-      <p style="font-size:12.5px;color:var(--ink3);margin:0 0 10px">Il «+» in una cella prepara il modulo qui sopra già puntato su medico e giorno.</p>
-      <div id="turni-tbl" class="mx-wrap"></div>
-    </section>
-
-    <section id="tab-servizi" class="card-lite hidden">
-      <div class="toolbar">
-        <div class="field" style="flex:1"><label for="servizio-nome">Nome servizio</label><input id="servizio-nome" type="text" maxlength="80" placeholder="Es. Cardiologia ambulatoriale" onblur="this.value=capitalizeWords(this.value.trim())"></div>
-        <button class="btn" onclick="creaServizio()">Aggiungi servizio</button>
-      </div>
-      <div id="servizio-msg" class="hidden"></div>
-      <div class="toolbar" style="margin-top:2px">
-        <input class="search" id="sv-search" type="text" placeholder="Cerca medico" oninput="renderServiziTab()">
-      </div>
-      <p style="font-size:12.5px;color:var(--ink3);margin:0 0 10px">Tocca una cella per associare o rimuovere il medico dal servizio.</p>
-      <div id="servizi-tbl" class="mx-wrap"></div>
-      <details style="margin-top:16px">
-        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--brand-mid)">Modalità alternativa (menu a tendina)</summary>
-        <div class="toolbar" style="margin-top:12px">
-          <div class="field" style="flex:1"><label for="sv-alt-medico">Medico</label><select id="sv-alt-medico"></select></div>
-          <div class="field" style="flex:1"><label for="sv-alt-servizio">Servizio</label><select id="sv-alt-servizio"></select></div>
-          <button class="btn" onclick="altAssocia(true)">Associa</button>
-          <button class="btn btn-ghost" style="border:1px solid var(--border)" onclick="altAssocia(false)">Rimuovi</button>
-        </div>
-      </details>
+      <p style="font-size:12.5px;color:var(--ink3);margin:12px 0 10px">Il «+» in una cella prepara il modulo qui sopra già puntato su medico e giorno.</p>
+      <div id="assoc-turni-tbl" class="mx-wrap"></div>
     </section>
 
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
@@ -328,7 +339,7 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 
 function switchTab(t){
-  ['medici','sedi','turni','servizi'].forEach(x => {
+  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
