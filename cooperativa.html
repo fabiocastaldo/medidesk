@@ -74,6 +74,20 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
   border-radius:var(--r-sm);padding:14px;text-align:center}
 .plancia-note{margin-top:22px;font-size:12.5px;color:var(--ink3)}
 
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:18px}
+.tab{background:none;border:none;border-bottom:2px solid transparent;padding:10px 14px;font-family:inherit;font-size:14px;font-weight:600;color:var(--ink2);cursor:pointer}
+.tab.active{color:var(--brand-mid);border-bottom-color:var(--brand-mid)}
+.tab:focus-visible{outline:2px solid var(--brand-bright);outline-offset:2px}
+.card-lite{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow-soft)}
+.toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.toolbar .field{margin-bottom:0;min-width:130px}
+.toolbar .btn{width:auto;margin:0;padding:11px 18px}
+.search{padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:14px;min-width:240px}
+.search:focus-visible{outline:2px solid var(--brand-bright);outline-offset:1px}
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border)}
+.tbl td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
+.tbl tr:hover td{background:var(--paper)}
 footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
 @media (max-width:840px){
@@ -151,58 +165,63 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     <button onclick="doLogout()">Esci</button>
   </div>
   <div class="plancia-body">
-    <div class="plancia-grid">
-      <div class="tile">
-        <h2>Sedi</h2>
-        <p>Gli ambulatori dell'organizzazione dove i medici ricevono.</p>
-        <div id="sedi-list"><div class="empty">Nessuna sede configurata</div></div>
-        <div class="field" style="margin-top:14px"><label for="sede-nome">Nome sede</label><input id="sede-nome" type="text" maxlength="80"></div>
-        <div class="field"><label for="sede-via">Via</label><input id="sede-via" type="text" maxlength="120"></div>
-        <div style="display:flex;gap:8px">
-          <div class="field" style="flex:2"><label for="sede-citta">Città</label><input id="sede-citta" type="text" maxlength="80"></div>
-          <div class="field" style="flex:1"><label for="sede-prov">Prov.</label><input id="sede-prov" type="text" maxlength="4"></div>
-        </div>
-        <button class="btn" onclick="creaSede()">Aggiungi sede</button>
-        <div id="sede-msg" class="hidden"></div>
-      </div>
-      <div class="tile">
-        <h2>Medici collegati</h2>
-        <p>I medici agganciati all'organizzazione tramite codice di collegamento.</p>
-        <div id="medici-list"><div class="empty">Nessun medico collegato</div></div>
-        <div id="codice-box" class="hidden" style="margin-top:14px;padding:12px;border:1px solid var(--brand-soft);border-radius:var(--r-sm);background:#F4FBFA">
-          <div style="font-size:12px;color:var(--ink2);margin-bottom:4px">Codice di collegamento attivo</div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <code id="codice-val" style="font-size:17px;font-weight:600;letter-spacing:1px;color:var(--brand-deep)"></code>
-            <button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12.5px" onclick="copiaCodice()">Copia</button>
-          </div>
-          <div id="codice-exp" style="font-size:11.5px;color:var(--ink3);margin-top:4px"></div>
-        </div>
-        <button class="btn" id="btn-genera" style="margin-top:14px" onclick="generaCodice()">Genera codice di collegamento</button>
-        <div id="codice-msg" class="hidden"></div>
-      </div>
-      <div class="tile">
-        <h2>Turni e agenda</h2>
-        <p>Assegna un turno: l'agenda del medico si aggiorna da sola.</p>
-        <div id="turni-form">
-          <div class="field"><label for="tf-medico">Medico</label><select id="tf-medico"></select></div>
-          <div class="field"><label for="tf-sede">Sede</label><select id="tf-sede"></select></div>
-          <div style="display:flex;gap:8px">
-            <div class="field" style="flex:1"><label for="tf-giorno">Giorno</label><select id="tf-giorno">
-              <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
-              <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
-            </select></div>
-            <div class="field" style="flex:1"><label for="tf-slot">Slot (min)</label><input id="tf-slot" type="number" min="5" max="120" step="5" value="20"></div>
-          </div>
-          <div style="display:flex;gap:8px">
-            <div class="field" style="flex:1"><label for="tf-inizio">Inizio</label><input id="tf-inizio" type="time" value="09:00"></div>
-            <div class="field" style="flex:1"><label for="tf-fine">Fine</label><input id="tf-fine" type="time" value="13:00"></div>
-          </div>
-          <button class="btn" onclick="assegnaTurno()">Assegna turno</button>
-          <div id="turno-msg" class="hidden"></div>
-        </div>
-        <div id="turni-list" style="margin-top:14px"></div>
-      </div>
+    <div class="tabs">
+      <button class="tab active" id="tabbtn-medici" onclick="switchTab('medici')">Medici</button>
+      <button class="tab" id="tabbtn-sedi" onclick="switchTab('sedi')">Sedi</button>
+      <button class="tab" id="tabbtn-turni" onclick="switchTab('turni')">Turni</button>
     </div>
+
+    <section id="tab-medici" class="card-lite">
+      <div class="toolbar">
+        <input class="search" id="medici-search" type="text" placeholder="Cerca per nome o specializzazione" oninput="renderMediciTab()">
+        <div style="flex:1"></div>
+        <button class="btn" id="btn-genera" onclick="generaCodice()">Genera codice di collegamento</button>
+      </div>
+      <div id="codice-box" class="hidden" style="margin-bottom:12px;padding:12px;border:1px solid var(--brand-soft);border-radius:var(--r-sm);background:#F4FBFA">
+        <div style="font-size:12px;color:var(--ink2);margin-bottom:4px">Codice di collegamento attivo</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <code id="codice-val" style="font-size:17px;font-weight:600;letter-spacing:1px;color:var(--brand-deep)"></code>
+          <button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12.5px" onclick="copiaCodice()">Copia</button>
+        </div>
+        <div id="codice-exp" style="font-size:11.5px;color:var(--ink3);margin-top:4px"></div>
+      </div>
+      <div id="codice-msg" class="hidden"></div>
+      <div id="medici-tbl"></div>
+    </section>
+
+    <section id="tab-sedi" class="card-lite hidden">
+      <div class="toolbar">
+        <div class="field" style="flex:1.4"><label for="sede-nome">Nome sede</label><input id="sede-nome" type="text" maxlength="80"></div>
+        <div class="field" style="flex:1.4"><label for="sede-via">Via</label><input id="sede-via" type="text" maxlength="120"></div>
+        <div class="field" style="flex:1"><label for="sede-citta">Città</label><input id="sede-citta" type="text" maxlength="80"></div>
+        <div class="field" style="min-width:70px;max-width:80px"><label for="sede-prov">Prov.</label><input id="sede-prov" type="text" maxlength="4"></div>
+        <button class="btn" onclick="creaSede()">Aggiungi sede</button>
+      </div>
+      <div id="sede-msg" class="hidden"></div>
+      <div id="sedi-tbl"></div>
+    </section>
+
+    <section id="tab-turni" class="card-lite hidden">
+      <div class="toolbar" style="padding-bottom:14px;border-bottom:1px solid var(--border)">
+        <div class="field" style="flex:1.4"><label for="tf-medico">Medico</label><select id="tf-medico"></select></div>
+        <div class="field" style="flex:1.2"><label for="tf-sede">Sede</label><select id="tf-sede"></select></div>
+        <div class="field"><label for="tf-giorno">Giorno</label><select id="tf-giorno">
+          <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
+          <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
+        </select></div>
+        <div class="field" style="min-width:90px;max-width:100px"><label for="tf-inizio">Inizio</label><input id="tf-inizio" type="time" value="09:00"></div>
+        <div class="field" style="min-width:90px;max-width:100px"><label for="tf-fine">Fine</label><input id="tf-fine" type="time" value="13:00"></div>
+        <div class="field" style="min-width:80px;max-width:90px"><label for="tf-slot">Slot</label><input id="tf-slot" type="number" min="5" max="120" step="5" value="20"></div>
+        <button class="btn" onclick="assegnaTurno()">Assegna turno</button>
+      </div>
+      <div id="turno-msg" class="hidden"></div>
+      <div class="toolbar" style="margin-top:14px">
+        <div class="field"><label for="ft-medico">Filtro medico</label><select id="ft-medico" onchange="renderTurniTab()"></select></div>
+        <div class="field"><label for="ft-sede">Filtro sede</label><select id="ft-sede" onchange="renderTurniTab()"></select></div>
+      </div>
+      <div id="turni-tbl"></div>
+    </section>
+
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
   </div>
   <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
@@ -245,56 +264,41 @@ function isCooperativa(user){
 
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+
+function switchTab(t){
+  ['medici','sedi','turni'].forEach(x => {
+    document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
+    document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
+  });
+}
+
+function nomeMedico(m){ return [m.titolo, m.nome, m.cognome].filter(Boolean).join(' '); }
+
 function renderPlancia(){
   const d = _plancia;
   if(!d) return;
   document.getElementById('plancia-who').textContent = d.cooperativa.nome;
-  const list = document.getElementById('medici-list');
-  if(d.medici && d.medici.length){
-    list.innerHTML = d.medici.map(m => {
-      const nome = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
-      const sedi = m.centri.map(c => esc(c.nome)).join(', ');
-      return `<div style="padding:9px 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:14px;font-weight:600">${esc(nome)}</div>
-        <div style="font-size:12.5px;color:var(--ink2)">${esc(m.specializzazione)}</div>
-        <div style="font-size:12px;color:var(--ink3)">Sedi: ${sedi || '—'}</div>
-      </div>`;
-    }).join('');
-  } else {
-    list.innerHTML = '<div class="empty">Nessun medico collegato</div>';
-  }
-  const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-  const sl = document.getElementById('sedi-list');
-  if(d.sedi && d.sedi.length){
-    sl.innerHTML = d.sedi.map(s => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:14px;font-weight:600">${esc(s.nome)}</div>
-      <div style="font-size:12px;color:var(--ink3)">${esc([s.via, s.citta, s.provincia].filter(Boolean).join(', ')) || '—'}</div>
-    </div>`).join('');
-  } else {
-    sl.innerHTML = '<div class="empty">Nessuna sede configurata</div>';
-  }
+  document.getElementById('tabbtn-medici').textContent = 'Medici (' + (d.medici||[]).length + ')';
+  document.getElementById('tabbtn-sedi').textContent = 'Sedi (' + (d.sedi||[]).length + ')';
+  const nTurni = (d.medici||[]).reduce((n,m) => n + (m.centri||[]).reduce((k,c) => k + (c.turni||[]).length, 0), 0);
+  document.getElementById('tabbtn-turni').textContent = 'Turni (' + nTurni + ')';
+
   const selM = document.getElementById('tf-medico');
   selM.innerHTML = (d.medici||[]).map(m =>
-    `<option value="${esc(m.medico_id)}">${esc([m.titolo,m.nome,m.cognome].filter(Boolean).join(' '))}</option>`).join('')
+    `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('')
     || '<option value="">Nessun medico collegato</option>';
   const selS = document.getElementById('tf-sede');
-  selS.innerHTML = (d.sedi||[]).filter(s=>s.attiva!==false).map(s =>
+  selS.innerHTML = (d.sedi||[]).filter(s => s.attiva !== false).map(s =>
     `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('')
     || '<option value="">Nessuna sede</option>';
-  const tl = document.getElementById('turni-list');
-  let righe = [];
-  (d.medici||[]).forEach(m => {
-    const nomeM = [m.titolo,m.nome,m.cognome].filter(Boolean).join(' ');
-    (m.centri||[]).forEach(c => (c.turni||[]).forEach(t => {
-      righe.push(`<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px">
-        <span style="font-weight:600">${esc(nomeM)}</span> · ${esc(c.nome)} ·
-        ${GG[t.giorno]||''} ${esc(String(t.inizio).slice(0,5))}–${esc(String(t.fine).slice(0,5))} · slot ${esc(String(t.durata_slot))} min
-      </div>`);
-    }));
-  });
-  tl.innerHTML = righe.length
-    ? '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;margin-bottom:2px">Turni assegnati</div>' + righe.join('')
-    : '<div class="empty">Nessun turno assegnato</div>';
+  const fM = document.getElementById('ft-medico');
+  fM.innerHTML = '<option value="">Tutti i medici</option>' + (d.medici||[]).map(m =>
+    `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('');
+  const fS = document.getElementById('ft-sede');
+  fS.innerHTML = '<option value="">Tutte le sedi</option>' + (d.sedi||[]).map(s =>
+    `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('');
+
   const box = document.getElementById('codice-box');
   const attivo = d.codici_attivi && d.codici_attivi[0];
   if(attivo){
@@ -305,6 +309,82 @@ function renderPlancia(){
   } else {
     box.classList.add('hidden');
   }
+
+  renderMediciTab();
+  renderSediTab();
+  renderTurniTab();
+}
+
+function renderMediciTab(){
+  const d = _plancia; if(!d) return;
+  const q = (document.getElementById('medici-search').value || '').toLowerCase().trim();
+  const rows = (d.medici||[]).filter(m => {
+    if(!q) return true;
+    return (nomeMedico(m) + ' ' + (m.specializzazione||'')).toLowerCase().includes(q);
+  });
+  const el = document.getElementById('medici-tbl');
+  if(!rows.length){
+    el.innerHTML = '<div class="empty">' + (q ? 'Nessun medico corrisponde alla ricerca' : 'Nessun medico collegato. Genera un codice e consegnalo al medico.') + '</div>';
+    return;
+  }
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Specializzazione</th><th>Sedi</th><th>Turni</th></tr></thead><tbody>'
+    + rows.map(m => {
+        const sedi = (m.centri||[]).map(c => esc(c.nome)).join(', ') || '—';
+        const nt = (m.centri||[]).reduce((k,c) => k + (c.turni||[]).length, 0);
+        return `<tr><td style="font-weight:600">${esc(nomeMedico(m))}</td><td>${esc(m.specializzazione||'—')}</td><td>${sedi}</td><td>${nt}</td></tr>`;
+      }).join('')
+    + '</tbody></table>';
+}
+
+function renderSediTab(){
+  const d = _plancia; if(!d) return;
+  const el = document.getElementById('sedi-tbl');
+  if(!(d.sedi||[]).length){
+    el.innerHTML = '<div class="empty">Nessuna sede configurata</div>';
+    return;
+  }
+  const mediciPerSede = {};
+  (d.medici||[]).forEach(m => (m.centri||[]).forEach(c => {
+    if(c.coop_sede_id){ mediciPerSede[c.coop_sede_id] = (mediciPerSede[c.coop_sede_id] || 0) + 1; }
+  }));
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Sede</th><th>Indirizzo</th><th>Medici</th><th>Stato</th></tr></thead><tbody>'
+    + d.sedi.map(s => `<tr>
+        <td style="font-weight:600">${esc(s.nome)}</td>
+        <td>${esc([s.via, s.citta, s.provincia].filter(Boolean).join(', ')) || '—'}</td>
+        <td>${mediciPerSede[s.id] || 0}</td>
+        <td>${s.attiva === false ? 'Sospesa' : 'Attiva'}</td>
+      </tr>`).join('')
+    + '</tbody></table>';
+}
+
+function renderTurniTab(){
+  const d = _plancia; if(!d) return;
+  const fm = document.getElementById('ft-medico').value;
+  const fs = document.getElementById('ft-sede').value;
+  let righe = [];
+  (d.medici||[]).forEach(m => {
+    if(fm && String(m.medico_id) !== fm) return;
+    (m.centri||[]).forEach(c => {
+      if(fs && String(c.coop_sede_id) !== fs) return;
+      (c.turni||[]).forEach(t => {
+        righe.push({ medico: nomeMedico(m), sede: c.nome, giorno: t.giorno,
+          orario: String(t.inizio).slice(0,5) + '–' + String(t.fine).slice(0,5),
+          slot: t.durata_slot, fine_val: t.data_fine_validita });
+      });
+    });
+  });
+  righe.sort((a,b) => a.medico.localeCompare(b.medico) || a.giorno - b.giorno);
+  const el = document.getElementById('turni-tbl');
+  if(!righe.length){
+    el.innerHTML = '<div class="empty">Nessun turno assegnato</div>';
+    return;
+  }
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Sede</th><th>Giorno</th><th>Orario</th><th>Slot</th></tr></thead><tbody>'
+    + righe.map(r => `<tr>
+        <td style="font-weight:600">${esc(r.medico)}</td><td>${esc(r.sede)}</td>
+        <td>${GG[r.giorno] || ''}</td><td>${esc(r.orario)}</td><td>${esc(String(r.slot))} min</td>
+      </tr>`).join('')
+    + '</tbody></table>';
 }
 
 async function enterPlancia(){
