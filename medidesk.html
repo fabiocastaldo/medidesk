@@ -2941,6 +2941,11 @@ async function saveNewPassword(){
   }
 }
 
+function _isCoopSession(session){
+  const u = session && session.user;
+  return !!(u && u.app_metadata && u.app_metadata.ruolo === 'cooperativa');
+}
+
 function checkSession(){
   console.log('[Delphi~Med] checkSession() avviata, isOnline:', isOnline());
   if(!isOnline()){
@@ -2956,9 +2961,19 @@ function checkSession(){
     }
     if(event === 'INITIAL_SESSION'){
       if(_inPasswordRecovery){ return; }
+      if(session && _isCoopSession(session)){
+        console.log('[Delphi~Med] Sessione cooperativa: redirect alla plancia');
+        window.location.replace('/cooperative');
+        return;
+      }
       if(session){ showAppView(); } else { showAuthView(); }
     } else if(event === 'SIGNED_IN'){
       if(_inPasswordRecovery){ return; }
+      if(_isCoopSession(session)){
+        console.log('[Delphi~Med] Sessione cooperativa: redirect alla plancia');
+        window.location.replace('/cooperative');
+        return;
+      }
       showAppView();
     } else if(event === 'SIGNED_OUT'){
       _appInitialized = false;
