@@ -53,19 +53,24 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Cooperativa non attiva' });
   }
 
-  const [mediciRes, codiciRes] = await Promise.all([
+  const [mediciRes, codiciRes, sediRes] = await Promise.all([
     fetch(
-      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,medici(id,titolo,nome,cognome,specializzazione)`,
+      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_fine_validita),medici(id,titolo,nome,cognome,specializzazione)`,
       { headers: srvHeaders }
     ).catch(() => null),
     fetch(
       `${supabaseUrl}/rest/v1/coop_codici?cooperativa_id=eq.${encodeURIComponent(coop.id)}&used_at=is.null&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=codice,expires_at&order=created_at.desc`,
+      { headers: srvHeaders }
+    ).catch(() => null),
+    fetch(
+      `${supabaseUrl}/rest/v1/coop_sedi?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,via,citta,provincia,cap,attiva&order=created_at.asc`,
       { headers: srvHeaders }
     ).catch(() => null)
   ]);
 
   const centriData = (mediciRes && mediciRes.ok) ? await mediciRes.json().catch(() => []) : [];
   const codiciData = (codiciRes && codiciRes.ok) ? await codiciRes.json().catch(() => []) : [];
+  const sediData = (sediRes && sediRes.ok) ? await sediRes.json().catch(() => []) : [];
 
   // aggrego per medico: un medico può avere più sede-centri collegati
   const perMedico = new Map();
@@ -83,13 +88,14 @@ export default async function handler(req, res) {
         centri: []
       });
     }
-    perMedico.get(k).centri.push({ id: c.id, nome: c.nome, attivo: c.attivo !== false });
+    perMedico.get(k).centri.push({ id: c.id, nome: c.nome, attivo: c.attivo !== false, coop_sede_id: c.coop_sede_id || null, turni: c.turni || [] });
   }
 
   return res.status(200).json({
     cooperativa: { id: coop.id, nome: coop.nome, stato: coop.stato },
     segreteria: { nome: seg.nome },
     medici: Array.from(perMedico.values()),
-    codici_attivi: codiciData || []
+    codici_attivi: codiciData || [],
+    sedi: sediData || []
   });
 }

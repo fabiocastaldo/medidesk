@@ -911,8 +911,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
       </div>
       <div class="home-section">
-        <h3>Delphi~Med per le cooperative</h3>
-        <div class="home-feature">Una plancia unica per sedi e medici</div>
+        <h3>Delphi~Med per le organizzazioni</h3>
+        <div class="home-feature">Per cooperative, poliambulatori e centri medici</div>
         <div class="home-feature">Assegni i turni, le agende si aggiornano da sole</div>
         <div class="home-feature">L'occupazione di ogni sede sempre sotto controllo</div>
         <div class="home-feature">Attivazione guidata, senza migrazione dati</div>
@@ -4410,8 +4410,8 @@ function renderCentri(){
 function coopJoinBlockHtml(){
   return `
   <div class="coop-join">
-    <div class="coop-join-title">Collega a una cooperativa</div>
-    <div class="coop-join-sub">Hai ricevuto un codice di collegamento? Inseriscilo qui: la cooperativa comparirà tra i tuoi centri e gestirà l'agenda di quella sede.</div>
+    <div class="coop-join-title">Collega a un'organizzazione</div>
+    <div class="coop-join-sub">Hai ricevuto un codice di collegamento? Inseriscilo qui: l'organizzazione comparirà tra i tuoi centri e gestirà l'agenda delle sue sedi.</div>
     <div class="coop-join-row">
       <input id="coop-join-code" type="text" placeholder="CP-XXXX-XXXX" maxlength="14" autocomplete="off">
       <button class="btn btn-sm btn-primary" onclick="joinCooperativa()">Collega</button>
@@ -4436,7 +4436,7 @@ async function joinCooperativa(){
     });
     const body = await res.json().catch(() => ({}));
     if(!res.ok){ if(msg) msg.textContent = body.error || 'Collegamento non riuscito.'; return; }
-    console.log('[Delphi~Med] Collegato alla cooperativa:', body.cooperativa && body.cooperativa.nome);
+    console.log('[Delphi~Med] Collegato all\'organizzazione:', body.cooperativa && body.cooperativa.nome);
     await loadCentriFromDB(session.user);
     renderCentri();
     if(typeof populateCentroSelect === 'function') populateCentroSelect();
@@ -4462,11 +4462,11 @@ function renderCentroCard(c, isActive){
         const fineStr = t.dataFineValidita ? ` · fino al ${formatDate(t.dataFineValidita)}` : '';
         return `<div class="turno-row${scadenzaVicina?' turno-scadenza-vicina':''}" style="${scaduto?'opacity:.5':''}">
           <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min${freqStr}${inizioStr}${fineStr}${scaduto?' <span class="badge-inactive">Scaduto</span>':''}${scadenzaVicina?' <span class="badge-scadenza-vicina">Scadenza vicina</span>':''}</span>
-          ${isActive && !scaduto?`<button class="centro-act" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})"><svg class="ic"><use href="#ic-calendar"/></svg></button>`:''}
-          ${isActive?`<button class="centro-act centro-act-danger" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
+          ${isActive && !scaduto && c.gestione!=='cooperativa'?`<button class="centro-act" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})"><svg class="ic"><use href="#ic-calendar"/></svg></button>`:''}
+          ${isActive && c.gestione!=='cooperativa'?`<button class="centro-act centro-act-danger" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
         </div>`;
       }).join('')}
-    </div>` : isActive?(c.gestione==='cooperativa'?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">I turni di questa sede verranno assegnati dalla cooperativa.</div>':'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>'):'';
+    </div>` : isActive?(c.gestione==='cooperativa'?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">I turni di questa sede verranno assegnati dall\'organizzazione.</div>':'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>'):'';
 
   const giornate = (c.giornateSingole||[]).filter(g=>g.data>=todayStr).sort((a,b)=>a.data.localeCompare(b.data));
   const giornateHtml = (giornate.length||(isActive && c.gestione!=='cooperativa')) ? `
@@ -4499,7 +4499,7 @@ function renderCentroCard(c, isActive){
       ${isActive ? `
       ${c.gestione==='cooperativa' ? `
       <div class="centro-gestione">
-        <span class="centro-gestione-lbl">Agenda gestita dalla cooperativa</span>
+        <span class="centro-gestione-lbl">Agenda gestita dall'organizzazione</span>
       </div>` : `
       <div class="centro-gestione">
         <span class="centro-gestione-lbl">Prenotazione online</span>

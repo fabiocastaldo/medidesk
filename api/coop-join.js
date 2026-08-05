@@ -84,7 +84,7 @@ export default async function handler(req, res) {
   ).catch(() => null);
   const coop = (coopRes && coopRes.ok) ? (await coopRes.json().catch(() => []))?.[0] : null;
   if (!coop || coop.stato !== 'attiva') {
-    return res.status(403).json({ error: 'Cooperativa non attiva' });
+    return res.status(403).json({ error: 'Organizzazione non attiva' });
   }
 
   // già collegato?
@@ -94,7 +94,7 @@ export default async function handler(req, res) {
   ).catch(() => null);
   const dup = (dupRes && dupRes.ok) ? await dupRes.json().catch(() => []) : [];
   if (dup && dup.length) {
-    return res.status(409).json({ error: 'Sei già collegato a questa cooperativa' });
+    return res.status(409).json({ error: 'Sei già collegato a questa organizzazione' });
   }
 
   // claim atomico: vince chi trova used_at ancora NULL

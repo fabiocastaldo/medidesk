@@ -39,7 +39,7 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .card .sub{font-size:13.5px;color:var(--ink2);margin:6px 0 22px;line-height:1.55}
 .field{margin-bottom:14px}
 .field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:5px}
-.field input{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--r-sm);
+.field input,.field select{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--r-sm);
   font-family:inherit;font-size:14px;color:var(--ink);background:#fff}
 .field input:focus-visible{outline:2px solid var(--brand-bright);outline-offset:1px;border-color:var(--brand-mid)}
 .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:12px 18px;margin-top:6px;
@@ -97,16 +97,16 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 <div id="view-login" class="shell hidden">
   <div class="brandpane">
     <div class="mark">Delphi~Med</div>
-    <div class="payoff">La regia della cooperativa</div>
+    <div class="payoff">La regia dell'organizzazione</div>
     <ul>
-      <li>Gestisci sedi e medici collegati da un'unica plancia</li>
+      <li>Gestisci le sedi e i medici della tua organizzazione da un'unica plancia</li>
       <li>Assegna i turni: l'agenda di ogni medico si aggiorna da sola</li>
       <li>Tieni sotto controllo l'occupazione di ogni sede</li>
     </ul>
   </div>
   <div class="cardpane">
     <div class="card">
-      <h1>Plancia cooperative</h1>
+      <h1>Plancia organizzazioni</h1>
       <p class="sub">Accedi con le credenziali fornite in fase di attivazione.</p>
       <div class="field">
         <label for="login-email">Email</label>
@@ -118,7 +118,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <button class="btn" id="login-btn" onclick="doLogin()">Accedi</button>
       <div id="login-msg" class="hidden"></div>
-      <span class="helplink">La tua cooperativa non è ancora attiva?
+      <span class="helplink">La tua organizzazione non è ancora attiva?
         <a href="mailto:info@delphi-med.com?subject=Attivazione%20cooperativa%20Delphi~Med">Richiedi l'attivazione</a>
       </span>
     </div>
@@ -130,9 +130,9 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   <div class="cardpane" style="flex:1">
     <div class="card">
       <h1>Account non abilitato</h1>
-      <p class="sub" id="denied-text">Questo account non è associato a una cooperativa.
+      <p class="sub" id="denied-text">Questo account non è associato a un'organizzazione.
         Se sei un medico, la tua area è su <a href="/">delphi-med.com</a>.
-        Se rappresenti una cooperativa, richiedi l'attivazione.</p>
+        Se rappresenti un'organizzazione — cooperativa, poliambulatorio o centro medico — richiedi l'attivazione.</p>
       <button class="btn" onclick="doLogout()">Esci e torna all'accesso</button>
       <span class="helplink">
         <a href="mailto:info@delphi-med.com?subject=Attivazione%20cooperativa%20Delphi~Med">Richiedi l'attivazione</a>
@@ -154,12 +154,20 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     <div class="plancia-grid">
       <div class="tile">
         <h2>Sedi</h2>
-        <p>Gli ambulatori della cooperativa dove i medici ricevono.</p>
-        <div class="empty">Nessuna sede configurata</div>
+        <p>Gli ambulatori dell'organizzazione dove i medici ricevono.</p>
+        <div id="sedi-list"><div class="empty">Nessuna sede configurata</div></div>
+        <div class="field" style="margin-top:14px"><label for="sede-nome">Nome sede</label><input id="sede-nome" type="text" maxlength="80"></div>
+        <div class="field"><label for="sede-via">Via</label><input id="sede-via" type="text" maxlength="120"></div>
+        <div style="display:flex;gap:8px">
+          <div class="field" style="flex:2"><label for="sede-citta">Città</label><input id="sede-citta" type="text" maxlength="80"></div>
+          <div class="field" style="flex:1"><label for="sede-prov">Prov.</label><input id="sede-prov" type="text" maxlength="4"></div>
+        </div>
+        <button class="btn" onclick="creaSede()">Aggiungi sede</button>
+        <div id="sede-msg" class="hidden"></div>
       </div>
       <div class="tile">
         <h2>Medici collegati</h2>
-        <p>I medici agganciati alla cooperativa tramite codice di collegamento.</p>
+        <p>I medici agganciati all'organizzazione tramite codice di collegamento.</p>
         <div id="medici-list"><div class="empty">Nessun medico collegato</div></div>
         <div id="codice-box" class="hidden" style="margin-top:14px;padding:12px;border:1px solid var(--brand-soft);border-radius:var(--r-sm);background:#F4FBFA">
           <div style="font-size:12px;color:var(--ink2);margin-bottom:4px">Codice di collegamento attivo</div>
@@ -174,8 +182,25 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <div class="tile">
         <h2>Turni e agenda</h2>
-        <p>Le assegnazioni per sede e la vista d'insieme dell'occupazione.</p>
-        <div class="empty">Disponibile dopo il collegamento del primo medico</div>
+        <p>Assegna un turno: l'agenda del medico si aggiorna da sola.</p>
+        <div id="turni-form">
+          <div class="field"><label for="tf-medico">Medico</label><select id="tf-medico"></select></div>
+          <div class="field"><label for="tf-sede">Sede</label><select id="tf-sede"></select></div>
+          <div style="display:flex;gap:8px">
+            <div class="field" style="flex:1"><label for="tf-giorno">Giorno</label><select id="tf-giorno">
+              <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
+              <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
+            </select></div>
+            <div class="field" style="flex:1"><label for="tf-slot">Slot (min)</label><input id="tf-slot" type="number" min="5" max="120" step="5" value="20"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div class="field" style="flex:1"><label for="tf-inizio">Inizio</label><input id="tf-inizio" type="time" value="09:00"></div>
+            <div class="field" style="flex:1"><label for="tf-fine">Fine</label><input id="tf-fine" type="time" value="13:00"></div>
+          </div>
+          <button class="btn" onclick="assegnaTurno()">Assegna turno</button>
+          <div id="turno-msg" class="hidden"></div>
+        </div>
+        <div id="turni-list" style="margin-top:14px"></div>
       </div>
     </div>
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
@@ -238,6 +263,38 @@ function renderPlancia(){
   } else {
     list.innerHTML = '<div class="empty">Nessun medico collegato</div>';
   }
+  const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const sl = document.getElementById('sedi-list');
+  if(d.sedi && d.sedi.length){
+    sl.innerHTML = d.sedi.map(s => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:14px;font-weight:600">${esc(s.nome)}</div>
+      <div style="font-size:12px;color:var(--ink3)">${esc([s.via, s.citta, s.provincia].filter(Boolean).join(', ')) || '—'}</div>
+    </div>`).join('');
+  } else {
+    sl.innerHTML = '<div class="empty">Nessuna sede configurata</div>';
+  }
+  const selM = document.getElementById('tf-medico');
+  selM.innerHTML = (d.medici||[]).map(m =>
+    `<option value="${esc(m.medico_id)}">${esc([m.titolo,m.nome,m.cognome].filter(Boolean).join(' '))}</option>`).join('')
+    || '<option value="">Nessun medico collegato</option>';
+  const selS = document.getElementById('tf-sede');
+  selS.innerHTML = (d.sedi||[]).filter(s=>s.attiva!==false).map(s =>
+    `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('')
+    || '<option value="">Nessuna sede</option>';
+  const tl = document.getElementById('turni-list');
+  let righe = [];
+  (d.medici||[]).forEach(m => {
+    const nomeM = [m.titolo,m.nome,m.cognome].filter(Boolean).join(' ');
+    (m.centri||[]).forEach(c => (c.turni||[]).forEach(t => {
+      righe.push(`<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px">
+        <span style="font-weight:600">${esc(nomeM)}</span> · ${esc(c.nome)} ·
+        ${GG[t.giorno]||''} ${esc(String(t.inizio).slice(0,5))}–${esc(String(t.fine).slice(0,5))} · slot ${esc(String(t.durata_slot))} min
+      </div>`);
+    }));
+  });
+  tl.innerHTML = righe.length
+    ? '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;margin-bottom:2px">Turni assegnati</div>' + righe.join('')
+    : '<div class="empty">Nessun turno assegnato</div>';
   const box = document.getElementById('codice-box');
   const attivo = d.codici_attivi && d.codici_attivi[0];
   if(attivo){
@@ -297,6 +354,68 @@ async function generaCodice(){
     setCodiceMsg('Generazione non riuscita. Riprova.', 'err');
   } finally {
     btn.disabled = false;
+  }
+}
+
+function setBoxMsg(id, text, kind){
+  const el = document.getElementById(id);
+  if(!text){ el.className = 'hidden'; el.textContent = ''; return; }
+  el.className = 'msg ' + (kind === 'err' ? 'msg-err' : 'msg-info');
+  el.textContent = text;
+}
+
+async function creaSede(){
+  const nome = document.getElementById('sede-nome').value.trim();
+  if(!nome){ setBoxMsg('sede-msg', 'Il nome della sede è obbligatorio.', 'err'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-sedi', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome,
+        via: document.getElementById('sede-via').value,
+        citta: document.getElementById('sede-citta').value,
+        provincia: document.getElementById('sede-prov').value
+      })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){ setBoxMsg('sede-msg', body.error || 'Creazione non riuscita.', 'err'); return; }
+    console.log('[Plancia] Sede creata:', body.sede && body.sede.nome);
+    setBoxMsg('sede-msg', 'Sede creata.', 'info');
+    ['sede-nome','sede-via','sede-citta','sede-prov'].forEach(i => document.getElementById(i).value = '');
+    await enterPlancia();
+  } catch(e){
+    console.error('[Plancia] creaSede:', e.message);
+    setBoxMsg('sede-msg', 'Creazione non riuscita. Riprova.', 'err');
+  }
+}
+
+async function assegnaTurno(){
+  const medico_id = document.getElementById('tf-medico').value;
+  const sede_id = document.getElementById('tf-sede').value;
+  if(!medico_id || !sede_id){ setBoxMsg('turno-msg', 'Servono un medico collegato e una sede.', 'err'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-assegna-turno', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        medico_id, sede_id,
+        giorno: Number(document.getElementById('tf-giorno').value),
+        inizio: document.getElementById('tf-inizio').value,
+        fine: document.getElementById('tf-fine').value,
+        durata_slot: Number(document.getElementById('tf-slot').value)
+      })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){ setBoxMsg('turno-msg', body.error || 'Assegnazione non riuscita.', 'err'); return; }
+    console.log('[Plancia] Turno assegnato:', body.sede && body.sede.nome, body.turno && body.turno.giorno);
+    setBoxMsg('turno-msg', 'Turno assegnato. L\'agenda del medico è aggiornata.', 'info');
+    await enterPlancia();
+  } catch(e){
+    console.error('[Plancia] assegnaTurno:', e.message);
+    setBoxMsg('turno-msg', 'Assegnazione non riuscita. Riprova.', 'err');
   }
 }
 
