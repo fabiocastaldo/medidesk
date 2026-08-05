@@ -2287,11 +2287,16 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-body">
       <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Centro: <strong id="turno-centro-label"></strong></p>
       <div class="form-group">
-        <label class="form-label">Giorno della settimana</label>
-        <select class="form-select" id="turno-giorno">
-          <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
-          <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
-        </select>
+        <label class="form-label">Giorni della settimana <span style="font-weight:400;color:var(--ink3)">(uno o più)</span></label>
+        <div id="turno-giorni" style="display:flex;flex-wrap:wrap;gap:6px 14px">
+          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="1">Lun</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="2">Mar</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="3">Mer</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="4">Gio</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="5">Ven</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="6">Sab</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="0">Dom</label>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Frequenza</label>
@@ -4890,6 +4895,7 @@ function openAddTurno(centroId){
   const c = S.centri.find(x=>String(x.id)===String(centroId));
   document.getElementById('turno-centro-label').textContent = c?c.nome:'';
   document.getElementById('turno-frequenza').value = '1';
+  document.querySelectorAll('.turno-giorno-chk').forEach(ch => { ch.checked = false; });
   document.getElementById('turno-inizio-validita').value = todayLocalISO();
   document.getElementById('turno-fine-validita').value = '';
   document.getElementById('turno-fine-validita').min = todayLocalISO();
@@ -4900,40 +4906,71 @@ function onTurnoFrequenzaChange(){
   // campo data inizio sempre visibile (obbligatorio per tutte le frequenze)
 }
 
+function turnoSovrapposto(giorno, inizio, fine, dataInizio, dataFine){
+  // conflitto se su QUALUNQUE centro esiste un turno stesso giorno, fascia oraria
+  // sovrapposta e periodi di validità che si intersecano (null = aperto)
+  for(const c of (S.centri||[])){
+    for(const t of (c.turni||[])){
+      if(Number(t.giorno) !== Number(giorno)) continue;
+      if(!(inizio < t.fine && fine > t.inizio)) continue;
+      const tIni = t.dataInizioValidita || '0000-01-01';
+      const tFin = t.dataFineValidita   || '9999-12-31';
+      const nIni = dataInizio || '0000-01-01';
+      const nFin = dataFine   || '9999-12-31';
+      if(nIni <= tFin && nFin >= tIni){
+        return { centro: c.nome, inizio: t.inizio, fine: t.fine };
+      }
+    }
+  }
+  return null;
+}
+
 async function saveTurno(){
   const c = S.centri.find(x=>String(x.id)===String(_turnoTargetId)); if(!c) return;
   c.turni = c.turni||[];
-  const giorno = parseInt(document.getElementById('turno-giorno').value);
+  const giorni = Array.from(document.querySelectorAll('.turno-giorno-chk:checked')).map(ch => parseInt(ch.value));
   const inizio = document.getElementById('turno-inizio').value;
   const fine   = document.getElementById('turno-fine').value;
   const slot   = parseInt(document.getElementById('turno-slot').value);
   const frequenza = parseInt(document.getElementById('turno-frequenza').value)||1;
   const dataInizioValidita = document.getElementById('turno-inizio-validita').value||null;
   const dataFineValidita   = document.getElementById('turno-fine-validita').value||null;
+  if(!giorni.length){ showToast('Seleziona almeno un giorno'); return; }
   if(!dataInizioValidita){ showToast('Seleziona la data di inizio validità'); return; }
-  const turnoData = { giorno, inizio, fine, slot, frequenza, dataInizioValidita, dataFineValidita };
-  if(!isOnline()){
-    c.turni.push(turnoData);
-    save(); closeModal('modal-turno'); renderCentri(); renderAgenda();
-    showToast('Turno aggiunto ✓');
-    checkTurnoFestivita(c.id, giorno);
-    return;
+  const aggiunti = [], conflitti = [];
+  for(const giorno of giorni){
+    const conf = turnoSovrapposto(giorno, inizio, fine, dataInizioValidita, dataFineValidita);
+    if(conf){ conflitti.push(`${GIORNI[giorno]} (${conf.inizio}–${conf.fine} presso ${conf.centro})`); continue; }
+    const turnoData = { giorno, inizio, fine, slot, frequenza, dataInizioValidita, dataFineValidita };
+    if(!isOnline()){
+      c.turni.push(turnoData); aggiunti.push(giorno);
+      continue;
+    }
+    try {
+      const { data: newTurno, error } = await supabaseClient.from('turni').insert({
+        centro_id: c.id, giorno, inizio, fine, durata_slot: slot,
+        frequenza_settimane: frequenza,
+        data_inizio_validita: dataInizioValidita,
+        data_fine_validita: dataFineValidita
+      }).select('id').single();
+      if(error) throw error;
+      c.turni.push({ id: newTurno.id, ...turnoData });
+      aggiunti.push(giorno);
+    } catch(e){
+      console.error('[Delphi~Med] saveTurno:', e.message);
+      showToast('Errore: ' + e.message);
+      break;
+    }
   }
-  try {
-    const { data: newTurno, error } = await supabaseClient.from('turni').insert({
-      centro_id: c.id, giorno, inizio, fine, durata_slot: slot,
-      frequenza_settimane: frequenza,
-      data_inizio_validita: dataInizioValidita,
-      data_fine_validita: dataFineValidita
-    }).select('id').single();
-    if(error) throw error;
-    c.turni.push({ id: newTurno.id, ...turnoData });
-    save(); closeModal('modal-turno'); renderCentri(); renderAgenda();
-    showToast('Turno aggiunto ✓');
-    checkTurnoFestivita(c.id, giorno);
-  } catch(e){
-    console.error('[Delphi~Med] saveTurno:', e.message);
-    showToast('Errore: ' + e.message);
+  if(aggiunti.length){
+    save(); renderCentri(); renderAgenda();
+    aggiunti.forEach(g => checkTurnoFestivita(c.id, g));
+  }
+  if(aggiunti.length && !conflitti.length){
+    closeModal('modal-turno');
+    showToast(aggiunti.length === 1 ? 'Turno aggiunto ✓' : `${aggiunti.length} turni aggiunti ✓`);
+  } else if(conflitti.length){
+    showToast((aggiunti.length ? `${aggiunti.length} aggiunti; ` : '') + 'sovrapposizione: ' + conflitti.join(', '));
   }
 }
 function confirmDeleteTurno(centroId, idx){

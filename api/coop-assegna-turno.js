@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   const b = req.body || {};
   const medicoId = String(b.medico_id || '');
   const sedeId = String(b.sede_id || '');
-  const giorno = Number(b.giorno);
+  const giorni = Array.isArray(b.giorni) ? b.giorni.map(Number) : [Number(b.giorno)];
   const inizio = String(b.inizio || '');
   const fine = String(b.fine || '');
   const slot = Number(b.durata_slot || 20);
@@ -36,8 +36,8 @@ export default async function handler(req, res) {
   if (!isUuid(medicoId) || !isUuid(sedeId)) {
     return res.status(400).json({ error: 'Parametri non validi' });
   }
-  if (!Number.isInteger(giorno) || giorno < 0 || giorno > 6) {
-    return res.status(400).json({ error: 'Giorno non valido' });
+  if (!giorni.length || giorni.length > 7 || giorni.some(g => !Number.isInteger(g) || g < 0 || g > 6) || new Set(giorni).size !== giorni.length) {
+    return res.status(400).json({ error: 'Giorni non validi' });
   }
   if (!isTime(inizio) || !isTime(fine) || inizio >= fine) {
     return res.status(400).json({ error: 'Orario non valido' });
@@ -128,24 +128,65 @@ export default async function handler(req, res) {
     }
   }
 
-  // inserisce il turno
-  const turnoRes = await fetch(`${supabaseUrl}/rest/v1/turni`, {
-    method: 'POST',
-    headers: { ...srvHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-    body: JSON.stringify({
-      centro_id: centroId, giorno, inizio, fine, durata_slot: slot,
-      frequenza_settimane: 1,
-      data_inizio_validita: (b.data_inizio_validita && /^\d{4}-\d{2}-\d{2}$/.test(b.data_inizio_validita)) ? b.data_inizio_validita : new Date().toISOString().slice(0, 10),
-      data_fine_validita: (b.data_fine_validita && /^\d{4}-\d{2}-\d{2}$/.test(b.data_fine_validita)) ? b.data_fine_validita : null
-    })
-  }).catch(() => null);
-  const turno = (turnoRes && turnoRes.ok) ? (await turnoRes.json().catch(() => []))?.[0] : null;
-  if (!turno?.id) {
-    return res.status(500).json({ error: 'Creazione del turno non riuscita' });
+  // guardia sovrapposizioni: tutti i turni del medico su TUTTI i suoi centri
+  // (privacy: alla regista si comunica solo la fascia, mai il centro)
+  const dataIni = (b.data_inizio_validita && /^\d{4}-\d{2}-\d{2}$/.test(b.data_inizio_validita)) ? b.data_inizio_validita : new Date().toISOString().slice(0, 10);
+  const dataFin = (b.data_fine_validita && /^\d{4}-\d{2}-\d{2}$/.test(b.data_fine_validita)) ? b.data_fine_validita : null;
+
+  const exRes = await fetch(
+    `${supabaseUrl}/rest/v1/turni?select=giorno,inizio,fine,data_inizio_validita,data_fine_validita,centri!inner(medico_id)&centri.medico_id=eq.${encodeURIComponent(medicoId)}`,
+    { headers: srvHeaders }
+  ).catch(() => null);
+  const esistenti = (exRes && exRes.ok) ? await exRes.json().catch(() => []) : [];
+
+  const GG = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const sovrapposto = (g) => {
+    for (const t of (esistenti || [])) {
+      if (Number(t.giorno) !== g) continue;
+      const tIni = String(t.inizio).slice(0, 5);
+      const tFin = String(t.fine).slice(0, 5);
+      if (!(inizio < tFin && fine > tIni)) continue;
+      const vIni = t.data_inizio_validita || '0000-01-01';
+      const vFin = t.data_fine_validita || '9999-12-31';
+      if (dataIni <= vFin && (dataFin || '9999-12-31') >= vIni) {
+        return `${GG[g]} ${tIni}–${tFin}`;
+      }
+    }
+    return null;
+  };
+
+  const assegnati = [];
+  const conflitti = [];
+  for (const g of giorni) {
+    const conf = sovrapposto(g);
+    if (conf) { conflitti.push(conf); continue; }
+    const turnoRes = await fetch(`${supabaseUrl}/rest/v1/turni`, {
+      method: 'POST',
+      headers: { ...srvHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify({
+        centro_id: centroId, giorno: g, inizio, fine, durata_slot: slot,
+        frequenza_settimane: 1,
+        data_inizio_validita: dataIni,
+        data_fine_validita: dataFin
+      })
+    }).catch(() => null);
+    const turno = (turnoRes && turnoRes.ok) ? (await turnoRes.json().catch(() => []))?.[0] : null;
+    if (!turno?.id) {
+      return res.status(500).json({ error: 'Creazione del turno non riuscita', assegnati, conflitti });
+    }
+    assegnati.push(g);
+  }
+
+  if (!assegnati.length) {
+    return res.status(409).json({
+      error: 'Il medico ha già impegni in quelle fasce: ' + conflitti.join(', '),
+      conflitti
+    });
   }
 
   return res.status(200).json({
-    turno: { id: turno.id, giorno: turno.giorno, inizio: turno.inizio, fine: turno.fine },
+    assegnati: assegnati.map(g => GG[g]),
+    conflitti,
     centro: { id: centroId, nome: sede.nome },
     sede: { id: sede.id, nome: sede.nome }
   });

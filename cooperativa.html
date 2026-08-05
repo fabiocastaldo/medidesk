@@ -192,10 +192,10 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
     <section id="tab-sedi" class="card-lite hidden">
       <div class="toolbar">
-        <div class="field" style="flex:1.4"><label for="sede-nome">Nome sede</label><input id="sede-nome" type="text" maxlength="80"></div>
-        <div class="field" style="flex:1.4"><label for="sede-via">Via</label><input id="sede-via" type="text" maxlength="120"></div>
-        <div class="field" style="flex:1"><label for="sede-citta">Città</label><input id="sede-citta" type="text" maxlength="80"></div>
-        <div class="field" style="min-width:70px;max-width:80px"><label for="sede-prov">Prov.</label><input id="sede-prov" type="text" maxlength="4"></div>
+        <div class="field" style="flex:1.4"><label for="sede-nome">Nome sede</label><input id="sede-nome" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+        <div class="field" style="flex:1.4"><label for="sede-via">Via</label><input id="sede-via" type="text" maxlength="120" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+        <div class="field" style="flex:1"><label for="sede-citta">Città</label><input id="sede-citta" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+        <div class="field" style="min-width:70px;max-width:80px"><label for="sede-prov">Prov.</label><input id="sede-prov" type="text" maxlength="4" onblur="this.value=this.value.trim().toUpperCase()"></div>
         <button class="btn" onclick="creaSede()">Aggiungi sede</button>
       </div>
       <div id="sede-msg" class="hidden"></div>
@@ -206,10 +206,17 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <div class="toolbar" style="padding-bottom:14px;border-bottom:1px solid var(--border)">
         <div class="field" style="flex:1.4"><label for="tf-medico">Medico</label><select id="tf-medico"></select></div>
         <div class="field" style="flex:1.2"><label for="tf-sede">Sede</label><select id="tf-sede"></select></div>
-        <div class="field"><label for="tf-giorno">Giorno</label><select id="tf-giorno">
-          <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
-          <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
-        </select></div>
+        <div class="field" style="min-width:250px"><label>Giorni</label>
+          <div id="tf-giorni" style="display:flex;flex-wrap:wrap;gap:5px 11px;padding:9px 0 3px">
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="tf-giorno-chk" value="1">Lun</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="tf-giorno-chk" value="2">Mar</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="tf-giorno-chk" value="3">Mer</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="tf-giorno-chk" value="4">Gio</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="tf-giorno-chk" value="5">Ven</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="tf-giorno-chk" value="6">Sab</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="tf-giorno-chk" value="0">Dom</label>
+          </div>
+        </div>
         <div class="field" style="min-width:90px;max-width:100px"><label for="tf-inizio">Inizio</label><input id="tf-inizio" type="time" value="09:00"></div>
         <div class="field" style="min-width:90px;max-width:100px"><label for="tf-fine">Fine</label><input id="tf-fine" type="time" value="13:00"></div>
         <div class="field" style="min-width:80px;max-width:90px"><label for="tf-slot">Slot</label><input id="tf-slot" type="number" min="5" max="120" step="5" value="20"></div>
@@ -225,7 +232,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
     <section id="tab-servizi" class="card-lite hidden">
       <div class="toolbar">
-        <div class="field" style="flex:1"><label for="servizio-nome">Nome servizio</label><input id="servizio-nome" type="text" maxlength="80" placeholder="Es. Cardiologia ambulatoriale"></div>
+        <div class="field" style="flex:1"><label for="servizio-nome">Nome servizio</label><input id="servizio-nome" type="text" maxlength="80" placeholder="Es. Cardiologia ambulatoriale" onblur="this.value=capitalizeWords(this.value.trim())"></div>
         <button class="btn" onclick="creaServizio()">Aggiungi servizio</button>
       </div>
       <div id="servizio-msg" class="hidden"></div>
@@ -270,6 +277,10 @@ async function initSupabase(){
 
 function isCooperativa(user){
   return !!(user && user.app_metadata && user.app_metadata.ruolo === 'cooperativa');
+}
+
+function capitalizeWords(str){
+  return String(str || '').toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase());
 }
 
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -551,6 +562,7 @@ async function assegnaTurno(){
   const medico_id = document.getElementById('tf-medico').value;
   const sede_id = document.getElementById('tf-sede').value;
   if(!medico_id || !sede_id){ setBoxMsg('turno-msg', 'Servono un medico collegato e una sede.', 'err'); return; }
+  if(!document.querySelectorAll('.tf-giorno-chk:checked').length){ setBoxMsg('turno-msg', 'Seleziona almeno un giorno.', 'err'); return; }
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-assegna-turno', {
@@ -558,7 +570,7 @@ async function assegnaTurno(){
       headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         medico_id, sede_id,
-        giorno: Number(document.getElementById('tf-giorno').value),
+        giorni: Array.from(document.querySelectorAll('.tf-giorno-chk:checked')).map(ch => Number(ch.value)),
         inizio: document.getElementById('tf-inizio').value,
         fine: document.getElementById('tf-fine').value,
         durata_slot: Number(document.getElementById('tf-slot').value)
@@ -566,9 +578,14 @@ async function assegnaTurno(){
     });
     const body = await res.json().catch(() => ({}));
     if(!res.ok){ setBoxMsg('turno-msg', body.error || 'Assegnazione non riuscita.', 'err'); return; }
-    console.log('[Plancia] Turno assegnato:', body.sede && body.sede.nome, body.turno && body.turno.giorno);
-    setBoxMsg('turno-msg', 'Turno assegnato. L\'agenda del medico è aggiornata.', 'info');
+    console.log('[Plancia] Turni assegnati:', (body.assegnati||[]).join(','), 'conflitti:', (body.conflitti||[]).length);
+    let msg = 'Assegnati: ' + (body.assegnati||[]).join(', ') + '. L\'agenda del medico è aggiornata.';
+    if(body.conflitti && body.conflitti.length){
+      msg += ' Non assegnati per impegni già presenti: ' + body.conflitti.join(', ') + '.';
+    }
+    setBoxMsg('turno-msg', msg, body.conflitti && body.conflitti.length ? 'err' : 'info');
     await enterPlancia();
+    switchTab('turni');
   } catch(e){
     console.error('[Plancia] assegnaTurno:', e.message);
     setBoxMsg('turno-msg', 'Assegnazione non riuscita. Riprova.', 'err');
