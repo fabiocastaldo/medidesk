@@ -399,6 +399,9 @@ async function enterPlancia(){
     if(res.status === 403){ show('view-denied'); return; }
     if(!res.ok) throw new Error('coop-me ' + res.status);
     _plancia = await res.json();
+    (_plancia.medici || []).sort((a, b) =>
+      (a.cognome || '').localeCompare(b.cognome || '', 'it') ||
+      (a.nome || '').localeCompare(b.nome || '', 'it'));
     console.log('[Plancia] Identità caricata:', _plancia.cooperativa.nome,
       '· medici:', _plancia.medici.length, '· codici attivi:', _plancia.codici_attivi.length);
     renderPlancia();
