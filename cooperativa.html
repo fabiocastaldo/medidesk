@@ -92,7 +92,8 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .gdd summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none;width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-size:14px;background:#fff;color:var(--ink)}
 .gdd summary::-webkit-details-marker{display:none}
 .gdd-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:40;background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-soft);padding:10px 14px;display:flex;flex-direction:column;gap:7px;min-width:170px}
-.gdd-pop label{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
+.gdd-pop label{display:flex;align-items:center;justify-content:flex-start;gap:9px;font-size:13.5px;cursor:pointer;width:100%;text-align:left}
+.gdd-pop input[type=checkbox]{flex:0 0 auto;margin:0;width:15px;height:15px}
 .act-btn{background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:3px 6px;border-radius:6px}
 .act-btn:hover{background:var(--paper);color:var(--ink)}
 .act-danger:hover{color:#A3382B}
@@ -230,7 +231,13 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <div class="toolbar">
         <div class="field"><label for="ft-medico">Filtro medico</label><select id="ft-medico" onchange="renderTurniTab()"></select></div>
         <div class="field"><label for="ft-sede">Filtro sede</label><select id="ft-sede" onchange="renderTurniTab()"></select></div>
+        <div class="field"><label for="ft-giorno">Filtro giorno</label><select id="ft-giorno" onchange="renderTurniTab()">
+          <option value="">Tutti i giorni</option>
+          <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
+          <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
+        </select></div>
       </div>
+      <div id="turni-count" style="font-size:13px;font-weight:600;color:var(--brand-mid);margin-bottom:10px"></div>
       <div id="turni-reg-msg" class="hidden"></div>
       <div id="turni-tbl"></div>
     </section>
@@ -245,10 +252,20 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     </section>
 
     <section id="tab-assoc-servizi" class="card-lite hidden">
-      <div class="toolbar">
-        <input class="search" id="sv-search" type="text" placeholder="Cerca medico" oninput="renderAssocServiziTab()">
+      <div class="toolbar" style="padding-bottom:14px;border-bottom:1px solid var(--border)">
+        <div class="field" style="flex:1.2"><label for="sv-med-sel">Medico</label><select id="sv-med-sel" onchange="syncServiziChk()"></select></div>
+        <div class="field" style="min-width:220px;flex:1"><label>Servizi</label>
+          <details class="gdd" id="sv-serv-dd">
+            <summary><span id="sv-serv-label">Seleziona servizi</span><span style="color:var(--ink3)">▾</span></summary>
+            <div class="gdd-pop" id="sv-serv-pop"></div>
+          </details>
+        </div>
+        <button class="btn" onclick="salvaAssociazioni()">Salva associazioni</button>
       </div>
-      <p style="font-size:12.5px;color:var(--ink3);margin:0 0 10px">Tocca una cella per associare o rimuovere il medico dal servizio.</p>
+      <div class="toolbar" style="margin-top:14px">
+        <input class="search" id="sv-search" type="text" placeholder="Cerca medico nella tabella" oninput="renderAssocServiziTab()">
+      </div>
+      <p style="font-size:12.5px;color:var(--ink3);margin:0 0 10px">La tabella riepiloga le associazioni; puoi anche toccare una cella per cambiarle al volo.</p>
       <div id="assoc-servizio-msg" class="hidden"></div>
       <div id="servizi-tbl" class="mx-wrap"></div>
       <details style="margin-top:16px">
@@ -414,6 +431,51 @@ function renderServiziCatalogo(){
     + '</tbody></table>';
 }
 
+function syncServiziChk(){
+  const d = _plancia; if(!d) return;
+  const mid = document.getElementById('sv-med-sel').value;
+  const m = (d.medici||[]).find(x => String(x.medico_id) === mid);
+  const pop = document.getElementById('sv-serv-pop');
+  pop.innerHTML = (d.servizi||[]).map(s => {
+    const on = m && (s.medici||[]).includes(String(m.medico_id));
+    return `<label><input type="checkbox" class="sv-serv-chk" value="${esc(s.id)}" ${on ? 'checked' : ''} onchange="updateSvServLabel()">${esc(s.nome)}</label>`;
+  }).join('') || '<span style="font-size:12.5px;color:var(--ink3)">Nessun servizio a catalogo</span>';
+  updateSvServLabel();
+}
+
+function updateSvServLabel(){
+  const n = document.querySelectorAll('.sv-serv-chk:checked').length;
+  document.getElementById('sv-serv-label').textContent = n ? (n + (n === 1 ? ' servizio selezionato' : ' servizi selezionati')) : 'Seleziona servizi';
+}
+
+async function salvaAssociazioni(){
+  const d = _plancia; if(!d) return;
+  const mid = document.getElementById('sv-med-sel').value;
+  if(!mid){ setBoxMsg('assoc-servizio-msg', 'Seleziona un medico.', 'err'); return; }
+  const scelti = new Set(Array.from(document.querySelectorAll('.sv-serv-chk:checked')).map(ch => ch.value));
+  const attuali = new Set((d.servizi||[]).filter(s => (s.medici||[]).includes(mid)).map(s => String(s.id)));
+  const daAggiungere = [...scelti].filter(id => !attuali.has(id));
+  const daRimuovere = [...attuali].filter(id => !scelti.has(id));
+  if(!daAggiungere.length && !daRimuovere.length){ setBoxMsg('assoc-servizio-msg', 'Nessuna modifica da salvare.', 'info'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    for(const sid of daAggiungere){
+      await fetch('/api/coop-servizi', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'associa', servizio_id: sid, medico_id: mid }) });
+    }
+    for(const sid of daRimuovere){
+      await fetch('/api/coop-servizi', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'rimuovi', servizio_id: sid, medico_id: mid }) });
+    }
+    console.log('[Plancia] Associazioni salvate: +' + daAggiungere.length + ' -' + daRimuovere.length);
+    await enterPlancia();
+    setBoxMsg('assoc-servizio-msg', 'Associazioni salvate (' + daAggiungere.length + ' aggiunte, ' + daRimuovere.length + ' rimosse).', 'info');
+    const keep = document.getElementById('sv-med-sel'); if(keep) keep.value = mid;
+    syncServiziChk();
+  } catch(e){
+    console.error('[Plancia] salvaAssociazioni:', e.message);
+    setBoxMsg('assoc-servizio-msg', 'Salvataggio non riuscito. Riprova.', 'err');
+  }
+}
+
 function renderAssocServiziTab(){
   const d = _plancia; if(!d) return;
   const el = document.getElementById('servizi-tbl');
@@ -436,6 +498,11 @@ function renderAssocServiziTab(){
           + '</tr>').join('')
       + '</tbody></table>';
   }
+  const ms = document.getElementById('sv-med-sel');
+  const prima = ms.value;
+  ms.innerHTML = (d.medici||[]).map(m => `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('') || '<option value="">Nessun medico</option>';
+  if(prima && Array.from(ms.options).some(o => o.value === prima)) ms.value = prima;
+  syncServiziChk();
   const am = document.getElementById('sv-alt-medico');
   am.innerHTML = (d.medici||[]).map(m => `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('') || '<option value="">Nessun medico</option>';
   const asv = document.getElementById('sv-alt-servizio');
@@ -539,12 +606,14 @@ function renderTurniTab(){
   const d = _plancia; if(!d) return;
   const fm = document.getElementById('ft-medico').value;
   const fs = document.getElementById('ft-sede').value;
+  const fg = document.getElementById('ft-giorno').value;
   let righe = [];
   (d.medici||[]).forEach(m => {
     if(fm && String(m.medico_id) !== fm) return;
     (m.centri||[]).forEach(c => {
       if(fs && String(c.coop_sede_id) !== fs) return;
       (c.turni||[]).forEach(t => {
+        if(fg !== '' && Number(t.giorno) !== Number(fg)) return;
         righe.push({ id: t.id, medico: nomeMedico(m), sede: c.nome, giorno: t.giorno,
           orario: String(t.inizio).slice(0,5) + '–' + String(t.fine).slice(0,5),
           slot: t.durata_slot });
@@ -552,9 +621,14 @@ function renderTurniTab(){
     });
   });
   righe.sort((a,b) => a.medico.localeCompare(b.medico) || a.giorno - b.giorno);
+  const nMedici = new Set(righe.map(r => r.medico)).size;
+  const cnt = document.getElementById('turni-count');
+  cnt.textContent = righe.length
+    ? righe.length + (righe.length === 1 ? ' turno' : ' turni') + ' · ' + nMedici + (nMedici === 1 ? ' medico' : ' medici') + (fg !== '' ? ' di ' + GG[Number(fg)] : '')
+    : '';
   const el = document.getElementById('turni-tbl');
   if(!righe.length){
-    el.innerHTML = '<div class="empty">Nessun turno assegnato</div>';
+    el.innerHTML = '<div class="empty">Nessun turno assegnato' + (fg !== '' || fm || fs ? ' con questi filtri' : '') + '</div>';
     return;
   }
   el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Sede</th><th>Giorno</th><th>Orario</th><th>Slot</th><th style="width:50px"></th></tr></thead><tbody>'
