@@ -236,6 +236,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .coop-join-row{display:flex;gap:8px;flex-wrap:wrap}
 .coop-join-row input{flex:1;min-width:160px;max-width:220px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:14px;letter-spacing:1px;text-transform:uppercase}
 .coop-join-msg{font-size:12.5px;color:var(--ink2);margin-top:8px;min-height:16px}
+.gdd{position:relative}
+.gdd summary::-webkit-details-marker{display:none}
+.gdd-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:40;background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);padding:10px 14px;display:flex;flex-direction:column;gap:7px;min-width:170px}
+.gdd-pop label{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;color:var(--ink)}
 .centro-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
 .centro-info{flex:1}
 .centro-nome{font-weight:600}
@@ -2288,15 +2292,18 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Centro: <strong id="turno-centro-label"></strong></p>
       <div class="form-group">
         <label class="form-label">Giorni della settimana <span style="font-weight:400;color:var(--ink3)">(uno o più)</span></label>
-        <div id="turno-giorni" style="display:flex;flex-wrap:wrap;gap:6px 14px">
-          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="1">Lun</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="2">Mar</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="3">Mer</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="4">Gio</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="5">Ven</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="6">Sab</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13.5px;cursor:pointer"><input type="checkbox" class="turno-giorno-chk" value="0">Dom</label>
-        </div>
+        <details class="gdd" id="turno-giorni-dd">
+          <summary class="form-select" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none"><span id="turno-giorni-label">Seleziona giorni</span><span style="color:var(--ink3)">▾</span></summary>
+          <div class="gdd-pop">
+            <label><input type="checkbox" class="turno-giorno-chk" value="1" onchange="updateGiorniLabel('turno')">Lunedì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="2" onchange="updateGiorniLabel('turno')">Martedì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="3" onchange="updateGiorniLabel('turno')">Mercoledì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="4" onchange="updateGiorniLabel('turno')">Giovedì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="5" onchange="updateGiorniLabel('turno')">Venerdì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="6" onchange="updateGiorniLabel('turno')">Sabato</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="0" onchange="updateGiorniLabel('turno')">Domenica</label>
+          </div>
+        </details>
       </div>
       <div class="form-group">
         <label class="form-label">Frequenza</label>
@@ -4896,6 +4903,8 @@ function openAddTurno(centroId){
   document.getElementById('turno-centro-label').textContent = c?c.nome:'';
   document.getElementById('turno-frequenza').value = '1';
   document.querySelectorAll('.turno-giorno-chk').forEach(ch => { ch.checked = false; });
+  updateGiorniLabel('turno');
+  const dd = document.getElementById('turno-giorni-dd'); if(dd) dd.removeAttribute('open');
   document.getElementById('turno-inizio-validita').value = todayLocalISO();
   document.getElementById('turno-fine-validita').value = '';
   document.getElementById('turno-fine-validita').min = todayLocalISO();
@@ -4904,6 +4913,13 @@ function openAddTurno(centroId){
 }
 function onTurnoFrequenzaChange(){
   // campo data inizio sempre visibile (obbligatorio per tutte le frequenze)
+}
+
+const GIORNI_FULL = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+function updateGiorniLabel(prefix){
+  const sel = Array.from(document.querySelectorAll('.' + prefix + '-giorno-chk:checked')).map(ch => GIORNI[parseInt(ch.value)]);
+  const lbl = document.getElementById(prefix + '-giorni-label');
+  if(lbl) lbl.textContent = sel.length ? sel.join(', ') : 'Seleziona giorni';
 }
 
 function turnoSovrapposto(giorno, inizio, fine, dataInizio, dataFine){
@@ -4967,6 +4983,7 @@ async function saveTurno(){
     aggiunti.forEach(g => checkTurnoFestivita(c.id, g));
   }
   if(aggiunti.length && !conflitti.length){
+    const _dd = document.getElementById('turno-giorni-dd'); if(_dd) _dd.removeAttribute('open');
     closeModal('modal-turno');
     showToast(aggiunti.length === 1 ? 'Turno aggiunto ✓' : `${aggiunti.length} turni aggiunti ✓`);
   } else if(conflitti.length){

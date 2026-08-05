@@ -63,6 +63,45 @@ export default async function handler(req, res) {
     return res.status(200).json({ servizio });
   }
 
+  if (action === 'rinomina' || action === 'elimina') {
+    const servizioId = String(b.servizio_id || '');
+    if (!isUuid(servizioId)) {
+      return res.status(400).json({ error: 'Parametri non validi' });
+    }
+    const svRes = await fetch(
+      `${supabaseUrl}/rest/v1/coop_servizi?id=eq.${encodeURIComponent(servizioId)}&cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id`,
+      { headers: srvHeaders }
+    ).catch(() => null);
+    const sv = (svRes && svRes.ok) ? (await svRes.json().catch(() => []))?.[0] : null;
+    if (!sv) {
+      return res.status(404).json({ error: 'Servizio non trovato' });
+    }
+    if (action === 'rinomina') {
+      const nome = String(b.nome || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+      if (!nome) {
+        return res.status(400).json({ error: 'Il nome del servizio è obbligatorio' });
+      }
+      const upRes = await fetch(
+        `${supabaseUrl}/rest/v1/coop_servizi?id=eq.${encodeURIComponent(servizioId)}`,
+        { method: 'PATCH', headers: { ...srvHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }, body: JSON.stringify({ nome }) }
+      ).catch(() => null);
+      const up = (upRes && upRes.ok) ? (await upRes.json().catch(() => []))?.[0] : null;
+      if (!up?.id) {
+        return res.status(500).json({ error: 'Rinomina non riuscita' });
+      }
+      return res.status(200).json({ servizio: up });
+    }
+    const delRes = await fetch(
+      `${supabaseUrl}/rest/v1/coop_servizi?id=eq.${encodeURIComponent(servizioId)}`,
+      { method: 'DELETE', headers: { ...srvHeaders, 'Prefer': 'return=representation' } }
+    ).catch(() => null);
+    const removed = (delRes && delRes.ok) ? await delRes.json().catch(() => []) : [];
+    if (!removed || !removed.length) {
+      return res.status(500).json({ error: 'Eliminazione non riuscita' });
+    }
+    return res.status(200).json({ eliminato: true });
+  }
+
   if (action === 'associa' || action === 'rimuovi') {
     const servizioId = String(b.servizio_id || '');
     const medicoId = String(b.medico_id || '');
