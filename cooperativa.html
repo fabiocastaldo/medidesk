@@ -262,21 +262,12 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         </div>
         <button class="btn" onclick="salvaAssociazioni()">Salva associazioni</button>
       </div>
-      <div class="toolbar" style="margin-top:14px">
-        <input class="search" id="sv-search" type="text" placeholder="Cerca medico nella tabella" oninput="renderAssocServiziTab()">
-      </div>
-      <p style="font-size:12.5px;color:var(--ink3);margin:0 0 10px">La tabella riepiloga le associazioni; puoi anche toccare una cella per cambiarle al volo.</p>
       <div id="assoc-servizio-msg" class="hidden"></div>
-      <div id="servizi-tbl" class="mx-wrap"></div>
-      <details style="margin-top:16px">
-        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--brand-mid)">Modalità alternativa (menu a tendina)</summary>
-        <div class="toolbar" style="margin-top:12px">
-          <div class="field" style="flex:1"><label for="sv-alt-medico">Medico</label><select id="sv-alt-medico"></select></div>
-          <div class="field" style="flex:1"><label for="sv-alt-servizio">Servizio</label><select id="sv-alt-servizio"></select></div>
-          <button class="btn" onclick="altAssocia(true)">Associa</button>
-          <button class="btn btn-ghost" style="border:1px solid var(--border)" onclick="altAssocia(false)">Rimuovi</button>
-        </div>
-      </details>
+      <div class="toolbar" style="margin-top:14px">
+        <input class="search" id="sv-search" type="text" placeholder="Cerca medico" oninput="renderAssocServiziTab()">
+        <div class="field"><label for="sv-filtro">Servizio</label><select id="sv-filtro" onchange="renderAssocServiziTab()"></select></div>
+      </div>
+      <div id="servizi-tbl"></div>
     </section>
 
     <section id="tab-assoc-turni" class="card-lite hidden">
@@ -374,7 +365,7 @@ function switchTab(t){
   });
 }
 
-function nomeMedico(m){ return [m.titolo, m.nome, m.cognome].filter(Boolean).join(' '); }
+function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
 
 function updateTfGiorniLabel(){
   const sel = Array.from(document.querySelectorAll('.tf-giorno-chk:checked')).map(ch => GG[parseInt(ch.value)]);
@@ -490,48 +481,46 @@ async function salvaAssociazioni(){
 
 function renderAssocServiziTab(){
   const d = _plancia; if(!d) return;
-  const el = document.getElementById('servizi-tbl');
-  const q = (document.getElementById('sv-search').value || '').toLowerCase().trim();
-  const medici = (d.medici||[]).filter(m => !q || (nomeMedico(m) + ' ' + (m.specializzazione||'')).toLowerCase().includes(q));
-  const servizi = d.servizi || [];
-  if(!servizi.length){
-    el.innerHTML = '<div class="empty">Nessun servizio. Aggiungi il primo dal modulo qui sopra.</div>';
-  } else if(!medici.length){
-    el.innerHTML = '<div class="empty">' + (q ? 'Nessun medico corrisponde alla ricerca' : 'Nessun medico collegato') + '</div>';
-  } else {
-    el.innerHTML = '<table class="mx"><thead><tr><th>Medico</th>'
-      + servizi.map(s => `<th>${esc(s.nome)}</th>`).join('')
-      + '</tr></thead><tbody>'
-      + medici.map(m => '<tr><td>' + esc(nomeMedico(m)) + '</td>'
-          + servizi.map(s => {
-              const on = (s.medici||[]).includes(String(m.medico_id));
-              return `<td><button class="mx-cell${on ? ' on' : ''}" title="${on ? 'Rimuovi da' : 'Associa a'} ${esc(s.nome)}" onclick="toggleAssociazione('${esc(s.id)}','${esc(m.medico_id)}',${on})">${on ? '✓' : ''}</button></td>`;
-            }).join('')
-          + '</tr>').join('')
-      + '</tbody></table>';
-  }
   const ms = document.getElementById('sv-med-sel');
   const prima = ms.value;
   ms.innerHTML = (d.medici||[]).map(m => `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('') || '<option value="">Nessun medico</option>';
   if(prima && Array.from(ms.options).some(o => o.value === prima)) ms.value = prima;
   syncServiziChk();
-  const am = document.getElementById('sv-alt-medico');
-  am.innerHTML = (d.medici||[]).map(m => `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('') || '<option value="">Nessun medico</option>';
-  const asv = document.getElementById('sv-alt-servizio');
-  asv.innerHTML = servizi.map(s => `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('') || '<option value="">Nessun servizio</option>';
+  const sf = document.getElementById('sv-filtro');
+  if(!sf.options.length || sf.dataset.n !== String((d.servizi||[]).length)){
+    sf.innerHTML = '<option value="">Tutti i servizi</option>' + (d.servizi||[]).map(s => `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('');
+    sf.dataset.n = String((d.servizi||[]).length);
+  }
+  const q = (document.getElementById('sv-search').value || '').toLowerCase().trim();
+  const fsv = sf.value;
+  const righe = (d.medici||[]).filter(m => {
+    if(q && !(nomeMedico(m) + ' ' + (m.specializzazione||'')).toLowerCase().includes(q)) return false;
+    if(fsv){
+      const sv = (d.servizi||[]).find(s => String(s.id) === fsv);
+      if(!sv || !(sv.medici||[]).includes(String(m.medico_id))) return false;
+    }
+    return true;
+  });
+  const el = document.getElementById('servizi-tbl');
+  if(!righe.length){
+    el.innerHTML = '<div class="empty">' + (q || fsv ? 'Nessun medico con questi filtri' : 'Nessun medico collegato') + '</div>';
+    return;
+  }
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Specializzazione</th><th>Servizi associati</th><th style="width:50px"></th></tr></thead><tbody>'
+    + righe.map(m => `<tr>
+        <td style="font-weight:600">${esc(nomeMedico(m))}</td>
+        <td style="font-size:12.5px;color:var(--ink2)">${esc(m.specializzazione||'—')}</td>
+        <td>${esc(serviziDelMedico(m.medico_id)) || '<span style="color:var(--ink3)">Nessuno</span>'}</td>
+        <td><button class="act-btn" title="Modifica associazioni" onclick="modificaAssocServizi('${esc(m.medico_id)}')">✎</button></td>
+      </tr>`).join('')
+    + '</tbody></table>';
 }
 
-async function toggleAssociazione(servizioId, medicoId, attiva){
-  await _serviziCall({ action: attiva ? 'rimuovi' : 'associa', servizio_id: servizioId, medico_id: medicoId },
-    attiva ? 'Associazione rimossa.' : 'Medico associato.');
-}
-
-async function altAssocia(associa){
-  const medicoId = document.getElementById('sv-alt-medico').value;
-  const servizioId = document.getElementById('sv-alt-servizio').value;
-  if(!medicoId || !servizioId){ setBoxMsg('servizio-msg', 'Servono un medico e un servizio.', 'err'); return; }
-  await _serviziCall({ action: associa ? 'associa' : 'rimuovi', servizio_id: servizioId, medico_id: medicoId },
-    associa ? 'Medico associato.' : 'Associazione rimossa.');
+function modificaAssocServizi(medicoId){
+  document.getElementById('sv-med-sel').value = medicoId;
+  syncServiziChk();
+  const dd = document.getElementById('sv-serv-dd'); if(dd) dd.setAttribute('open','');
+  document.getElementById('tab-assoc-servizi').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function _serviziCall(payload, msgOk){
