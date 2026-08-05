@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Cooperativa non attiva' });
   }
 
-  const [mediciRes, codiciRes, sediRes] = await Promise.all([
+  const [mediciRes, codiciRes, sediRes, serviziRes] = await Promise.all([
     fetch(
       `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_fine_validita),medici(id,titolo,nome,cognome,specializzazione)`,
       { headers: srvHeaders }
@@ -65,12 +65,17 @@ export default async function handler(req, res) {
     fetch(
       `${supabaseUrl}/rest/v1/coop_sedi?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,via,citta,provincia,cap,attiva&order=created_at.asc`,
       { headers: srvHeaders }
+    ).catch(() => null),
+    fetch(
+      `${supabaseUrl}/rest/v1/coop_servizi?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,coop_servizi_medici(medico_id)&order=nome.asc`,
+      { headers: srvHeaders }
     ).catch(() => null)
   ]);
 
   const centriData = (mediciRes && mediciRes.ok) ? await mediciRes.json().catch(() => []) : [];
   const codiciData = (codiciRes && codiciRes.ok) ? await codiciRes.json().catch(() => []) : [];
   const sediData = (sediRes && sediRes.ok) ? await sediRes.json().catch(() => []) : [];
+  const serviziData = (serviziRes && serviziRes.ok) ? await serviziRes.json().catch(() => []) : [];
 
   // aggrego per medico: un medico può avere più sede-centri collegati
   const perMedico = new Map();
@@ -96,6 +101,10 @@ export default async function handler(req, res) {
     segreteria: { nome: seg.nome },
     medici: Array.from(perMedico.values()),
     codici_attivi: codiciData || [],
-    sedi: sediData || []
+    sedi: sediData || [],
+    servizi: (serviziData || []).map(s => ({
+      id: s.id, nome: s.nome, attivo: s.attivo !== false,
+      medici: (s.coop_servizi_medici || []).map(a => String(a.medico_id))
+    }))
   });
 }

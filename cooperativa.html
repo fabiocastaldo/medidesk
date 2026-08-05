@@ -169,6 +169,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <button class="tab active" id="tabbtn-medici" onclick="switchTab('medici')">Medici</button>
       <button class="tab" id="tabbtn-sedi" onclick="switchTab('sedi')">Sedi</button>
       <button class="tab" id="tabbtn-turni" onclick="switchTab('turni')">Turni</button>
+      <button class="tab" id="tabbtn-servizi" onclick="switchTab('servizi')">Servizi</button>
     </div>
 
     <section id="tab-medici" class="card-lite">
@@ -222,6 +223,15 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <div id="turni-tbl"></div>
     </section>
 
+    <section id="tab-servizi" class="card-lite hidden">
+      <div class="toolbar">
+        <div class="field" style="flex:1"><label for="servizio-nome">Nome servizio</label><input id="servizio-nome" type="text" maxlength="80" placeholder="Es. Cardiologia ambulatoriale"></div>
+        <button class="btn" onclick="creaServizio()">Aggiungi servizio</button>
+      </div>
+      <div id="servizio-msg" class="hidden"></div>
+      <div id="servizi-tbl"></div>
+    </section>
+
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
   </div>
   <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
@@ -267,7 +277,7 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 
 function switchTab(t){
-  ['medici','sedi','turni'].forEach(x => {
+  ['medici','sedi','turni','servizi'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
@@ -283,6 +293,7 @@ function renderPlancia(){
   document.getElementById('tabbtn-sedi').textContent = 'Sedi (' + (d.sedi||[]).length + ')';
   const nTurni = (d.medici||[]).reduce((n,m) => n + (m.centri||[]).reduce((k,c) => k + (c.turni||[]).length, 0), 0);
   document.getElementById('tabbtn-turni').textContent = 'Turni (' + nTurni + ')';
+  document.getElementById('tabbtn-servizi').textContent = 'Servizi (' + (d.servizi||[]).length + ')';
 
   const selM = document.getElementById('tf-medico');
   selM.innerHTML = (d.medici||[]).map(m =>
@@ -313,6 +324,68 @@ function renderPlancia(){
   renderMediciTab();
   renderSediTab();
   renderTurniTab();
+  renderServiziTab();
+}
+
+function renderServiziTab(){
+  const d = _plancia; if(!d) return;
+  const el = document.getElementById('servizi-tbl');
+  if(!(d.servizi||[]).length){
+    el.innerHTML = '<div class="empty">Nessun servizio. Aggiungi il primo dal modulo qui sopra.</div>';
+    return;
+  }
+  const byId = {};
+  (d.medici||[]).forEach(m => { byId[String(m.medico_id)] = nomeMedico(m); });
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Servizio</th><th>Medici associati</th><th style="width:260px">Associa medico</th></tr></thead><tbody>'
+    + d.servizi.map(s => {
+        const chips = (s.medici||[]).map(mid => `<span style="display:inline-flex;align-items:center;gap:5px;background:var(--paper);border:1px solid var(--border);border-radius:14px;padding:3px 9px;margin:2px 4px 2px 0;font-size:12.5px">${esc(byId[mid] || 'Medico non collegato')}<button onclick="rimuoviDaServizio('${esc(s.id)}','${esc(mid)}')" title="Rimuovi" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:13px;padding:0;line-height:1">✕</button></span>`).join('') || '<span style="color:var(--ink3);font-size:12.5px">Nessuno</span>';
+        const opzioni = (d.medici||[]).filter(m => !(s.medici||[]).includes(String(m.medico_id)))
+          .map(m => `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('');
+        const assoc = opzioni
+          ? `<div style="display:flex;gap:6px"><select id="sv-sel-${esc(s.id)}" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:13px">${opzioni}</select><button class="btn" style="width:auto;margin:0;padding:8px 14px;font-size:13px" onclick="associaAServizio('${esc(s.id)}')">Associa</button></div>`
+          : '<span style="color:var(--ink3);font-size:12.5px">Tutti i medici associati</span>';
+        return `<tr><td style="font-weight:600">${esc(s.nome)}</td><td>${chips}</td><td>${assoc}</td></tr>`;
+      }).join('')
+    + '</tbody></table>';
+}
+
+async function _serviziCall(payload, msgOk){
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-servizi', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){ setBoxMsg('servizio-msg', body.error || 'Operazione non riuscita.', 'err'); return false; }
+    console.log('[Plancia] Servizi:', payload.action, 'ok');
+    if(msgOk) setBoxMsg('servizio-msg', msgOk, 'info');
+    await enterPlancia();
+    switchTab('servizi');
+    return true;
+  } catch(e){
+    console.error('[Plancia] servizi:', e.message);
+    setBoxMsg('servizio-msg', 'Operazione non riuscita. Riprova.', 'err');
+    return false;
+  }
+}
+
+async function creaServizio(){
+  const nome = document.getElementById('servizio-nome').value.trim();
+  if(!nome){ setBoxMsg('servizio-msg', 'Il nome del servizio è obbligatorio.', 'err'); return; }
+  const ok = await _serviziCall({ action: 'crea', nome }, 'Servizio creato.');
+  if(ok) document.getElementById('servizio-nome').value = '';
+}
+
+async function associaAServizio(servizioId){
+  const sel = document.getElementById('sv-sel-' + servizioId);
+  if(!sel || !sel.value){ return; }
+  await _serviziCall({ action: 'associa', servizio_id: servizioId, medico_id: sel.value }, 'Medico associato.');
+}
+
+async function rimuoviDaServizio(servizioId, medicoId){
+  await _serviziCall({ action: 'rimuovi', servizio_id: servizioId, medico_id: medicoId }, 'Associazione rimossa.');
 }
 
 function renderMediciTab(){
