@@ -111,6 +111,12 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .tchip button:hover{color:#A3382B}
 .cell-add{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px dashed var(--border);border-radius:8px;background:none;cursor:pointer;color:var(--ink3);font-size:15px;margin:2px}
 .cell-add:hover{background:var(--brand-soft);color:var(--brand-deep)}
+.ag-block{display:block;background:var(--brand-soft);border-left:3px solid var(--brand-mid);border-radius:6px;padding:6px 9px;margin:4px 0;font-size:12px;line-height:1.45;text-align:left}
+.ag-block .ag-sede{font-weight:700;color:var(--brand-deep)}
+.ag-block .ag-ora{color:var(--ink)}
+.ag-block .ag-val{color:var(--ink3);font-size:11px}
+.cov-n{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:28px;border-radius:8px;background:var(--brand-mid);color:#fff;font-weight:700;font-size:13px;padding:0 8px;cursor:default}
+.cov-zero{background:var(--paper);color:var(--ink3);font-weight:400}
 footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
 @media (max-width:840px){
@@ -195,6 +201,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <button class="tab" id="tabbtn-servizi" onclick="switchTab('servizi')">Servizi</button>
       <button class="tab" id="tabbtn-assoc-servizi" onclick="switchTab('assoc-servizi')">Associa medici ai servizi</button>
       <button class="tab" id="tabbtn-assoc-turni" onclick="switchTab('assoc-turni')">Associa medici ai turni</button>
+      <button class="tab" id="tabbtn-copertura" onclick="switchTab('copertura')">Copertura sedi</button>
+      <button class="tab" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
     </div>
 
     <section id="tab-medici" class="card-lite">
@@ -310,6 +318,18 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <div id="assoc-turni-tbl" class="mx-wrap"></div>
     </section>
 
+    <section id="tab-copertura" class="card-lite hidden">
+      <p style="font-size:12.5px;color:var(--ink3);margin:0 0 12px">Quanti medici coprono ogni servizio in ogni sede (associati al servizio e con turni assegnati sulla sede). Passa sul numero per i nomi.</p>
+      <div id="copertura-tbl" class="mx-wrap"></div>
+    </section>
+
+    <section id="tab-agenda" class="card-lite hidden">
+      <div class="toolbar">
+        <div class="field" style="min-width:260px"><label for="ag-med-sel">Medico</label><select id="ag-med-sel" onchange="renderAgendaTab()"></select></div>
+      </div>
+      <div id="agenda-tbl" class="mx-wrap"></div>
+    </section>
+
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
   </div>
   <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
@@ -359,7 +379,7 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 
 function switchTab(t){
-  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni'].forEach(x => {
+  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','copertura','agenda'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
@@ -414,6 +434,66 @@ function renderPlancia(){
   renderServiziCatalogo();
   renderAssocServiziTab();
   renderAssocTurniTab();
+  renderCoperturaTab();
+  renderAgendaTab();
+}
+
+function renderCoperturaTab(){
+  const d = _plancia; if(!d) return;
+  const el = document.getElementById('copertura-tbl');
+  const servizi = d.servizi || [], sedi = d.sedi || [];
+  if(!servizi.length || !sedi.length){
+    el.innerHTML = '<div class="empty">Servono almeno un servizio a catalogo e una sede.</div>';
+    return;
+  }
+  // medici con turni per sede
+  const perSede = {}; // sede_id -> Set(medico_id) + nomi
+  (d.medici||[]).forEach(m => (m.centri||[]).forEach(c => {
+    if(!c.coop_sede_id || !(c.turni||[]).length) return;
+    (perSede[c.coop_sede_id] = perSede[c.coop_sede_id] || new Map()).set(String(m.medico_id), nomeMedico(m));
+  }));
+  el.innerHTML = '<table class="mx"><thead><tr><th>Servizio</th>'
+    + sedi.map(s => `<th>${esc(s.nome)}</th>`).join('')
+    + '</tr></thead><tbody>'
+    + servizi.map(sv => '<tr><td>' + esc(sv.nome) + '</td>'
+        + sedi.map(s => {
+            const inSede = perSede[s.id] || new Map();
+            const nomi = [...inSede.entries()].filter(([mid]) => (sv.medici||[]).includes(mid)).map(([,n]) => n);
+            return `<td><span class="cov-n${nomi.length ? '' : ' cov-zero'}" title="${esc(nomi.join(', ') || 'Nessun medico')}">${nomi.length || '—'}</span></td>`;
+          }).join('')
+        + '</tr>').join('')
+    + '</tbody></table>';
+}
+
+function renderAgendaTab(){
+  const d = _plancia; if(!d) return;
+  const sel = document.getElementById('ag-med-sel');
+  const prima = sel.value;
+  sel.innerHTML = (d.medici||[]).map(m => `<option value="${esc(m.medico_id)}">${esc(nomeMedico(m))}</option>`).join('') || '<option value="">Nessun medico</option>';
+  if(prima && Array.from(sel.options).some(o => o.value === prima)) sel.value = prima;
+  const mid = sel.value;
+  const m = (d.medici||[]).find(x => String(x.medico_id) === mid);
+  const el = document.getElementById('agenda-tbl');
+  if(!m){ el.innerHTML = '<div class="empty">Nessun medico collegato</div>'; return; }
+  const ordine = [1,2,3,4,5,6,0];
+  const perGiorno = {};
+  (m.centri||[]).forEach(c => (c.turni||[]).forEach(t => {
+    (perGiorno[t.giorno] = perGiorno[t.giorno] || []).push({ sede: c.nome, t });
+  }));
+  Object.values(perGiorno).forEach(a => a.sort((x,y) => String(x.t.inizio).localeCompare(String(y.t.inizio))));
+  const vuota = !Object.keys(perGiorno).length;
+  el.innerHTML = (vuota ? '<div class="empty" style="margin-bottom:12px">Nessun turno assegnato a ' + esc(nomeMedico(m)) + '</div>' : '')
+    + '<table class="mx" style="table-layout:fixed;min-width:840px"><thead><tr>'
+    + ordine.map(g => `<th>${GG[g]}</th>`).join('')
+    + '</tr></thead><tbody><tr>'
+    + ordine.map(g => {
+        const blocchi = (perGiorno[g] || []).map(b => {
+          const val = (b.t.data_inizio_validita ? 'dal ' + fmtData(b.t.data_inizio_validita) : '') + (b.t.data_fine_validita ? ' al ' + fmtData(b.t.data_fine_validita) : '');
+          return `<span class="ag-block"><span class="ag-sede">${esc(b.sede)}</span><br><span class="ag-ora">${esc(String(b.t.inizio).slice(0,5))}–${esc(String(b.t.fine).slice(0,5))} · slot ${esc(String(b.t.durata_slot))} min</span>${val ? '<br><span class="ag-val">' + esc(val.trim()) + '</span>' : ''}</span>`;
+        }).join('');
+        return '<td style="vertical-align:top">' + (blocchi || '<span style="color:var(--ink3);font-size:12px">—</span>') + '</td>';
+      }).join('')
+    + '</tr></tbody></table>';
 }
 
 function renderServiziCatalogo(){
