@@ -86,8 +86,15 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 </head>
 <body>
 
+<!-- ══ CARICAMENTO ══ -->
+<div id="view-boot" class="shell">
+  <div class="cardpane" style="flex:1">
+    <p style="color:var(--ink3);font-size:14px">Caricamento…</p>
+  </div>
+</div>
+
 <!-- ══ ACCESSO ══ -->
-<div id="view-login" class="shell">
+<div id="view-login" class="shell hidden">
   <div class="brandpane">
     <div class="mark">Delphi~Med</div>
     <div class="payoff">La regia della cooperativa</div>
@@ -153,7 +160,17 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <div class="tile">
         <h2>Medici collegati</h2>
         <p>I medici agganciati alla cooperativa tramite codice di collegamento.</p>
-        <div class="empty">Nessun medico collegato</div>
+        <div id="medici-list"><div class="empty">Nessun medico collegato</div></div>
+        <div id="codice-box" class="hidden" style="margin-top:14px;padding:12px;border:1px solid var(--brand-soft);border-radius:var(--r-sm);background:#F4FBFA">
+          <div style="font-size:12px;color:var(--ink2);margin-bottom:4px">Codice di collegamento attivo</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <code id="codice-val" style="font-size:17px;font-weight:600;letter-spacing:1px;color:var(--brand-deep)"></code>
+            <button class="btn btn-ghost" style="width:auto;margin:0;padding:6px 12px;font-size:12.5px" onclick="copiaCodice()">Copia</button>
+          </div>
+          <div id="codice-exp" style="font-size:11.5px;color:var(--ink3);margin-top:4px"></div>
+        </div>
+        <button class="btn" id="btn-genera" style="margin-top:14px" onclick="generaCodice()">Genera codice di collegamento</button>
+        <div id="codice-msg" class="hidden"></div>
       </div>
       <div class="tile">
         <h2>Turni e agenda</h2>
@@ -168,9 +185,10 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
 <script>
 let sb = null;
+let _plancia = null;
 
 function show(id){
-  ['view-login','view-denied','view-plancia'].forEach(v =>
+  ['view-boot','view-login','view-denied','view-plancia'].forEach(v =>
     document.getElementById(v).classList.toggle('hidden', v !== id));
 }
 function setMsg(text, kind){
@@ -200,16 +218,97 @@ function isCooperativa(user){
   return !!(user && user.app_metadata && user.app_metadata.ruolo === 'cooperativa');
 }
 
-function enterPlancia(user){
-  const nome = (user.app_metadata && user.app_metadata.cooperativa_nome) || user.email || '';
-  document.getElementById('plancia-who').textContent = nome;
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderPlancia(){
+  const d = _plancia;
+  if(!d) return;
+  document.getElementById('plancia-who').textContent = d.cooperativa.nome;
+  const list = document.getElementById('medici-list');
+  if(d.medici && d.medici.length){
+    list.innerHTML = d.medici.map(m => {
+      const nome = [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ');
+      const sedi = m.centri.map(c => esc(c.nome)).join(', ');
+      return `<div style="padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:600">${esc(nome)}</div>
+        <div style="font-size:12.5px;color:var(--ink2)">${esc(m.specializzazione)}</div>
+        <div style="font-size:12px;color:var(--ink3)">Sedi: ${sedi || '—'}</div>
+      </div>`;
+    }).join('');
+  } else {
+    list.innerHTML = '<div class="empty">Nessun medico collegato</div>';
+  }
+  const box = document.getElementById('codice-box');
+  const attivo = d.codici_attivi && d.codici_attivi[0];
+  if(attivo){
+    document.getElementById('codice-val').textContent = attivo.codice;
+    document.getElementById('codice-exp').textContent =
+      'Valido fino al ' + new Date(attivo.expires_at).toLocaleDateString('it-IT');
+    box.classList.remove('hidden');
+  } else {
+    box.classList.add('hidden');
+  }
+}
+
+async function enterPlancia(){
   show('view-plancia');
+  document.getElementById('plancia-who').textContent = 'Caricamento…';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-me', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    });
+    if(res.status === 403){ show('view-denied'); return; }
+    if(!res.ok) throw new Error('coop-me ' + res.status);
+    _plancia = await res.json();
+    console.log('[Plancia] Identità caricata:', _plancia.cooperativa.nome,
+      '· medici:', _plancia.medici.length, '· codici attivi:', _plancia.codici_attivi.length);
+    renderPlancia();
+  } catch(e){
+    console.error('[Plancia] enterPlancia:', e.message);
+    document.getElementById('plancia-who').textContent = 'Errore di caricamento — ricarica la pagina';
+  }
+}
+
+function setCodiceMsg(text, kind){
+  const el = document.getElementById('codice-msg');
+  if(!text){ el.className = 'hidden'; el.textContent = ''; return; }
+  el.className = 'msg ' + (kind === 'err' ? 'msg-err' : 'msg-info');
+  el.textContent = text;
+}
+
+async function generaCodice(){
+  const btn = document.getElementById('btn-genera');
+  btn.disabled = true; setCodiceMsg('');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-genera-codice', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){ setCodiceMsg(body.error || 'Generazione non riuscita.', 'err'); return; }
+    console.log('[Plancia] Codice generato:', body.codice);
+    if(_plancia){ _plancia.codici_attivi = [body].concat(_plancia.codici_attivi || []); renderPlancia(); }
+    setCodiceMsg('Codice generato. Consegnalo al medico da collegare.', 'info');
+  } catch(e){
+    console.error('[Plancia] generaCodice:', e.message);
+    setCodiceMsg('Generazione non riuscita. Riprova.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function copiaCodice(){
+  const v = document.getElementById('codice-val').textContent;
+  if(v) navigator.clipboard.writeText(v).then(() => setCodiceMsg('Codice copiato.', 'info'));
 }
 
 async function routeSession(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ show('view-login'); return; }
-  if(isCooperativa(session.user)){ enterPlancia(session.user); }
+  if(isCooperativa(session.user)){ enterPlancia(); }
   else { console.log('[Plancia] Sessione presente ma senza ruolo cooperativa'); show('view-denied'); }
 }
 
@@ -223,7 +322,7 @@ async function doLogin(){
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if(error){ setMsg('Credenziali non valide. Controlla email e password.', 'err'); return; }
-    if(isCooperativa(data.user)){ enterPlancia(data.user); }
+    if(isCooperativa(data.user)){ enterPlancia(); }
     else { show('view-denied'); }
   } catch(e){
     console.error('[Plancia] login:', e.message);
@@ -245,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(e.key === 'Enter') doLogin();
   });
   const ok = await initSupabase();
-  if(ok) await routeSession();
+  if(ok){ await routeSession(); } else { show('view-login'); }
 });
 </script>
 </body>
