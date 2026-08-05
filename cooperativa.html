@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Delphi~Med — Plancia cooperative</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --brand-deep:#073C42; --brand-mid:#0C726E; --brand-bright:#16A89E; --brand-soft:#BFE7E2;
+  --paper:#F3F6F5; --surface:#FFFFFF;
+  --ink:#15211F; --ink2:#5E6E6B; --ink3:#9AA8A5; --border:#E7ECEA;
+  --r:12px; --r-sm:8px;
+  --shadow-soft:0 4px 14px color-mix(in srgb, var(--brand-deep) 12%, transparent);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--paper)}
+.hidden{display:none !important}
+
+/* ── shell d'accesso: pannello brand + card, come l'auth della SPA ── */
+.shell{min-height:100%;display:flex}
+.brandpane{flex:1.1;display:flex;flex-direction:column;justify-content:center;padding:56px;color:#fff;
+  background:radial-gradient(130% 100% at 80% -10%,color-mix(in srgb,var(--brand-bright) 70%,transparent),transparent 62%),
+             linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
+.brandpane .mark{font-family:'DM Serif Display',serif;font-size:34px;letter-spacing:.2px}
+.brandpane .payoff{margin-top:6px;font-size:15px;color:var(--brand-soft)}
+.brandpane ul{list-style:none;margin-top:34px;display:flex;flex-direction:column;gap:14px}
+.brandpane li{display:flex;gap:10px;font-size:14.5px;line-height:1.5;color:rgba(255,255,255,.92)}
+.brandpane li::before{content:'—';color:var(--brand-soft);flex-shrink:0}
+.cardpane{flex:1;display:flex;align-items:center;justify-content:center;padding:32px}
+.card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+  box-shadow:var(--shadow-soft);padding:32px}
+.card h1{font-family:'DM Serif Display',serif;font-size:24px;font-weight:400;color:var(--brand-deep)}
+.card .sub{font-size:13.5px;color:var(--ink2);margin:6px 0 22px;line-height:1.55}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink2);margin-bottom:5px}
+.field input{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--r-sm);
+  font-family:inherit;font-size:14px;color:var(--ink);background:#fff}
+.field input:focus-visible{outline:2px solid var(--brand-bright);outline-offset:1px;border-color:var(--brand-mid)}
+.btn{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:12px 18px;margin-top:6px;
+  background:var(--brand-mid);color:#fff;border:1.5px solid var(--brand-mid);border-radius:10px;
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn:hover{background:var(--brand-deep);border-color:var(--brand-deep)}
+.btn:focus-visible{outline:2px solid var(--brand-bright);outline-offset:2px}
+.btn[disabled]{opacity:.6;cursor:default}
+.btn-ghost{background:transparent;color:var(--brand-mid)}
+.btn-ghost:hover{background:var(--brand-soft);color:var(--brand-deep)}
+.msg{margin-top:14px;font-size:13px;line-height:1.5;border-radius:var(--r-sm);padding:10px 12px}
+.msg-err{background:#FBEDEA;color:#8C2F22;border:1px solid #EFCFC8}
+.msg-info{background:var(--paper);color:var(--ink2);border:1px solid var(--border)}
+.helplink{display:block;margin-top:18px;font-size:12.5px;color:var(--ink3);text-align:center}
+.helplink a{color:var(--brand-mid)}
+
+/* ── plancia ── */
+.plancia{min-height:100%;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;color:#fff;
+  background:linear-gradient(225deg,var(--brand-mid) 0%,var(--brand-deep) 100%)}
+.topbar .mark{font-family:'DM Serif Display',serif;font-size:20px}
+.topbar .who{font-size:12.5px;color:var(--brand-soft)}
+.topbar button{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;
+  padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer}
+.topbar button:hover{background:rgba(255,255,255,.12)}
+.plancia-body{flex:1;max-width:1180px;width:100%;margin:0 auto;padding:28px 24px}
+.plancia-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:18px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;box-shadow:var(--shadow-soft)}
+.tile h2{font-size:16px;color:var(--brand-mid);margin-bottom:8px}
+.tile p{font-size:13.5px;color:var(--ink2);line-height:1.6}
+.tile .empty{margin-top:12px;font-size:13px;color:var(--ink3);border:1px dashed var(--border);
+  border-radius:var(--r-sm);padding:14px;text-align:center}
+.plancia-note{margin-top:22px;font-size:12.5px;color:var(--ink3)}
+
+footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
+
+@media (max-width:840px){
+  .shell{flex-direction:column}
+  .brandpane{padding:36px 24px}
+  .cardpane{padding:24px 16px 40px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<!-- ══ ACCESSO ══ -->
+<div id="view-login" class="shell">
+  <div class="brandpane">
+    <div class="mark">Delphi~Med</div>
+    <div class="payoff">La regia della cooperativa</div>
+    <ul>
+      <li>Gestisci sedi e medici collegati da un'unica plancia</li>
+      <li>Assegna i turni: l'agenda di ogni medico si aggiorna da sola</li>
+      <li>Tieni sotto controllo l'occupazione di ogni sede</li>
+    </ul>
+  </div>
+  <div class="cardpane">
+    <div class="card">
+      <h1>Plancia cooperative</h1>
+      <p class="sub">Accedi con le credenziali fornite in fase di attivazione.</p>
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn" id="login-btn" onclick="doLogin()">Accedi</button>
+      <div id="login-msg" class="hidden"></div>
+      <span class="helplink">La tua cooperativa non è ancora attiva?
+        <a href="mailto:info@delphi-med.com?subject=Attivazione%20cooperativa%20Delphi~Med">Richiedi l'attivazione</a>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ACCOUNT NON ABILITATO ══ -->
+<div id="view-denied" class="shell hidden">
+  <div class="cardpane" style="flex:1">
+    <div class="card">
+      <h1>Account non abilitato</h1>
+      <p class="sub" id="denied-text">Questo account non è associato a una cooperativa.
+        Se sei un medico, la tua area è su <a href="/">delphi-med.com</a>.
+        Se rappresenti una cooperativa, richiedi l'attivazione.</p>
+      <button class="btn" onclick="doLogout()">Esci e torna all'accesso</button>
+      <span class="helplink">
+        <a href="mailto:info@delphi-med.com?subject=Attivazione%20cooperativa%20Delphi~Med">Richiedi l'attivazione</a>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PLANCIA ══ -->
+<div id="view-plancia" class="plancia hidden">
+  <div class="topbar">
+    <div>
+      <div class="mark">Delphi~Med · Plancia</div>
+      <div class="who" id="plancia-who"></div>
+    </div>
+    <button onclick="doLogout()">Esci</button>
+  </div>
+  <div class="plancia-body">
+    <div class="plancia-grid">
+      <div class="tile">
+        <h2>Sedi</h2>
+        <p>Gli ambulatori della cooperativa dove i medici ricevono.</p>
+        <div class="empty">Nessuna sede configurata</div>
+      </div>
+      <div class="tile">
+        <h2>Medici collegati</h2>
+        <p>I medici agganciati alla cooperativa tramite codice di collegamento.</p>
+        <div class="empty">Nessun medico collegato</div>
+      </div>
+      <div class="tile">
+        <h2>Turni e agenda</h2>
+        <p>Le assegnazioni per sede e la vista d'insieme dell'occupazione.</p>
+        <div class="empty">Disponibile dopo il collegamento del primo medico</div>
+      </div>
+    </div>
+    <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
+  </div>
+  <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
+</div>
+
+<script>
+let sb = null;
+
+function show(id){
+  ['view-login','view-denied','view-plancia'].forEach(v =>
+    document.getElementById(v).classList.toggle('hidden', v !== id));
+}
+function setMsg(text, kind){
+  const el = document.getElementById('login-msg');
+  if(!text){ el.className = 'hidden'; el.textContent = ''; return; }
+  el.className = 'msg ' + (kind === 'err' ? 'msg-err' : 'msg-info');
+  el.textContent = text;
+}
+
+async function initSupabase(){
+  try {
+    const res = await fetch('/api/config');
+    if(!res.ok) throw new Error('config non disponibile');
+    const cfg = await res.json();
+    if(!cfg || !cfg.url || !cfg.anonKey) throw new Error('config incompleta');
+    sb = supabase.createClient(cfg.url, cfg.anonKey);
+    console.log('[Plancia] Supabase connesso');
+    return true;
+  } catch(e){
+    console.error('[Plancia] init:', e.message);
+    setMsg('Servizio momentaneamente non disponibile. Riprova tra poco.', 'err');
+    return false;
+  }
+}
+
+function isCooperativa(user){
+  return !!(user && user.app_metadata && user.app_metadata.ruolo === 'cooperativa');
+}
+
+function enterPlancia(user){
+  const nome = (user.app_metadata && user.app_metadata.cooperativa_nome) || user.email || '';
+  document.getElementById('plancia-who').textContent = nome;
+  show('view-plancia');
+}
+
+async function routeSession(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ show('view-login'); return; }
+  if(isCooperativa(session.user)){ enterPlancia(session.user); }
+  else { console.log('[Plancia] Sessione presente ma senza ruolo cooperativa'); show('view-denied'); }
+}
+
+async function doLogin(){
+  if(!sb){ return; }
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  if(!email || !password){ setMsg('Inserisci email e password.', 'err'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; setMsg('');
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ setMsg('Credenziali non valide. Controlla email e password.', 'err'); return; }
+    if(isCooperativa(data.user)){ enterPlancia(data.user); }
+    else { show('view-denied'); }
+  } catch(e){
+    console.error('[Plancia] login:', e.message);
+    setMsg('Accesso non riuscito. Riprova.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function doLogout(){
+  try { await sb.auth.signOut(); } catch(e){ console.warn('[Plancia] logout:', e.message); }
+  setMsg('');
+  show('view-login');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('footer-year').textContent = new Date().getFullYear();
+  document.getElementById('login-password').addEventListener('keydown', e => {
+    if(e.key === 'Enter') doLogin();
+  });
+  const ok = await initSupabase();
+  if(ok) await routeSession();
+});
+</script>
+</body>
+</html>

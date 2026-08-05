@@ -710,13 +710,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-result-spec{font-size:12px;color:#666;margin-top:2px}
 .home-search-msg{color:rgba(255,255,255,.75);font-size:13px;margin-top:10px;min-height:20px}
 .home-body{flex:1;background:var(--paper)}
-.home-sections{display:flex;gap:0;flex-wrap:wrap;max-width:860px;margin:0 auto;padding:30px 24px}
+.home-sections{display:flex;gap:0;flex-wrap:wrap;max-width:1180px;margin:0 auto;padding:30px 24px}
 .home-section{flex:1;min-width:260px;padding:0 32px}
 .home-section:first-child{border-right:1px solid #e2e8e8}
 .home-section h3{font-size:19px;font-weight:700;color:var(--brand-mid);margin:0 0 14px;letter-spacing:-.2px}
 .home-feature{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:#444;line-height:1.55}
 .home-feature::before{content:'✓';color:var(--brand-mid);font-weight:700;flex-shrink:0;margin-top:1px}
-.home-cta-btn{display:inline-block;background:var(--brand-mid);color:#fff;border:1.5px solid var(--brand-mid);border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;font-family:'DM Sans',Arial,sans-serif}
+.home-cta-btn{display:inline-block;background:var(--brand-mid);color:#fff;border:1.5px solid var(--brand-mid);border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;font-family:'DM Sans',Arial,sans-serif;text-decoration:none}
 .home-cta-btn:hover{background:color-mix(in srgb,var(--brand-mid) 85%,#000);border-color:color-mix(in srgb,var(--brand-mid) 85%,#000)}
 .home-cta-btn-outline{background:transparent;color:var(--brand-mid)}
 .home-cta-btn-outline:hover{background:color-mix(in srgb,var(--brand-mid) 8%,var(--surface));border-color:color-mix(in srgb,var(--brand-mid) 85%,#000);color:color-mix(in srgb,var(--brand-mid) 85%,#000)}
@@ -901,6 +901,16 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="home-feature">Prenotazioni online accessibili ovunque</div>
         <div class="home-cta-row">
           <button class="home-cta-btn" onclick="showLoginView('login')">Registrati / Accedi</button>
+        </div>
+      </div>
+      <div class="home-section">
+        <h3>Delphi~Med per le cooperative</h3>
+        <div class="home-feature">Una plancia unica per sedi e medici</div>
+        <div class="home-feature">Assegni i turni, le agende si aggiornano da sole</div>
+        <div class="home-feature">L'occupazione di ogni sede sempre sotto controllo</div>
+        <div class="home-feature">Attivazione guidata, senza migrazione dati</div>
+        <div class="home-cta-row">
+          <a class="home-cta-btn" href="/cooperative">Accedi alla plancia</a>
         </div>
       </div>
     </div>
@@ -3047,6 +3057,10 @@ async function showAppView(){
 
 async function ensureMedicoRecord(user){
   if(!isOnline() || !user) return;
+  if(user.app_metadata && user.app_metadata.ruolo === 'cooperativa'){
+    console.log('[Delphi~Med] Account cooperativa: nessun record medico da creare');
+    return;
+  }
   try {
     const { data, error } = await supabaseClient
       .from('medici').select('id').eq('user_id', user.id).maybeSingle();
