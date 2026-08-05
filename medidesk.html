@@ -3201,6 +3201,7 @@ async function loadCentriFromDB(user){
       booking_token: c.booking_token || null,
       gestione: c.gestione || 'delphi',
       cooperativa_id: c.cooperativa_id || null,
+      coop_booking_pubblico: c.coop_booking_pubblico === true,
       turni:     (c.turni || []).map(t => ({
         id:     t.id,
         giorno: t.giorno,
@@ -8215,7 +8216,7 @@ function renderBkCentri(){
   const noEl=document.getElementById('bk-no-centri');
   const _today=new Date().toLocaleDateString('en-CA');
   const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
-  const eligibili=S.centri.filter(c=>c.attivo!==false && c.gestione!=='cooperativa' && (c.gestione==='centro' || (c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
+  const eligibili=S.centri.filter(c=>c.attivo!==false && (c.gestione!=='cooperativa' || c.coop_booking_pubblico===true) && (c.gestione==='centro' || (c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
   if(!eligibili.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
   const MAX_DATE=4;

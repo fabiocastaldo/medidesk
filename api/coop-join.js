@@ -79,7 +79,7 @@ export default async function handler(req, res) {
 
   // cooperativa attiva
   const coopRes = await fetch(
-    `${supabaseUrl}/rest/v1/cooperative?id=eq.${encodeURIComponent(codeRow.cooperativa_id)}&select=id,nome,stato`,
+    `${supabaseUrl}/rest/v1/cooperative?id=eq.${encodeURIComponent(codeRow.cooperativa_id)}&select=id,nome,stato,booking_pubblico`,
     { headers: srvHeaders }
   ).catch(() => null);
   const coop = (coopRes && coopRes.ok) ? (await coopRes.json().catch(() => []))?.[0] : null;
@@ -120,6 +120,7 @@ export default async function handler(req, res) {
       nome: coop.nome,
       gestione: 'cooperativa',
       cooperativa_id: coop.id,
+      coop_booking_pubblico: coop.booking_pubblico === true,
       colore: '#0C726E',
       attivo: true
     })

@@ -56,16 +56,38 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .helplink{display:block;margin-top:18px;font-size:12.5px;color:var(--ink3);text-align:center}
 .helplink a{color:var(--brand-mid)}
 
-/* ── plancia ── */
-.plancia{min-height:100%;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;color:#fff;
-  background:linear-gradient(225deg,var(--brand-mid) 0%,var(--brand-deep) 100%)}
-.topbar .mark{font-family:'DM Serif Display',serif;font-size:20px}
-.topbar .who{font-size:12.5px;color:var(--brand-soft)}
-.topbar button{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;
-  padding:7px 14px;font-family:inherit;font-size:13px;cursor:pointer}
-.topbar button:hover{background:rgba(255,255,255,.12)}
-.plancia-body{flex:1;max-width:1180px;width:100%;margin:0 auto;padding:28px 24px}
+/* ── plancia con sidebar ── */
+.plancia{min-height:100vh;display:flex;align-items:stretch}
+.side{width:230px;flex-shrink:0;display:flex;flex-direction:column;color:#fff;
+  background:linear-gradient(200deg,var(--brand-mid) 0%,var(--brand-deep) 70%)}
+.side .mark{font-family:'DM Serif Display',serif;font-size:21px;padding:20px 18px 4px}
+.side .payoff{font-size:11.5px;color:var(--brand-soft);padding:0 18px 16px}
+.side nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:6px 10px;overflow-y:auto}
+.sitem{display:block;width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.88);
+  font-family:inherit;font-size:13.5px;font-weight:500;padding:10px 12px;border-radius:8px;cursor:pointer}
+.sitem:hover{background:rgba(255,255,255,.1)}
+.sitem.active{background:rgba(255,255,255,.16);color:#fff;font-weight:700}
+.sitem.sub{padding-left:26px;font-size:13px}
+.sgroup{display:block;width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.7);
+  font-family:inherit;font-size:13.5px;font-weight:600;padding:10px 12px;cursor:pointer}
+.sgroup:hover{color:#fff}
+.side-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.15)}
+.side-foot .who{font-size:12.5px;color:var(--brand-soft);margin-bottom:8px;word-break:break-word}
+.side-foot button{width:100%;background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;
+  padding:8px 12px;font-family:inherit;font-size:13px;cursor:pointer}
+.side-foot button:hover{background:rgba(255,255,255,.12)}
+.plancia-body{flex:1;min-width:0;padding:26px 28px;overflow-x:hidden}
+@media (max-width:840px){
+  .plancia{flex-direction:column}
+  .side{width:100%}
+  .side nav{flex-direction:row;flex-wrap:wrap;padding:4px 8px}
+  .sitem,.sgroup{width:auto}
+  .sitem.sub{padding-left:12px}
+  .side-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .side-foot .who{margin:0}
+  .side-foot button{width:auto}
+  .plancia-body{padding:18px 14px}
+}
 .plancia-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:18px}
 .tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;box-shadow:var(--shadow-soft)}
 .tile h2{font-size:16px;color:var(--brand-mid);margin-bottom:8px}
@@ -186,24 +208,29 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
 <!-- ══ PLANCIA ══ -->
 <div id="view-plancia" class="plancia hidden">
-  <div class="topbar">
-    <div>
-      <div class="mark">Delphi~Med · Plancia</div>
+  <aside class="side">
+    <div class="mark">Delphi~Med</div>
+    <div class="payoff">Plancia organizzazione</div>
+    <nav>
+      <button class="sitem active" id="tabbtn-medici" onclick="switchTab('medici')">Medici</button>
+      <button class="sitem" id="tabbtn-sedi" onclick="switchTab('sedi')">Sedi</button>
+      <button class="sitem" id="tabbtn-turni" onclick="switchTab('turni')">Turni</button>
+      <button class="sitem" id="tabbtn-servizi" onclick="switchTab('servizi')">Servizi</button>
+      <button class="sgroup" onclick="toggleSubmenu()">Associazioni ▾</button>
+      <div id="submenu-assoc">
+        <button class="sitem sub" id="tabbtn-assoc-servizi" onclick="switchTab('assoc-servizi')">Medici ↔ servizi</button>
+        <button class="sitem sub" id="tabbtn-assoc-turni" onclick="switchTab('assoc-turni')">Medici ↔ turni</button>
+      </div>
+      <button class="sitem" id="tabbtn-copertura" onclick="switchTab('copertura')">Copertura sedi</button>
+      <button class="sitem" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
+      <button class="sitem" id="tabbtn-preferenze" onclick="switchTab('preferenze')">Preferenze</button>
+    </nav>
+    <div class="side-foot">
       <div class="who" id="plancia-who"></div>
+      <button onclick="doLogout()">Esci</button>
     </div>
-    <button onclick="doLogout()">Esci</button>
-  </div>
+  </aside>
   <div class="plancia-body">
-    <div class="tabs">
-      <button class="tab active" id="tabbtn-medici" onclick="switchTab('medici')">Medici</button>
-      <button class="tab" id="tabbtn-sedi" onclick="switchTab('sedi')">Sedi</button>
-      <button class="tab" id="tabbtn-turni" onclick="switchTab('turni')">Turni</button>
-      <button class="tab" id="tabbtn-servizi" onclick="switchTab('servizi')">Servizi</button>
-      <button class="tab" id="tabbtn-assoc-servizi" onclick="switchTab('assoc-servizi')">Associa medici ai servizi</button>
-      <button class="tab" id="tabbtn-assoc-turni" onclick="switchTab('assoc-turni')">Associa medici ai turni</button>
-      <button class="tab" id="tabbtn-copertura" onclick="switchTab('copertura')">Copertura sedi</button>
-      <button class="tab" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
-    </div>
 
     <section id="tab-medici" class="card-lite">
       <div class="toolbar">
@@ -330,9 +357,21 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <div id="agenda-tbl" class="mx-wrap"></div>
     </section>
 
+    <section id="tab-preferenze" class="card-lite hidden">
+      <h2 style="font-size:16px;color:var(--brand-mid);margin-bottom:14px">Preferenze dell'organizzazione</h2>
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;max-width:640px">
+        <input type="checkbox" id="pref-booking" style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" onchange="setPrefBooking(this.checked)">
+        <span>
+          <span style="font-weight:600">Agenda visibile sul sito pubblico</span><br>
+          <span style="font-size:13px;color:var(--ink2);line-height:1.55">Se attiva, i turni assegnati ai medici sulle sedi dell'organizzazione sono prenotabili anche dal link pubblico del medico: il paziente può prenotare direttamente, senza passare dalla segreteria.</span>
+        </span>
+      </label>
+      <div id="pref-msg" class="hidden" style="margin-top:12px"></div>
+    </section>
+
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
+    <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
   </div>
-  <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
 </div>
 
 <script>
@@ -379,13 +418,44 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 
 function switchTab(t){
-  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','copertura','agenda'].forEach(x => {
+  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','copertura','agenda','preferenze'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
 }
 
 function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
+
+function toggleSubmenu(){
+  const el = document.getElementById('submenu-assoc');
+  el.classList.toggle('hidden');
+}
+
+async function setPrefBooking(valore){
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-preferenze', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_booking_pubblico', valore })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){
+      document.getElementById('pref-booking').checked = !valore;
+      setBoxMsg('pref-msg', body.error || 'Salvataggio non riuscito.', 'err');
+      return;
+    }
+    console.log('[Plancia] booking_pubblico =', body.booking_pubblico);
+    if(_plancia && _plancia.cooperativa) _plancia.cooperativa.booking_pubblico = body.booking_pubblico;
+    setBoxMsg('pref-msg', body.booking_pubblico
+      ? 'Agenda pubblica attiva: i pazienti possono prenotare direttamente dal link del medico.'
+      : 'Agenda pubblica disattivata: si prenota solo tramite la segreteria.', 'info');
+  } catch(e){
+    console.error('[Plancia] setPrefBooking:', e.message);
+    document.getElementById('pref-booking').checked = !valore;
+    setBoxMsg('pref-msg', 'Salvataggio non riuscito. Riprova.', 'err');
+  }
+}
 
 function updateTfGiorniLabel(){
   const sel = Array.from(document.querySelectorAll('.tf-giorno-chk:checked')).map(ch => GG[parseInt(ch.value)]);
@@ -436,6 +506,8 @@ function renderPlancia(){
   renderAssocTurniTab();
   renderCoperturaTab();
   renderAgendaTab();
+  const pb = document.getElementById('pref-booking');
+  if(pb) pb.checked = !!(d.cooperativa && d.cooperativa.booking_pubblico);
 }
 
 function renderCoperturaTab(){

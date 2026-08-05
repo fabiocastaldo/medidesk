@@ -60,7 +60,7 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,cooperativa_id,cooperative(id,stato)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,cooperativa_id,cooperative(id,stato,booking_pubblico)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
@@ -117,6 +117,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           medico_id: medicoId, nome: sede.nome, gestione: 'cooperativa',
           cooperativa_id: coopId, coop_sede_id: sede.id,
+          coop_booking_pubblico: seg.cooperative.booking_pubblico === true,
           via: sede.via, citta: sede.citta, provincia: sede.provincia, cap: sede.cap,
           colore: '#0C726E', attivo: true
         })
