@@ -229,6 +229,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-gestione{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .centro-gestione-lbl{font-size:13px;font-weight:600;color:var(--ink2)}
 .centro-gestione-sel{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r-sm);background:#fff;color:var(--ink);cursor:pointer}
+.badge-coop{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#fff;background:var(--brand-mid);border-radius:6px;padding:2px 7px;vertical-align:2px}
+.coop-join{margin-top:22px;padding:16px 18px;border:1px dashed var(--border);border-radius:var(--r-sm);background:var(--surface)}
+.coop-join-title{font-size:14px;font-weight:700;color:var(--brand-mid)}
+.coop-join-sub{font-size:12.5px;color:var(--ink2);margin:4px 0 10px;line-height:1.5}
+.coop-join-row{display:flex;gap:8px;flex-wrap:wrap}
+.coop-join-row input{flex:1;min-width:160px;max-width:220px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:14px;letter-spacing:1px;text-transform:uppercase}
+.coop-join-msg{font-size:12.5px;color:var(--ink2);margin-top:8px;min-height:16px}
 .centro-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
 .centro-info{flex:1}
 .centro-nome{font-weight:600}
@@ -3181,6 +3188,7 @@ async function loadCentriFromDB(user){
       attivo:    c.attivo !== false,
       booking_token: c.booking_token || null,
       gestione: c.gestione || 'delphi',
+      cooperativa_id: c.cooperativa_id || null,
       turni:     (c.turni || []).map(t => ({
         id:     t.id,
         giorno: t.giorno,
@@ -4394,9 +4402,49 @@ function renderCentri(){
     html += inattivi.map(c=>renderCentroCard(c, false)).join('');
   }
   if(!attivi.length && !inattivi.length){
-    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun centro</div>'; return;
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun centro</div>' + coopJoinBlockHtml(); return;
   }
-  el.innerHTML = html;
+  el.innerHTML = html + coopJoinBlockHtml();
+}
+
+function coopJoinBlockHtml(){
+  return `
+  <div class="coop-join">
+    <div class="coop-join-title">Collega a una cooperativa</div>
+    <div class="coop-join-sub">Hai ricevuto un codice di collegamento? Inseriscilo qui: la cooperativa comparirà tra i tuoi centri e gestirà l'agenda di quella sede.</div>
+    <div class="coop-join-row">
+      <input id="coop-join-code" type="text" placeholder="CP-XXXX-XXXX" maxlength="14" autocomplete="off">
+      <button class="btn btn-sm btn-primary" onclick="joinCooperativa()">Collega</button>
+    </div>
+    <div id="coop-join-msg" class="coop-join-msg"></div>
+  </div>`;
+}
+
+async function joinCooperativa(){
+  const inp = document.getElementById('coop-join-code'); if(!inp) return;
+  const codice = (inp.value || '').trim();
+  const msg = document.getElementById('coop-join-msg');
+  if(!codice){ if(msg) msg.textContent = 'Inserisci il codice di collegamento.'; return; }
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(!session){ if(msg) msg.textContent = 'Sessione non valida. Accedi di nuovo.'; return; }
+    if(msg) msg.textContent = 'Collegamento in corso…';
+    const res = await fetch('/api/coop-join', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codice })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){ if(msg) msg.textContent = body.error || 'Collegamento non riuscito.'; return; }
+    console.log('[Delphi~Med] Collegato alla cooperativa:', body.cooperativa && body.cooperativa.nome);
+    await loadCentriFromDB(session.user);
+    renderCentri();
+    if(typeof populateCentroSelect === 'function') populateCentroSelect();
+    showToast('Collegato a ' + ((body.cooperativa && body.cooperativa.nome) || 'cooperativa') + ' ✓');
+  } catch(e){
+    console.error('[Delphi~Med] joinCooperativa:', e.message);
+    if(msg) msg.textContent = 'Collegamento non riuscito. Riprova.';
+  }
 }
 
 function renderCentroCard(c, isActive){
@@ -4437,7 +4485,7 @@ function renderCentroCard(c, isActive){
       <div class="centro-header">
         <div class="centro-dot" style="background:${c.colore}"></div>
         <div class="centro-info">
-          <div class="centro-nome">${c.nome} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
+          <div class="centro-nome">${c.nome} ${c.gestione==='cooperativa'?'<span class="badge-coop">Cooperativa</span>':''} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
           <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
         </div>
         ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
@@ -4449,14 +4497,18 @@ function renderCentroCard(c, isActive){
         </div>
       </div>
       ${isActive ? `
+      ${c.gestione==='cooperativa' ? `
+      <div class="centro-gestione">
+        <span class="centro-gestione-lbl">Agenda gestita dalla cooperativa</span>
+      </div>` : `
       <div class="centro-gestione">
         <span class="centro-gestione-lbl">Prenotazione online</span>
         <select class="centro-gestione-sel" onchange="setCentroGestione('${c.id}', this.value)">
           <option value="delphi" ${c.gestione!=='centro'?'selected':''}>Attiva su Delphi~Med</option>
           <option value="centro" ${c.gestione==='centro'?'selected':''}>Gestita dal centro (offline)</option>
         </select>
-      </div>
-      ${c.gestione!=='centro' ? `
+      </div>`}
+      ${(c.gestione!=='centro' && c.gestione!=='cooperativa') ? `
       <div class="centro-booking">
         <div class="centro-booking-hdr ${_linkOpen.has(String(c.id))?'open':''}" onclick="toggleCentroLink('${c.id}')">
           <svg class="ic"><use href="#ic-link"/></svg>
@@ -8109,7 +8161,7 @@ function renderBkCentri(){
   const noEl=document.getElementById('bk-no-centri');
   const _today=new Date().toLocaleDateString('en-CA');
   const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
-  const eligibili=S.centri.filter(c=>c.attivo!==false && (c.gestione==='centro' || (c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
+  const eligibili=S.centri.filter(c=>c.attivo!==false && c.gestione!=='cooperativa' && (c.gestione==='centro' || (c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
   if(!eligibili.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
   const MAX_DATE=4;
