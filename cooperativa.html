@@ -87,7 +87,7 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .stat-block:last-child{margin-bottom:0}
 .stat-block h3{font-size:14px;font-weight:700;color:var(--brand-mid);margin:0 0 10px}
 .stat-hint{font-size:12.5px;color:var(--ink3);margin:0 0 12px}
-.cal-wrap{max-width:560px}
+.cal-wrap{max-width:480px;margin:0 auto}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .cal-title{font-weight:600;font-size:16px;color:var(--brand-deep)}
 .cal-arrow{width:38px;height:38px;border:1px solid var(--border);border-radius:50%;background:#fff;cursor:pointer;font-size:16px;color:var(--ink2)}
@@ -100,7 +100,7 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .cal-day.available:hover{background:var(--brand-bright);color:#fff}
 .cal-day.selected{background:var(--brand-bright);color:#fff}
 .cal-day.past,.cal-day.noavail{color:var(--ink3);cursor:default}
-.slots-grid{display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));gap:8px;margin-bottom:8px;max-width:560px}
+.slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
 .slot-btn{padding:10px;border:2px solid var(--border);border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:var(--brand-mid);transition:all .15s;font-family:inherit}
 .slot-btn:hover{background:var(--brand-bright);color:#fff;border-color:var(--brand-bright)}
 .slot-btn.slot-occupied,.slot-btn.slot-occupied:hover{background:#F4F0EC;border-color:#E4D6C8;color:#A98F73;cursor:default;text-decoration:line-through}
@@ -405,19 +405,19 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <div id="agenda-tbl" class="mx-wrap"></div>
       <div class="stat-block" style="margin-top:26px;margin-bottom:0">
-        <h3>Prenotazioni</h3>
-        <p class="stat-hint">Scegli il giorno e l'orario sui sede-centri dell'organizzazione. I giorni evidenziati hanno slot liberi.</p>
         <div class="cal-wrap">
+          <h3>Prenotazioni</h3>
+          <p class="stat-hint">Scegli il giorno e l'orario sui sede-centri dell'organizzazione. I giorni evidenziati hanno slot liberi.</p>
           <div class="cal-nav">
             <button class="cal-arrow" onclick="agMonth(-1)">←</button>
             <span class="cal-title" id="ag-cal-title"></span>
             <button class="cal-arrow" onclick="agMonth(1)">→</button>
           </div>
           <div class="cal-grid" id="ag-cal"></div>
+          <div id="ag-slot-msg" class="hidden"></div>
+          <div id="ag-day-label" style="font-weight:600;margin-bottom:12px;font-size:14px;color:var(--brand-deep)"></div>
+          <div id="ag-slots"></div>
         </div>
-        <div id="ag-slot-msg" class="hidden"></div>
-        <div id="ag-day-label" style="font-weight:600;margin-bottom:12px;font-size:14px;color:var(--brand-deep)"></div>
-        <div id="ag-slots"></div>
       </div>
     </section>
 
@@ -687,7 +687,7 @@ function renderAgendaTab(){
   Object.values(perGiorno).forEach(a => a.sort((x,y) => String(x.t.inizio).localeCompare(String(y.t.inizio))));
   const vuota = !Object.keys(perGiorno).length;
   el.innerHTML = (vuota ? '<div class="empty" style="margin-bottom:12px">Nessun turno assegnato a ' + esc(nomeMedico(m)) + '</div>' : '')
-    + '<table class="mx" style="table-layout:fixed;min-width:840px"><thead><tr>'
+    + '<table class="mx" style="table-layout:fixed;min-width:700px;max-width:960px;margin:0 auto"><thead><tr>'
     + ordine.map(g => `<th>${GG[g]}</th>`).join('')
     + '</tr></thead><tbody><tr>'
     + ordine.map(g => {
