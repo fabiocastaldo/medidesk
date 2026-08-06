@@ -119,7 +119,9 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .cal-day.limited:hover{background:var(--brand-bright);color:#fff}
 .cal-day.selected{background:var(--brand-bright);color:#fff;font-weight:700}
 .cal-day.past,.cal-day.noavail{color:var(--ink3);cursor:default}
-.ag-book{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin:18px auto 0;max-width:640px;text-align:left}
+.ag-day-panel{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;margin-top:18px}
+.ag-day-card{flex:1 1 380px;min-width:320px;background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:20px}
+.ag-book{flex:1 1 380px;min-width:320px;background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;text-align:left}
 .ag-book h4{font-size:14.5px;color:var(--brand-deep);margin-bottom:4px}
 .ag-book-ctx{font-size:13px;color:var(--brand-mid);font-weight:600;margin-bottom:14px}
 .ag-book-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
@@ -455,8 +457,11 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           </div>
         </div>
         <div id="ag-slot-msg" class="hidden"></div>
-        <div id="ag-day-label" style="font-weight:600;margin:18px 0 12px;font-size:14px;color:var(--brand-deep);text-align:center"></div>
-        <div id="ag-slots" style="text-align:center"></div>
+        <div class="ag-day-panel">
+        <div id="ag-day-card" class="ag-day-card hidden">
+          <div id="ag-day-label" style="font-weight:600;margin:0 0 12px;font-size:14px;color:var(--brand-deep);text-align:center"></div>
+          <div id="ag-slots" style="text-align:center"></div>
+        </div>
         <div id="ag-book" class="ag-book hidden">
           <h4>Prenota per conto del paziente</h4>
           <div class="ag-book-ctx" id="ag-book-ctx"></div>
@@ -472,6 +477,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
             <button class="btn" id="agb-btn" onclick="agConfermaPrenotazione()">Conferma prenotazione</button>
             <button class="btn btn-ghost" onclick="agAnnullaPrenotazione()">Annulla</button>
           </div>
+        </div>
         </div>
       </div>
     </section>
@@ -920,7 +926,9 @@ function renderAgSlots(){
   const lbl = document.getElementById('ag-day-label');
   const box = document.getElementById('ag-slots');
   const ds = _agCal.dateStr;
-  if(!ds){ lbl.textContent = ''; box.innerHTML = ''; return; }
+  const card = document.getElementById('ag-day-card');
+  if(!ds){ lbl.textContent = ''; box.innerHTML = ''; card.classList.add('hidden'); agAnnullaPrenotazione(); return; }
+  card.classList.remove('hidden');
   const d = new Date(ds + 'T12:00:00');
   lbl.textContent = ['Domenica','Luned\u00ec','Marted\u00ec','Mercoled\u00ec','Gioved\u00ec','Venerd\u00ec','Sabato'][d.getDay()] + ' ' + fmtData(ds);
   const blocchi = _agSlotsGiorno(ds);
