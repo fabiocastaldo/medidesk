@@ -77,6 +77,12 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
   padding:8px 12px;font-family:inherit;font-size:13px;cursor:pointer}
 .side-foot button:hover{background:rgba(255,255,255,.12)}
 .plancia-body{flex:1;min-width:0;padding:26px 28px;overflow-x:hidden}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.sec-head h2{font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;color:var(--brand-deep);margin:0}
+.sec-stats{display:flex;gap:8px;flex-wrap:wrap}
+.sec-stat{display:inline-flex;align-items:baseline;gap:5px;background:var(--surface);border:1px solid var(--border);
+  border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--ink2);box-shadow:var(--shadow-soft)}
+.sec-stat b{font-size:14px;font-weight:700;color:var(--brand-mid)}
 @media (max-width:840px){
   .plancia{flex-direction:column}
   .side{width:100%}
@@ -231,6 +237,11 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     </div>
   </aside>
   <div class="plancia-body">
+
+    <div class="sec-head">
+      <h2 id="sec-title">Medici</h2>
+      <div class="sec-stats" id="sec-stats"></div>
+    </div>
 
     <section id="tab-medici" class="card-lite">
       <div class="toolbar">
@@ -417,11 +428,18 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 
 const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 
+const SEC_TITOLI = {
+  'medici': 'Medici', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
+  'assoc-servizi': 'Medici ↔ servizi', 'assoc-turni': 'Medici ↔ turni',
+  'copertura': 'Copertura sedi', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
+};
+
 function switchTab(t){
   ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','copertura','agenda','preferenze'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
+  document.getElementById('sec-title').textContent = SEC_TITOLI[t] || '';
 }
 
 function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
@@ -466,11 +484,15 @@ function renderPlancia(){
   const d = _plancia;
   if(!d) return;
   document.getElementById('plancia-who').textContent = d.cooperativa.nome;
-  document.getElementById('tabbtn-medici').textContent = 'Medici (' + (d.medici||[]).length + ')';
-  document.getElementById('tabbtn-sedi').textContent = 'Sedi (' + (d.sedi||[]).length + ')';
   const nTurni = (d.medici||[]).reduce((n,m) => n + (m.centri||[]).reduce((k,c) => k + (c.turni||[]).length, 0), 0);
-  document.getElementById('tabbtn-turni').textContent = 'Turni (' + nTurni + ')';
-  document.getElementById('tabbtn-servizi').textContent = 'Servizi (' + (d.servizi||[]).length + ')';
+  const stats = [
+    ['Medici',   (d.medici||[]).length],
+    ['Sedi',     (d.sedi||[]).length],
+    ['Turni',    nTurni],
+    ['Servizi',  (d.servizi||[]).length]
+  ];
+  document.getElementById('sec-stats').innerHTML = stats.map(([et,n]) =>
+    `<span class="sec-stat"><b>${n}</b>${esc(et)}</span>`).join('');
 
   const selM = document.getElementById('tf-medico');
   selM.innerHTML = (d.medici||[]).map(m =>
