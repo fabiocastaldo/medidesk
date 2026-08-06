@@ -83,6 +83,10 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .sec-stat{display:inline-flex;align-items:baseline;gap:5px;background:var(--surface);border:1px solid var(--border);
   border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--ink2);box-shadow:var(--shadow-soft)}
 .sec-stat b{font-size:14px;font-weight:700;color:var(--brand-mid)}
+.stat-block{margin-bottom:28px}
+.stat-block:last-child{margin-bottom:0}
+.stat-block h3{font-size:14px;font-weight:700;color:var(--brand-mid);margin:0 0 10px}
+.stat-hint{font-size:12.5px;color:var(--ink3);margin:0 0 12px}
 @media (max-width:840px){
   .plancia{flex-direction:column}
   .side{width:100%}
@@ -227,7 +231,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <button class="sitem sub" id="tabbtn-assoc-servizi" onclick="switchTab('assoc-servizi')">Medici ↔ servizi</button>
         <button class="sitem sub" id="tabbtn-assoc-turni" onclick="switchTab('assoc-turni')">Medici ↔ turni</button>
       </div>
-      <button class="sitem" id="tabbtn-copertura" onclick="switchTab('copertura')">Copertura sedi</button>
+      <button class="sitem" id="tabbtn-statistiche" onclick="switchTab('statistiche')">Statistiche</button>
       <button class="sitem" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
       <button class="sitem" id="tabbtn-preferenze" onclick="switchTab('preferenze')">Preferenze</button>
     </nav>
@@ -356,9 +360,22 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <div id="assoc-turni-tbl" class="mx-wrap"></div>
     </section>
 
-    <section id="tab-copertura" class="card-lite hidden">
-      <p style="font-size:12.5px;color:var(--ink3);margin:0 0 12px">Quanti medici coprono ogni servizio in ogni sede (associati al servizio e con turni assegnati sulla sede). Passa sul numero per i nomi.</p>
-      <div id="copertura-tbl" class="mx-wrap"></div>
+    <section id="tab-statistiche" class="card-lite hidden">
+      <div class="stat-block">
+        <h3>Medici per specializzazione</h3>
+        <p class="stat-hint">Solo i medici collegati all'organizzazione tramite codice.</p>
+        <div id="stat-spec-tbl"></div>
+      </div>
+      <div class="stat-block">
+        <h3>Visite erogate per tipologia</h3>
+        <p class="stat-hint">Visite segnate come erogate dai medici sulle sedi dell'organizzazione. Solo conteggi aggregati: nessun dato dei pazienti.</p>
+        <div id="stat-tipo-tbl"></div>
+      </div>
+      <div class="stat-block">
+        <h3>Copertura sedi</h3>
+        <p class="stat-hint">Quanti medici coprono ogni servizio in ogni sede (associati al servizio e con turni assegnati sulla sede). Passa sul numero per i nomi.</p>
+        <div id="copertura-tbl" class="mx-wrap"></div>
+      </div>
     </section>
 
     <section id="tab-agenda" class="card-lite hidden">
@@ -431,15 +448,16 @@ const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const SEC_TITOLI = {
   'medici': 'Medici', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
   'assoc-servizi': 'Medici ↔ servizi', 'assoc-turni': 'Medici ↔ turni',
-  'copertura': 'Copertura sedi', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
+  'statistiche': 'Statistiche', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
 };
 
 function switchTab(t){
-  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','copertura','agenda','preferenze'].forEach(x => {
+  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','statistiche','agenda','preferenze'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
   document.getElementById('sec-title').textContent = SEC_TITOLI[t] || '';
+  if(t === 'statistiche') loadStatVisite();
 }
 
 function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
@@ -527,6 +545,7 @@ function renderPlancia(){
   renderAssocServiziTab();
   renderAssocTurniTab();
   renderCoperturaTab();
+  renderStatSpec();
   renderAgendaTab();
   const pb = document.getElementById('pref-booking');
   if(pb) pb.checked = !!(d.cooperativa && d.cooperativa.booking_pubblico);
@@ -557,6 +576,50 @@ function renderCoperturaTab(){
           }).join('')
         + '</tr>').join('')
     + '</tbody></table>';
+}
+
+function renderStatSpec(){
+  const d = _plancia; if(!d) return;
+  const el = document.getElementById('stat-spec-tbl');
+  const per = new Map();
+  (d.medici||[]).forEach(m => {
+    const k = (m.specializzazione || '').trim() || 'Non indicata';
+    per.set(k, (per.get(k) || 0) + 1);
+  });
+  if(!per.size){ el.innerHTML = '<div class="empty">Nessun medico collegato</div>'; return; }
+  const righe = [...per.entries()].sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Specializzazione</th><th style="width:90px">Medici</th></tr></thead><tbody>'
+    + righe.map(([k,n]) => '<tr><td>' + esc(k) + '</td><td>' + n + '</td></tr>').join('')
+    + '</tbody></table>';
+}
+
+let _statVisiteBusy = false;
+async function loadStatVisite(){
+  if(_statVisiteBusy) return;
+  _statVisiteBusy = true;
+  const el = document.getElementById('stat-tipo-tbl');
+  el.innerHTML = '<div class="empty">Caricamento…</div>';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-statistiche', {
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body) throw new Error('fetch');
+    const righe = body.tipologie || [];
+    if(!righe.length){
+      el.innerHTML = '<div class="empty">Nessuna visita erogata sulle sedi dell\'organizzazione</div>';
+      return;
+    }
+    el.innerHTML = '<table class="tbl"><thead><tr><th>Tipologia</th><th style="width:90px">Visite</th></tr></thead><tbody>'
+      + righe.map(r => '<tr><td>' + esc(r.tipo) + '</td><td>' + Number(r.n) + '</td></tr>').join('')
+      + '<tr><td style="font-weight:700">Totale</td><td style="font-weight:700">' + Number(body.totale || 0) + '</td></tr>'
+      + '</tbody></table>';
+  } catch(_e) {
+    el.innerHTML = '<div class="empty">Statistiche non disponibili. Riprova.</div>';
+  } finally {
+    _statVisiteBusy = false;
+  }
 }
 
 function renderAgendaTab(){
