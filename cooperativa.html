@@ -119,8 +119,14 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .cal-day.limited:hover{background:var(--brand-bright);color:#fff}
 .cal-day.selected{background:var(--brand-bright);color:#fff;font-weight:700}
 .cal-day.past,.cal-day.noavail{color:var(--ink3);cursor:default}
-.ag-banner{display:flex;align-items:center;gap:12px;background:#EAF5F3;border:1px solid var(--brand-soft);border-radius:var(--r);padding:12px 16px;margin-top:18px;font-size:13px;color:var(--brand-deep)}
-.ag-banner svg{width:20px;height:20px;stroke:var(--brand-mid);flex:none}
+.ag-book{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-top:18px;max-width:640px}
+.ag-book h4{font-size:14.5px;color:var(--brand-deep);margin-bottom:4px}
+.ag-book-ctx{font-size:13px;color:var(--brand-mid);font-weight:600;margin-bottom:14px}
+.ag-book-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.ag-book-consenso{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;color:var(--ink2);margin:4px 0 12px;cursor:pointer}
+.ag-book-consenso input{margin-top:2px}
+.ag-book-actions{display:flex;gap:10px}
+.ag-book-actions .btn{width:auto;margin-top:0;padding:10px 18px}
 .slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;max-width:480px}
 .slot-btn{padding:10px;border:2px solid var(--border);border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:var(--brand-mid);transition:all .15s;font-family:inherit}
 .slot-btn:hover{background:var(--brand-bright);color:#fff;border-color:var(--brand-bright)}
@@ -451,7 +457,22 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div id="ag-slot-msg" class="hidden"></div>
         <div id="ag-day-label" style="font-weight:600;margin:18px 0 12px;font-size:14px;color:var(--brand-deep)"></div>
         <div id="ag-slots"></div>
-        <div class="ag-banner"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><span>La prenotazione dalla plancia arriva con la prossima tappa: da qui si aprirà il modulo per prenotare per conto del paziente.</span></div>
+        <div id="ag-book" class="ag-book hidden">
+          <h4>Prenota per conto del paziente</h4>
+          <div class="ag-book-ctx" id="ag-book-ctx"></div>
+          <div class="ag-book-grid">
+            <div class="field"><label for="agb-nome">Nome del paziente</label><input id="agb-nome" type="text" maxlength="80" autocomplete="off"></div>
+            <div class="field"><label for="agb-cognome">Cognome del paziente</label><input id="agb-cognome" type="text" maxlength="80" autocomplete="off"></div>
+            <div class="field"><label for="agb-tel">Telefono del paziente</label><input id="agb-tel" type="tel" maxlength="40" autocomplete="off"></div>
+            <div class="field"><label for="agb-servizio">Servizio (facoltativo)</label><select id="agb-servizio"></select></div>
+          </div>
+          <label class="ag-book-consenso"><input type="checkbox" id="agb-consenso"><span>Dichiaro di aver ricevuto dal paziente, telefonicamente o di persona, il consenso al trattamento dei dati personali necessari alla prenotazione.</span></label>
+          <div id="ag-book-msg" class="hidden"></div>
+          <div class="ag-book-actions">
+            <button class="btn" id="agb-btn" onclick="agConfermaPrenotazione()">Conferma prenotazione</button>
+            <button class="btn btn-ghost" onclick="agAnnullaPrenotazione()">Annulla</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -915,9 +936,74 @@ function renderAgSlots(){
   }).join('') || '<div class="empty">Nessuno slot in questo giorno</div>';
 }
 
-function agPickSlot(_centroId, _ds, _ora){
-  const b = document.querySelector('.ag-banner');
-  if(b){ b.style.transition = 'box-shadow .2s'; b.style.boxShadow = '0 0 0 3px var(--brand-soft)'; setTimeout(() => { b.style.boxShadow = ''; }, 900); b.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+let _agBook = null;
+
+function agPickSlot(centroId, ds, ora){
+  const mid = document.getElementById('ag-med-sel').value;
+  const c = (((_agCal.data || {}).centri) || []).find(x => String(x.id) === String(centroId));
+  const m = (((_plancia || {}).medici) || []).find(x => String(x.medico_id) === String(mid));
+  _agBook = { centro_id: centroId, data: ds, ora };
+  document.getElementById('ag-book-ctx').textContent =
+    fmtData(ds) + ' alle ' + ora + (c ? ' \u00b7 ' + c.nome : '') + (m ? ' \u00b7 ' + nomeMedico(m) : '');
+  const svSel = document.getElementById('agb-servizio');
+  const servizi = (((_plancia || {}).servizi) || []).filter(s => (s.medici || []).some(x => String(x) === String(mid)));
+  svSel.innerHTML = '<option value="">\u2014</option>' + servizi.map(s => '<option value="' + esc(s.nome) + '">' + esc(s.nome) + '</option>').join('');
+  setBoxMsg('ag-book-msg', '');
+  setBoxMsg('ag-slot-msg', '');
+  const box = document.getElementById('ag-book');
+  box.classList.remove('hidden');
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function agAnnullaPrenotazione(){
+  _agBook = null;
+  document.getElementById('ag-book').classList.add('hidden');
+}
+
+async function agConfermaPrenotazione(){
+  if(!_agBook) return;
+  const nome = document.getElementById('agb-nome').value.trim();
+  const cognome = document.getElementById('agb-cognome').value.trim();
+  const tel = document.getElementById('agb-tel').value.trim();
+  if(!nome || !cognome){ setBoxMsg('ag-book-msg', 'Nome e cognome del paziente sono obbligatori.', 'err'); return; }
+  if(!tel){ setBoxMsg('ag-book-msg', 'Il telefono del paziente \u00e8 obbligatorio per la prenotazione per conto.', 'err'); return; }
+  if(!document.getElementById('agb-consenso').checked){ setBoxMsg('ag-book-msg', 'La dichiarazione di consenso \u00e8 obbligatoria.', 'err'); return; }
+  const slotPrenotato = { data: _agBook.data, ora: _agBook.ora };
+  const btn = document.getElementById('agb-btn');
+  btn.disabled = true;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-prenota', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        medico_id: document.getElementById('ag-med-sel').value,
+        centro_id: _agBook.centro_id,
+        data: _agBook.data,
+        ora: _agBook.ora,
+        nome, cognome, telefono: tel,
+        tipo_visita: document.getElementById('agb-servizio').value || undefined,
+        consenso: true
+      })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(res.status === 409){
+      agAnnullaPrenotazione();
+      setBoxMsg('ag-slot-msg', 'Lo slot delle ' + slotPrenotato.ora + ' \u00e8 appena stato occupato da un\'altra prenotazione. Il calendario \u00e8 stato aggiornato: scegli un altro orario.', 'err');
+      agLoadMonth();
+      return;
+    }
+    if(!res.ok){ setBoxMsg('ag-book-msg', body.error || 'Prenotazione non riuscita.', 'err'); return; }
+    ['agb-nome','agb-cognome','agb-tel'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('agb-consenso').checked = false;
+    agAnnullaPrenotazione();
+    setBoxMsg('ag-slot-msg', 'Prenotazione registrata: ' + nome + ' ' + cognome + ', ' + fmtData(slotPrenotato.data) + ' alle ' + slotPrenotato.ora + '.', 'info');
+    agLoadMonth();
+  } catch(_e) {
+    setBoxMsg('ag-book-msg', 'Errore di rete. Riprova.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function renderServiziCatalogo(){
