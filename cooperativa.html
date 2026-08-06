@@ -87,6 +87,11 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .stat-block:last-child{margin-bottom:0}
 .stat-block h3{font-size:14px;font-weight:700;color:var(--brand-mid);margin:0 0 10px}
 .stat-hint{font-size:12.5px;color:var(--ink3);margin:0 0 12px}
+.slot-c{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 7px;border-radius:6px;margin:2px}
+.slot-c.free{background:#E8F6F4;color:var(--brand-deep);border:1px solid var(--brand-soft)}
+.slot-c.busy{background:#F0F0F0;color:var(--ink3);border:1px solid var(--border);text-decoration:line-through}
+.slot-closed{font-size:11.5px;color:#B5544B;font-weight:600}
+.slot-centro{font-size:10.5px;color:var(--ink3);margin:6px 0 2px;text-transform:uppercase;letter-spacing:.4px}
 @media (max-width:840px){
   .plancia{flex-direction:column}
   .side{width:100%}
@@ -383,6 +388,17 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div class="field" style="min-width:260px"><label for="ag-med-sel">Medico</label><select id="ag-med-sel" onchange="renderAgendaTab()"></select></div>
       </div>
       <div id="agenda-tbl" class="mx-wrap"></div>
+      <div class="stat-block" style="margin-top:26px;margin-bottom:0">
+        <h3>Slot della settimana</h3>
+        <p class="stat-hint">Disponibilità sui sede-centri dell'organizzazione: slot liberi, occupati e giorni di chiusura del medico.</p>
+        <div class="toolbar" style="margin-bottom:10px">
+          <button class="btn btn-ghost" style="width:auto;margin:0;padding:8px 14px;border:1px solid var(--border)" onclick="agWeek(-1)">‹</button>
+          <div id="ag-week-label" style="font-weight:600;color:var(--brand-mid);align-self:center;min-width:190px;text-align:center"></div>
+          <button class="btn btn-ghost" style="width:auto;margin:0;padding:8px 14px;border:1px solid var(--border)" onclick="agWeek(1)">›</button>
+        </div>
+        <div id="ag-slot-msg" class="hidden"></div>
+        <div id="ag-slot-grid" class="mx-wrap"></div>
+      </div>
     </section>
 
     <section id="tab-preferenze" class="card-lite hidden">
@@ -651,6 +667,111 @@ function renderAgendaTab(){
         return '<td style="vertical-align:top">' + (blocchi || '<span style="color:var(--ink3);font-size:12px">—</span>') + '</td>';
       }).join('')
     + '</tr></tbody></table>';
+  loadAgendaSlots();
+}
+
+let _agWeekStart = null;
+let _agBusy = false;
+function _agMondayIso(base){
+  const d = base ? new Date(base + 'T12:00:00') : new Date();
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.toLocaleDateString('en-CA');
+}
+function _agAddDays(iso, n){
+  const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n);
+  return d.toLocaleDateString('en-CA');
+}
+function agWeek(dir){
+  _agWeekStart = _agAddDays(_agWeekStart || _agMondayIso(), 7 * dir);
+  loadAgendaSlots();
+}
+function _t2m(t){ const [h,m] = String(t).split(':').map(Number); return h * 60 + m; }
+function _m2t(m){ return String(Math.floor(m / 60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0'); }
+
+async function loadAgendaSlots(){
+  const grid = document.getElementById('ag-slot-grid');
+  const msg = document.getElementById('ag-slot-msg');
+  const mid = document.getElementById('ag-med-sel').value;
+  if(!mid){ grid.innerHTML = ''; return; }
+  if(_agBusy) return;
+  _agBusy = true;
+  if(!_agWeekStart) _agWeekStart = _agMondayIso();
+  const da = _agWeekStart, al = _agAddDays(da, 6);
+  document.getElementById('ag-week-label').textContent = fmtData(da) + ' \u2013 ' + fmtData(al);
+  grid.innerHTML = '<div class="empty">Caricamento\u2026</div>';
+  msg.classList.add('hidden');
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-agenda?medico_id=' + encodeURIComponent(mid) + '&da=' + da + '&a=' + al, {
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body) throw new Error('fetch');
+    renderAgendaSlots(body, da);
+  } catch(_e) {
+    grid.innerHTML = '<div class="empty">Agenda non disponibile. Riprova.</div>';
+  } finally {
+    _agBusy = false;
+  }
+}
+
+function renderAgendaSlots(body, da){
+  const grid = document.getElementById('ag-slot-grid');
+  const centri = body.centri || [];
+  const occ = new Set((body.occupati || []).map(o => o.centro_id + '|' + o.data + '|' + o.ora));
+  const chiusure = body.chiusure || [];
+  const giorni = [];
+  for(let i = 0; i < 7; i++) giorni.push(_agAddDays(da, i));
+  const oggi = new Date().toLocaleDateString('en-CA');
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const chiuso = (dataStr, centroId) => chiusure.some(ch => {
+    if(dataStr < ch.data_inizio || dataStr > ch.data_fine) return false;
+    const ids = ch.centri_ids || [];
+    return ids.length === 0 || ids.some(cid => String(cid) === String(centroId));
+  });
+  let hasSlot = false;
+  const celle = giorni.map(g => {
+    const dow = new Date(g + 'T12:00:00').getDay();
+    let html = '';
+    centri.forEach(c => {
+      if(chiuso(g, c.id)){
+        html += '<div class="slot-centro">' + esc(c.nome) + '</div><span class="slot-closed">Chiuso</span>';
+        return;
+      }
+      const turni = (c.turni || []).filter(t => {
+        if(t.giorno !== dow) return false;
+        if(t.dal && g < t.dal) return false;
+        if(t.al && g > t.al) return false;
+        const freq = t.frequenza || 1;
+        if(freq > 1 && t.dal){
+          const diffW = Math.round((new Date(g + 'T12:00:00') - new Date(t.dal + 'T12:00:00')) / (7 * 24 * 3600 * 1000));
+          if(diffW < 0 || diffW % freq !== 0) return false;
+        }
+        return true;
+      });
+      if(!turni.length) return;
+      let chips = '';
+      turni.forEach(t => {
+        let cur = _t2m(t.inizio); const end = _t2m(t.fine);
+        while(cur + t.slot <= end){
+          const ora = _m2t(cur);
+          const isOcc = occ.has(c.id + '|' + g + '|' + ora);
+          const passato = (g === oggi && cur <= nowMin) || g < oggi;
+          chips += '<span class="slot-c ' + (isOcc ? 'busy' : 'free') + '"' + (passato && !isOcc ? ' style="opacity:.45"' : '') + '>' + ora + '</span>';
+          hasSlot = true;
+          cur += t.slot;
+        }
+      });
+      if(chips) html += '<div class="slot-centro">' + esc(c.nome) + '</div>' + chips;
+    });
+    return html || '<span style="color:var(--ink3);font-size:12px">\u2014</span>';
+  });
+  grid.innerHTML = '<table class="mx" style="table-layout:fixed;min-width:840px"><thead><tr>'
+    + giorni.map(g => '<th>' + GG[new Date(g + 'T12:00:00').getDay()] + ' ' + fmtData(g).slice(0,5) + '</th>').join('')
+    + '</tr></thead><tbody><tr>'
+    + celle.map(h => '<td style="vertical-align:top">' + h + '</td>').join('')
+    + '</tr></tbody></table>'
+    + (hasSlot ? '' : '<div class="empty" style="margin-top:10px">Nessun turno attivo in questa settimana</div>');
 }
 
 function renderServiziCatalogo(){
