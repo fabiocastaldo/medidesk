@@ -89,7 +89,15 @@ export default async function handler(req, res) {
   ).catch(() => null);
   const chiusure = (chRes && chRes.ok) ? await chRes.json().catch(() => []) : [];
 
+  // tipi di visita dal profilo del medico (per il modulo prenotazione in plancia)
+  const tvRes = await fetch(
+    `${supabaseUrl}/rest/v1/tipi_visita?medico_id=eq.${encodeURIComponent(medicoId)}&select=nome,is_default&order=nome`,
+    { headers: srvHeaders }
+  ).catch(() => null);
+  const tipiVisita = (tvRes && tvRes.ok) ? await tvRes.json().catch(() => []) : [];
+
   return res.status(200).json({
+    tipi_visita: (Array.isArray(tipiVisita) ? tipiVisita : []).map(t => ({ nome: t.nome, is_default: !!t.is_default })),
     centri: centri.map(c => ({
       id: c.id, nome: c.nome, coop_sede_id: c.coop_sede_id,
       turni: (c.turni || []).map(t => ({

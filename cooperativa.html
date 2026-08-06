@@ -469,7 +469,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
             <div class="field"><label for="agb-nome">Nome del paziente</label><input id="agb-nome" type="text" maxlength="80" autocomplete="off"></div>
             <div class="field"><label for="agb-cognome">Cognome del paziente</label><input id="agb-cognome" type="text" maxlength="80" autocomplete="off"></div>
             <div class="field"><label for="agb-tel">Telefono del paziente</label><input id="agb-tel" type="tel" maxlength="40" autocomplete="off"></div>
-            <div class="field"><label for="agb-servizio">Servizio (facoltativo)</label><select id="agb-servizio"></select></div>
+            <div class="field"><label for="agb-email">Email del paziente (facoltativa)</label><input id="agb-email" type="email" maxlength="160" autocomplete="off"></div>
+            <div class="field"><label for="agb-servizio">Tipo di visita (facoltativo)</label><select id="agb-servizio"></select></div>
           </div>
           <label class="ag-book-consenso"><input type="checkbox" id="agb-consenso"><span>Dichiaro di aver ricevuto dal paziente, telefonicamente o di persona, il consenso al trattamento dei dati personali necessari alla prenotazione.</span></label>
           <div id="ag-book-msg" class="hidden"></div>
@@ -927,8 +928,10 @@ function renderAgSlots(){
   const box = document.getElementById('ag-slots');
   const ds = _agCal.dateStr;
   const card = document.getElementById('ag-day-card');
-  if(!ds){ lbl.textContent = ''; box.innerHTML = ''; card.classList.add('hidden'); agAnnullaPrenotazione(); return; }
+  if(!ds){ lbl.textContent = ''; box.innerHTML = ''; card.classList.add('hidden'); _agBook = null; document.getElementById('ag-book').classList.add('hidden'); return; }
   card.classList.remove('hidden');
+  const bookBox = document.getElementById('ag-book');
+  if(bookBox.classList.contains('hidden')){ bookBox.classList.remove('hidden'); agBookIdle(); }
   const d = new Date(ds + 'T12:00:00');
   lbl.textContent = ['Domenica','Luned\u00ec','Marted\u00ec','Mercoled\u00ec','Gioved\u00ec','Venerd\u00ec','Sabato'][d.getDay()] + ' ' + fmtData(ds);
   const blocchi = _agSlotsGiorno(ds);
@@ -945,6 +948,15 @@ function renderAgSlots(){
 }
 
 let _agBook = null;
+const AGB_CAMPI = ['agb-nome','agb-cognome','agb-tel','agb-email','agb-servizio','agb-consenso'];
+
+function agBookIdle(){
+  _agBook = null;
+  document.getElementById('ag-book-ctx').textContent = 'Seleziona un orario dalla griglia per compilare la prenotazione.';
+  AGB_CAMPI.forEach(id => { document.getElementById(id).disabled = true; });
+  document.getElementById('agb-btn').disabled = true;
+  setBoxMsg('ag-book-msg', '');
+}
 
 function agPickSlot(centroId, ds, ora){
   const mid = document.getElementById('ag-med-sel').value;
@@ -953,19 +965,28 @@ function agPickSlot(centroId, ds, ora){
   _agBook = { centro_id: centroId, data: ds, ora };
   document.getElementById('ag-book-ctx').textContent =
     fmtData(ds) + ' alle ' + ora + (c ? ' \u00b7 ' + c.nome : '') + (m ? ' \u00b7 ' + nomeMedico(m) : '');
+  AGB_CAMPI.forEach(id => { document.getElementById(id).disabled = false; });
+  document.getElementById('agb-btn').disabled = false;
   const svSel = document.getElementById('agb-servizio');
-  const servizi = (((_plancia || {}).servizi) || []).filter(s => (s.medici || []).some(x => String(x) === String(mid)));
-  svSel.innerHTML = '<option value="">\u2014</option>' + servizi.map(s => '<option value="' + esc(s.nome) + '">' + esc(s.nome) + '</option>').join('');
+  const tipi = (((_agCal.data || {}).tipi_visita) || []);
+  let opts;
+  if(tipi.length){
+    opts = ['<option value="">\u2014</option>'].concat(tipi.map(t => '<option value="' + esc(t.nome) + '"' + (t.is_default ? ' selected' : '') + '>' + esc(t.nome) + '</option>'));
+  } else {
+    const servizi = (((_plancia || {}).servizi) || []).filter(s => (s.medici || []).some(x => String(x) === String(mid)));
+    opts = ['<option value="">\u2014</option>'].concat(servizi.map(s => '<option value="' + esc(s.nome) + '">' + esc(s.nome) + '</option>'));
+  }
+  svSel.innerHTML = opts.join('');
   setBoxMsg('ag-book-msg', '');
   setBoxMsg('ag-slot-msg', '');
-  const box = document.getElementById('ag-book');
-  box.classList.remove('hidden');
-  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('ag-book').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function agAnnullaPrenotazione(){
   _agBook = null;
-  document.getElementById('ag-book').classList.add('hidden');
+  ['agb-nome','agb-cognome','agb-tel','agb-email'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  const cons = document.getElementById('agb-consenso'); if(cons) cons.checked = false;
+  if(_agCal.dateStr){ agBookIdle(); } else { document.getElementById('ag-book').classList.add('hidden'); }
 }
 
 async function agConfermaPrenotazione(){
@@ -975,6 +996,8 @@ async function agConfermaPrenotazione(){
   const tel = document.getElementById('agb-tel').value.trim();
   if(!nome || !cognome){ setBoxMsg('ag-book-msg', 'Nome e cognome del paziente sono obbligatori.', 'err'); return; }
   if(!tel){ setBoxMsg('ag-book-msg', 'Il telefono del paziente \u00e8 obbligatorio per la prenotazione per conto.', 'err'); return; }
+  const email = document.getElementById('agb-email').value.trim();
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ setBoxMsg('ag-book-msg', 'Email non valida.', 'err'); return; }
   if(!document.getElementById('agb-consenso').checked){ setBoxMsg('ag-book-msg', 'La dichiarazione di consenso \u00e8 obbligatoria.', 'err'); return; }
   const slotPrenotato = { data: _agBook.data, ora: _agBook.ora };
   const btn = document.getElementById('agb-btn');
@@ -990,6 +1013,7 @@ async function agConfermaPrenotazione(){
         data: _agBook.data,
         ora: _agBook.ora,
         nome, cognome, telefono: tel,
+        email: email || undefined,
         tipo_visita: document.getElementById('agb-servizio').value || undefined,
         consenso: true
       })
@@ -1002,15 +1026,13 @@ async function agConfermaPrenotazione(){
       return;
     }
     if(!res.ok){ setBoxMsg('ag-book-msg', body.error || 'Prenotazione non riuscita.', 'err'); return; }
-    ['agb-nome','agb-cognome','agb-tel'].forEach(id => { document.getElementById(id).value = ''; });
-    document.getElementById('agb-consenso').checked = false;
     agAnnullaPrenotazione();
-    setBoxMsg('ag-slot-msg', 'Prenotazione registrata: ' + nome + ' ' + cognome + ', ' + fmtData(slotPrenotato.data) + ' alle ' + slotPrenotato.ora + '.', 'info');
+    setBoxMsg('ag-slot-msg', 'Prenotazione registrata: ' + nome + ' ' + cognome + ', ' + fmtData(slotPrenotato.data) + ' alle ' + slotPrenotato.ora + '.' + (email ? ' Email di conferma inviata a ' + email + '.' : ''), 'info');
     agLoadMonth();
   } catch(_e) {
     setBoxMsg('ag-book-msg', 'Errore di rete. Riprova.', 'err');
   } finally {
-    btn.disabled = false;
+    btn.disabled = !_agBook;
   }
 }
 

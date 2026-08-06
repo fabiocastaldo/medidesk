@@ -315,7 +315,7 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
 const VALID_TIPI = new Set([
   'conferma_appt_anon', 'conferma_appt_medico', 'cancellazione_paziente',
   'notifica_centro_evento', 'cancellazione_centro_anon', 'chiusura_studio_centro',
-  'account_eliminazione'
+  'account_eliminazione', 'notifica_prenotazione_coop'
 ]);
 
 const PATH1_TIPI = new Set([
@@ -378,6 +378,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, skipped: 'notifiche disabilitate per il centro' });
     }
     authCtx = { centroNome: ct.centroNome, centroEmail: ct.centroEmail, authMode: 'cancellation_token' };
+  } else if (tipo === 'notifica_prenotazione_coop') {
+    const ct = await verifyCancellationToken(body.appt_id, body.cancellation_token, supabaseUrl, serviceKey);
+    if (!ct.ok) return res.status(ct.status).json({ error: ct.error });
+    authCtx = { authMode: 'cancellation_token' };
   }
 
   // ── Per-tipo: lookup DB + costruzione payload email ───────────────────────────
@@ -402,7 +406,7 @@ export default async function handler(req, res) {
 
     // Notifica al centro (best-effort, soft-fail): solo se il medico ha il toggle attivo
     // e il centro ha email. Sostituisce la chiamata frontend rimossa da confirmBooking (#3).
-    if (appt.notificaNuovaPrenotazione && appt.centroEmail) {
+    if (appt.notificaNuovaPrenotazione && appt.centroEmail && body.skip_notifica_centro !== true) {
       try {
         const htmlCentro = buildHtmlNotificaCentro({
           evento: 'nuova_prenotazione',
@@ -449,6 +453,23 @@ export default async function handler(req, res) {
     medicoIdAudit = authCtx.medicoId;
     targetType    = 'appuntamento';
     targetId      = appt_id;
+
+  } else if (tipo === 'notifica_prenotazione_coop') {
+    const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
+    if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    if (!appt.notificaNuovaPrenotazione) {
+      return res.status(200).json({ ok: true, skipped: 'notifiche disabilitate dal medico' });
+    }
+    if (!appt.medicoEmail) {
+      return res.status(200).json({ ok: true, skipped: 'medico senza email' });
+    }
+    const dataFmt = formatDateIt(appt.data);
+    to            = appt.medicoEmail;
+    subject       = `Nuova prenotazione — ${appt.pazienteNome}, ${dataFmt}`;
+    html          = buildHtmlNotificaCentro({ evento: 'nuova_prenotazione', paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
+    medicoIdAudit = appt.apptMedicoId;
+    targetType    = 'appuntamento';
+    targetId      = body.appt_id;
 
   } else if (tipo === 'cancellazione_paziente') {
     const { appt_id } = body;

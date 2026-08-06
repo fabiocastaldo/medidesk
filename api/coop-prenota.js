@@ -39,6 +39,10 @@ export default async function handler(req, res) {
   const cognome  = clean(b.cognome, 80);
   const telefono = clean(b.telefono, 40);
   const tipo     = clean(b.tipo_visita, 120);
+  const email    = clean(b.email, 160);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Email non valida' });
+  }
   if (!medicoId || !centroId) return res.status(400).json({ error: 'Parametri non validi' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return res.status(400).json({ error: 'Data non valida' });
   if (!/^\d{2}:\d{2}$/.test(ora)) return res.status(400).json({ error: 'Ora non valida' });
@@ -135,6 +139,7 @@ export default async function handler(req, res) {
         nome_paziente: nome,
         cognome_paziente: cognome,
         telefono_paziente: telefono,
+        email_paziente: email || null,
         tipo_visita: tipo || null,
         source: 'paziente',
         cancellation_token: cancellationToken,
@@ -156,7 +161,42 @@ export default async function handler(req, res) {
     const arr = await r.json().catch(() => []);
     const apptId = arr?.[0]?.id;
     if (!apptId) return res.status(500).json({ error: 'Creazione prenotazione fallita' });
-    return res.status(200).json({ ok: true, appt_id: apptId, data, ora });
+    // Email best-effort, MAI bloccanti (l'appuntamento e' gia' salvato):
+    // conferma al paziente via token email (path anonimo, senza doppia notifica
+    // interna), notifica al medico via token di cancellazione. I toggle di
+    // cooperativa arriveranno con le colonne dedicate (DDL su mandato);
+    // fino ad allora il canale e' attivo di default.
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    if (host && email) {
+      try {
+        const tr = await fetch(`${supabaseUrl}/rest/v1/rpc/emit_email_token_for_appt`, {
+          method: 'POST',
+          headers: { ...srvHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ p_appt_id: apptId })
+        });
+        if (tr.ok) {
+          const tok = await tr.json().catch(() => null);
+          const jti = Array.isArray(tok) ? tok[0]?.jti : tok?.jti;
+          if (jti) {
+            await fetch(`https://${host}/api/send-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tipo: 'conferma_appt_anon', email_token: jti, skip_notifica_centro: true })
+            }).catch(() => {});
+          }
+        }
+      } catch { /* soft-fail */ }
+    }
+    if (host) {
+      try {
+        await fetch(`https://${host}/api/send-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo: 'notifica_prenotazione_coop', appt_id: apptId, cancellation_token: cancellationToken })
+        }).catch(() => {});
+      } catch { /* soft-fail */ }
+    }
+    return res.status(200).json({ ok: true, appt_id: apptId, data, ora, email_inviata: !!email });
   } catch {
     return res.status(500).json({ error: 'Creazione prenotazione fallita' });
   }
