@@ -66,7 +66,7 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,cooperativa_id,cooperative(id,stato)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,cooperativa_id,cooperative(id,stato,mail_conferma_paziente,mail_notifica_medico)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
@@ -167,7 +167,9 @@ export default async function handler(req, res) {
     // cooperativa arriveranno con le colonne dedicate (DDL su mandato);
     // fino ad allora il canale e' attivo di default.
     const host = req.headers['x-forwarded-host'] || req.headers.host;
-    if (host && email) {
+    const mailPaz = seg.cooperative.mail_conferma_paziente !== false;
+    const mailMed = seg.cooperative.mail_notifica_medico !== false;
+    if (host && email && mailPaz) {
       try {
         const tr = await fetch(`${supabaseUrl}/rest/v1/rpc/emit_email_token_for_appt`, {
           method: 'POST',
@@ -187,7 +189,7 @@ export default async function handler(req, res) {
         }
       } catch { /* soft-fail */ }
     }
-    if (host) {
+    if (host && mailMed) {
       try {
         await fetch(`https://${host}/api/send-email`, {
           method: 'POST',
@@ -196,7 +198,7 @@ export default async function handler(req, res) {
         }).catch(() => {});
       } catch { /* soft-fail */ }
     }
-    return res.status(200).json({ ok: true, appt_id: apptId, data, ora, email_inviata: !!email });
+    return res.status(200).json({ ok: true, appt_id: apptId, data, ora, email_inviata: !!email && mailPaz });
   } catch {
     return res.status(500).json({ error: 'Creazione prenotazione fallita' });
   }

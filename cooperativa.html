@@ -492,6 +492,20 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <span style="font-size:13px;color:var(--ink2);line-height:1.55">Se attiva, i turni assegnati ai medici sulle sedi dell'organizzazione sono prenotabili anche dal link pubblico del medico: il paziente può prenotare direttamente, senza passare dalla segreteria.</span>
         </span>
       </label>
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;max-width:640px;margin-top:16px">
+        <input type="checkbox" id="pref-mail-paziente" style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" onchange="setPrefMail('mail_conferma_paziente', this.checked)">
+        <span>
+          <span style="font-weight:600">Email di conferma al paziente</span><br>
+          <span style="font-size:13px;color:var(--ink2);line-height:1.55">Alla prenotazione dalla plancia, se è stata indicata l'email, il paziente riceve la conferma con il promemoria e il codice di cancellazione.</span>
+        </span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;max-width:640px;margin-top:16px">
+        <input type="checkbox" id="pref-mail-medico" style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" onchange="setPrefMail('mail_notifica_medico', this.checked)">
+        <span>
+          <span style="font-weight:600">Notifica email al medico</span><br>
+          <span style="font-size:13px;color:var(--ink2);line-height:1.55">Il medico riceve un'email per ogni prenotazione registrata dalla plancia sui suoi sede-centri (vale comunque il suo consenso alle notifiche nel profilo).</span>
+        </span>
+      </label>
       <div id="pref-msg" class="hidden" style="margin-top:12px"></div>
     </section>
 
@@ -575,6 +589,32 @@ function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
 function toggleSubmenu(){
   const el = document.getElementById('submenu-assoc');
   el.classList.toggle('hidden');
+}
+
+async function setPrefMail(colonna, valore){
+  const chkId = colonna === 'mail_conferma_paziente' ? 'pref-mail-paziente' : 'pref-mail-medico';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-preferenze', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_' + colonna, valore })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){
+      document.getElementById(chkId).checked = !valore;
+      setBoxMsg('pref-msg', body.error || 'Salvataggio non riuscito.', 'err');
+      return;
+    }
+    if(_plancia && _plancia.cooperativa) _plancia.cooperativa[colonna] = body[colonna];
+    setBoxMsg('pref-msg', colonna === 'mail_conferma_paziente'
+      ? (body[colonna] ? 'Email di conferma al paziente attive.' : 'Email di conferma al paziente disattivate.')
+      : (body[colonna] ? 'Notifiche email al medico attive.' : 'Notifiche email al medico disattivate.'), 'info');
+  } catch(e){
+    console.error('[Plancia] setPrefMail:', e.message);
+    document.getElementById(chkId).checked = !valore;
+    setBoxMsg('pref-msg', 'Salvataggio non riuscito. Riprova.', 'err');
+  }
 }
 
 async function setPrefBooking(valore){
@@ -665,6 +705,10 @@ function renderPlancia(){
   renderAgendaTab();
   const pb = document.getElementById('pref-booking');
   if(pb) pb.checked = !!(d.cooperativa && d.cooperativa.booking_pubblico);
+  const pmp = document.getElementById('pref-mail-paziente');
+  if(pmp) pmp.checked = !(d.cooperativa && d.cooperativa.mail_conferma_paziente === false);
+  const pmm = document.getElementById('pref-mail-medico');
+  if(pmm) pmm.checked = !(d.cooperativa && d.cooperativa.mail_notifica_medico === false);
 }
 
 function renderCoperturaTab(){

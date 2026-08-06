@@ -23,7 +23,13 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }
   const b = req.body || {};
-  if (b.action !== 'set_booking_pubblico' || typeof b.valore !== 'boolean') {
+  const AZIONI = {
+    set_booking_pubblico: 'booking_pubblico',
+    set_mail_conferma_paziente: 'mail_conferma_paziente',
+    set_mail_notifica_medico: 'mail_notifica_medico'
+  };
+  const colonna = AZIONI[b.action];
+  if (!colonna || typeof b.valore !== 'boolean') {
     return res.status(400).json({ error: 'Parametri non validi' });
   }
 
@@ -51,18 +57,19 @@ export default async function handler(req, res) {
   const upCoop = await fetch(
     `${supabaseUrl}/rest/v1/cooperative?id=eq.${encodeURIComponent(seg.cooperativa_id)}`,
     { method: 'PATCH', headers: { ...srvHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify({ booking_pubblico: b.valore }) }
+      body: JSON.stringify({ [colonna]: b.valore }) }
   ).catch(() => null);
   const coopRow = (upCoop && upCoop.ok) ? (await upCoop.json().catch(() => []))?.[0] : null;
   if (!coopRow) {
     return res.status(500).json({ error: 'Aggiornamento non riuscito' });
   }
-  // specchio su tutti i centri della cooperativa
-  await fetch(
+  // specchio su tutti i centri della cooperativa (solo per il booking pubblico:
+  // la SPA del medico lo legge dai centri; i flag email vivono solo qui)
+  if (colonna === 'booking_pubblico') await fetch(
     `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(seg.cooperativa_id)}`,
     { method: 'PATCH', headers: { ...srvHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ coop_booking_pubblico: b.valore }) }
   ).catch(() => null);
 
-  return res.status(200).json({ booking_pubblico: coopRow.booking_pubblico });
+  return res.status(200).json({ [colonna]: coopRow[colonna] });
 }

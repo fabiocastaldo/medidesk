@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
 
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,nome,stato,cooperativa_id,cooperative(id,nome,stato,booking_pubblico)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,nome,stato,cooperativa_id,cooperative(id,nome,stato,booking_pubblico,mail_conferma_paziente,mail_notifica_medico)`,
     { headers: srvHeaders }
   ).catch(() => null);
   if (!segRes || !segRes.ok) {
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({
-    cooperativa: { id: coop.id, nome: coop.nome, stato: coop.stato, booking_pubblico: coop.booking_pubblico === true },
+    cooperativa: { id: coop.id, nome: coop.nome, stato: coop.stato, booking_pubblico: coop.booking_pubblico === true, mail_conferma_paziente: coop.mail_conferma_paziente !== false, mail_notifica_medico: coop.mail_notifica_medico !== false },
     segreteria: { nome: seg.nome },
     medici: Array.from(perMedico.values()),
     codici_attivi: codiciData || [],
