@@ -37,13 +37,14 @@ async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
 const PROMPT_TEMPLATE = `Sei un estrattore di liste di appuntamenti da agende mediche italiane. Ricevi un'immagine, screenshot, PDF o testo che rappresenta la lista di appuntamenti di una giornata in un centro medico. Estrai in JSON.
 
 CONTESTO (fornito dal sistema):
+- Oggi e il {{OGGI}}. Usa questa data come riferimento temporale.
 - Medico titolare dell'agenda: {{MEDICO}}. Il suo nome/cognome puo comparire come prefisso o etichetta sulle righe o in intestazioni di fascia oraria: NON e il paziente ne la prestazione.
 - Catalogo prestazioni del medico: {{TIPI_VISITA}}.
 
 Regole:
 - Rispondi SOLO con un oggetto JSON valido: nessun testo prima/dopo, nessun markdown, nessun commento.
 - Non inventare MAI dati. Campo non leggibile o assente -> null. Inventare un nome e un errore grave: meglio null + confidenza bassa.
-- "data": data della giornata SE scritta, normalizzata a YYYY-MM-DD; altrimenti null. NON dedurla da "domani" o dal contesto.
+- "data": data della giornata SE scritta, normalizzata a YYYY-MM-DD; altrimenti null. NON dedurla da "domani" o dal contesto. Se giorno e mese sono scritti ma l'anno manca, usa l'anno che rende la data piu vicina a oggi (tipicamente l'anno corrente); non usare MAI anni passati se non scritti esplicitamente.
 - "centro_raw": nome del centro cosi come appare; null se assente.
 - "righe": una per voce della lista, in ordine di lettura. Per ciascuna:
     - "ora": "HH:MM" se presente, altrimenti null.
@@ -129,7 +130,8 @@ export default async function handler(req, res) {
 
     const prompt = PROMPT_TEMPLATE
       .replace(/\{\{MEDICO\}\}/g, medicoNome)
-      .replace(/\{\{TIPI_VISITA\}\}/g, tipiList);
+      .replace(/\{\{TIPI_VISITA\}\}/g, tipiList)
+      .replace(/\{\{OGGI\}\}/g, new Date().toISOString().slice(0, 10));
 
     let contentBlocks;
     if (file && typeof file.base64 === 'string' && ALLOWED.has(file.type)) {

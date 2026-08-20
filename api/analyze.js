@@ -121,6 +121,8 @@ export default async function handler(req, res) {
 
 I dati anagrafici del paziente (nome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza. Inizia direttamente dal contenuto clinico.
 
+REGOLA TASSATIVA: riporta esclusivamente informazioni presenti nei dati forniti; non inventare ne aggiungere diagnosi, esami, valori, misure o terapie non menzionati.
+
 Produci una STORIA CLINICA UNIFICATA che:
 - Descrive l'evoluzione clinica in ordine cronologico
 - Riporta diagnosi, terapie rilevanti e loro andamento nel tempo
@@ -153,6 +155,8 @@ Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
       const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi ${n>1 ? n+' referti' : 'un referto'} di un paziente${eta ? ' di '+eta+' anni' : ''}, forniti come immagini/documenti${refertiValidi.length ? ', oltre ad alcuni referti redatti in formato testo' : ''}.
 
 I dati anagrafici del paziente (nome, cognome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza. Inizia direttamente dal contenuto clinico.
+
+REGOLA TASSATIVA: riporta esclusivamente informazioni presenti nei dati forniti; non inventare ne aggiungere diagnosi, esami, valori, misure o terapie non menzionati.
 
 Produci una STORIA CLINICA UNIFICATA che:
 - Ordina i referti in modo cronologico quando le date sono leggibili nei documenti
