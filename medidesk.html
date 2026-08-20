@@ -6248,7 +6248,7 @@ function _buildRefertoInner(paz, v){
   h+='<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px" id="ref-block-'+pid+'-'+vid+'">';
   h+='<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:8px">Referto</div>';
   if(_rAttiva&&_rEdit){
-    h+='<textarea class="form-textarea" id="ref-ta-'+pid+'-'+vid+'" style="min-height:140px;white-space:pre-wrap"></textarea>';
+    h+='<textarea class="form-textarea" id="ref-ta-'+pid+'-'+vid+'" style="min-height:140px;white-space:pre-wrap" oninput="_refDrafts.set(this.id.slice(7), this.value)"></textarea>';
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">';
     h+='<button class="btn btn-sm btn-secondary" id="btn-ai-ref-'+pid+'-'+vid+'" onclick="generaRefertoAI(\''+pid+'\',\''+vid+'\')">Ottimizza con AI</button>';
     h+='<button class="btn btn-sm btn-primary" onclick="salvaReferto(\''+pid+'\',\''+vid+'\')">Salva</button>';
@@ -6544,6 +6544,7 @@ async function deleteVisita(pazId, visitaId){
 }
 
 let _refEdit = new Set();
+let _refDrafts = new Map(); // bozze referto non salvate: sopravvivono ai re-render del fascicolo
 
 function _initPazienteModal(paz){
   (paz.visite||[]).forEach(v => {
@@ -6551,7 +6552,7 @@ function _initPazienteModal(paz){
     const viewEl=document.getElementById('ref-view-'+pid+'-'+vid);
     if(viewEl && v.referto) viewEl.dataset.md=v.referto;
     const ta=document.getElementById('ref-ta-'+pid+'-'+vid);
-    if(ta) ta.value=v.referto||'';
+    if(ta) ta.value=_refDrafts.get(pid+'-'+vid) ?? (v.referto||'');
   });
 }
 
@@ -6559,7 +6560,7 @@ function toggleRefertoEdit(pid, vid){
   pid=String(pid); vid=String(vid);
   if(S.settings.refertazioneAttiva===false) return;
   const k=pid+'-'+vid;
-  if(_refEdit.has(k)) _refEdit.delete(k); else _refEdit.add(k);
+  if(_refEdit.has(k)){ _refEdit.delete(k); _refDrafts.delete(k); } else _refEdit.add(k);
   const paz=S.pazienti.find(p=>String(p.id)===pid); if(!paz) return;
   const v=(paz.visite||[]).find(x=>String(x.id)===vid); if(!v) return;
   const block=document.getElementById('ref-block-'+pid+'-'+vid);
@@ -6568,7 +6569,7 @@ function toggleRefertoEdit(pid, vid){
   const viewEl=document.getElementById('ref-view-'+pid+'-'+vid);
   if(viewEl && v.referto) viewEl.dataset.md=v.referto;
   const ta=document.getElementById('ref-ta-'+pid+'-'+vid);
-  if(ta){ ta.value=v.referto||''; ta.focus(); }
+  if(ta){ ta.value=_refDrafts.get(k) ?? (v.referto||''); ta.focus(); }
 }
 
 async function generaRefertoAI(pid, vid){
@@ -6595,6 +6596,7 @@ async function generaRefertoAI(pid, vid){
     }
     const data=await res.json();
     ta.value=data.content.map(i=>i.text||'').join('').trim();
+    _refDrafts.set(pid+'-'+vid, ta.value);
   }catch(err){
     showToast(err.message);
   }finally{
@@ -6619,6 +6621,7 @@ async function salvaReferto(pid, vid){
   }catch(e){ showToast('Errore: '+e.message); return; }
   v.referto=testo;
   _refEdit.delete(pid+'-'+vid);
+  _refDrafts.delete(pid+'-'+vid);
   save();
   const block=document.getElementById('ref-block-'+pid+'-'+vid);
   if(block){
