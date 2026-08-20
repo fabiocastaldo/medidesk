@@ -466,7 +466,7 @@ export default async function handler(req, res) {
     const dataFmt = formatDateIt(appt.data);
     to            = appt.medicoEmail;
     subject       = `Nuova prenotazione — ${appt.pazienteNome}, ${dataFmt}`;
-    html          = buildHtmlNotificaCentro({ evento: 'nuova_prenotazione', paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
+    html          = buildHtmlNotificaMedicoCoop({ paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
     medicoIdAudit = appt.apptMedicoId;
     targetType    = 'appuntamento';
     targetId      = body.appt_id;
@@ -492,7 +492,7 @@ export default async function handler(req, res) {
     const dataFmtS = formatDateIt(appt.data);
     to            = segEmail;
     subject       = `Prenotazione registrata — ${appt.pazienteNome}, ${dataFmtS}`;
-    html          = buildHtmlNotificaCentro({ evento: 'nuova_prenotazione', paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtS), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
+    html          = buildHtmlRicevutaSegreteria({ paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtS), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
     medicoIdAudit = appt.apptMedicoId;
     targetType    = 'appuntamento';
     targetId      = body.appt_id;
@@ -697,6 +697,37 @@ function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_vi
     `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile Segreteria,<br>${intro}</p>` +
     detailCard(rows) +
     `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">Grazie per la collaborazione.</p>`;
+  return emailShell(body);
+}
+
+function buildHtmlNotificaMedicoCoop({ medico_nome, paziente_nome, data_fmt, ora, tipo_visita, centro_nome }) {
+  const rows =
+    detailRow('Paziente', paziente_nome) +
+    detailRow('Sede', centro_nome) +
+    detailRow('Data', data_fmt) +
+    detailRow('Ora', ora, { last: !tipo_visita }) +
+    (tipo_visita ? detailRow('Tipo visita', tipo_visita, { last: true }) : '');
+  const body =
+    emailTitle('Nuova prenotazione dalla segreteria') +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${medico_nome ? 'Dott. ' + medico_nome : 'Dottore'},<br>la segreteria dell&apos;organizzazione ha registrato una nuova prenotazione per Lei. Di seguito i dettagli.</p>` +
+    detailCard(rows) +
+    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">L&apos;appuntamento &egrave; gi&agrave; visibile nella Sua agenda Delphi~Med.</p>`;
+  return emailShell(body);
+}
+
+function buildHtmlRicevutaSegreteria({ medico_nome, paziente_nome, data_fmt, ora, tipo_visita, centro_nome }) {
+  const rows =
+    detailRow('Paziente', paziente_nome) +
+    detailRow('Medico', medico_nome) +
+    detailRow('Sede', centro_nome) +
+    detailRow('Data', data_fmt) +
+    detailRow('Ora', ora, { last: !tipo_visita }) +
+    (tipo_visita ? detailRow('Tipo visita', tipo_visita, { last: true }) : '');
+  const body =
+    emailTitle('Prenotazione registrata') +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile Segreteria,<br>la prenotazione che avete appena registrato &egrave; stata confermata e inserita nell&apos;agenda ${medDi(medico_nome)}. Questo &egrave; il riepilogo per i vostri registri.</p>` +
+    detailCard(rows) +
+    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">Se il paziente ha fornito un&apos;email, ha ricevuto la conferma con il codice di cancellazione.</p>`;
   return emailShell(body);
 }
 

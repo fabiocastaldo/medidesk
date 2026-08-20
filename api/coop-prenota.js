@@ -203,11 +203,12 @@ export default async function handler(req, res) {
     // ricevuta alla segreteria (sempre attiva: e' la conferma della propria azione)
     if (host) {
       try {
-        await fetch(`https://${host}/api/send-email`, {
+        const rSeg = await fetch(`https://${host}/api/send-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tipo: 'conferma_prenotazione_segreteria', appt_id: apptId, cancellation_token: cancellationToken })
-        }).catch(() => {});
+        }).catch(() => null);
+        console.log('[coop-prenota] ricevuta segreteria:', rSeg ? rSeg.status : 'no-response');
       } catch { /* soft-fail */ }
     }
     return res.status(200).json({ ok: true, appt_id: apptId, data, ora, email_inviata: !!email && mailPaz });
