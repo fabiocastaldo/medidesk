@@ -378,7 +378,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, skipped: 'notifiche disabilitate per il centro' });
     }
     authCtx = { centroNome: ct.centroNome, centroEmail: ct.centroEmail, authMode: 'cancellation_token' };
-  } else if (tipo === 'notifica_prenotazione_coop') {
+  } else if (tipo === 'notifica_prenotazione_coop' || tipo === 'conferma_prenotazione_segreteria') {
     const ct = await verifyCancellationToken(body.appt_id, body.cancellation_token, supabaseUrl, serviceKey);
     if (!ct.ok) return res.status(ct.status).json({ error: ct.error });
     authCtx = { authMode: 'cancellation_token' };
@@ -467,6 +467,32 @@ export default async function handler(req, res) {
     to            = appt.medicoEmail;
     subject       = `Nuova prenotazione — ${appt.pazienteNome}, ${dataFmt}`;
     html          = buildHtmlNotificaCentro({ evento: 'nuova_prenotazione', paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
+    medicoIdAudit = appt.apptMedicoId;
+    targetType    = 'appuntamento';
+    targetId      = body.appt_id;
+
+  } else if (tipo === 'conferma_prenotazione_segreteria') {
+    // ricevuta alla segreteria della cooperativa: destinatario derivato
+    // interamente server-side (appt -> centro -> cooperativa -> segreteria
+    // attiva -> email dall'admin API), mai dal client.
+    const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
+    if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    const srvH = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
+    const rowRes = await fetch(`${supabaseUrl}/rest/v1/appuntamenti?id=eq.${encodeURIComponent(body.appt_id)}&select=centro_id,centri(cooperativa_id)`, { headers: srvH }).catch(() => null);
+    const row = (rowRes && rowRes.ok) ? (await rowRes.json().catch(() => []))?.[0] : null;
+    const coopId = row?.centri?.cooperativa_id;
+    if (!coopId) return res.status(200).json({ ok: true, skipped: 'appuntamento non di cooperativa' });
+    const segRes = await fetch(`${supabaseUrl}/rest/v1/segreterie?cooperativa_id=eq.${encodeURIComponent(coopId)}&stato=eq.attiva&select=user_id&limit=1`, { headers: srvH }).catch(() => null);
+    const segRow = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
+    if (!segRow?.user_id) return res.status(200).json({ ok: true, skipped: 'segreteria non trovata' });
+    const uRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(segRow.user_id)}`, { headers: srvH }).catch(() => null);
+    const uRow = (uRes && uRes.ok) ? await uRes.json().catch(() => null) : null;
+    const segEmail = uRow?.email;
+    if (!segEmail) return res.status(200).json({ ok: true, skipped: 'segreteria senza email' });
+    const dataFmtS = formatDateIt(appt.data);
+    to            = segEmail;
+    subject       = `Prenotazione registrata — ${appt.pazienteNome}, ${dataFmtS}`;
+    html          = buildHtmlNotificaCentro({ evento: 'nuova_prenotazione', paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtS), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
     medicoIdAudit = appt.apptMedicoId;
     targetType    = 'appuntamento';
     targetId      = body.appt_id;

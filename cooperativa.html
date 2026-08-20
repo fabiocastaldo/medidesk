@@ -471,6 +471,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
             <div class="field"><label for="agb-tel">Telefono del paziente</label><input id="agb-tel" type="tel" maxlength="40" autocomplete="off"></div>
             <div class="field"><label for="agb-email">Email del paziente (facoltativa)</label><input id="agb-email" type="email" maxlength="160" autocomplete="off"></div>
             <div class="field"><label for="agb-servizio">Tipo di visita (facoltativo)</label><select id="agb-servizio"></select></div>
+            <div class="field"><label for="agb-area">Area (facoltativa)</label><select id="agb-area"></select></div>
           </div>
           <label class="ag-book-consenso"><input type="checkbox" id="agb-consenso"><span>Dichiaro di aver ricevuto dal paziente, telefonicamente o di persona, il consenso al trattamento dei dati personali necessari alla prenotazione.</span></label>
           <div id="ag-book-msg" class="hidden"></div>
@@ -1021,6 +1022,9 @@ function agPickSlot(centroId, ds, ora){
     opts = ['<option value="">\u2014</option>'].concat(servizi.map(s => '<option value="' + esc(s.nome) + '">' + esc(s.nome) + '</option>'));
   }
   svSel.innerHTML = opts.join('');
+  const arSel = document.getElementById('agb-area');
+  const aree = (((_agCal.data || {}).aree_tematiche) || []);
+  arSel.innerHTML = ['<option value="">\u2014</option>'].concat(aree.map(a => '<option value="' + esc(a) + '">' + esc(a) + '</option>')).join('');
   setBoxMsg('ag-book-msg', '');
   setBoxMsg('ag-slot-msg', '');
   document.getElementById('ag-book').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1059,6 +1063,7 @@ async function agConfermaPrenotazione(){
         nome, cognome, telefono: tel,
         email: email || undefined,
         tipo_visita: document.getElementById('agb-servizio').value || undefined,
+        area: document.getElementById('agb-area').value || undefined,
         consenso: true
       })
     });

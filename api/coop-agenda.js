@@ -96,8 +96,16 @@ export default async function handler(req, res) {
   ).catch(() => null);
   const tipiVisita = (tvRes && tvRes.ok) ? await tvRes.json().catch(() => []) : [];
 
+  // aree tematiche dal profilo del medico (campo Area nel modulo prenotazione)
+  const arRes = await fetch(
+    `${supabaseUrl}/rest/v1/aree_tematiche?medico_id=eq.${encodeURIComponent(medicoId)}&select=nome&order=nome`,
+    { headers: srvHeaders }
+  ).catch(() => null);
+  const aree = (arRes && arRes.ok) ? await arRes.json().catch(() => []) : [];
+
   return res.status(200).json({
     tipi_visita: (Array.isArray(tipiVisita) ? tipiVisita : []).map(t => ({ nome: t.nome, is_default: !!t.is_default })),
+    aree_tematiche: (Array.isArray(aree) ? aree : []).map(a => a.nome),
     centri: centri.map(c => ({
       id: c.id, nome: c.nome, coop_sede_id: c.coop_sede_id,
       turni: (c.turni || []).map(t => ({

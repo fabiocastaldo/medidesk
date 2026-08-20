@@ -39,6 +39,7 @@ export default async function handler(req, res) {
   const cognome  = clean(b.cognome, 80);
   const telefono = clean(b.telefono, 40);
   const tipo     = clean(b.tipo_visita, 120);
+  const area     = clean(b.area, 120);
   const email    = clean(b.email, 160);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Email non valida' });
@@ -141,6 +142,7 @@ export default async function handler(req, res) {
         telefono_paziente: telefono,
         email_paziente: email || null,
         tipo_visita: tipo || null,
+        area_tematica: area || null,
         source: 'paziente',
         cancellation_token: cancellationToken,
         consenso_base_at: consentTs,
@@ -195,6 +197,16 @@ export default async function handler(req, res) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tipo: 'notifica_prenotazione_coop', appt_id: apptId, cancellation_token: cancellationToken })
+        }).catch(() => {});
+      } catch { /* soft-fail */ }
+    }
+    // ricevuta alla segreteria (sempre attiva: e' la conferma della propria azione)
+    if (host) {
+      try {
+        await fetch(`https://${host}/api/send-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tipo: 'conferma_prenotazione_segreteria', appt_id: apptId, cancellation_token: cancellationToken })
         }).catch(() => {});
       } catch { /* soft-fail */ }
     }
