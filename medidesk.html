@@ -3770,6 +3770,8 @@ function checkView(){
   }
   if(params.has('cancel')){
     showCancelView();
+  } else if(params.has('anticipa')){
+    showAnticipaView();
   } else if(location.search.includes('booking') || location.pathname.startsWith('/m/') || location.pathname.startsWith('/c/')){
     showBookingView();
   } else if(location.pathname.startsWith('/p/')){
@@ -8670,6 +8672,134 @@ async function cancelBookingByToken(apptId){
   } catch(e){
     showToast('Errore nella cancellazione: '+e.message);
     console.error('[Delphi~Med] cancelBookingByToken:', e.message);
+  }
+}
+
+// ── PAGINA LISTA D'ATTESA (anticipo visita) ──
+function showAnticipaView(){
+  document.getElementById('view-home').style.display   ='none';
+  document.getElementById('view-app').style.display    ='none';
+  document.getElementById('view-booking').style.display='none';
+  document.getElementById('view-auth').style.display   ='none';
+  document.getElementById('view-cancel').style.display ='flex';
+  loadAnticipaPage();
+}
+async function loadAnticipaPage(){
+  const params=new URLSearchParams(location.search);
+  const token=params.get('anticipa');
+  const content=document.getElementById('cancel-content');
+  const loading=document.getElementById('cancel-loading');
+  if(!token){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Codice non valido</h2><p>Il link non è corretto.</p>';
+    return;
+  }
+  if(!isOnline()){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-wifi-off"/></svg></div><h2>Nessuna connessione</h2><p>Impossibile procedere senza connessione.</p>';
+    return;
+  }
+  // Token in variabile e via dalla barra (fuori da log/referrer), come per ?cancel=
+  window._anticipaToken = token;
+  try { history.replaceState(null, '', location.pathname); } catch(_e){}
+  try {
+    const r = await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'lookup', token })
+    });
+    const payload = await r.json().catch(()=>({}));
+    const appt = r.ok ? payload.appt : null;
+    loading.style.display='none'; content.style.display='block';
+    if(!appt){
+      content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Codice non valido</h2><p>Non è stato trovato nessun appuntamento con questo codice.</p>'; return;
+    }
+    if(appt.cancelled){
+      content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Appuntamento cancellato</h2><p>Questo appuntamento risulta cancellato: la lista di anticipo non è più attiva.</p>'; return;
+    }
+    appt.ora=(appt.ora||'').substring(0,5);
+    const d=new Date(appt.data+'T12:00:00');
+    const cardAppt='<div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin:16px 0;text-align:left;font-size:13px;color:var(--ink2);line-height:1.8">'
+      +'<strong>'+escapeHtml(appt.cognome_paziente)+' '+escapeHtml(appt.nome_paziente)+'</strong><br>'
+      +d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' alle '+escapeHtml(appt.ora)+'<br>'
+      +escapeHtml(appt.tipo_visita||'Visita')+'</div>';
+    if(payload.iscritto){
+      content.innerHTML=`
+        <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:#22c55e"><use href="#ic-check"/></svg></div>
+        <h2>Iscrizione attiva</h2>
+        ${cardAppt}
+        <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+          Riceverai un'email se si libera una data più vicina per questo appuntamento.
+        </p>
+        <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="waitlistUnsubscribe()">Annulla iscrizione</button>`;
+    } else {
+      content.innerHTML=`
+        <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--brand-mid)"><use href="#ic-calendar"/></svg></div>
+        <h2>Vorresti essere avvisato nel caso si liberi una data più vicina?</h2>
+        ${cardAppt}
+        <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+          Se un altro paziente cancella un appuntamento prima della tua data, riceverai un'email:
+          la prenotazione del nuovo orario resta libera, vale l'ordine di arrivo.
+        </p>
+        <label style="display:flex;align-items:flex-start;gap:10px;text-align:left;font-size:13px;color:var(--ink2);line-height:1.5;margin:16px 0;cursor:pointer">
+          <input type="checkbox" id="wl-consenso" style="margin-top:2px">
+          <span>Acconsento a essere ricontattato via email per la disponibilità di date anticipate relative a questo appuntamento.</span>
+        </label>
+        <button class="btn btn-primary" style="width:100%;padding:13px;margin-top:8px;font-size:15px" onclick="waitlistSubscribe()">Avvisami se si libera un posto</button>`;
+    }
+  } catch(e){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Errore</h2><p>Si è verificato un errore. Riprova più tardi.</p>';
+    console.error('[Delphi~Med] loadAnticipaPage:', e.message);
+  }
+}
+async function waitlistSubscribe(){
+  const chk=document.getElementById('wl-consenso');
+  if(!chk || !chk.checked){ showToast('Per iscriverti è necessario il consenso'); return; }
+  try {
+    const token=window._anticipaToken;
+    const r=await fetch('/api/waitlist',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'subscribe',token,consenso:true})
+    });
+    if(!r.ok){
+      const payload=await r.json().catch(()=>({}));
+      if(payload.error==='gia_cancellato') throw new Error('appuntamento già cancellato');
+      if(payload.error==='appuntamento_passato') throw new Error('appuntamento già passato');
+      if(payload.error==='email_mancante') throw new Error('nessuna email associata alla prenotazione');
+      throw new Error('iscrizione non riuscita');
+    }
+    document.getElementById('cancel-content').innerHTML=`
+      <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:#22c55e"><use href="#ic-check"/></svg></div>
+      <h2>Iscrizione confermata</h2>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+        Riceverai un'email se si libera una data più vicina.<br>
+        Puoi annullare l'iscrizione in qualsiasi momento da questo stesso link.
+      </p>
+      <a href="https://delphi-med.com" class="btn btn-secondary" style="display:inline-block;margin-top:16px;text-decoration:none;padding:12px 32px">Torna alla home</a>`;
+  } catch(e){
+    showToast('Errore: '+e.message);
+    console.error('[Delphi~Med] waitlistSubscribe:', e.message);
+  }
+}
+async function waitlistUnsubscribe(){
+  try {
+    const token=window._anticipaToken;
+    const r=await fetch('/api/waitlist',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'unsubscribe',token})
+    });
+    if(!r.ok) throw new Error('operazione non riuscita');
+    document.getElementById('cancel-content').innerHTML=`
+      <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:#22c55e"><use href="#ic-check"/></svg></div>
+      <h2>Iscrizione annullata</h2>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">Non riceverai più avvisi per questo appuntamento.</p>
+      <a href="https://delphi-med.com" class="btn btn-secondary" style="display:inline-block;margin-top:16px;text-decoration:none;padding:12px 32px">Torna alla home</a>`;
+  } catch(e){
+    showToast('Errore: '+e.message);
+    console.error('[Delphi~Med] waitlistUnsubscribe:', e.message);
   }
 }
 
