@@ -122,6 +122,17 @@ export default async function handler(req, res) {
         // Corsa persa tra il check e l'UPDATE: qualcuno ha già cancellato
         return res.status(409).json({ error: 'gia_cancellato' });
       }
+      // notifica personale al medico (gate server-side su medici.mail_medico_cancellazione)
+      try {
+        const hostN = req.headers['x-forwarded-host'] || req.headers.host;
+        if (hostN) {
+          await fetch(`https://${hostN}/api/send-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: 'notifica_medico_cancellazione', appt_id: appt0.id, cancellation_token: token })
+          }).catch(() => {});
+        }
+      } catch { /* soft-fail */ }
       return res.status(200).json({ ok: true });
     }
 

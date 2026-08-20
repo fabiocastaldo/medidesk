@@ -212,7 +212,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
   let medico = {};
   try {
     const r = await fetch(
-      `${base}/medici?id=eq.${encodeURIComponent(appt.medico_id)}&select=id,titolo,nome,cognome,email,slug,notifica_nuova_prenotazione`,
+      `${base}/medici?id=eq.${encodeURIComponent(appt.medico_id)}&select=id,titolo,nome,cognome,email,slug,notifica_nuova_prenotazione,mail_medico_prenotazione,mail_medico_appuntamento,mail_medico_cancellazione`,
       { headers }
     );
     if (r.ok) { const rows = await r.json(); medico = rows?.[0] || {}; }
@@ -243,7 +243,10 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     centroNome:        centro.nome || '',
     centroIndirizzo:   [centro.via, [centro.cap, centro.citta].filter(Boolean).join(' '), centro.provincia].filter(Boolean).join(', '),
     centroEmail:       centro.email_segreteria || null,
-    notificaNuovaPrenotazione: medico.notifica_nuova_prenotazione !== false
+    notificaNuovaPrenotazione: medico.notifica_nuova_prenotazione !== false,
+    mailMedicoPrenotazione: medico.mail_medico_prenotazione !== false,
+    mailMedicoAppuntamento: medico.mail_medico_appuntamento === true,
+    mailMedicoCancellazione: medico.mail_medico_cancellazione !== false
   };
 }
 
@@ -316,10 +319,12 @@ const VALID_TIPI = new Set([
   'conferma_appt_anon', 'conferma_appt_medico', 'cancellazione_paziente',
   'notifica_centro_evento', 'cancellazione_centro_anon', 'chiusura_studio_centro',
   'account_eliminazione', 'notifica_prenotazione_coop',
-  'conferma_prenotazione_segreteria'
+  'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione',
+  'notifica_medico_cancellazione', 'notifica_medico_appuntamento'
 ]);
 
 const PATH1_TIPI = new Set([
+  'notifica_medico_appuntamento',
   'conferma_appt_medico', 'cancellazione_paziente', 'notifica_centro_evento',
   'chiusura_studio_centro', 'account_eliminazione'
 ]);
@@ -379,7 +384,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, skipped: 'notifiche disabilitate per il centro' });
     }
     authCtx = { centroNome: ct.centroNome, centroEmail: ct.centroEmail, authMode: 'cancellation_token' };
-  } else if (tipo === 'notifica_prenotazione_coop' || tipo === 'conferma_prenotazione_segreteria') {
+  } else if (tipo === 'notifica_prenotazione_coop' || tipo === 'conferma_prenotazione_segreteria' || tipo === 'notifica_medico_prenotazione' || tipo === 'notifica_medico_cancellazione') {
     const ct = await verifyCancellationToken(body.appt_id, body.cancellation_token, supabaseUrl, serviceKey);
     if (!ct.ok) return res.status(ct.status).json({ error: ct.error });
     authCtx = { authMode: 'cancellation_token' };
@@ -494,6 +499,37 @@ export default async function handler(req, res) {
     to            = segEmail;
     subject       = `Prenotazione registrata — ${appt.pazienteNome}, ${dataFmtS}`;
     html          = buildHtmlRicevutaSegreteria({ paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtS), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
+    medicoIdAudit = appt.apptMedicoId;
+    targetType    = 'appuntamento';
+    targetId      = body.appt_id;
+
+  } else if (tipo === 'notifica_medico_prenotazione' || tipo === 'notifica_medico_cancellazione') {
+    const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
+    if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    const flag = tipo === 'notifica_medico_prenotazione' ? appt.mailMedicoPrenotazione : appt.mailMedicoCancellazione;
+    if (!flag) return res.status(200).json({ ok: true, skipped: 'notifica disabilitata dal medico' });
+    if (!appt.medicoEmail) return res.status(200).json({ ok: true, skipped: 'medico senza email' });
+    const dataFmtM = formatDateIt(appt.data);
+    const eventoM = tipo === 'notifica_medico_prenotazione' ? 'prenotazione' : 'cancellazione';
+    to            = appt.medicoEmail;
+    subject       = (eventoM === 'prenotazione' ? 'Nuova prenotazione — ' : 'Prenotazione cancellata — ') + `${appt.pazienteNome}, ${dataFmtM}`;
+    html          = buildHtmlNotificaMedicoEvento({ evento: eventoM, medico_nome: esc(appt.medicoNome), paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtM), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_nome: esc(appt.centroNome) });
+    medicoIdAudit = appt.apptMedicoId;
+    targetType    = 'appuntamento';
+    targetId      = body.appt_id;
+
+  } else if (tipo === 'notifica_medico_appuntamento') {
+    const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
+    if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    if (String(appt.apptMedicoId) !== String(authCtx.medicoId)) {
+      return res.status(404).json({ error: 'not_found' });
+    }
+    if (!appt.mailMedicoAppuntamento) return res.status(200).json({ ok: true, skipped: 'notifica disabilitata dal medico' });
+    if (!appt.medicoEmail) return res.status(200).json({ ok: true, skipped: 'medico senza email' });
+    const dataFmtA = formatDateIt(appt.data);
+    to            = appt.medicoEmail;
+    subject       = `Appuntamento registrato — ${appt.pazienteNome}, ${dataFmtA}`;
+    html          = buildHtmlNotificaMedicoEvento({ evento: 'appuntamento', medico_nome: esc(appt.medicoNome), paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtA), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_nome: esc(appt.centroNome) });
     medicoIdAudit = appt.apptMedicoId;
     targetType    = 'appuntamento';
     targetId      = body.appt_id;
@@ -698,6 +734,27 @@ function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_vi
     `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile Segreteria,<br>${intro}</p>` +
     detailCard(rows) +
     `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">Grazie per la collaborazione.</p>`;
+  return emailShell(body);
+}
+
+function buildHtmlNotificaMedicoEvento({ evento, medico_nome, paziente_nome, data_fmt, ora, tipo_visita, centro_nome }) {
+  const TITOLI = { prenotazione: 'Nuova prenotazione online', cancellazione: 'Prenotazione cancellata dal paziente', appuntamento: 'Appuntamento registrato' };
+  const INTRI = {
+    prenotazione: 'un paziente ha prenotato una visita dalla Sua pagina pubblica. Di seguito i dettagli.',
+    cancellazione: 'il paziente ha cancellato la propria prenotazione: lo slot &egrave; di nuovo disponibile in agenda.',
+    appuntamento: 'ecco il riepilogo dell&apos;appuntamento che ha appena inserito, per i Suoi archivi.'
+  };
+  const rows =
+    detailRow('Paziente', paziente_nome) +
+    (centro_nome ? detailRow('Centro', centro_nome) : '') +
+    detailRow('Data', data_fmt) +
+    detailRow('Ora', ora, { last: !tipo_visita }) +
+    (tipo_visita ? detailRow('Tipo visita', tipo_visita, { last: true }) : '');
+  const body =
+    emailTitle(TITOLI[evento] || 'Aggiornamento agenda') +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${medico_nome || 'Dottore'},<br>${INTRI[evento] || ''}</p>` +
+    detailCard(rows) +
+    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">Puoi gestire queste notifiche dalle Impostazioni del tuo profilo.</p>`;
   return emailShell(body);
 }
 

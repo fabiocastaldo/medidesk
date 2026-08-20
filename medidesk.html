@@ -1735,6 +1735,33 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
 
       <div style="margin-bottom:24px">
+        <div class="section-title">Notifiche email a te</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Nuova prenotazione di un paziente</div>
+              <div class="notif-toggle-desc">Ricevi un'email quando un paziente prenota dalla tua pagina pubblica</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mail-medico-prenotazione"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Appuntamento inserito da te</div>
+              <div class="notif-toggle-desc">Ricevi un riepilogo quando inserisci tu stesso un appuntamento</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mail-medico-appuntamento"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Cancellazione del paziente</div>
+              <div class="notif-toggle-desc">Ricevi un'email quando un paziente cancella la propria prenotazione</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mail-medico-cancellazione"><span class="toggle-slider"></span></label>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
         <div class="section-title">Visualizzazione agenda</div>
         <div class="card"><div class="card-body">
           <div class="notif-toggle-row">
@@ -3158,6 +3185,9 @@ async function loadMedicoFromDB(user){
       S.settings.notifAppuntamentoManuale = data.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = data.notifica_cancellazione_medico !== false;
       S.settings.notifChiusuraCentro      = data.notifica_chiusura_centro      !== false;
+      S.settings.mailMedicoPrenotazione   = data.mail_medico_prenotazione     !== false;
+      S.settings.mailMedicoAppuntamento   = data.mail_medico_appuntamento     === true;
+      S.settings.mailMedicoCancellazione  = data.mail_medico_cancellazione    !== false;
       S.settings.mostraPrenotazioniAttesa = data.mostra_prenotazioni_attesa !== false;
       S.settings.nascondiCancellati       = data.nascondi_cancellati           === true;
       S.settings.sogliaConservazione     = data.soglia_conservazione_anni    || 10;
@@ -5636,6 +5666,16 @@ async function saveAppuntamento(){
           appt_id: newAppt.id
         })
       }).catch(e=>console.error('[Delphi~Med] send-email conferma manuale:', e.message));
+    }
+    if(isOnline() && S.medicoId && typeof newAppt.id === 'string'){
+      try {
+        const _jwt2 = await getAuthJwt();
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt2 },
+          body: JSON.stringify({ tipo: 'notifica_medico_appuntamento', appt_id: newAppt.id })
+        }).catch(()=>{});
+      } catch(e){ /* soft-fail */ }
     }
   } catch(err){
     console.error('saveAppuntamento error:', err);
@@ -8121,6 +8161,9 @@ async function bkInit(){
       S.settings.notifAppuntamentoManuale = m.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = m.notifica_cancellazione_medico !== false;
       S.settings.notifChiusuraCentro      = m.notifica_chiusura_centro      !== false;
+      S.settings.mailMedicoPrenotazione   = m.mail_medico_prenotazione     !== false;
+      S.settings.mailMedicoAppuntamento   = m.mail_medico_appuntamento     === true;
+      S.settings.mailMedicoCancellazione  = m.mail_medico_cancellazione    !== false;
       S.settings.mostraPrenotazioniAttesa = m.mostra_prenotazioni_attesa !== false;
       S.settings.nascondiCancellati       = m.nascondi_cancellati           === true;
       if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
@@ -9083,6 +9126,9 @@ function renderImpostazioni(){
   chk('imp-notif-cancellazione-medico',    S.settings.notifCancellazioneMedico    !== false);
   chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
   chk('imp-notif-chiusura-centro',         S.settings.notifChiusuraCentro         !== false);
+  chk('imp-mail-medico-prenotazione',      S.settings.mailMedicoPrenotazione      !== false);
+  chk('imp-mail-medico-appuntamento',      S.settings.mailMedicoAppuntamento      === true);
+  chk('imp-mail-medico-cancellazione',     S.settings.mailMedicoCancellazione     !== false);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
   chk('imp-mostra-email',    S.settings.mostraEmailPazienti    !== false);
@@ -9105,6 +9151,9 @@ async function saveImpostazione(toggleId){
     'imp-notif-cancellazione-medico': { key: 'notifCancellazioneMedico', col: 'notifica_cancellazione_medico' },
     'imp-notif-appuntamento-manuale': { key: 'notifAppuntamentoManuale', col: 'notifica_appuntamento_manuale' },
     'imp-notif-chiusura-centro':      { key: 'notifChiusuraCentro',      col: 'notifica_chiusura_centro' },
+    'imp-mail-medico-prenotazione':   { key: 'mailMedicoPrenotazione',   col: 'mail_medico_prenotazione' },
+    'imp-mail-medico-appuntamento':   { key: 'mailMedicoAppuntamento',   col: 'mail_medico_appuntamento' },
+    'imp-mail-medico-cancellazione':  { key: 'mailMedicoCancellazione',  col: 'mail_medico_cancellazione' },
     'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' },
     'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' },
     'imp-mostra-email':    { key: 'mostraEmailPazienti',    col: 'mostra_email_pazienti' },
