@@ -229,6 +229,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-gestione{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .centro-gestione-lbl{font-size:13px;font-weight:600;color:var(--ink2)}
 .centro-gestione-sel{font-family:'DM Sans',sans-serif;font-size:13px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--r-sm);background:#fff;color:var(--ink);cursor:pointer}
+.badge-coop{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#fff;background:var(--brand-mid);border-radius:6px;padding:2px 7px;vertical-align:2px}
+.coop-join{margin-top:22px;padding:16px 18px;border:1px dashed var(--border);border-radius:var(--r-sm);background:var(--surface)}
+.coop-join-title{font-size:14px;font-weight:700;color:var(--brand-mid)}
+.coop-join-sub{font-size:12.5px;color:var(--ink2);margin:4px 0 10px;line-height:1.5}
+.coop-join-row{display:flex;gap:8px;flex-wrap:wrap}
+.coop-join-row input{flex:1;min-width:160px;max-width:220px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:14px;letter-spacing:1px;text-transform:uppercase}
+.coop-join-msg{font-size:12.5px;color:var(--ink2);margin-top:8px;min-height:16px}
+.gdd{position:relative}
+.gdd summary::-webkit-details-marker{display:none}
+.gdd-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:40;background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);padding:10px 14px;display:flex;flex-direction:column;gap:7px;min-width:170px}
+.gdd-pop label{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer;color:var(--ink)}
 .centro-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
 .centro-info{flex:1}
 .centro-nome{font-weight:600}
@@ -710,13 +721,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-result-spec{font-size:12px;color:#666;margin-top:2px}
 .home-search-msg{color:rgba(255,255,255,.75);font-size:13px;margin-top:10px;min-height:20px}
 .home-body{flex:1;background:var(--paper)}
-.home-sections{display:flex;gap:0;flex-wrap:wrap;max-width:860px;margin:0 auto;padding:30px 24px}
+.home-sections{display:flex;gap:0;flex-wrap:wrap;max-width:1180px;margin:0 auto;padding:30px 24px}
 .home-section{flex:1;min-width:260px;padding:0 32px}
 .home-section:first-child{border-right:1px solid #e2e8e8}
 .home-section h3{font-size:19px;font-weight:700;color:var(--brand-mid);margin:0 0 14px;letter-spacing:-.2px}
 .home-feature{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:14px;color:#444;line-height:1.55}
 .home-feature::before{content:'✓';color:var(--brand-mid);font-weight:700;flex-shrink:0;margin-top:1px}
-.home-cta-btn{display:inline-block;background:var(--brand-mid);color:#fff;border:1.5px solid var(--brand-mid);border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;font-family:'DM Sans',Arial,sans-serif}
+.home-cta-btn{display:inline-block;background:var(--brand-mid);color:#fff;border:1.5px solid var(--brand-mid);border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,color .15s;font-family:'DM Sans',Arial,sans-serif;text-decoration:none}
 .home-cta-btn:hover{background:color-mix(in srgb,var(--brand-mid) 85%,#000);border-color:color-mix(in srgb,var(--brand-mid) 85%,#000)}
 .home-cta-btn-outline{background:transparent;color:var(--brand-mid)}
 .home-cta-btn-outline:hover{background:color-mix(in srgb,var(--brand-mid) 8%,var(--surface));border-color:color-mix(in srgb,var(--brand-mid) 85%,#000);color:color-mix(in srgb,var(--brand-mid) 85%,#000)}
@@ -901,6 +912,16 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="home-feature">Prenotazioni online accessibili ovunque</div>
         <div class="home-cta-row">
           <button class="home-cta-btn" onclick="showLoginView('login')">Registrati / Accedi</button>
+        </div>
+      </div>
+      <div class="home-section">
+        <h3>Delphi~Med per le organizzazioni</h3>
+        <div class="home-feature">Per cooperative, poliambulatori e centri medici</div>
+        <div class="home-feature">Assegni i turni, le agende si aggiornano da sole</div>
+        <div class="home-feature">L'occupazione di ogni sede sempre sotto controllo</div>
+        <div class="home-feature">Attivazione guidata, senza migrazione dati</div>
+        <div class="home-cta-row">
+          <a class="home-cta-btn" href="/cooperative">Accedi alla plancia</a>
         </div>
       </div>
     </div>
@@ -1714,6 +1735,33 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
 
       <div style="margin-bottom:24px">
+        <div class="section-title">Notifiche email a te</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Nuova prenotazione di un paziente</div>
+              <div class="notif-toggle-desc">Ricevi un'email quando un paziente prenota dalla tua pagina pubblica</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mail-medico-prenotazione"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Appuntamento inserito da te</div>
+              <div class="notif-toggle-desc">Ricevi un riepilogo quando inserisci tu stesso un appuntamento</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mail-medico-appuntamento"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Cancellazione del paziente</div>
+              <div class="notif-toggle-desc">Ricevi un'email quando un paziente cancella la propria prenotazione</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-mail-medico-cancellazione"><span class="toggle-slider"></span></label>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
         <div class="section-title">Visualizzazione agenda</div>
         <div class="card"><div class="card-body">
           <div class="notif-toggle-row">
@@ -2270,11 +2318,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-body">
       <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Centro: <strong id="turno-centro-label"></strong></p>
       <div class="form-group">
-        <label class="form-label">Giorno della settimana</label>
-        <select class="form-select" id="turno-giorno">
-          <option value="1">Lunedì</option><option value="2">Martedì</option><option value="3">Mercoledì</option>
-          <option value="4">Giovedì</option><option value="5">Venerdì</option><option value="6">Sabato</option><option value="0">Domenica</option>
-        </select>
+        <label class="form-label">Giorni della settimana <span style="font-weight:400;color:var(--ink3)">(uno o più)</span></label>
+        <details class="gdd" id="turno-giorni-dd">
+          <summary class="form-select" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;list-style:none"><span id="turno-giorni-label">Seleziona giorni</span><span style="color:var(--ink3)">▾</span></summary>
+          <div class="gdd-pop">
+            <label><input type="checkbox" class="turno-giorno-chk" value="1" onchange="updateGiorniLabel('turno')">Lunedì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="2" onchange="updateGiorniLabel('turno')">Martedì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="3" onchange="updateGiorniLabel('turno')">Mercoledì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="4" onchange="updateGiorniLabel('turno')">Giovedì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="5" onchange="updateGiorniLabel('turno')">Venerdì</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="6" onchange="updateGiorniLabel('turno')">Sabato</label>
+            <label><input type="checkbox" class="turno-giorno-chk" value="0" onchange="updateGiorniLabel('turno')">Domenica</label>
+          </div>
+        </details>
       </div>
       <div class="form-group">
         <label class="form-label">Frequenza</label>
@@ -2931,6 +2987,11 @@ async function saveNewPassword(){
   }
 }
 
+function _isCoopSession(session){
+  const u = session && session.user;
+  return !!(u && u.app_metadata && u.app_metadata.ruolo === 'cooperativa');
+}
+
 function checkSession(){
   console.log('[Delphi~Med] checkSession() avviata, isOnline:', isOnline());
   if(!isOnline()){
@@ -2946,9 +3007,19 @@ function checkSession(){
     }
     if(event === 'INITIAL_SESSION'){
       if(_inPasswordRecovery){ return; }
+      if(session && _isCoopSession(session)){
+        console.log('[Delphi~Med] Sessione cooperativa: redirect alla plancia');
+        window.location.replace('/cooperative');
+        return;
+      }
       if(session){ showAppView(); } else { showAuthView(); }
     } else if(event === 'SIGNED_IN'){
       if(_inPasswordRecovery){ return; }
+      if(_isCoopSession(session)){
+        console.log('[Delphi~Med] Sessione cooperativa: redirect alla plancia');
+        window.location.replace('/cooperative');
+        return;
+      }
       showAppView();
     } else if(event === 'SIGNED_OUT'){
       _appInitialized = false;
@@ -3047,6 +3118,10 @@ async function showAppView(){
 
 async function ensureMedicoRecord(user){
   if(!isOnline() || !user) return;
+  if(user.app_metadata && user.app_metadata.ruolo === 'cooperativa'){
+    console.log('[Delphi~Med] Account cooperativa: nessun record medico da creare');
+    return;
+  }
   try {
     const { data, error } = await supabaseClient
       .from('medici').select('id').eq('user_id', user.id).maybeSingle();
@@ -3110,6 +3185,9 @@ async function loadMedicoFromDB(user){
       S.settings.notifAppuntamentoManuale = data.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = data.notifica_cancellazione_medico !== false;
       S.settings.notifChiusuraCentro      = data.notifica_chiusura_centro      !== false;
+      S.settings.mailMedicoPrenotazione   = data.mail_medico_prenotazione     !== false;
+      S.settings.mailMedicoAppuntamento   = data.mail_medico_appuntamento     === true;
+      S.settings.mailMedicoCancellazione  = data.mail_medico_cancellazione    !== false;
       S.settings.mostraPrenotazioniAttesa = data.mostra_prenotazioni_attesa !== false;
       S.settings.nascondiCancellati       = data.nascondi_cancellati           === true;
       S.settings.sogliaConservazione     = data.soglia_conservazione_anni    || 10;
@@ -3152,6 +3230,8 @@ async function loadCentriFromDB(user){
       attivo:    c.attivo !== false,
       booking_token: c.booking_token || null,
       gestione: c.gestione || 'delphi',
+      cooperativa_id: c.cooperativa_id || null,
+      coop_booking_pubblico: c.coop_booking_pubblico === true,
       turni:     (c.turni || []).map(t => ({
         id:     t.id,
         giorno: t.giorno,
@@ -3690,6 +3770,8 @@ function checkView(){
   }
   if(params.has('cancel')){
     showCancelView();
+  } else if(params.has('anticipa')){
+    showAnticipaView();
   } else if(location.search.includes('booking') || location.pathname.startsWith('/m/') || location.pathname.startsWith('/c/')){
     showBookingView();
   } else if(location.pathname.startsWith('/p/')){
@@ -4365,9 +4447,49 @@ function renderCentri(){
     html += inattivi.map(c=>renderCentroCard(c, false)).join('');
   }
   if(!attivi.length && !inattivi.length){
-    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun centro</div>'; return;
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun centro</div>' + coopJoinBlockHtml(); return;
   }
-  el.innerHTML = html;
+  el.innerHTML = html + coopJoinBlockHtml();
+}
+
+function coopJoinBlockHtml(){
+  return `
+  <div class="coop-join">
+    <div class="coop-join-title">Collega a un'organizzazione</div>
+    <div class="coop-join-sub">Hai ricevuto un codice di collegamento? Inseriscilo qui: l'organizzazione comparirà tra i tuoi centri e gestirà l'agenda delle sue sedi.</div>
+    <div class="coop-join-row">
+      <input id="coop-join-code" type="text" placeholder="CP-XXXX-XXXX" maxlength="14" autocomplete="off">
+      <button class="btn btn-sm btn-primary" onclick="joinCooperativa()">Collega</button>
+    </div>
+    <div id="coop-join-msg" class="coop-join-msg"></div>
+  </div>`;
+}
+
+async function joinCooperativa(){
+  const inp = document.getElementById('coop-join-code'); if(!inp) return;
+  const codice = (inp.value || '').trim();
+  const msg = document.getElementById('coop-join-msg');
+  if(!codice){ if(msg) msg.textContent = 'Inserisci il codice di collegamento.'; return; }
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(!session){ if(msg) msg.textContent = 'Sessione non valida. Accedi di nuovo.'; return; }
+    if(msg) msg.textContent = 'Collegamento in corso…';
+    const res = await fetch('/api/coop-join', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codice })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){ if(msg) msg.textContent = body.error || 'Collegamento non riuscito.'; return; }
+    console.log('[Delphi~Med] Collegato all\'organizzazione:', body.cooperativa && body.cooperativa.nome);
+    await loadCentriFromDB(session.user);
+    renderCentri();
+    if(typeof populateCentroSelect === 'function') populateCentroSelect();
+    showToast('Collegato a ' + ((body.cooperativa && body.cooperativa.nome) || 'cooperativa') + ' ✓');
+  } catch(e){
+    console.error('[Delphi~Med] joinCooperativa:', e.message);
+    if(msg) msg.textContent = 'Collegamento non riuscito. Riprova.';
+  }
 }
 
 function renderCentroCard(c, isActive){
@@ -4385,14 +4507,14 @@ function renderCentroCard(c, isActive){
         const fineStr = t.dataFineValidita ? ` · fino al ${formatDate(t.dataFineValidita)}` : '';
         return `<div class="turno-row${scadenzaVicina?' turno-scadenza-vicina':''}" style="${scaduto?'opacity:.5':''}">
           <span>${GIORNI[t.giorno]} ${t.inizio}–${t.fine} · slot ${t.slot} min${freqStr}${inizioStr}${fineStr}${scaduto?' <span class="badge-inactive">Scaduto</span>':''}${scadenzaVicina?' <span class="badge-scadenza-vicina">Scadenza vicina</span>':''}</span>
-          ${isActive && !scaduto?`<button class="centro-act" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})"><svg class="ic"><use href="#ic-calendar"/></svg></button>`:''}
-          ${isActive?`<button class="centro-act centro-act-danger" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
+          ${isActive && !scaduto && c.gestione!=='cooperativa'?`<button class="centro-act" title="Termina dal..." onclick="confirmTerminaTurno('${c.id}',${i})"><svg class="ic"><use href="#ic-calendar"/></svg></button>`:''}
+          ${isActive && c.gestione!=='cooperativa'?`<button class="centro-act centro-act-danger" onclick="confirmDeleteTurno('${c.id}',${i})">✕</button>`:''}
         </div>`;
       }).join('')}
-    </div>` : isActive?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>':'';
+    </div>` : isActive?(c.gestione==='cooperativa'?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">I turni di questa sede verranno assegnati dall\'organizzazione.</div>':'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>'):'';
 
   const giornate = (c.giornateSingole||[]).filter(g=>g.data>=todayStr).sort((a,b)=>a.data.localeCompare(b.data));
-  const giornateHtml = (giornate.length||isActive) ? `
+  const giornateHtml = (giornate.length||(isActive && c.gestione!=='cooperativa')) ? `
     <div class="turni-list" style="margin-top:8px">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;margin-bottom:4px">Giornate singole</div>
       ${giornate.map((g)=>`
@@ -4400,7 +4522,7 @@ function renderCentroCard(c, isActive){
           <span><svg class="ic" style="vertical-align:-.15em;margin-right:4px"><use href="#ic-calendar"/></svg>${formatDate(g.data)} ${g.inizio}–${g.fine} · slot ${g.slot} min</span>
           ${isActive?`<button class="centro-act centro-act-danger" onclick="deleteGiornataSingola('${c.id}','${g.data}','${g.inizio}')">✕</button>`:''}
         </div>`).join('')}
-      ${isActive?`<button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button>`:''}
+      ${isActive && c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button>`:''}
     </div>` : '';
 
   return `
@@ -4408,26 +4530,30 @@ function renderCentroCard(c, isActive){
       <div class="centro-header">
         <div class="centro-dot" style="background:${c.colore}"></div>
         <div class="centro-info">
-          <div class="centro-nome">${c.nome} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
+          <div class="centro-nome">${c.nome} ${c.gestione==='cooperativa'?'<span class="badge-coop">Cooperativa</span>':''} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
           <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
         </div>
-        ${isActive?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
+        ${isActive && c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
         ${isActive && c.gestione==='centro'?`<button class="btn btn-sm btn-secondary" onclick="importaGiornata('${c.id}')">Importa</button>`:''}
         <div class="centro-actions">
-          <button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro"><svg class="ic"><use href="#ic-edit"/></svg></button>
+          ${c.gestione!=='cooperativa'?`<button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro"><svg class="ic"><use href="#ic-edit"/></svg></button>`:''}
           <button class="centro-act" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
           <button class="centro-act centro-act-danger" onclick="deleteCentro('${c.id}')" title="Elimina centro">✕</button>
         </div>
       </div>
       ${isActive ? `
+      ${c.gestione==='cooperativa' ? `
+      <div class="centro-gestione">
+        <span class="centro-gestione-lbl">Agenda gestita dall'organizzazione</span>
+      </div>` : `
       <div class="centro-gestione">
         <span class="centro-gestione-lbl">Prenotazione online</span>
         <select class="centro-gestione-sel" onchange="setCentroGestione('${c.id}', this.value)">
           <option value="delphi" ${c.gestione!=='centro'?'selected':''}>Attiva su Delphi~Med</option>
           <option value="centro" ${c.gestione==='centro'?'selected':''}>Gestita dal centro (offline)</option>
         </select>
-      </div>
-      ${c.gestione!=='centro' ? `
+      </div>`}
+      ${(c.gestione!=='centro' && c.gestione!=='cooperativa') ? `
       <div class="centro-booking">
         <div class="centro-booking-hdr ${_linkOpen.has(String(c.id))?'open':''}" onclick="toggleCentroLink('${c.id}')">
           <svg class="ic"><use href="#ic-link"/></svg>
@@ -4809,6 +4935,9 @@ function openAddTurno(centroId){
   const c = S.centri.find(x=>String(x.id)===String(centroId));
   document.getElementById('turno-centro-label').textContent = c?c.nome:'';
   document.getElementById('turno-frequenza').value = '1';
+  document.querySelectorAll('.turno-giorno-chk').forEach(ch => { ch.checked = false; });
+  updateGiorniLabel('turno');
+  const dd = document.getElementById('turno-giorni-dd'); if(dd) dd.removeAttribute('open');
   document.getElementById('turno-inizio-validita').value = todayLocalISO();
   document.getElementById('turno-fine-validita').value = '';
   document.getElementById('turno-fine-validita').min = todayLocalISO();
@@ -4819,40 +4948,79 @@ function onTurnoFrequenzaChange(){
   // campo data inizio sempre visibile (obbligatorio per tutte le frequenze)
 }
 
+const GIORNI_FULL = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+function updateGiorniLabel(prefix){
+  const sel = Array.from(document.querySelectorAll('.' + prefix + '-giorno-chk:checked')).map(ch => GIORNI[parseInt(ch.value)]);
+  const lbl = document.getElementById(prefix + '-giorni-label');
+  if(lbl) lbl.textContent = sel.length ? sel.join(', ') : 'Seleziona giorni';
+}
+
+function turnoSovrapposto(giorno, inizio, fine, dataInizio, dataFine){
+  // conflitto se su QUALUNQUE centro esiste un turno stesso giorno, fascia oraria
+  // sovrapposta e periodi di validità che si intersecano (null = aperto)
+  for(const c of (S.centri||[])){
+    for(const t of (c.turni||[])){
+      if(Number(t.giorno) !== Number(giorno)) continue;
+      if(!(inizio < t.fine && fine > t.inizio)) continue;
+      const tIni = t.dataInizioValidita || '0000-01-01';
+      const tFin = t.dataFineValidita   || '9999-12-31';
+      const nIni = dataInizio || '0000-01-01';
+      const nFin = dataFine   || '9999-12-31';
+      if(nIni <= tFin && nFin >= tIni){
+        return { centro: c.nome, inizio: t.inizio, fine: t.fine };
+      }
+    }
+  }
+  return null;
+}
+
 async function saveTurno(){
   const c = S.centri.find(x=>String(x.id)===String(_turnoTargetId)); if(!c) return;
   c.turni = c.turni||[];
-  const giorno = parseInt(document.getElementById('turno-giorno').value);
+  const giorni = Array.from(document.querySelectorAll('.turno-giorno-chk:checked')).map(ch => parseInt(ch.value));
   const inizio = document.getElementById('turno-inizio').value;
   const fine   = document.getElementById('turno-fine').value;
   const slot   = parseInt(document.getElementById('turno-slot').value);
   const frequenza = parseInt(document.getElementById('turno-frequenza').value)||1;
   const dataInizioValidita = document.getElementById('turno-inizio-validita').value||null;
   const dataFineValidita   = document.getElementById('turno-fine-validita').value||null;
+  if(!giorni.length){ showToast('Seleziona almeno un giorno'); return; }
   if(!dataInizioValidita){ showToast('Seleziona la data di inizio validità'); return; }
-  const turnoData = { giorno, inizio, fine, slot, frequenza, dataInizioValidita, dataFineValidita };
-  if(!isOnline()){
-    c.turni.push(turnoData);
-    save(); closeModal('modal-turno'); renderCentri(); renderAgenda();
-    showToast('Turno aggiunto ✓');
-    checkTurnoFestivita(c.id, giorno);
-    return;
+  const aggiunti = [], conflitti = [];
+  for(const giorno of giorni){
+    const conf = turnoSovrapposto(giorno, inizio, fine, dataInizioValidita, dataFineValidita);
+    if(conf){ conflitti.push(`${GIORNI[giorno]} (${conf.inizio}–${conf.fine} presso ${conf.centro})`); continue; }
+    const turnoData = { giorno, inizio, fine, slot, frequenza, dataInizioValidita, dataFineValidita };
+    if(!isOnline()){
+      c.turni.push(turnoData); aggiunti.push(giorno);
+      continue;
+    }
+    try {
+      const { data: newTurno, error } = await supabaseClient.from('turni').insert({
+        centro_id: c.id, giorno, inizio, fine, durata_slot: slot,
+        frequenza_settimane: frequenza,
+        data_inizio_validita: dataInizioValidita,
+        data_fine_validita: dataFineValidita
+      }).select('id').single();
+      if(error) throw error;
+      c.turni.push({ id: newTurno.id, ...turnoData });
+      aggiunti.push(giorno);
+    } catch(e){
+      console.error('[Delphi~Med] saveTurno:', e.message);
+      showToast('Errore: ' + e.message);
+      break;
+    }
   }
-  try {
-    const { data: newTurno, error } = await supabaseClient.from('turni').insert({
-      centro_id: c.id, giorno, inizio, fine, durata_slot: slot,
-      frequenza_settimane: frequenza,
-      data_inizio_validita: dataInizioValidita,
-      data_fine_validita: dataFineValidita
-    }).select('id').single();
-    if(error) throw error;
-    c.turni.push({ id: newTurno.id, ...turnoData });
-    save(); closeModal('modal-turno'); renderCentri(); renderAgenda();
-    showToast('Turno aggiunto ✓');
-    checkTurnoFestivita(c.id, giorno);
-  } catch(e){
-    console.error('[Delphi~Med] saveTurno:', e.message);
-    showToast('Errore: ' + e.message);
+  if(aggiunti.length){
+    save(); renderCentri(); renderAgenda();
+    aggiunti.forEach(g => checkTurnoFestivita(c.id, g));
+  }
+  if(aggiunti.length && !conflitti.length){
+    const _dd = document.getElementById('turno-giorni-dd'); if(_dd) _dd.removeAttribute('open');
+    closeModal('modal-turno');
+    showToast(aggiunti.length === 1 ? 'Turno aggiunto ✓' : `${aggiunti.length} turni aggiunti ✓`);
+  } else if(conflitti.length){
+    showToast((aggiunti.length ? `${aggiunti.length} aggiunti; ` : '') + 'sovrapposizione: ' + conflitti.join(', '));
   }
 }
 function confirmDeleteTurno(centroId, idx){
@@ -5500,6 +5668,16 @@ async function saveAppuntamento(){
           appt_id: newAppt.id
         })
       }).catch(e=>console.error('[Delphi~Med] send-email conferma manuale:', e.message));
+    }
+    if(isOnline() && S.medicoId && typeof newAppt.id === 'string'){
+      try {
+        const _jwt2 = await getAuthJwt();
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt2 },
+          body: JSON.stringify({ tipo: 'notifica_medico_appuntamento', appt_id: newAppt.id })
+        }).catch(()=>{});
+      } catch(e){ /* soft-fail */ }
     }
   } catch(err){
     console.error('saveAppuntamento error:', err);
@@ -7985,6 +8163,9 @@ async function bkInit(){
       S.settings.notifAppuntamentoManuale = m.notifica_appuntamento_manuale === true;
       S.settings.notifCancellazioneMedico = m.notifica_cancellazione_medico !== false;
       S.settings.notifChiusuraCentro      = m.notifica_chiusura_centro      !== false;
+      S.settings.mailMedicoPrenotazione   = m.mail_medico_prenotazione     !== false;
+      S.settings.mailMedicoAppuntamento   = m.mail_medico_appuntamento     === true;
+      S.settings.mailMedicoCancellazione  = m.mail_medico_cancellazione    !== false;
       S.settings.mostraPrenotazioniAttesa = m.mostra_prenotazioni_attesa !== false;
       S.settings.nascondiCancellati       = m.nascondi_cancellati           === true;
       if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
@@ -8080,7 +8261,7 @@ function renderBkCentri(){
   const noEl=document.getElementById('bk-no-centri');
   const _today=new Date().toLocaleDateString('en-CA');
   const GIORNI_BK=['Do','Lu','Ma','Me','Gi','Ve','Sa'];
-  const eligibili=S.centri.filter(c=>c.attivo!==false && (c.gestione==='centro' || (c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
+  const eligibili=S.centri.filter(c=>c.attivo!==false && (c.gestione!=='cooperativa' || c.coop_booking_pubblico===true) && (c.gestione==='centro' || (c.turni && c.turni.length) || (c.giornateSingole && c.giornateSingole.some(g=>g.data>=_today))));
   if(!eligibili.length){ el.innerHTML=''; noEl.style.display='block'; return; }
   noEl.style.display='none';
   const MAX_DATE=4;
@@ -8491,6 +8672,134 @@ async function cancelBookingByToken(apptId){
   } catch(e){
     showToast('Errore nella cancellazione: '+e.message);
     console.error('[Delphi~Med] cancelBookingByToken:', e.message);
+  }
+}
+
+// ── PAGINA LISTA D'ATTESA (anticipo visita) ──
+function showAnticipaView(){
+  document.getElementById('view-home').style.display   ='none';
+  document.getElementById('view-app').style.display    ='none';
+  document.getElementById('view-booking').style.display='none';
+  document.getElementById('view-auth').style.display   ='none';
+  document.getElementById('view-cancel').style.display ='flex';
+  loadAnticipaPage();
+}
+async function loadAnticipaPage(){
+  const params=new URLSearchParams(location.search);
+  const token=params.get('anticipa');
+  const content=document.getElementById('cancel-content');
+  const loading=document.getElementById('cancel-loading');
+  if(!token){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Codice non valido</h2><p>Il link non è corretto.</p>';
+    return;
+  }
+  if(!isOnline()){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-wifi-off"/></svg></div><h2>Nessuna connessione</h2><p>Impossibile procedere senza connessione.</p>';
+    return;
+  }
+  // Token in variabile e via dalla barra (fuori da log/referrer), come per ?cancel=
+  window._anticipaToken = token;
+  try { history.replaceState(null, '', location.pathname); } catch(_e){}
+  try {
+    const r = await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'lookup', token })
+    });
+    const payload = await r.json().catch(()=>({}));
+    const appt = r.ok ? payload.appt : null;
+    loading.style.display='none'; content.style.display='block';
+    if(!appt){
+      content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Codice non valido</h2><p>Non è stato trovato nessun appuntamento con questo codice.</p>'; return;
+    }
+    if(appt.cancelled){
+      content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Appuntamento cancellato</h2><p>Questo appuntamento risulta cancellato: la lista di anticipo non è più attiva.</p>'; return;
+    }
+    appt.ora=(appt.ora||'').substring(0,5);
+    const d=new Date(appt.data+'T12:00:00');
+    const cardAppt='<div style="background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin:16px 0;text-align:left;font-size:13px;color:var(--ink2);line-height:1.8">'
+      +'<strong>'+escapeHtml(appt.cognome_paziente)+' '+escapeHtml(appt.nome_paziente)+'</strong><br>'
+      +d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' alle '+escapeHtml(appt.ora)+'<br>'
+      +escapeHtml(appt.tipo_visita||'Visita')+'</div>';
+    if(payload.iscritto){
+      content.innerHTML=`
+        <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:#22c55e"><use href="#ic-check"/></svg></div>
+        <h2>Iscrizione attiva</h2>
+        ${cardAppt}
+        <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+          Riceverai un'email se si libera una data più vicina per questo appuntamento.
+        </p>
+        <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="waitlistUnsubscribe()">Annulla iscrizione</button>`;
+    } else {
+      content.innerHTML=`
+        <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--brand-mid)"><use href="#ic-calendar"/></svg></div>
+        <h2>Vorresti essere avvisato nel caso si liberi una data più vicina?</h2>
+        ${cardAppt}
+        <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+          Se un altro paziente cancella un appuntamento prima della tua data, riceverai un'email:
+          la prenotazione del nuovo orario resta libera, vale l'ordine di arrivo.
+        </p>
+        <label style="display:flex;align-items:flex-start;gap:10px;text-align:left;font-size:13px;color:var(--ink2);line-height:1.5;margin:16px 0;cursor:pointer">
+          <input type="checkbox" id="wl-consenso" style="margin-top:2px">
+          <span>Acconsento a essere ricontattato via email per la disponibilità di date anticipate relative a questo appuntamento.</span>
+        </label>
+        <button class="btn btn-primary" style="width:100%;padding:13px;margin-top:8px;font-size:15px" onclick="waitlistSubscribe()">Avvisami se si libera un posto</button>`;
+    }
+  } catch(e){
+    loading.style.display='none'; content.style.display='block';
+    content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Errore</h2><p>Si è verificato un errore. Riprova più tardi.</p>';
+    console.error('[Delphi~Med] loadAnticipaPage:', e.message);
+  }
+}
+async function waitlistSubscribe(){
+  const chk=document.getElementById('wl-consenso');
+  if(!chk || !chk.checked){ showToast('Per iscriverti è necessario il consenso'); return; }
+  try {
+    const token=window._anticipaToken;
+    const r=await fetch('/api/waitlist',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'subscribe',token,consenso:true})
+    });
+    if(!r.ok){
+      const payload=await r.json().catch(()=>({}));
+      if(payload.error==='gia_cancellato') throw new Error('appuntamento già cancellato');
+      if(payload.error==='appuntamento_passato') throw new Error('appuntamento già passato');
+      if(payload.error==='email_mancante') throw new Error('nessuna email associata alla prenotazione');
+      throw new Error('iscrizione non riuscita');
+    }
+    document.getElementById('cancel-content').innerHTML=`
+      <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:#22c55e"><use href="#ic-check"/></svg></div>
+      <h2>Iscrizione confermata</h2>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+        Riceverai un'email se si libera una data più vicina.<br>
+        Puoi annullare l'iscrizione in qualsiasi momento da questo stesso link.
+      </p>
+      <a href="https://delphi-med.com" class="btn btn-secondary" style="display:inline-block;margin-top:16px;text-decoration:none;padding:12px 32px">Torna alla home</a>`;
+  } catch(e){
+    showToast('Errore: '+e.message);
+    console.error('[Delphi~Med] waitlistSubscribe:', e.message);
+  }
+}
+async function waitlistUnsubscribe(){
+  try {
+    const token=window._anticipaToken;
+    const r=await fetch('/api/waitlist',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'unsubscribe',token})
+    });
+    if(!r.ok) throw new Error('operazione non riuscita');
+    document.getElementById('cancel-content').innerHTML=`
+      <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:#22c55e"><use href="#ic-check"/></svg></div>
+      <h2>Iscrizione annullata</h2>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">Non riceverai più avvisi per questo appuntamento.</p>
+      <a href="https://delphi-med.com" class="btn btn-secondary" style="display:inline-block;margin-top:16px;text-decoration:none;padding:12px 32px">Torna alla home</a>`;
+  } catch(e){
+    showToast('Errore: '+e.message);
+    console.error('[Delphi~Med] waitlistUnsubscribe:', e.message);
   }
 }
 
@@ -8947,6 +9256,9 @@ function renderImpostazioni(){
   chk('imp-notif-cancellazione-medico',    S.settings.notifCancellazioneMedico    !== false);
   chk('imp-notif-appuntamento-manuale',    S.settings.notifAppuntamentoManuale    === true);
   chk('imp-notif-chiusura-centro',         S.settings.notifChiusuraCentro         !== false);
+  chk('imp-mail-medico-prenotazione',      S.settings.mailMedicoPrenotazione      !== false);
+  chk('imp-mail-medico-appuntamento',      S.settings.mailMedicoAppuntamento      === true);
+  chk('imp-mail-medico-cancellazione',     S.settings.mailMedicoCancellazione     !== false);
   chk('imp-nascondi-cancellati',           S.settings.nascondiCancellati          === true);
   chk('imp-mostra-prenotazioni-attesa',    S.settings.mostraPrenotazioniAttesa    !== false);
   chk('imp-mostra-email',    S.settings.mostraEmailPazienti    !== false);
@@ -8969,6 +9281,9 @@ async function saveImpostazione(toggleId){
     'imp-notif-cancellazione-medico': { key: 'notifCancellazioneMedico', col: 'notifica_cancellazione_medico' },
     'imp-notif-appuntamento-manuale': { key: 'notifAppuntamentoManuale', col: 'notifica_appuntamento_manuale' },
     'imp-notif-chiusura-centro':      { key: 'notifChiusuraCentro',      col: 'notifica_chiusura_centro' },
+    'imp-mail-medico-prenotazione':   { key: 'mailMedicoPrenotazione',   col: 'mail_medico_prenotazione' },
+    'imp-mail-medico-appuntamento':   { key: 'mailMedicoAppuntamento',   col: 'mail_medico_appuntamento' },
+    'imp-mail-medico-cancellazione':  { key: 'mailMedicoCancellazione',  col: 'mail_medico_cancellazione' },
     'imp-nascondi-cancellati':        { key: 'nascondiCancellati',       col: 'nascondi_cancellati' },
     'imp-mostra-prenotazioni-attesa': { key: 'mostraPrenotazioniAttesa', col: 'mostra_prenotazioni_attesa' },
     'imp-mostra-email':    { key: 'mostraEmailPazienti',    col: 'mostra_email_pazienti' },

@@ -32,6 +32,7 @@
     { "source": "/c/(.*)", "destination": "/medidesk.html" },
     { "source": "/p/(.*)", "destination": "/medidesk.html" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/cooperative", "destination": "/cooperativa.html" },
     { "source": "/((?!api/).*)", "destination": "/medidesk.html" }
   ]
 }

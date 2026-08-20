@@ -145,5 +145,17 @@ export default async function handler(req, res) {
     }
   } catch { /* soft-fail: appuntamento salvato, email no */ }
 
+  // notifica personale al medico (gate server-side su medici.mail_medico_prenotazione)
+  try {
+    const hostN = req.headers['x-forwarded-host'] || req.headers.host;
+    if (hostN) {
+      await fetch(`https://${hostN}/api/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'notifica_medico_prenotazione', appt_id: apptId, cancellation_token: cancellationToken })
+      }).catch(() => {});
+    }
+  } catch { /* soft-fail */ }
+
   return res.status(200).json({ ok: true, appt_id: apptId, centro_id: centroId, data, ora });
 }
