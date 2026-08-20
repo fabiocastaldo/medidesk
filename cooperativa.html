@@ -177,6 +177,14 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .act-btn{background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:3px 6px;border-radius:6px}
 .act-btn:hover{background:var(--paper);color:var(--ink)}
 .act-danger:hover{color:#A3382B}
+.toggle-switch{position:relative;display:inline-flex;align-items:center;cursor:pointer;flex-shrink:0;margin-top:2px}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{width:42px;height:24px;background:var(--border);border-radius:12px;transition:background .2s;position:relative;display:block}
+.toggle-slider::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle-switch input:checked~.toggle-slider{background:var(--brand-mid)}
+.toggle-switch input:checked~.toggle-slider::after{transform:translateX(18px)}
+.pref-row{display:flex;align-items:flex-start;gap:14px;max-width:680px}
+.pref-row + .pref-row{margin-top:18px}
 .mx-wrap{overflow-x:auto}
 .mx{border-collapse:collapse;font-size:13px;min-width:100%}
 .mx th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
@@ -486,27 +494,34 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
     <section id="tab-preferenze" class="card-lite hidden">
       <h2 style="font-size:16px;color:var(--brand-mid);margin-bottom:14px">Preferenze dell'organizzazione</h2>
-      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;max-width:640px">
-        <input type="checkbox" id="pref-booking" style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" onchange="setPrefBooking(this.checked)">
+      <div class="pref-row">
+        <label class="toggle-switch"><input type="checkbox" id="pref-booking" onchange="setPrefBooking(this.checked)"><span class="toggle-slider"></span></label>
         <span>
           <span style="font-weight:600">Agenda visibile sul sito pubblico</span><br>
           <span style="font-size:13px;color:var(--ink2);line-height:1.55">Se attiva, i turni assegnati ai medici sulle sedi dell'organizzazione sono prenotabili anche dal link pubblico del medico: il paziente può prenotare direttamente, senza passare dalla segreteria.</span>
         </span>
-      </label>
-      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;max-width:640px;margin-top:16px">
-        <input type="checkbox" id="pref-mail-paziente" style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" onchange="setPrefMail('mail_conferma_paziente', this.checked)">
+      </div>
+      <div class="pref-row">
+        <label class="toggle-switch"><input type="checkbox" id="pref-mail-paziente" onchange="setPrefMail('mail_conferma_paziente', this.checked)"><span class="toggle-slider"></span></label>
         <span>
           <span style="font-weight:600">Email di conferma al paziente</span><br>
           <span style="font-size:13px;color:var(--ink2);line-height:1.55">Alla prenotazione dalla plancia, se è stata indicata l'email, il paziente riceve la conferma con il promemoria e il codice di cancellazione.</span>
         </span>
-      </label>
-      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;max-width:640px;margin-top:16px">
-        <input type="checkbox" id="pref-mail-medico" style="width:18px;height:18px;margin-top:2px;flex:0 0 auto" onchange="setPrefMail('mail_notifica_medico', this.checked)">
+      </div>
+      <div class="pref-row">
+        <label class="toggle-switch"><input type="checkbox" id="pref-mail-medico" onchange="setPrefMail('mail_notifica_medico', this.checked)"><span class="toggle-slider"></span></label>
         <span>
           <span style="font-weight:600">Notifica email al medico</span><br>
           <span style="font-size:13px;color:var(--ink2);line-height:1.55">Il medico riceve un'email per ogni prenotazione registrata dalla plancia sui suoi sede-centri (vale comunque il suo consenso alle notifiche nel profilo).</span>
         </span>
-      </label>
+      </div>
+      <div class="pref-row">
+        <label class="toggle-switch"><input type="checkbox" id="pref-mail-segreteria" onchange="setPrefMail('mail_ricevuta_segreteria', this.checked)"><span class="toggle-slider"></span></label>
+        <span>
+          <span style="font-weight:600">Ricevuta email alla segreteria</span><br>
+          <span style="font-size:13px;color:var(--ink2);line-height:1.55">La segreteria riceve un riepilogo per ogni prenotazione registrata dalla plancia, come conferma per i propri registri.</span>
+        </span>
+      </div>
       <div id="pref-msg" class="hidden" style="margin-top:12px"></div>
     </section>
 
@@ -593,7 +608,8 @@ function toggleSubmenu(){
 }
 
 async function setPrefMail(colonna, valore){
-  const chkId = colonna === 'mail_conferma_paziente' ? 'pref-mail-paziente' : 'pref-mail-medico';
+  const IDS = { mail_conferma_paziente: 'pref-mail-paziente', mail_notifica_medico: 'pref-mail-medico', mail_ricevuta_segreteria: 'pref-mail-segreteria' };
+  const chkId = IDS[colonna];
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-preferenze', {
@@ -608,9 +624,8 @@ async function setPrefMail(colonna, valore){
       return;
     }
     if(_plancia && _plancia.cooperativa) _plancia.cooperativa[colonna] = body[colonna];
-    setBoxMsg('pref-msg', colonna === 'mail_conferma_paziente'
-      ? (body[colonna] ? 'Email di conferma al paziente attive.' : 'Email di conferma al paziente disattivate.')
-      : (body[colonna] ? 'Notifiche email al medico attive.' : 'Notifiche email al medico disattivate.'), 'info');
+    const NOMI = { mail_conferma_paziente: 'Email di conferma al paziente', mail_notifica_medico: 'Notifiche email al medico', mail_ricevuta_segreteria: 'Ricevuta email alla segreteria' };
+    setBoxMsg('pref-msg', NOMI[colonna] + (body[colonna] ? ' attive.' : ' disattivate.'), 'info');
   } catch(e){
     console.error('[Plancia] setPrefMail:', e.message);
     document.getElementById(chkId).checked = !valore;
@@ -710,6 +725,8 @@ function renderPlancia(){
   if(pmp) pmp.checked = !(d.cooperativa && d.cooperativa.mail_conferma_paziente === false);
   const pmm = document.getElementById('pref-mail-medico');
   if(pmm) pmm.checked = !(d.cooperativa && d.cooperativa.mail_notifica_medico === false);
+  const pms = document.getElementById('pref-mail-segreteria');
+  if(pms) pms.checked = !(d.cooperativa && d.cooperativa.mail_ricevuta_segreteria === false);
 }
 
 function renderCoperturaTab(){

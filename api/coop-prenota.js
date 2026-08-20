@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,cooperativa_id,cooperative(id,stato,mail_conferma_paziente,mail_notifica_medico)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,cooperativa_id,cooperative(id,stato,mail_conferma_paziente,mail_notifica_medico,mail_ricevuta_segreteria)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
@@ -200,8 +200,8 @@ export default async function handler(req, res) {
         }).catch(() => {});
       } catch { /* soft-fail */ }
     }
-    // ricevuta alla segreteria (sempre attiva: e' la conferma della propria azione)
-    if (host) {
+    // ricevuta alla segreteria (disattivabile dalle Preferenze)
+    if (host && seg.cooperative.mail_ricevuta_segreteria !== false) {
       try {
         const rSeg = await fetch(`https://${host}/api/send-email`, {
           method: 'POST',

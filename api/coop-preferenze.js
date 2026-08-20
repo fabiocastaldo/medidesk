@@ -26,7 +26,8 @@ export default async function handler(req, res) {
   const AZIONI = {
     set_booking_pubblico: 'booking_pubblico',
     set_mail_conferma_paziente: 'mail_conferma_paziente',
-    set_mail_notifica_medico: 'mail_notifica_medico'
+    set_mail_notifica_medico: 'mail_notifica_medico',
+    set_mail_ricevuta_segreteria: 'mail_ricevuta_segreteria'
   };
   const colonna = AZIONI[b.action];
   if (!colonna || typeof b.valore !== 'boolean') {

@@ -315,7 +315,8 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
 const VALID_TIPI = new Set([
   'conferma_appt_anon', 'conferma_appt_medico', 'cancellazione_paziente',
   'notifica_centro_evento', 'cancellazione_centro_anon', 'chiusura_studio_centro',
-  'account_eliminazione', 'notifica_prenotazione_coop'
+  'account_eliminazione', 'notifica_prenotazione_coop',
+  'conferma_prenotazione_segreteria'
 ]);
 
 const PATH1_TIPI = new Set([
@@ -709,7 +710,7 @@ function buildHtmlNotificaMedicoCoop({ medico_nome, paziente_nome, data_fmt, ora
     (tipo_visita ? detailRow('Tipo visita', tipo_visita, { last: true }) : '');
   const body =
     emailTitle('Nuova prenotazione dalla segreteria') +
-    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${medico_nome ? 'Dott. ' + medico_nome : 'Dottore'},<br>la segreteria dell&apos;organizzazione ha registrato una nuova prenotazione per Lei. Di seguito i dettagli.</p>` +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${medico_nome || 'Dottore'},<br>la segreteria dell&apos;organizzazione ha registrato una nuova prenotazione per Lei. Di seguito i dettagli.</p>` +
     detailCard(rows) +
     `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">L&apos;appuntamento &egrave; gi&agrave; visibile nella Sua agenda Delphi~Med.</p>`;
   return emailShell(body);
