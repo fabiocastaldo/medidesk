@@ -93,7 +93,7 @@ export default async function handler(req, res) {
 
     if (action === 'cancel') {
       // Stato attuale (per distinguere già-cancellato e verificare il cutoff server-side)
-      const r0 = await sb(`appuntamenti?cancellation_token=eq.${encodeURIComponent(token)}&select=id,data,ora,cancelled&limit=1`);
+      const r0 = await sb(`appuntamenti?cancellation_token=eq.${encodeURIComponent(token)}&select=id,data,ora,cancelled,medico_id,centro_id&limit=1`);
       if (!r0.ok) return res.status(500).json({ error: 'Errore server' });
       const rows0 = await r0.json().catch(() => []);
       const appt0 = Array.isArray(rows0) ? rows0[0] : null;
@@ -131,6 +131,49 @@ export default async function handler(req, res) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tipo: 'notifica_medico_cancellazione', appt_id: appt0.id, cancellation_token: token })
           }).catch(() => {});
+        }
+      } catch { /* soft-fail */ }
+      // Lista d'attesa (v1): avvisa gli iscritti attivi dello stesso medico+centro
+      // il cui appuntamento (non cancellato) è a data/ora successiva allo slot liberato.
+      // Best-effort, soft-fail, cap 10 destinatari per cancellazione.
+      try {
+        const hostW = req.headers['x-forwarded-host'] || req.headers.host;
+        if (hostW && appt0.medico_id) {
+          const q = `lista_attesa?attivo=eq.true&medico_id=eq.${encodeURIComponent(appt0.medico_id)}` +
+                    (appt0.centro_id ? `&centro_id=eq.${encodeURIComponent(appt0.centro_id)}` : '') +
+                    `&select=id,appuntamento_id,appuntamenti!inner(id,data,ora,cancelled,cancellation_token)` +
+                    `&appuntamenti.cancelled=eq.false&limit=50`;
+          const rw = await sb(q);
+          if (rw.ok) {
+            const subs = await rw.json().catch(() => []);
+            const oraSlot = (appt0.ora || '00:00').substring(0, 5);
+            const slotTs = `${appt0.data}T${oraSlot}`;
+            const targets = (Array.isArray(subs) ? subs : [])
+              .filter(s => {
+                const a = s.appuntamenti;
+                if (!a || a.cancelled || !a.data) return false;
+                const ts = `${a.data}T${(a.ora || '00:00').substring(0, 5)}`;
+                return ts > slotTs;
+              })
+              .slice(0, 10);
+            for (const s of targets) {
+              await fetch(`https://${hostW}/api/send-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  tipo: 'avviso_lista_attesa',
+                  appt_id: s.appuntamenti.id,
+                  cancellation_token: s.appuntamenti.cancellation_token,
+                  slot_data: appt0.data,
+                  slot_ora: oraSlot
+                })
+              }).catch(() => {});
+              await sb(`lista_attesa?id=eq.${encodeURIComponent(s.id)}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ notified_at: new Date().toISOString() })
+              }).catch(() => {});
+            }
+          }
         }
       } catch { /* soft-fail */ }
       return res.status(200).json({ ok: true });

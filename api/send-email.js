@@ -320,7 +320,8 @@ const VALID_TIPI = new Set([
   'notifica_centro_evento', 'cancellazione_centro_anon', 'chiusura_studio_centro',
   'account_eliminazione', 'notifica_prenotazione_coop',
   'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione',
-  'notifica_medico_cancellazione', 'notifica_medico_appuntamento'
+  'notifica_medico_cancellazione', 'notifica_medico_appuntamento',
+  'avviso_lista_attesa'
 ]);
 
 const PATH1_TIPI = new Set([
@@ -384,7 +385,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, skipped: 'notifiche disabilitate per il centro' });
     }
     authCtx = { centroNome: ct.centroNome, centroEmail: ct.centroEmail, authMode: 'cancellation_token' };
-  } else if (tipo === 'notifica_prenotazione_coop' || tipo === 'conferma_prenotazione_segreteria' || tipo === 'notifica_medico_prenotazione' || tipo === 'notifica_medico_cancellazione') {
+  } else if (tipo === 'notifica_prenotazione_coop' || tipo === 'conferma_prenotazione_segreteria' || tipo === 'notifica_medico_prenotazione' || tipo === 'notifica_medico_cancellazione' || tipo === 'avviso_lista_attesa') {
     const ct = await verifyCancellationToken(body.appt_id, body.cancellation_token, supabaseUrl, serviceKey);
     if (!ct.ok) return res.status(ct.status).json({ error: ct.error });
     authCtx = { authMode: 'cancellation_token' };
@@ -533,6 +534,35 @@ export default async function handler(req, res) {
     medicoIdAudit = appt.apptMedicoId;
     targetType    = 'appuntamento';
     targetId      = body.appt_id;
+
+  } else if (tipo === 'avviso_lista_attesa') {
+    const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
+    if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    if (!appt.emailPaziente) {
+      return res.status(200).json({ ok: true, skipped: 'paziente senza email' });
+    }
+    const slotData = typeof body.slot_data === 'string' ? body.slot_data.slice(0, 10) : '';
+    const slotOra  = typeof body.slot_ora  === 'string' ? body.slot_ora.slice(0, 5)  : '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(slotData) || !/^\d{2}:\d{2}$/.test(slotOra)) {
+      return res.status(400).json({ error: 'slot_data/slot_ora non validi' });
+    }
+    to            = appt.emailPaziente;
+    subject       = `Si è liberato un posto prima — ${appt.medicoNome}`;
+    html          = buildHtmlAvvisoListaAttesa({
+      paziente_nome: esc(appt.pazienteNome),
+      medico_nome:   esc(appt.medicoNome),
+      centro_nome:   esc(appt.centroNome),
+      slot_data_fmt: esc(formatDateIt(slotData)),
+      slot_ora:      esc(slotOra),
+      appt_data_fmt: esc(formatDateIt(appt.data)),
+      appt_ora:      esc(appt.ora),
+      booking_url:   appt.medicoSlug ? ('https://delphi-med.com/m/' + encodeURIComponent(appt.medicoSlug)) : 'https://delphi-med.com',
+      anticipa_url:  'https://delphi-med.com/?anticipa=' + encodeURIComponent(appt.cancellationToken)
+    });
+    replyTo       = appt.medicoEmail;
+    medicoIdAudit = appt.apptMedicoId;
+    targetType    = 'appuntamento';
+    targetId      = appt.apptId;
 
   } else if (tipo === 'cancellazione_paziente') {
     const { appt_id } = body;
@@ -687,6 +717,7 @@ function buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_
 
 function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione, data_raw, appt_id, centro_indirizzo, ics_host }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
+  const anticipaUrl = 'https://delphi-med.com/?anticipa=' + encodeURIComponent(codice_cancellazione);
   const { googleUrl, icsUrl } = buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_id, codice_cancellazione, ics_host });
   const btnStyle = 'display:inline-block;padding:8px 16px;background:#f1f6fd;border:1px solid #d3e3f4;border-radius:6px;text-decoration:none;color:#15487F;font-size:13px;font-weight:500;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Arial,sans-serif;';
   const calSection = googleUrl
@@ -710,7 +741,11 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
     calSection +
     noteBox('<strong>Ricorda di portare</strong> la tua documentazione sanitaria: tessera sanitaria, referti e risultati di esami precedenti, e ogni altro documento rilevante per la visita.') +
     `<p style="font-size:13px;color:#555;line-height:1.6;text-align:center;margin:24px auto 12px;max-width:480px;">Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile: lo slot torner&agrave; subito disponibile per un altro paziente che ne ha bisogno.</p>` +
-    ctaButton(cancelUrl, 'Cancella l&rsquo;appuntamento');
+    ctaButton(cancelUrl, 'Cancella l&rsquo;appuntamento') +
+    `<div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8e8e8;text-align:center;">` +
+    `<p style="font-size:13px;color:#555;line-height:1.6;margin:0 0 12px;max-width:480px;display:inline-block;">Vorresti essere avvisato nel caso si liberi una data pi&ugrave; vicina?</p><br>` +
+    ctaButton(anticipaUrl, 'Avvisami se si libera un posto') +
+    `</div>`;
   return emailShell(body);
 }
 
@@ -755,6 +790,22 @@ function buildHtmlNotificaMedicoEvento({ evento, medico_nome, paziente_nome, dat
     `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${medico_nome || 'Dottore'},<br>${INTRI[evento] || ''}</p>` +
     detailCard(rows) +
     `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">Puoi gestire queste notifiche dalle Impostazioni del tuo profilo.</p>`;
+  return emailShell(body);
+}
+
+function buildHtmlAvvisoListaAttesa({ paziente_nome, medico_nome, centro_nome, slot_data_fmt, slot_ora, appt_data_fmt, appt_ora, booking_url, anticipa_url }) {
+  const body =
+    emailTitle('Si è liberato un posto') +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 18px;">Gentile <strong>${paziente_nome}</strong>,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">Ti eri iscritto alla lista di anticipo per il tuo appuntamento con <strong>${medArt(medico_nome)}</strong> del ${appt_data_fmt} alle ${appt_ora}.<br>Si &egrave; appena liberato un posto in una data pi&ugrave; vicina:</p>` +
+    detailCard(
+      detailRow('Centro medico', centro_nome) +
+      detailRow('Data', slot_data_fmt) +
+      detailRow('Ora', slot_ora, { last: true })
+    ) +
+    `<p style="font-size:13px;color:#555;line-height:1.6;text-align:center;margin:24px auto 12px;max-width:480px;">Se ti interessa, prenota subito dalla pagina del medico: la disponibilit&agrave; resta libera e vale l&rsquo;ordine di arrivo. Dopo aver prenotato il nuovo orario, ricordati di cancellare il vecchio appuntamento dal link nella tua email di conferma.</p>` +
+    ctaButton(booking_url, 'Vedi le disponibilit&agrave;') +
+    `<p style="font-size:12px;color:#888;text-align:center;margin:20px 0 0;">Non vuoi pi&ugrave; ricevere questi avvisi? <a href="${anticipa_url}" style="color:#15487F;">Gestisci la tua iscrizione</a>.</p>`;
   return emailShell(body);
 }
 
