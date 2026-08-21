@@ -2430,9 +2430,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="extracted-fields">
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
-            <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" style="flex:1"></div>
+            <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome" style="flex:1" oninput="capFirstInput(this)"></div>
-            <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" style="flex:1"></div>
+            <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1" oninput="capFirstInput(this)"></div>
           </div>
           <div class="form-group" style="margin-top:14px">
@@ -6823,6 +6823,11 @@ function isoToIt(s){
   return m ? (m[3]+'/'+m[2]+'/'+m[1]) : s;
 }
 
+function expandCompactDate(s){
+  s = String(s||'').trim();
+  return /^\d{8}$/.test(s) ? (s.slice(0,2)+'/'+s.slice(2,4)+'/'+s.slice(4)) : s;
+}
+
 function etaDaNascita(nascita){
   if(!nascita) return null;
   let d;
@@ -7222,7 +7227,7 @@ async function saveVisita(){
   try {
     if(btnSalva){ btnSalva.disabled = true; btnSalva.textContent = 'Salvataggio...'; }
 
-    const dataVisita = document.getElementById('ex-data-visita').value.trim() || new Date().toLocaleDateString('it-IT');
+    const dataVisita = expandCompactDate(document.getElementById('ex-data-visita').value.trim()) || new Date().toLocaleDateString('it-IT');
     const dataVisitaIso = itToIso(dataVisita);
     if(!dataVisitaIso){ showToast('Data visita non valida: usa GG/MM/AAAA'); return null; }
     const luogo = document.getElementById('ex-luogo').value.trim();
@@ -7246,7 +7251,7 @@ async function saveVisita(){
       const nome = capitalizeName(document.getElementById('ex-nome').value.trim());
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return null; }
-      const nascita = document.getElementById('ex-nascita').value.trim();
+      const nascita = expandCompactDate(document.getElementById('ex-nascita').value.trim());
       const nascitaIso = itToIso(nascita);
       if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return null; }
       paz = S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
@@ -7355,9 +7360,9 @@ async function generaRefertoModale(){
   const bozza=ta.value.trim();
   if(!bozza){ showToast('Scrivi prima una bozza'); return; }
   const tipo=(document.getElementById('ex-tipo-referto')?.value||'').trim();
-  const nascita=(document.getElementById('ex-nascita')?.value||'').trim();
+  const nascita=expandCompactDate((document.getElementById('ex-nascita')?.value||'').trim());
   const eta=etaDaNascita(nascita);
-  const dataV=(document.getElementById('ex-data-visita')?.value||'').trim();
+  const dataV=expandCompactDate((document.getElementById('ex-data-visita')?.value||'').trim());
   const btn=document.getElementById('btn-ai-nv-referto');
   if(btn){ btn.disabled=true; btn.textContent='Ottimizzo…'; }
   try{
