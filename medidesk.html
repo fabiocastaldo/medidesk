@@ -3294,7 +3294,7 @@ async function loadPazientiFromDB(user){
     if(error) throw error;
     S.pazienti = (data || []).map(p => ({
       id: p.id, nome: p.nome||'', cognome: p.cognome||'',
-      nascita: p.data_nascita||'', visite: []
+      nascita: isoToIt(p.data_nascita||''), visite: []
     }));
     save();
     console.log('[Delphi~Med] Pazienti caricati da DB:', S.pazienti.length);
@@ -3321,7 +3321,7 @@ async function loadVisiteFromDB(user){
         let _referto = '';
         try { _referto = await _decryptText(v.referto_testo); }
         catch(e){ _referto = ''; console.warn('[Delphi~Med] referto non decifrabile, riga saltata:', v.id); }
-        paz.visite.push({ id:v.id, data:v.data_visita||'', luogo:v.luogo||'', clinica:_clinica, tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null, referto:_referto });
+        paz.visite.push({ id:v.id, data:isoToIt(v.data_visita||''), luogo:v.luogo||'', clinica:_clinica, tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null, referto:_referto });
       }
     }
     save();
@@ -6806,6 +6806,23 @@ function parseVisitDate(s){
   return new Date(s+'T12:00:00');
 }
 
+function itToIso(s){
+  s = String(s||'').trim();
+  if(!s) return null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return null;
+  const d=+m[1], mo=+m[2], y=+m[3];
+  const dt = new Date(y, mo-1, d);
+  if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==d) return null;
+  return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+function isoToIt(s){
+  s = String(s||'').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? (m[3]+'/'+m[2]+'/'+m[1]) : s;
+}
+
 function etaDaNascita(nascita){
   if(!nascita) return null;
   let d;
@@ -7206,6 +7223,8 @@ async function saveVisita(){
     if(btnSalva){ btnSalva.disabled = true; btnSalva.textContent = 'Salvataggio...'; }
 
     const dataVisita = document.getElementById('ex-data-visita').value.trim() || new Date().toLocaleDateString('it-IT');
+    const dataVisitaIso = itToIso(dataVisita);
+    if(!dataVisitaIso){ showToast('Data visita non valida: usa GG/MM/AAAA'); return null; }
     const luogo = document.getElementById('ex-luogo').value.trim();
     const clinica = document.getElementById('ex-clinica').value.trim();
     const _tipoRaw = document.getElementById('ex-tipo-referto').value.trim();
@@ -7228,12 +7247,14 @@ async function saveVisita(){
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return null; }
       const nascita = document.getElementById('ex-nascita').value.trim();
+      const nascitaIso = itToIso(nascita);
+      if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return null; }
       paz = S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
       if(!paz){
         if(isOnline() && S.medicoId){
           const { data: newPaz, error } = await supabaseClient.from('pazienti').insert({
             medico_id: S.medicoId, nome, cognome,
-            data_nascita: nascita || null
+            data_nascita: nascitaIso
           }).select('id').single();
           if(error) throw error;
           paz = { id: newPaz.id, nome, cognome, nascita, visite:[] };
@@ -7279,7 +7300,7 @@ async function saveVisita(){
         const { data: dbV, error: vErr } = await supabaseClient.from('visite').insert({
           paziente_id:       paz.id,
           medico_id:         S.medicoId,
-          data_visita:       dataVisita  || null,
+          data_visita:       dataVisitaIso,
           luogo:             luogo       || null,
           contenuto_clinico: _clinicaEnc,
           foto_referto_url:  visita.foto_url || null,
