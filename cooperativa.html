@@ -213,6 +213,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   .cardpane{padding:24px 16px 40px}
 }
 @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+.paz-row{display:block;width:100%;text-align:left;padding:9px 12px;margin:4px 0;border:1px solid #dfe5e4;border-radius:8px;background:#fff;cursor:pointer;font-size:13.5px}
+.paz-row:hover{border-color:var(--brand-deep);background:#f6faf9}
 </style>
 </head>
 <body>
@@ -289,6 +291,9 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <button class="sitem" id="tabbtn-statistiche" onclick="switchTab('statistiche')">Statistiche</button>
       <button class="sitem" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
+      <div id="submenu-agenda">
+        <button class="sitem sub" id="tabbtn-agenda-ricerca" onclick="agPazApri()">Ricerca paziente</button>
+      </div>
       <button class="sitem" id="tabbtn-preferenze" onclick="switchTab('preferenze')">Preferenze</button>
     </nav>
     <div class="side-foot">
@@ -443,6 +448,11 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div class="field" style="min-width:200px"><label for="ag-spec-sel">Specialità</label><select id="ag-spec-sel" onchange="renderAgendaTab()"><option value="">Tutte</option></select></div>
         <div class="field" style="min-width:200px"><label for="ag-vista-sel">Visualizza</label><select id="ag-vista-sel" onchange="renderAgCal()"><option value="tutte">Tutte le disponibilità</option><option value="liberi">Solo giorni liberi</option><option value="prenotati">Giorni con prenotazioni</option></select></div>
         <div class="field" style="min-width:240px"><label for="ag-med-sel">Medico</label><select id="ag-med-sel" onchange="onAgMedicoChange()"></select></div>
+      </div>
+      <div id="ag-paz-box" class="hidden" style="margin-bottom:18px;padding:14px 16px;border:1px solid #dfe5e4;border-radius:10px">
+        <div style="font-weight:600;margin-bottom:8px;color:var(--brand-deep)">Ricerca paziente</div>
+        <input class="search" id="ag-paz-q" type="text" placeholder="Nome o cognome del paziente (min 2 lettere)" oninput="agPazInput()" style="width:100%;max-width:420px">
+        <div id="ag-paz-res" style="margin-top:10px"></div>
       </div>
       <div id="agenda-tbl" class="mx-wrap"></div>
       <div class="stat-block" style="margin-top:26px;margin-bottom:0">
@@ -1195,6 +1205,77 @@ async function agOccCancella(){
     setBoxMsg('ag-occ-msg', 'Errore di rete. Riprova.', 'err');
     btn.disabled = false;
   }
+}
+
+// --- Ricerca paziente (sottovoce Agenda) ---
+let _agPaz = { t: null, res: [] };
+
+function agPazApri(){
+  switchTab('agenda');
+  document.getElementById('ag-paz-box').classList.remove('hidden');
+  document.getElementById('ag-paz-q').focus();
+}
+
+function agPazInput(){
+  clearTimeout(_agPaz.t);
+  _agPaz.t = setTimeout(agPazSearch, 350);
+}
+
+async function agPazSearch(){
+  const el = document.getElementById('ag-paz-res');
+  const q = (document.getElementById('ag-paz-q').value || '').trim();
+  if(q.length < 2){ el.innerHTML = ''; _agPaz.res = []; return; }
+  el.innerHTML = '<div class="empty">Ricerca\u2026</div>';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-cancella', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'search', q })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){ el.innerHTML = '<div class="empty">' + esc(body.error || 'Ricerca non riuscita.') + '</div>'; return; }
+    _agPaz.res = body.results || [];
+    if(!_agPaz.res.length){ el.innerHTML = '<div class="empty">Nessun appuntamento futuro per \u00ab' + esc(q) + '\u00bb.</div>'; return; }
+    el.innerHTML = _agPaz.res.map((r, i) => {
+      const m = (((_plancia || {}).medici) || []).find(x => String(x.medico_id) === String(r.medico_id));
+      return '<button class="paz-row" onclick="agPazVai(' + i + ')">'
+        + '<span style="font-weight:600">' + esc((r.cognome + ' ' + r.nome).trim()) + '</span>'
+        + ' \u00b7 ' + fmtData(r.data) + ' alle ' + esc(r.ora)
+        + (r.centro_nome ? ' \u00b7 ' + esc(r.centro_nome) : '')
+        + (m ? ' \u00b7 ' + esc(nomeMedico(m)) : '')
+        + (r.tipo_visita ? ' \u00b7 ' + esc(r.tipo_visita) : '')
+        + (r.per_conto ? ' \u00b7 prenotato dalla segreteria' : ' \u00b7 prenotato online')
+        + '</button>';
+    }).join('');
+  } catch(_e) {
+    el.innerHTML = '<div class="empty">Errore di rete. Riprova.</div>';
+  }
+}
+
+async function agPazVai(i){
+  const r = _agPaz.res[i]; if(!r) return;
+  // Il medico deve essere selezionabile: azzero i filtri medici e ripopolo la tendina
+  document.getElementById('ag-search').value = '';
+  document.getElementById('ag-spec-sel').value = '';
+  renderAgendaTab();
+  const sel = document.getElementById('ag-med-sel');
+  if(!Array.from(sel.options).some(o => o.value === String(r.medico_id))){
+    setBoxMsg('ag-slot-msg', 'Il medico di questo appuntamento non \u00e8 pi\u00f9 collegato all\u2019organizzazione.', 'err');
+    return;
+  }
+  sel.value = String(r.medico_id);
+  // attendo un eventuale caricamento in corso (renderAgendaTab puo' aver innescato onAgMedicoChange)
+  for(let k = 0; k < 40 && _agCal.busy; k++) await new Promise(w => setTimeout(w, 100));
+  const d = new Date(r.data + 'T12:00:00');
+  _agCal.year = d.getFullYear();
+  _agCal.month = d.getMonth();
+  _agCal.dateStr = r.data;
+  _agCal.data = null;
+  await agLoadMonth();
+  agSlotOccupato(r.centro_id, r.data, r.ora);
+  const occ = document.getElementById('ag-occ');
+  if(occ && !occ.classList.contains('hidden')) occ.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function renderServiziCatalogo(){

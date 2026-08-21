@@ -7,6 +7,9 @@
 // verifica del perimetro. Nessun cutoff 2h: la struttura è titolare dell'agenda
 // (il cutoff resta sul solo canale pubblico del paziente).
 //
+// POST { action:'search', q }
+//   → 200 { results:[{ id, nome, cognome, data, ora, tipo_visita, per_conto, medico_id, centro_id, centro_nome }] }
+//     (solo appuntamenti futuri non cancellati sui centri della cooperativa; max 20; q min 2 caratteri)
 // POST { action:'lookup', centro_id, data, ora }
 //   → 200 { appt:{ id, nome_paziente, cognome_paziente, tipo_visita, per_conto, email_presente } }
 //   → 404 { error:'not_found' } (slot libero o fuori perimetro)
@@ -71,6 +74,38 @@ export default async function handler(req, res) {
   const action = typeof b.action === 'string' ? b.action : '';
 
   try {
+    if (action === 'search') {
+      // Ricerca paziente per nome/cognome sui soli centri della cooperativa del chiamante.
+      // Sanitizzazione stretta: restano lettere, cifre, spazi, apostrofi e trattini
+      // (via i caratteri speciali del filtro PostgREST: * , ( ) . " \ ecc.)
+      const raw = clean(b.q, 40);
+      const q = raw.replace(/[^\p{L}\p{N}\s'\-]/gu, '').trim();
+      if (q.length < 2) return res.status(400).json({ error: 'Almeno 2 caratteri' });
+      const oggi = new Date().toISOString().slice(0, 10);
+      const pat = encodeURIComponent('*' + q + '*');
+      const rRes = await sb(
+        `appuntamenti?select=id,nome_paziente,cognome_paziente,data,ora,tipo_visita,per_conto,medico_id,centro_id,centri!inner(nome,cooperativa_id)` +
+        `&centri.cooperativa_id=eq.${encodeURIComponent(seg.cooperativa_id)}` +
+        `&data=gte.${oggi}` +
+        `&and=(or(nome_paziente.ilike.${pat},cognome_paziente.ilike.${pat}),or(cancelled.is.null,cancelled.eq.false))` +
+        `&order=data.asc,ora.asc&limit=20`
+      );
+      if (!rRes.ok) return res.status(500).json({ error: 'Errore server' });
+      const rows = await rRes.json().catch(() => []);
+      return res.status(200).json({ results: (Array.isArray(rows) ? rows : []).map(a => ({
+        id: a.id,
+        nome: a.nome_paziente || '',
+        cognome: a.cognome_paziente || '',
+        data: a.data,
+        ora: String(a.ora || '').slice(0, 5),
+        tipo_visita: a.tipo_visita || '',
+        per_conto: !!a.per_conto,
+        medico_id: a.medico_id,
+        centro_id: a.centro_id,
+        centro_nome: (a.centri && a.centri.nome) || ''
+      })) });
+    }
+
     if (action === 'lookup') {
       const centroId = clean(b.centro_id, 64);
       const data     = clean(b.data, 10);
