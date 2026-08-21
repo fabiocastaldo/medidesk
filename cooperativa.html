@@ -292,6 +292,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <button class="sitem sub" id="tabbtn-assoc-servizi" onclick="switchTab('assoc-servizi')">Medici ↔ servizi</button>
         <button class="sitem sub" id="tabbtn-assoc-turni" onclick="switchTab('assoc-turni')">Medici ↔ turni</button>
       </div>
+      <button class="sitem" id="tabbtn-giornata" onclick="switchTab('giornata')">Giornata</button>
       <button class="sitem" id="tabbtn-statistiche" onclick="switchTab('statistiche')">Statistiche</button>
       <button class="sitem" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
       <button class="sitem" id="tabbtn-preferenze" onclick="switchTab('preferenze')">Preferenze</button>
@@ -422,6 +423,17 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div class="field"><label for="at-servizio">Servizio</label><select id="at-servizio" onchange="renderAssocTurniTab()"></select></div>
       </div>
       <div id="assoc-turni-tbl" class="mx-wrap"></div>
+    </section>
+
+    <section id="tab-giornata" class="card-lite hidden">
+      <div class="toolbar">
+        <label for="gio-data" style="font-size:13px">Data</label>
+        <input type="date" id="gio-data" onchange="loadGiornata()">
+        <button class="btn" onclick="loadGiornata()">Aggiorna</button>
+        <span id="gio-totali" style="font-size:13px;margin-left:auto"></span>
+      </div>
+      <p class="stat-hint">Vista in sola lettura: lo stato «erogata» lo certifica il medico dalla sua app. Nessuna azione è possibile da qui.</p>
+      <div id="gio-tbl"><div class="empty">Scegli una data.</div></div>
     </section>
 
     <section id="tab-statistiche" class="card-lite hidden">
@@ -604,6 +616,7 @@ const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const SEC_TITOLI = {
   'medici': 'Medici', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
   'assoc-servizi': 'Medici ↔ servizi', 'assoc-turni': 'Medici ↔ turni',
+  'giornata': 'Giornata',
   'statistiche': 'Statistiche', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
 };
 const SEC_SOTTO = {
@@ -613,19 +626,21 @@ const SEC_SOTTO = {
   'servizi': 'Il catalogo dei servizi dell\'organizzazione',
   'assoc-servizi': 'Abilita i medici sui servizi',
   'assoc-turni': 'I turni di ogni medico, a colpo d\'occhio',
+  'giornata': 'Gli appuntamenti del giorno su tutte le sedi, in sola lettura',
   'statistiche': 'La visione d\'insieme dell\'attivit\u00e0',
   'agenda': 'Gestisci disponibilit\u00e0 e prenotazioni del medico',
   'preferenze': 'Le impostazioni dell\'organizzazione'
 };
 
 function switchTab(t){
-  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','statistiche','agenda','preferenze'].forEach(x => {
+  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','agenda','preferenze'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
   document.getElementById('sec-title').textContent = SEC_TITOLI[t] || '';
   document.getElementById('sec-sub').textContent = SEC_SOTTO[t] || '';
   if(t === 'statistiche') loadStatVisite();
+  if(t === 'giornata') initGiornata();
 }
 
 function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
@@ -825,6 +840,61 @@ async function loadStatVisite(){
     el.innerHTML = '<div class="empty">Statistiche non disponibili. Riprova.</div>';
   } finally {
     _statVisiteBusy = false;
+  }
+}
+
+// ── GIORNATA (sola lettura: stato scritto dal medico, la plancia legge) ──
+let _gioBusy = false;
+function initGiornata(){
+  const el = document.getElementById('gio-data');
+  if(el && !el.value){
+    el.value = new Date().toLocaleDateString('en-CA');
+  }
+  loadGiornata();
+}
+async function loadGiornata(){
+  if(_gioBusy) return;
+  _gioBusy = true;
+  const tbl = document.getElementById('gio-tbl');
+  const tot = document.getElementById('gio-totali');
+  const giorno = (document.getElementById('gio-data')||{}).value || '';
+  tbl.innerHTML = '<div class="empty">Caricamento…</div>';
+  if(tot) tot.textContent = '';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-giornata' + (giorno ? ('?data=' + encodeURIComponent(giorno)) : ''), {
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body) throw new Error('fetch');
+    const sedi = body.sedi || [];
+    if(tot && body.totali){
+      tot.textContent = body.totali.prenotati + ' prenotat' + (body.totali.prenotati===1?'o':'i')
+        + ' · ' + body.totali.erogate + ' erogat' + (body.totali.erogate===1?'a':'e')
+        + ' · ' + body.totali.cancellati + ' cancellat' + (body.totali.cancellati===1?'o':'i');
+    }
+    if(!sedi.length){
+      tbl.innerHTML = '<div class="empty">Nessun appuntamento in questa data sulle sedi dell\'organizzazione.</div>';
+      return;
+    }
+    const statoBadge = s => s === 'erogata'
+      ? '<span style="color:#16a34a;font-weight:600">Erogata ✓</span>'
+      : (s === 'cancellato'
+        ? '<span style="color:#b45309;font-weight:600;text-decoration:line-through">Cancellato</span>'
+        : '<span style="color:#0a8074;font-weight:600">Prenotato</span>');
+    tbl.innerHTML = sedi.map(sede =>
+      '<div class="stat-block"><h3>' + esc(sede.nome) + '</h3>'
+      + '<table class="tbl"><thead><tr><th style="width:70px">Ora</th><th>Paziente</th><th>Tipo</th><th>Medico</th><th style="width:110px">Stato</th></tr></thead><tbody>'
+      + sede.appuntamenti.map(a =>
+          '<tr' + (a.stato === 'cancellato' ? ' style="opacity:.6"' : '') + '><td>' + esc(a.ora) + '</td><td>' + esc(a.paziente || '—')
+          + '</td><td>' + esc(a.tipo || '—') + '</td><td>' + esc(a.medico || '—') + '</td><td>' + statoBadge(a.stato) + '</td></tr>'
+        ).join('')
+      + '</tbody></table></div>'
+    ).join('');
+  } catch(_e) {
+    tbl.innerHTML = '<div class="empty">Giornata non disponibile. Riprova.</div>';
+  } finally {
+    _gioBusy = false;
   }
 }
 
