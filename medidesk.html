@@ -6742,7 +6742,7 @@ function openDeletePazienteModal(pazienteId){
   const nVisite = visite.length;
   let periodoStr = '';
   if(nVisite > 0){
-    const dates = visite.map(v => v.data).filter(Boolean).sort();
+    const dates = visite.map(v => v.data).filter(Boolean).sort((a,b)=>(itToIso(a)||'').localeCompare(itToIso(b)||''));
     periodoStr = dates.length === 1
       ? `del ${escapeHtml(dates[0])}`
       : `tra il ${escapeHtml(dates[0])} e il ${escapeHtml(dates[dates.length-1])}`;
@@ -9585,7 +9585,7 @@ h1{color:#0a8074}h2{border-bottom:1px solid #ccc;padding-bottom:4px;margin-top:3
 <p><strong>${escapeHtml(p.cognome||'')} ${escapeHtml(p.nome||'')}</strong></p>
 ${p.nascita ? `<p>Data di nascita: ${escapeHtml(p.nascita)}</p>` : ''}
 <h2>Cronologia clinica (${visite.length} visite)</h2>
-${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.slice().sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(v => `
+${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.slice().sort((a,b)=>(itToIso(a.data)||'').localeCompare(itToIso(b.data)||'')).map(v => `
 <div class="visita">
   <div class="visita-date">${escapeHtml(v.data||'')}${v.luogo ? ` — ${escapeHtml(v.luogo)}` : ''}</div>
   <div class="clinica">${escapeHtml(v.clinica||'')}</div>
@@ -11174,7 +11174,7 @@ function renderArchivioPage(){
   if(list){
     list.innerHTML = data.pazienti.map(p => {
       const nV = (p.visite||[]).length;
-      const dates = (p.visite||[]).map(v=>v.data).filter(Boolean).sort();
+      const dates = (p.visite||[]).map(v=>v.data).filter(Boolean).sort((a,b)=>(itToIso(a)||'').localeCompare(itToIso(b)||''));
       const range = dates.length > 1 ? `${dates[0]} – ${dates[dates.length-1]}` : (dates[0]||'—');
       return `<div class="card" style="margin-bottom:10px">
         <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
