@@ -132,7 +132,10 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 auto 8px;max-width:480px}
 .slot-btn{padding:10px;border:2px solid var(--border);border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:var(--brand-mid);transition:all .15s;font-family:inherit}
 .slot-btn:hover{background:var(--brand-bright);color:#fff;border-color:var(--brand-bright)}
-.slot-btn.slot-occupied,.slot-btn.slot-occupied:hover{background:#F4F0EC;border-color:#E4D6C8;color:#A98F73;cursor:default;text-decoration:line-through}
+.slot-btn.slot-occupied,.slot-btn.slot-occupied:hover{background:#F4F0EC;border-color:#E4D6C8;color:#A98F73;cursor:pointer;text-decoration:line-through}
+.slot-btn.slot-selected,.slot-btn.slot-selected:hover{background:var(--brand-mid);border-color:var(--brand-mid);color:#fff}
+.slot-btn.slot-occupied.slot-selected,.slot-btn.slot-occupied.slot-selected:hover{background:#F4F0EC;border-color:var(--brand-deep);color:var(--brand-deep);text-decoration:line-through}
+.ag-occ-avviso{margin:10px 0 4px;padding:10px 12px;border:1px solid #E4D6C8;border-radius:var(--r-sm);background:#FBF7F2;font-size:13.5px;color:#7A6248}
 .slot-centro{font-size:11px;color:var(--ink3);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;text-align:center}
 .slot-closed{display:inline-block;font-size:12.5px;color:#B5544B;font-weight:600;margin:4px 0}
 @media (max-width:840px){
@@ -499,8 +502,16 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <h4>Appuntamento prenotato</h4>
           <div class="ag-book-ctx" id="ag-occ-ctx"></div>
           <div id="ag-occ-msg" class="hidden"></div>
-          <div class="ag-book-actions">
-            <button class="btn" id="ag-occ-btn" onclick="agOccCancella()">Cancella appuntamento</button>
+          <div id="ag-occ-conferma" class="hidden">
+            <div class="ag-occ-avviso" id="ag-occ-avviso"></div>
+            <div class="ag-book-actions">
+              <button class="btn" onclick="agOccEsegui(true)">Cancella e riprogramma</button>
+              <button class="btn" onclick="agOccEsegui(false)">Cancella soltanto</button>
+              <button class="btn btn-ghost" onclick="agOccIndietro()">Indietro</button>
+            </div>
+          </div>
+          <div class="ag-book-actions" id="ag-occ-azioni">
+            <button class="btn" id="ag-occ-btn" onclick="agOccScegli()">Cancella / riprogramma visita</button>
             <button class="btn btn-ghost" onclick="agOccChiudi()">Chiudi</button>
           </div>
         </div>
@@ -1017,11 +1028,14 @@ function renderAgSlots(){
   const multi = blocchi.length > 1;
   box.innerHTML = blocchi.map(b => {
     if(b.chiuso) return (multi ? '<div class="slot-centro">' + esc(b.centro.nome) + '</div>' : '') + '<span class="slot-closed">Chiuso per ferie del medico</span>';
-    const btns = b.slots.filter(sl => !sl.passato || sl.occupato).map(sl =>
-      sl.occupato
-        ? '<button class="slot-btn slot-occupied" onclick="agSlotOccupato(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>'
-        : '<button class="slot-btn" onclick="agPickSlot(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>'
-    ).join('');
+    const btns = b.slots.filter(sl => !sl.passato || sl.occupato).map(sl => {
+      const selB = _agBook && String(_agBook.centro_id) === String(b.centro.id) && _agBook.data === ds && _agBook.ora === sl.ora;
+      const selO = _agOcc && String(_agOcc.centro_id) === String(b.centro.id) && _agOcc.data === ds && String(_agOcc.ora) === sl.ora;
+      const selCls = (selB || selO) ? ' slot-selected' : '';
+      return sl.occupato
+        ? '<button class="slot-btn slot-occupied' + selCls + '" onclick="agSlotOccupato(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>'
+        : '<button class="slot-btn' + selCls + '" onclick="agPickSlot(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>';
+    }).join('');
     return (multi ? '<div class="slot-centro">' + esc(b.centro.nome) + '</div>' : '') + '<div class="slots-grid">' + btns + '</div>';
   }).join('') || '<div class="empty">Nessuno slot in questo giorno</div>';
 }
@@ -1042,6 +1056,9 @@ function agPickSlot(centroId, ds, ora){
   const c = (((_agCal.data || {}).centri) || []).find(x => String(x.id) === String(centroId));
   const m = (((_plancia || {}).medici) || []).find(x => String(x.medico_id) === String(mid));
   _agBook = { centro_id: centroId, data: ds, ora };
+  _agOcc = null;
+  document.getElementById('ag-occ').classList.add('hidden');
+  renderAgSlots();
   document.getElementById('ag-book-ctx').textContent =
     fmtData(ds) + ' alle ' + ora + (c ? ' \u00b7 ' + c.nome : '') + (m ? ' \u00b7 ' + nomeMedico(m) : '');
   AGB_CAMPI.forEach(id => { document.getElementById(id).disabled = false; });
@@ -1068,7 +1085,7 @@ function agAnnullaPrenotazione(){
   _agBook = null;
   ['agb-nome','agb-cognome','agb-tel','agb-email'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   const cons = document.getElementById('agb-consenso'); if(cons) cons.checked = false;
-  if(_agCal.dateStr){ agBookIdle(); } else { document.getElementById('ag-book').classList.add('hidden'); }
+  if(_agCal.dateStr){ agBookIdle(); renderAgSlots(); } else { document.getElementById('ag-book').classList.add('hidden'); }
 }
 
 async function agConfermaPrenotazione(){
@@ -1126,6 +1143,23 @@ function agOccChiudi(){
   const el = document.getElementById('ag-occ');
   if(el) el.classList.add('hidden');
   setBoxMsg('ag-occ-msg', '');
+  agOccIndietro();
+  if(_agCal.dateStr) renderAgSlots();
+}
+
+function agOccScegli(){
+  if(!_agOcc) return;
+  const a = _agOcc.appt;
+  document.getElementById('ag-occ-avviso').textContent = a.email_presente
+    ? 'Il paziente ricever\u00e0 un\u2019email di annullamento.'
+    : 'Il paziente NON ha un\u2019email registrata: va avvisato telefonicamente.';
+  document.getElementById('ag-occ-conferma').classList.remove('hidden');
+  document.getElementById('ag-occ-azioni').classList.add('hidden');
+}
+
+function agOccIndietro(){
+  document.getElementById('ag-occ-conferma').classList.add('hidden');
+  document.getElementById('ag-occ-azioni').classList.remove('hidden');
 }
 
 async function agSlotOccupato(centroId, ds, ora){
@@ -1152,6 +1186,10 @@ async function agSlotOccupato(centroId, ds, ora){
     }
     if(!res.ok || !body.appt){ ctx.textContent = 'Lettura non riuscita. Riprova.'; return; }
     _agOcc = { appt: body.appt, centro_id: centroId, data: ds, ora };
+    _agBook = null;
+    agBookIdle();
+    agOccIndietro();
+    renderAgSlots();
     ctx.textContent = (body.appt.nome_paziente + ' ' + body.appt.cognome_paziente).trim()
       + ' \u00b7 ' + fmtData(ds) + ' alle ' + ora
       + (c ? ' \u00b7 ' + c.nome : '')
@@ -1163,14 +1201,10 @@ async function agSlotOccupato(centroId, ds, ora){
   }
 }
 
-async function agOccCancella(){
+async function agOccEsegui(riprogramma){
   if(!_agOcc) return;
   const a = _agOcc.appt;
   const chi = (a.nome_paziente + ' ' + a.cognome_paziente).trim() || 'questo paziente';
-  const avviso = a.email_presente
-    ? 'Il paziente ricever\u00e0 un\'email di annullamento.'
-    : 'ATTENZIONE: il paziente NON ha un\'email registrata \u2014 va avvisato telefonicamente.';
-  if(!window.confirm('Cancellare l\'appuntamento di ' + chi + ' del ' + fmtData(_agOcc.data) + ' alle ' + _agOcc.ora + '? ' + avviso)) return;
   const btn = document.getElementById('ag-occ-btn');
   btn.disabled = true;
   try {
@@ -1189,13 +1223,16 @@ async function agOccCancella(){
     if(!res.ok){ setBoxMsg('ag-occ-msg', body.error || 'Cancellazione non riuscita.', 'err'); btn.disabled = false; return; }
     const rp = body.riprenota || {};
     agOccChiudi();
-    setBoxMsg('ag-slot-msg', 'Appuntamento di ' + chi + ' cancellato. Lo slot \u00e8 di nuovo libero.'
-      + (a.email_presente ? ' Email di annullamento inviata al paziente.' : ' Il paziente non ha email: avvisalo telefonicamente.'), 'info');
-    if(window.confirm('Vuoi riprogrammare per ' + chi + '? I dati del paziente verranno precompilati: scegli poi il nuovo orario dalla griglia.')){
+    if(riprogramma){
       document.getElementById('agb-nome').value = rp.nome || '';
       document.getElementById('agb-cognome').value = rp.cognome || '';
       document.getElementById('agb-tel').value = rp.telefono || '';
       document.getElementById('agb-email').value = rp.email || '';
+      setBoxMsg('ag-slot-msg', 'Visita di ' + chi + ' cancellata. Dati precompilati nel modulo: scegli il nuovo orario dalla griglia per riprogrammare.'
+        + (a.email_presente ? ' Il paziente ha ricevuto l\u2019email di annullamento.' : ' Il paziente non ha email: avvisalo telefonicamente.'), 'info');
+    } else {
+      setBoxMsg('ag-slot-msg', 'Visita di ' + chi + ' cancellata. Lo slot \u00e8 di nuovo libero.'
+        + (a.email_presente ? ' Email di annullamento inviata al paziente.' : ' Il paziente non ha email: avvisalo telefonicamente.'), 'info');
     }
     agLoadMonth();
   } catch(_e) {
