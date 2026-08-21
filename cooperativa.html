@@ -484,8 +484,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <h4>Prenota per conto del paziente</h4>
           <div class="ag-book-ctx" id="ag-book-ctx"></div>
           <div class="ag-book-grid">
-            <div class="field"><label for="agb-nome">Nome del paziente</label><input id="agb-nome" type="text" maxlength="80" autocomplete="off"></div>
-            <div class="field"><label for="agb-cognome">Cognome del paziente</label><input id="agb-cognome" type="text" maxlength="80" autocomplete="off"></div>
+            <div class="field"><label for="agb-nome">Nome del paziente</label><input id="agb-nome" onblur="this.value=capNome(this.value)" type="text" maxlength="80" autocomplete="off"></div>
+            <div class="field"><label for="agb-cognome">Cognome del paziente</label><input id="agb-cognome" onblur="this.value=capNome(this.value)" type="text" maxlength="80" autocomplete="off"></div>
             <div class="field"><label for="agb-tel">Telefono del paziente</label><input id="agb-tel" type="tel" maxlength="40" autocomplete="off"></div>
             <div class="field"><label for="agb-email">Email del paziente (facoltativa)</label><input id="agb-email" type="email" maxlength="160" autocomplete="off"></div>
             <div class="field"><label for="agb-servizio">Tipo di visita (facoltativo)</label><select id="agb-servizio"></select></div>
@@ -1081,6 +1081,11 @@ function agPickSlot(centroId, ds, ora){
   document.getElementById('ag-book').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function capNome(s){
+  return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase()
+    .replace(/(^|[\s'\-])(\p{L})/gu, (m, p, c) => p + c.toUpperCase());
+}
+
 function agAnnullaPrenotazione(){
   _agBook = null;
   ['agb-nome','agb-cognome','agb-tel','agb-email'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
@@ -1090,8 +1095,8 @@ function agAnnullaPrenotazione(){
 
 async function agConfermaPrenotazione(){
   if(!_agBook) return;
-  const nome = document.getElementById('agb-nome').value.trim();
-  const cognome = document.getElementById('agb-cognome').value.trim();
+  const nome = capNome(document.getElementById('agb-nome').value);
+  const cognome = capNome(document.getElementById('agb-cognome').value);
   const tel = document.getElementById('agb-tel').value.trim();
   if(!nome || !cognome){ setBoxMsg('ag-book-msg', 'Nome e cognome del paziente sono obbligatori.', 'err'); return; }
   if(!tel){ setBoxMsg('ag-book-msg', 'Il telefono del paziente \u00e8 obbligatorio per la prenotazione per conto.', 'err'); return; }
