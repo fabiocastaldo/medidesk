@@ -488,6 +488,15 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
             <button class="btn btn-ghost" onclick="agAnnullaPrenotazione()">Annulla</button>
           </div>
         </div>
+        <div id="ag-occ" class="ag-book hidden">
+          <h4>Appuntamento prenotato</h4>
+          <div class="ag-book-ctx" id="ag-occ-ctx"></div>
+          <div id="ag-occ-msg" class="hidden"></div>
+          <div class="ag-book-actions">
+            <button class="btn" id="ag-occ-btn" onclick="agOccCancella()">Cancella appuntamento</button>
+            <button class="btn btn-ghost" onclick="agOccChiudi()">Chiudi</button>
+          </div>
+        </div>
         </div>
       </div>
     </section>
@@ -982,6 +991,7 @@ function renderAgCal(){
 
 function agSelectDate(ds){
   _agCal.dateStr = ds;
+  agOccChiudi();
   renderAgCal();
 }
 
@@ -1002,7 +1012,7 @@ function renderAgSlots(){
     if(b.chiuso) return (multi ? '<div class="slot-centro">' + esc(b.centro.nome) + '</div>' : '') + '<span class="slot-closed">Chiuso per ferie del medico</span>';
     const btns = b.slots.filter(sl => !sl.passato || sl.occupato).map(sl =>
       sl.occupato
-        ? '<button class="slot-btn slot-occupied" disabled>' + sl.ora + '</button>'
+        ? '<button class="slot-btn slot-occupied" onclick="agSlotOccupato(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>'
         : '<button class="slot-btn" onclick="agPickSlot(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>'
     ).join('');
     return (multi ? '<div class="slot-centro">' + esc(b.centro.nome) + '</div>' : '') + '<div class="slots-grid">' + btns + '</div>';
@@ -1099,6 +1109,91 @@ async function agConfermaPrenotazione(){
     setBoxMsg('ag-book-msg', 'Errore di rete. Riprova.', 'err');
   } finally {
     btn.disabled = !_agBook;
+  }
+}
+
+let _agOcc = null;
+
+function agOccChiudi(){
+  _agOcc = null;
+  const el = document.getElementById('ag-occ');
+  if(el) el.classList.add('hidden');
+  setBoxMsg('ag-occ-msg', '');
+}
+
+async function agSlotOccupato(centroId, ds, ora){
+  const c = (((_agCal.data || {}).centri) || []).find(x => String(x.id) === String(centroId));
+  const ctx = document.getElementById('ag-occ-ctx');
+  const btn = document.getElementById('ag-occ-btn');
+  document.getElementById('ag-occ').classList.remove('hidden');
+  setBoxMsg('ag-occ-msg', '');
+  _agOcc = null;
+  btn.disabled = true;
+  ctx.textContent = 'Caricamento\u2026';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-cancella', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'lookup', centro_id: centroId, data: ds, ora })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(res.status === 404){
+      ctx.textContent = 'Nessun appuntamento trovato su questo orario. Il calendario potrebbe non essere aggiornato.';
+      agLoadMonth();
+      return;
+    }
+    if(!res.ok || !body.appt){ ctx.textContent = 'Lettura non riuscita. Riprova.'; return; }
+    _agOcc = { appt: body.appt, centro_id: centroId, data: ds, ora };
+    ctx.textContent = (body.appt.nome_paziente + ' ' + body.appt.cognome_paziente).trim()
+      + ' \u00b7 ' + fmtData(ds) + ' alle ' + ora
+      + (c ? ' \u00b7 ' + c.nome : '')
+      + (body.appt.tipo_visita ? ' \u00b7 ' + body.appt.tipo_visita : '')
+      + (body.appt.per_conto ? ' \u00b7 prenotato dalla segreteria' : ' \u00b7 prenotato online');
+    btn.disabled = false;
+  } catch(_e) {
+    ctx.textContent = 'Errore di rete. Riprova.';
+  }
+}
+
+async function agOccCancella(){
+  if(!_agOcc) return;
+  const a = _agOcc.appt;
+  const chi = (a.nome_paziente + ' ' + a.cognome_paziente).trim() || 'questo paziente';
+  const avviso = a.email_presente
+    ? 'Il paziente ricever\u00e0 un\'email di annullamento.'
+    : 'ATTENZIONE: il paziente NON ha un\'email registrata \u2014 va avvisato telefonicamente.';
+  if(!window.confirm('Cancellare l\'appuntamento di ' + chi + ' del ' + fmtData(_agOcc.data) + ' alle ' + _agOcc.ora + '? ' + avviso)) return;
+  const btn = document.getElementById('ag-occ-btn');
+  btn.disabled = true;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-cancella', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel', appt_id: a.id })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(res.status === 409){
+      setBoxMsg('ag-occ-msg', 'Appuntamento gi\u00e0 cancellato. Il calendario \u00e8 stato aggiornato.', 'err');
+      agLoadMonth();
+      return;
+    }
+    if(!res.ok){ setBoxMsg('ag-occ-msg', body.error || 'Cancellazione non riuscita.', 'err'); btn.disabled = false; return; }
+    const rp = body.riprenota || {};
+    agOccChiudi();
+    setBoxMsg('ag-slot-msg', 'Appuntamento di ' + chi + ' cancellato. Lo slot \u00e8 di nuovo libero.'
+      + (a.email_presente ? ' Email di annullamento inviata al paziente.' : ' Il paziente non ha email: avvisalo telefonicamente.'), 'info');
+    if(window.confirm('Vuoi riprogrammare per ' + chi + '? I dati del paziente verranno precompilati: scegli poi il nuovo orario dalla griglia.')){
+      document.getElementById('agb-nome').value = rp.nome || '';
+      document.getElementById('agb-cognome').value = rp.cognome || '';
+      document.getElementById('agb-tel').value = rp.telefono || '';
+      document.getElementById('agb-email').value = rp.email || '';
+    }
+    agLoadMonth();
+  } catch(_e) {
+    setBoxMsg('ag-occ-msg', 'Errore di rete. Riprova.', 'err');
+    btn.disabled = false;
   }
 }
 

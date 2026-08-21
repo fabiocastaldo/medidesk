@@ -317,6 +317,7 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
 
 const VALID_TIPI = new Set([
   'conferma_appt_anon', 'conferma_appt_medico', 'cancellazione_paziente',
+  'cancellazione_paziente_coop',
   'notifica_centro_evento', 'cancellazione_centro_anon', 'chiusura_studio_centro',
   'account_eliminazione', 'notifica_prenotazione_coop',
   'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione',
@@ -385,7 +386,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, skipped: 'notifiche disabilitate per il centro' });
     }
     authCtx = { centroNome: ct.centroNome, centroEmail: ct.centroEmail, authMode: 'cancellation_token' };
-  } else if (tipo === 'notifica_prenotazione_coop' || tipo === 'conferma_prenotazione_segreteria' || tipo === 'notifica_medico_prenotazione' || tipo === 'notifica_medico_cancellazione' || tipo === 'avviso_lista_attesa') {
+  } else if (tipo === 'notifica_prenotazione_coop' || tipo === 'conferma_prenotazione_segreteria' || tipo === 'notifica_medico_prenotazione' || tipo === 'notifica_medico_cancellazione' || tipo === 'avviso_lista_attesa' || tipo === 'cancellazione_paziente_coop') {
     const ct = await verifyCancellationToken(body.appt_id, body.cancellation_token, supabaseUrl, serviceKey);
     if (!ct.ok) return res.status(ct.status).json({ error: ct.error });
     authCtx = { authMode: 'cancellation_token' };
@@ -577,6 +578,24 @@ export default async function handler(req, res) {
     medicoIdAudit = authCtx.medicoId;
     targetType    = 'appuntamento';
     targetId      = appt_id;
+
+  } else if (tipo === 'cancellazione_paziente_coop') {
+    // Cancellazione decisa dalla struttura (plancia coop): avviso al paziente.
+    // Auth via cancellation_token (server-to-server da coop-cancella); riusa il
+    // template della cancellazione dal medico. Skip pulito se il paziente non ha email.
+    const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
+    if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    if (!appt.emailPaziente) {
+      return res.status(200).json({ ok: true, skipped: 'paziente senza email' });
+    }
+    const dataFmt = formatDateIt(appt.data);
+    to            = appt.emailPaziente;
+    subject       = `Appuntamento annullato — ${dataFmt} alle ${appt.ora}`;
+    html          = buildHtmlCancellazioneMedico({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt, ora: esc(appt.ora), medico_slug: appt.medicoSlug || '' });
+    replyTo       = appt.medicoEmail;
+    medicoIdAudit = appt.apptMedicoId;
+    targetType    = 'appuntamento';
+    targetId      = body.appt_id;
 
   } else if (tipo === 'notifica_centro_evento') {
     const { appt_id, evento } = body;
