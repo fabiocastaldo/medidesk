@@ -91,6 +91,20 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .stat-block:last-child{margin-bottom:0}
 .stat-block h3{font-size:14px;font-weight:700;color:var(--brand-mid);margin:0 0 10px}
 .stat-hint{font-size:12.5px;color:var(--ink3);margin:0 0 12px}
+.stat-filtri{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:18px}
+.stat-filtri .field{margin:0;min-width:150px;flex:1}
+.stat-filtri select,.stat-filtri input[type=date]{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:13.5px;color:var(--ink);background:#fff}
+.stat-filtri select:focus-visible,.stat-filtri input[type=date]:focus-visible{outline:2px solid var(--brand-bright);outline-offset:1px;border-color:var(--brand-mid)}
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.kpi-tile{background:linear-gradient(160deg,#fff 0%,var(--paper) 100%);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow-soft)}
+.kpi-tile .kn{font-family:'DM Serif Display',serif;font-size:28px;color:var(--brand-deep);line-height:1.1}
+.kpi-tile .kl{font-size:11.5px;color:var(--ink3);margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
+.barrow{display:grid;grid-template-columns:minmax(120px,32%) 1fr 52px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.barrow:last-child{border-bottom:0}
+.barrow .bl{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barrow .bt{height:10px;border-radius:99px;background:var(--paper);overflow:hidden;border:1px solid var(--border)}
+.barrow .bf{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--brand-bright),var(--brand-mid));transition:width .5s ease}
+.barrow .bn{font-weight:700;color:var(--brand-deep);text-align:right;font-variant-numeric:tabular-nums}
 .cal-panel{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:20px}
 .cal-side{flex:1 1 240px;min-width:190px;max-width:340px}
 .cal-side h4{font-family:'DM Serif Display',serif;font-weight:400;font-size:17px;color:var(--brand-deep);margin:8px 0 6px}
@@ -443,9 +457,20 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div id="stat-spec-tbl"></div>
       </div>
       <div class="stat-block">
-        <h3>Visite erogate per tipologia</h3>
+        <h3>Visite erogate</h3>
         <p class="stat-hint">Visite segnate come erogate dai medici sulle sedi dell'organizzazione. Solo conteggi aggregati: nessun dato dei pazienti.</p>
+        <div class="stat-filtri">
+          <div class="field"><label for="stf-medico">Medico</label><select id="stf-medico"><option value="">Tutti</option></select></div>
+          <div class="field"><label for="stf-sede">Sede</label><select id="stf-sede"><option value="">Tutte</option></select></div>
+          <div class="field"><label for="stf-dal">Dal</label><input type="date" id="stf-dal"></div>
+          <div class="field"><label for="stf-al">Al</label><input type="date" id="stf-al"></div>
+          <button class="btn" style="padding:9px 16px" onclick="loadStatVisite()">Applica</button>
+          <button class="btn btn-ghost" style="padding:9px 16px" onclick="exportStatCSV()">Esporta CSV</button>
+        </div>
+        <div class="kpi-strip" id="stat-kpi"></div>
         <div id="stat-tipo-tbl"></div>
+        <div id="stat-medico-tbl" style="margin-top:18px"></div>
+        <div id="stat-sede-tbl" style="margin-top:18px"></div>
       </div>
       <div class="stat-block">
         <h3>Copertura sedi</h3>
@@ -639,7 +664,7 @@ function switchTab(t){
   });
   document.getElementById('sec-title').textContent = SEC_TITOLI[t] || '';
   document.getElementById('sec-sub').textContent = SEC_SOTTO[t] || '';
-  if(t === 'statistiche') loadStatVisite();
+  if(t === 'statistiche'){ initStatFiltri(); loadStatVisite(); }
   if(t === 'giornata') initGiornata();
 }
 
@@ -815,32 +840,119 @@ function renderStatSpec(){
 }
 
 let _statVisiteBusy = false;
+let _statLast = null;
+let _statFiltriInit = false;
+
+function initStatFiltri(){
+  if(_statFiltriInit || !_plancia) return;
+  const sm = document.getElementById('stf-medico');
+  const ss = document.getElementById('stf-sede');
+  (_plancia.medici || []).forEach(m => {
+    const o = document.createElement('option');
+    o.value = String(m.medico_id);
+    o.textContent = ((m.titolo ? m.titolo + ' ' : '') + (m.nome || '') + ' ' + (m.cognome || '')).trim();
+    sm.appendChild(o);
+  });
+  (_plancia.sedi || []).forEach(s => {
+    const o = document.createElement('option');
+    o.value = String(s.id); o.textContent = s.nome || 'Sede';
+    ss.appendChild(o);
+  });
+  _statFiltriInit = true;
+}
+
+function statBars(el, righe, labelKey, vuoto){
+  if(!righe.length){ el.innerHTML += '<div class="empty">' + vuoto + '</div>'; return; }
+  const max = Math.max.apply(null, righe.map(r => Number(r.n) || 0).concat([1]));
+  el.innerHTML += righe.map(r =>
+    '<div class="barrow"><span class="bl" title="' + esc(r[labelKey]) + '">' + esc(r[labelKey]) + '</span>'
+    + '<span class="bt"><span class="bf" style="width:' + Math.round((Number(r.n) || 0) / max * 100) + '%"></span></span>'
+    + '<span class="bn">' + Number(r.n) + '</span></div>').join('');
+}
+
 async function loadStatVisite(){
   if(_statVisiteBusy) return;
   _statVisiteBusy = true;
-  const el = document.getElementById('stat-tipo-tbl');
-  el.innerHTML = '<div class="empty">Caricamento…</div>';
+  const elT = document.getElementById('stat-tipo-tbl');
+  const elM = document.getElementById('stat-medico-tbl');
+  const elS = document.getElementById('stat-sede-tbl');
+  const elK = document.getElementById('stat-kpi');
+  elT.innerHTML = '<div class="empty">Caricamento…</div>';
+  elM.innerHTML = ''; elS.innerHTML = ''; elK.innerHTML = '';
   try {
+    const dal = document.getElementById('stf-dal').value;
+    const al  = document.getElementById('stf-al').value;
+    const med = document.getElementById('stf-medico').value;
+    const sede = document.getElementById('stf-sede').value;
+    if(dal && al && dal > al){
+      elT.innerHTML = '<div class="empty">Intervallo date non valido: «Dal» è successivo ad «Al»</div>';
+      return;
+    }
+    const qs = [];
+    if(dal) qs.push('dal=' + encodeURIComponent(dal));
+    if(al) qs.push('al=' + encodeURIComponent(al));
+    if(med) qs.push('medico_id=' + encodeURIComponent(med));
+    if(sede) qs.push('sede_id=' + encodeURIComponent(sede));
     const { data: { session } } = await sb.auth.getSession();
-    const res = await fetch('/api/coop-statistiche', {
+    const res = await fetch('/api/coop-statistiche' + (qs.length ? '?' + qs.join('&') : ''), {
       headers: { 'Authorization': 'Bearer ' + session.access_token }
     });
     const body = await res.json().catch(() => null);
     if(!res.ok || !body) throw new Error('fetch');
-    const righe = body.tipologie || [];
-    if(!righe.length){
-      el.innerHTML = '<div class="empty">Nessuna visita erogata sulle sedi dell\'organizzazione</div>';
+    _statLast = { body: body, dal: dal, al: al };
+    elK.innerHTML =
+      '<div class="kpi-tile"><div class="kn">' + Number(body.totale || 0) + '</div><div class="kl">Visite erogate</div></div>'
+      + '<div class="kpi-tile"><div class="kn">' + (body.per_medico || []).length + '</div><div class="kl">Medici attivi</div></div>'
+      + '<div class="kpi-tile"><div class="kn">' + (body.per_sede || []).length + '</div><div class="kl">Sedi attive</div></div>';
+    if(!Number(body.totale)){
+      elT.innerHTML = '<div class="empty">Nessuna visita erogata per i filtri scelti</div>';
       return;
     }
-    el.innerHTML = '<table class="tbl"><thead><tr><th>Tipologia</th><th style="width:90px">Visite</th></tr></thead><tbody>'
-      + righe.map(r => '<tr><td>' + esc(r.tipo) + '</td><td>' + Number(r.n) + '</td></tr>').join('')
-      + '<tr><td style="font-weight:700">Totale</td><td style="font-weight:700">' + Number(body.totale || 0) + '</td></tr>'
-      + '</tbody></table>';
+    elT.innerHTML = '<h3>Per tipologia</h3>';
+    statBars(elT, body.tipologie || [], 'tipo', 'Nessun dato');
+    elM.innerHTML = '<h3>Per medico</h3>';
+    statBars(elM, body.per_medico || [], 'nome', 'Nessun dato');
+    elS.innerHTML = '<h3>Per sede</h3>';
+    statBars(elS, body.per_sede || [], 'nome', 'Nessun dato');
   } catch(_e) {
-    el.innerHTML = '<div class="empty">Statistiche non disponibili. Riprova.</div>';
+    elT.innerHTML = '<div class="empty">Statistiche non disponibili. Riprova.</div>';
   } finally {
     _statVisiteBusy = false;
   }
+}
+
+function _csvCell(v){
+  const s = String(v == null ? '' : v);
+  return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportStatCSV(){
+  if(!_statLast || !_statLast.body){
+    alert('Applica prima i filtri: nessun dato da esportare.');
+    return;
+  }
+  const b = _statLast.body;
+  const per = _statLast.dal || _statLast.al
+    ? ((_statLast.dal || 'inizio') + ' → ' + (_statLast.al || 'oggi'))
+    : 'tutto il periodo';
+  const righe = [];
+  righe.push(['Statistiche visite erogate', per].map(_csvCell).join(';'));
+  righe.push(['Totale', String(Number(b.totale || 0))].map(_csvCell).join(';'));
+  righe.push('');
+  righe.push(['Per tipologia', 'Visite'].map(_csvCell).join(';'));
+  (b.tipologie || []).forEach(r => righe.push([r.tipo, String(Number(r.n))].map(_csvCell).join(';')));
+  righe.push('');
+  righe.push(['Per medico', 'Visite'].map(_csvCell).join(';'));
+  (b.per_medico || []).forEach(r => righe.push([r.nome, String(Number(r.n))].map(_csvCell).join(';')));
+  righe.push('');
+  righe.push(['Per sede', 'Visite'].map(_csvCell).join(';'));
+  (b.per_sede || []).forEach(r => righe.push([r.nome, String(Number(r.n))].map(_csvCell).join(';')));
+  const blob = new Blob(['\uFEFF' + righe.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'statistiche_' + (_statLast.dal || 'inizio') + '_' + (_statLast.al || 'oggi') + '.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
 // ── GIORNATA (sola lettura: stato scritto dal medico, la plancia legge) ──
