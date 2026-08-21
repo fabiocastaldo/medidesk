@@ -3289,12 +3289,13 @@ async function loadPazientiFromDB(user){
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient.from('pazienti')
-      .select('id, nome, cognome, data_nascita')
+      .select('id, nome, cognome, data_nascita, sintesi_clinica, sintesi_generata_il, sintesi_meta')
       .eq('medico_id', medico.id).order('cognome').order('nome');
     if(error) throw error;
     S.pazienti = (data || []).map(p => ({
       id: p.id, nome: p.nome||'', cognome: p.cognome||'',
-      nascita: isoToIt(p.data_nascita||''), visite: []
+      nascita: isoToIt(p.data_nascita||''), visite: [],
+      sintesiEnc: p.sintesi_clinica||null, sintesiGenerataIl: p.sintesi_generata_il||null, sintesiMeta: p.sintesi_meta||null
     }));
     save();
     console.log('[Delphi~Med] Pazienti caricati da DB:', S.pazienti.length);
@@ -6335,6 +6336,7 @@ function showPazienteDetail(id){
     </div>`;
   _initPazienteModal(p);
   openModal('modal-paziente');
+  if(canSint) _renderSintesiSalvata(id);
 }
 function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
 
@@ -6905,6 +6907,60 @@ function stampaStoria(pazId){
   }catch(e){ showToast('Errore stampa: '+e.message); }
 }
 
+// ── PERSISTENZA SINTESI CLINICA (cifrata client-side, invalidazione a fingerprint) ──
+async function _fpVisite(p){
+  const snap=(p.visite||[]).map(v=>[String(v.id),v.data||'',v.clinica||'',v.referto||'',v.foto_url||null])
+    .sort((a,b)=>a[0].localeCompare(b[0]));
+  const buf=new TextEncoder().encode(JSON.stringify(snap));
+  const h=await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function _storiaBoxHTML(pazId, testo, titolo, extraHtml){
+  return `<div class="storia-box"><div class="section-title" style="margin:0 0 12px">${titolo}</div>${extraHtml||''}<div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
+}
+
+async function _salvaSintesi(p, testo, fonte){
+  try{
+    const fp=await _fpVisite(p);
+    const enc=await _encryptText(testo);
+    const generataIl=new Date().toISOString();
+    const meta={fonte, fp};
+    const { data, error } = await supabaseClient.from('pazienti')
+      .update({ sintesi_clinica: enc, sintesi_generata_il: generataIl, sintesi_meta: meta })
+      .eq('id', p.id).select('id');
+    if(error) throw error;
+    if(!data || !data.length) throw new Error('nessuna riga aggiornata');
+    p.sintesiEnc=enc; p.sintesiGenerataIl=generataIl; p.sintesiMeta=meta;
+    save();
+    showToast('Sintesi salvata nel fascicolo ✓');
+  } catch(e){
+    console.warn('[Delphi~Med] salvataggio sintesi fallito:', e.message);
+    showToast('Sintesi non salvata: '+e.message);
+  }
+}
+
+async function _renderSintesiSalvata(pazId){
+  const p=S.pazienti.find(x=>String(x.id)===String(pazId));
+  if(!p || !p.sintesiEnc) return;
+  const container=document.getElementById('storia-container-'+pazId);
+  if(!container || container.innerHTML.trim()) return;
+  try{
+    const testo=await _decryptText(p.sintesiEnc);
+    if(!testo) return;
+    const fonte=(p.sintesiMeta&&p.sintesiMeta.fonte)||'note';
+    const titolo=fonte==='referti'?'Sintesi clinica dai referti':'Storia clinica sintetizzata';
+    const dataStr=p.sintesiGenerataIl?new Date(p.sintesiGenerataIl).toLocaleDateString('it-IT'):'';
+    const fpNow=await _fpVisite(p);
+    const stale=!p.sintesiMeta || p.sintesiMeta.fp!==fpNow;
+    const extra=`<div style="font-size:12px;color:var(--ink3);margin:0 0 10px">Generata il ${escapeHtml(dataStr)}${stale?' — <span style="color:var(--warm);font-weight:600">non aggiornata alle ultime modifiche del fascicolo</span>':''}</div>`;
+    container.innerHTML=_storiaBoxHTML(pazId, testo, titolo, extra);
+    const _st=container.querySelector('.storia-testo'); if(_st) _st.dataset.md=testo;
+  } catch(e){
+    console.warn('[Delphi~Med] sintesi salvata non decifrabile:', e.message);
+  }
+}
+
 async function sintetizzaStoria(pazId){
   const p=S.pazienti.find(x=>String(x.id)===String(pazId)); if(!p) return;
   const container=document.getElementById('storia-container-'+pazId); if(!container) return;
@@ -6928,6 +6984,7 @@ async function sintetizzaStoria(pazId){
     const testo=data.content.map(i=>i.text||'').join('').trim();
     container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
+    _salvaSintesi(p, testo, 'note');
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${escapeHtml(err.message)}</div>`;
   } finally{
@@ -6991,6 +7048,7 @@ async function sintetizzaReferti(pazId){
     const testo=dataR.content.map(i=>i.text||'').join('').trim();
     container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
+    _salvaSintesi(p, testo, 'referti');
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${escapeHtml(err.message)}</div>`;
   } finally{
