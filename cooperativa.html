@@ -132,7 +132,10 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 auto 8px;max-width:480px}
 .slot-btn{padding:10px;border:2px solid var(--border);border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:var(--brand-mid);transition:all .15s;font-family:inherit}
 .slot-btn:hover{background:var(--brand-bright);color:#fff;border-color:var(--brand-bright)}
-.slot-btn.slot-occupied,.slot-btn.slot-occupied:hover{background:#F4F0EC;border-color:#E4D6C8;color:#A98F73;cursor:default;text-decoration:line-through}
+.slot-btn.slot-occupied,.slot-btn.slot-occupied:hover{background:#F4F0EC;border-color:#E4D6C8;color:#A98F73;cursor:pointer;text-decoration:line-through}
+.slot-btn.slot-selected,.slot-btn.slot-selected:hover{background:var(--brand-mid);border-color:var(--brand-mid);color:#fff}
+.slot-btn.slot-occupied.slot-selected,.slot-btn.slot-occupied.slot-selected:hover{background:#F4F0EC;border-color:var(--brand-deep);color:var(--brand-deep);text-decoration:line-through}
+.ag-occ-avviso{margin:10px 0 4px;padding:10px 12px;border:1px solid #E4D6C8;border-radius:var(--r-sm);background:#FBF7F2;font-size:13.5px;color:#7A6248}
 .slot-centro{font-size:11px;color:var(--ink3);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.4px;font-weight:600;text-align:center}
 .slot-closed{display:inline-block;font-size:12.5px;color:#B5544B;font-weight:600;margin:4px 0}
 @media (max-width:840px){
@@ -213,6 +216,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   .cardpane{padding:24px 16px 40px}
 }
 @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+.paz-row{display:block;width:100%;text-align:left;padding:9px 12px;margin:4px 0;border:1px solid #dfe5e4;border-radius:8px;background:#fff;cursor:pointer;font-size:13.5px}
+.paz-row:hover{border-color:var(--brand-deep);background:#f6faf9}
 </style>
 </head>
 <body>
@@ -444,6 +449,11 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div class="field" style="min-width:200px"><label for="ag-vista-sel">Visualizza</label><select id="ag-vista-sel" onchange="renderAgCal()"><option value="tutte">Tutte le disponibilità</option><option value="liberi">Solo giorni liberi</option><option value="prenotati">Giorni con prenotazioni</option></select></div>
         <div class="field" style="min-width:240px"><label for="ag-med-sel">Medico</label><select id="ag-med-sel" onchange="onAgMedicoChange()"></select></div>
       </div>
+      <div id="ag-paz-box" style="margin-bottom:18px;padding:14px 16px;border:1px solid #dfe5e4;border-radius:10px">
+        <div style="font-weight:600;margin-bottom:8px;color:var(--brand-deep)">Ricerca paziente</div>
+        <input class="search" id="ag-paz-q" type="text" placeholder="Nome o cognome del paziente (min 2 lettere)" oninput="agPazInput()" style="width:100%;max-width:420px">
+        <div id="ag-paz-res" style="margin-top:10px"></div>
+      </div>
       <div id="agenda-tbl" class="mx-wrap"></div>
       <div class="stat-block" style="margin-top:26px;margin-bottom:0">
         <div class="cal-panel">
@@ -474,8 +484,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <h4>Prenota per conto del paziente</h4>
           <div class="ag-book-ctx" id="ag-book-ctx"></div>
           <div class="ag-book-grid">
-            <div class="field"><label for="agb-nome">Nome del paziente</label><input id="agb-nome" type="text" maxlength="80" autocomplete="off"></div>
-            <div class="field"><label for="agb-cognome">Cognome del paziente</label><input id="agb-cognome" type="text" maxlength="80" autocomplete="off"></div>
+            <div class="field"><label for="agb-nome">Nome del paziente</label><input id="agb-nome" onblur="this.value=capitalizeWords(this.value)" type="text" maxlength="80" autocomplete="off"></div>
+            <div class="field"><label for="agb-cognome">Cognome del paziente</label><input id="agb-cognome" onblur="this.value=capitalizeWords(this.value)" type="text" maxlength="80" autocomplete="off"></div>
             <div class="field"><label for="agb-tel">Telefono del paziente</label><input id="agb-tel" type="tel" maxlength="40" autocomplete="off"></div>
             <div class="field"><label for="agb-email">Email del paziente (facoltativa)</label><input id="agb-email" type="email" maxlength="160" autocomplete="off"></div>
             <div class="field"><label for="agb-servizio">Tipo di visita (facoltativo)</label><select id="agb-servizio"></select></div>
@@ -492,8 +502,16 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <h4>Appuntamento prenotato</h4>
           <div class="ag-book-ctx" id="ag-occ-ctx"></div>
           <div id="ag-occ-msg" class="hidden"></div>
-          <div class="ag-book-actions">
-            <button class="btn" id="ag-occ-btn" onclick="agOccCancella()">Cancella appuntamento</button>
+          <div id="ag-occ-conferma" class="hidden">
+            <div class="ag-occ-avviso" id="ag-occ-avviso"></div>
+            <div class="ag-book-actions">
+              <button class="btn" onclick="agOccEsegui(true)">Cancella e riprogramma</button>
+              <button class="btn" onclick="agOccEsegui(false)">Cancella soltanto</button>
+              <button class="btn btn-ghost" onclick="agOccIndietro()">Indietro</button>
+            </div>
+          </div>
+          <div class="ag-book-actions" id="ag-occ-azioni">
+            <button class="btn" id="ag-occ-btn" onclick="agOccScegli()">Cancella / riprogramma visita</button>
             <button class="btn btn-ghost" onclick="agOccChiudi()">Chiudi</button>
           </div>
         </div>
@@ -575,7 +593,8 @@ function isCooperativa(user){
 }
 
 function capitalizeWords(str){
-  return String(str || '').toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase());
+  return String(str || '').trim().replace(/\s+/g, ' ').toLowerCase()
+    .replace(/(^|[\s'\-])(\p{L})/gu, (m, p, c) => p + c.toUpperCase());
 }
 
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1010,11 +1029,14 @@ function renderAgSlots(){
   const multi = blocchi.length > 1;
   box.innerHTML = blocchi.map(b => {
     if(b.chiuso) return (multi ? '<div class="slot-centro">' + esc(b.centro.nome) + '</div>' : '') + '<span class="slot-closed">Chiuso per ferie del medico</span>';
-    const btns = b.slots.filter(sl => !sl.passato || sl.occupato).map(sl =>
-      sl.occupato
-        ? '<button class="slot-btn slot-occupied" onclick="agSlotOccupato(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>'
-        : '<button class="slot-btn" onclick="agPickSlot(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>'
-    ).join('');
+    const btns = b.slots.filter(sl => !sl.passato || sl.occupato).map(sl => {
+      const selB = _agBook && String(_agBook.centro_id) === String(b.centro.id) && _agBook.data === ds && _agBook.ora === sl.ora;
+      const selO = _agOcc && String(_agOcc.centro_id) === String(b.centro.id) && _agOcc.data === ds && String(_agOcc.ora) === sl.ora;
+      const selCls = (selB || selO) ? ' slot-selected' : '';
+      return sl.occupato
+        ? '<button class="slot-btn slot-occupied' + selCls + '" onclick="agSlotOccupato(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>'
+        : '<button class="slot-btn' + selCls + '" onclick="agPickSlot(\'' + esc(b.centro.id) + '\',\'' + ds + '\',\'' + sl.ora + '\')">' + sl.ora + '</button>';
+    }).join('');
     return (multi ? '<div class="slot-centro">' + esc(b.centro.nome) + '</div>' : '') + '<div class="slots-grid">' + btns + '</div>';
   }).join('') || '<div class="empty">Nessuno slot in questo giorno</div>';
 }
@@ -1035,6 +1057,9 @@ function agPickSlot(centroId, ds, ora){
   const c = (((_agCal.data || {}).centri) || []).find(x => String(x.id) === String(centroId));
   const m = (((_plancia || {}).medici) || []).find(x => String(x.medico_id) === String(mid));
   _agBook = { centro_id: centroId, data: ds, ora };
+  _agOcc = null;
+  document.getElementById('ag-occ').classList.add('hidden');
+  renderAgSlots();
   document.getElementById('ag-book-ctx').textContent =
     fmtData(ds) + ' alle ' + ora + (c ? ' \u00b7 ' + c.nome : '') + (m ? ' \u00b7 ' + nomeMedico(m) : '');
   AGB_CAMPI.forEach(id => { document.getElementById(id).disabled = false; });
@@ -1061,13 +1086,13 @@ function agAnnullaPrenotazione(){
   _agBook = null;
   ['agb-nome','agb-cognome','agb-tel','agb-email'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   const cons = document.getElementById('agb-consenso'); if(cons) cons.checked = false;
-  if(_agCal.dateStr){ agBookIdle(); } else { document.getElementById('ag-book').classList.add('hidden'); }
+  if(_agCal.dateStr){ agBookIdle(); renderAgSlots(); } else { document.getElementById('ag-book').classList.add('hidden'); }
 }
 
 async function agConfermaPrenotazione(){
   if(!_agBook) return;
-  const nome = document.getElementById('agb-nome').value.trim();
-  const cognome = document.getElementById('agb-cognome').value.trim();
+  const nome = capitalizeWords(document.getElementById('agb-nome').value);
+  const cognome = capitalizeWords(document.getElementById('agb-cognome').value);
   const tel = document.getElementById('agb-tel').value.trim();
   if(!nome || !cognome){ setBoxMsg('ag-book-msg', 'Nome e cognome del paziente sono obbligatori.', 'err'); return; }
   if(!tel){ setBoxMsg('ag-book-msg', 'Il telefono del paziente \u00e8 obbligatorio per la prenotazione per conto.', 'err'); return; }
@@ -1119,6 +1144,23 @@ function agOccChiudi(){
   const el = document.getElementById('ag-occ');
   if(el) el.classList.add('hidden');
   setBoxMsg('ag-occ-msg', '');
+  agOccIndietro();
+  if(_agCal.dateStr) renderAgSlots();
+}
+
+function agOccScegli(){
+  if(!_agOcc) return;
+  const a = _agOcc.appt;
+  document.getElementById('ag-occ-avviso').textContent = a.email_presente
+    ? 'Il paziente ricever\u00e0 un\u2019email di annullamento.'
+    : 'Il paziente NON ha un\u2019email registrata: va avvisato telefonicamente.';
+  document.getElementById('ag-occ-conferma').classList.remove('hidden');
+  document.getElementById('ag-occ-azioni').classList.add('hidden');
+}
+
+function agOccIndietro(){
+  document.getElementById('ag-occ-conferma').classList.add('hidden');
+  document.getElementById('ag-occ-azioni').classList.remove('hidden');
 }
 
 async function agSlotOccupato(centroId, ds, ora){
@@ -1145,6 +1187,10 @@ async function agSlotOccupato(centroId, ds, ora){
     }
     if(!res.ok || !body.appt){ ctx.textContent = 'Lettura non riuscita. Riprova.'; return; }
     _agOcc = { appt: body.appt, centro_id: centroId, data: ds, ora };
+    _agBook = null;
+    agBookIdle();
+    agOccIndietro();
+    renderAgSlots();
     ctx.textContent = (body.appt.nome_paziente + ' ' + body.appt.cognome_paziente).trim()
       + ' \u00b7 ' + fmtData(ds) + ' alle ' + ora
       + (c ? ' \u00b7 ' + c.nome : '')
@@ -1156,14 +1202,10 @@ async function agSlotOccupato(centroId, ds, ora){
   }
 }
 
-async function agOccCancella(){
+async function agOccEsegui(riprogramma){
   if(!_agOcc) return;
   const a = _agOcc.appt;
   const chi = (a.nome_paziente + ' ' + a.cognome_paziente).trim() || 'questo paziente';
-  const avviso = a.email_presente
-    ? 'Il paziente ricever\u00e0 un\'email di annullamento.'
-    : 'ATTENZIONE: il paziente NON ha un\'email registrata \u2014 va avvisato telefonicamente.';
-  if(!window.confirm('Cancellare l\'appuntamento di ' + chi + ' del ' + fmtData(_agOcc.data) + ' alle ' + _agOcc.ora + '? ' + avviso)) return;
   const btn = document.getElementById('ag-occ-btn');
   btn.disabled = true;
   try {
@@ -1182,19 +1224,87 @@ async function agOccCancella(){
     if(!res.ok){ setBoxMsg('ag-occ-msg', body.error || 'Cancellazione non riuscita.', 'err'); btn.disabled = false; return; }
     const rp = body.riprenota || {};
     agOccChiudi();
-    setBoxMsg('ag-slot-msg', 'Appuntamento di ' + chi + ' cancellato. Lo slot \u00e8 di nuovo libero.'
-      + (a.email_presente ? ' Email di annullamento inviata al paziente.' : ' Il paziente non ha email: avvisalo telefonicamente.'), 'info');
-    if(window.confirm('Vuoi riprogrammare per ' + chi + '? I dati del paziente verranno precompilati: scegli poi il nuovo orario dalla griglia.')){
+    if(riprogramma){
       document.getElementById('agb-nome').value = rp.nome || '';
       document.getElementById('agb-cognome').value = rp.cognome || '';
       document.getElementById('agb-tel').value = rp.telefono || '';
       document.getElementById('agb-email').value = rp.email || '';
+      setBoxMsg('ag-slot-msg', 'Visita di ' + chi + ' cancellata. Dati precompilati nel modulo: scegli il nuovo orario dalla griglia per riprogrammare.'
+        + (a.email_presente ? ' Il paziente ha ricevuto l\u2019email di annullamento.' : ' Il paziente non ha email: avvisalo telefonicamente.'), 'info');
+    } else {
+      setBoxMsg('ag-slot-msg', 'Visita di ' + chi + ' cancellata. Lo slot \u00e8 di nuovo libero.'
+        + (a.email_presente ? ' Email di annullamento inviata al paziente.' : ' Il paziente non ha email: avvisalo telefonicamente.'), 'info');
     }
     agLoadMonth();
   } catch(_e) {
     setBoxMsg('ag-occ-msg', 'Errore di rete. Riprova.', 'err');
     btn.disabled = false;
   }
+}
+
+// --- Ricerca paziente (sottovoce Agenda) ---
+let _agPaz = { t: null, res: [] };
+
+function agPazInput(){
+  clearTimeout(_agPaz.t);
+  _agPaz.t = setTimeout(agPazSearch, 350);
+}
+
+async function agPazSearch(){
+  const el = document.getElementById('ag-paz-res');
+  const q = (document.getElementById('ag-paz-q').value || '').trim();
+  if(q.length < 2){ el.innerHTML = ''; _agPaz.res = []; return; }
+  el.innerHTML = '<div class="empty">Ricerca\u2026</div>';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-cancella', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'search', q })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){ el.innerHTML = '<div class="empty">' + esc(body.error || 'Ricerca non riuscita.') + '</div>'; return; }
+    _agPaz.res = body.results || [];
+    if(!_agPaz.res.length){ el.innerHTML = '<div class="empty">Nessun appuntamento futuro per \u00ab' + esc(q) + '\u00bb.</div>'; return; }
+    el.innerHTML = _agPaz.res.map((r, i) => {
+      const m = (((_plancia || {}).medici) || []).find(x => String(x.medico_id) === String(r.medico_id));
+      return '<button class="paz-row" onclick="agPazVai(' + i + ')">'
+        + '<span style="font-weight:600">' + esc((r.cognome + ' ' + r.nome).trim()) + '</span>'
+        + ' \u00b7 ' + fmtData(r.data) + ' alle ' + esc(r.ora)
+        + (r.centro_nome ? ' \u00b7 ' + esc(r.centro_nome) : '')
+        + (m ? ' \u00b7 ' + esc(nomeMedico(m)) : '')
+        + (r.tipo_visita ? ' \u00b7 ' + esc(r.tipo_visita) : '')
+        + (r.per_conto ? ' \u00b7 prenotato dalla segreteria' : ' \u00b7 prenotato online')
+        + '</button>';
+    }).join('');
+  } catch(_e) {
+    el.innerHTML = '<div class="empty">Errore di rete. Riprova.</div>';
+  }
+}
+
+async function agPazVai(i){
+  const r = _agPaz.res[i]; if(!r) return;
+  // Il medico deve essere selezionabile: azzero i filtri medici e ripopolo la tendina
+  document.getElementById('ag-search').value = '';
+  document.getElementById('ag-spec-sel').value = '';
+  renderAgendaTab();
+  const sel = document.getElementById('ag-med-sel');
+  if(!Array.from(sel.options).some(o => o.value === String(r.medico_id))){
+    setBoxMsg('ag-slot-msg', 'Il medico di questo appuntamento non \u00e8 pi\u00f9 collegato all\u2019organizzazione.', 'err');
+    return;
+  }
+  sel.value = String(r.medico_id);
+  // attendo un eventuale caricamento in corso (renderAgendaTab puo' aver innescato onAgMedicoChange)
+  for(let k = 0; k < 40 && _agCal.busy; k++) await new Promise(w => setTimeout(w, 100));
+  const d = new Date(r.data + 'T12:00:00');
+  _agCal.year = d.getFullYear();
+  _agCal.month = d.getMonth();
+  _agCal.dateStr = r.data;
+  _agCal.data = null;
+  await agLoadMonth();
+  agSlotOccupato(r.centro_id, r.data, r.ora);
+  const occ = document.getElementById('ag-occ');
+  if(occ && !occ.classList.contains('hidden')) occ.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function renderServiziCatalogo(){
