@@ -480,14 +480,14 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <div class="field" style="max-width:190px;flex:none"><label for="cmp-mese">Mese</label><input type="month" id="cmp-mese" onchange="loadCompensi()"></div>
           <button class="btn btn-ghost" style="padding:9px 16px" onclick="exportCompensiCSV()">Esporta CSV</button>
         </div>
-        <div id="cmp-tbl"></div>
-        <div style="margin-top:22px">
-          <h3>Tariffe per medico</h3>
-          <p class="stat-hint">Compenso al medico per ogni servizio del listino. Lascia il campo vuoto per rimuovere la tariffa.</p>
-          <div class="stat-filtri">
+        <div id="cmp-tbl" style="border:1px solid var(--border);border-radius:var(--r);padding:6px 16px 12px;background:#fff"></div>
+        <div style="margin-top:24px;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;background:var(--paper)">
+          <div style="font-size:13.5px;font-weight:700;color:var(--brand-deep);margin-bottom:4px">Tariffe per medico</div>
+          <p class="stat-hint">Compenso al medico per ogni servizio del listino (tab Servizi). Lascia il campo vuoto per rimuovere la tariffa.</p>
+          <div class="stat-filtri" style="background:#fff;margin-bottom:14px">
             <div class="field" style="max-width:280px;flex:none"><label for="cmp-tar-medico">Medico</label><select id="cmp-tar-medico" onchange="renderTariffe()"><option value="">Seleziona…</option></select></div>
           </div>
-          <div id="cmp-tar-tbl"></div>
+          <div id="cmp-tar-tbl" style="background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);padding:4px 14px"></div>
         </div>
       </div>
       <div class="stat-block">
