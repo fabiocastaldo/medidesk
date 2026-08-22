@@ -88,9 +88,9 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .sec-stat .n b{font-size:15px;font-weight:700;color:var(--brand-deep)}
 .sec-stat .n span{font-size:11px;color:var(--ink3)}
 .stat-block{margin-bottom:28px}
-#tab-statistiche.card-lite{background:transparent;border:none;box-shadow:none;padding:0}
-#tab-statistiche .stat-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:18px;box-shadow:var(--shadow-soft)}
-#tab-statistiche .stat-block:last-child{margin-bottom:0}
+#tab-statistiche.card-lite,#tab-compensi.card-lite{background:transparent;border:none;box-shadow:none;padding:0}
+#tab-statistiche .stat-block,#tab-compensi .stat-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:18px;box-shadow:var(--shadow-soft)}
+#tab-statistiche .stat-block:last-child,#tab-compensi .stat-block:last-child{margin-bottom:0}
 .stat-block:last-child{margin-bottom:0}
 .stat-block h3{font-size:14px;font-weight:700;color:var(--brand-mid);margin:0 0 10px}
 .stat-hint{font-size:12.5px;color:var(--ink3);margin:0 0 12px}
@@ -312,6 +312,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <button class="sitem" id="tabbtn-giornata" onclick="switchTab('giornata')">Giornata</button>
       <button class="sitem" id="tabbtn-statistiche" onclick="switchTab('statistiche')">Statistiche</button>
+      <button class="sitem" id="tabbtn-compensi" onclick="switchTab('compensi')">Compensi</button>
       <button class="sitem" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
       <button class="sitem" id="tabbtn-preferenze" onclick="switchTab('preferenze')">Preferenze</button>
     </nav>
@@ -477,26 +478,29 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div id="stat-sede-tbl" style="margin-top:18px"></div>
       </div>
       <div class="stat-block">
-        <h3>Riconciliazione compensi</h3>
+        <h3>Copertura sedi</h3>
+        <p class="stat-hint">Quanti medici coprono ogni servizio in ogni sede (associati al servizio e con turni assegnati sulla sede). Passa sul numero per i nomi.</p>
+        <div id="copertura-tbl" class="mx-wrap"></div>
+      </div>
+    </section>
+
+    <section id="tab-compensi" class="card-lite hidden">
+      <div class="stat-block">
+        <h3>Riconciliazione</h3>
         <p class="stat-hint">Compenso maturato dai medici sulle visite erogate del mese, secondo le tariffe dell'organizzazione, a confronto con gli importi liquidati. Solo aggregati economici: nessun dato dei pazienti.</p>
         <div class="stat-filtri">
           <div class="field" style="max-width:190px;flex:none"><label for="cmp-mese">Mese</label><input type="month" id="cmp-mese" onchange="loadCompensi()"></div>
           <button class="btn btn-ghost" style="padding:9px 16px" onclick="exportCompensiCSV()">Esporta CSV</button>
         </div>
         <div id="cmp-tbl"></div>
-        <div style="margin-top:24px;border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;background:var(--paper)">
-          <div style="font-size:13.5px;font-weight:700;color:var(--brand-deep);margin-bottom:4px">Tariffe per medico</div>
-          <p class="stat-hint">Compenso al medico per ogni servizio del listino (tab Servizi). Lascia il campo vuoto per rimuovere la tariffa.</p>
-          <div class="stat-filtri" style="background:#fff;margin-bottom:14px">
-            <div class="field" style="max-width:280px;flex:none"><label for="cmp-tar-medico">Medico</label><select id="cmp-tar-medico" onchange="renderTariffe()"><option value="">Seleziona…</option></select></div>
-          </div>
-          <div id="cmp-tar-tbl" style="background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);padding:4px 14px"></div>
-        </div>
       </div>
       <div class="stat-block">
-        <h3>Copertura sedi</h3>
-        <p class="stat-hint">Quanti medici coprono ogni servizio in ogni sede (associati al servizio e con turni assegnati sulla sede). Passa sul numero per i nomi.</p>
-        <div id="copertura-tbl" class="mx-wrap"></div>
+        <h3>Tariffe per medico</h3>
+        <p class="stat-hint">Compenso al medico per ogni servizio del listino (tab Servizi). Lascia il campo vuoto per rimuovere la tariffa.</p>
+        <div class="stat-filtri">
+          <div class="field" style="max-width:280px;flex:none"><label for="cmp-tar-medico">Medico</label><select id="cmp-tar-medico" onchange="renderTariffe()"><option value="">Seleziona…</option></select></div>
+        </div>
+        <div id="cmp-tar-tbl"></div>
       </div>
     </section>
 
@@ -663,7 +667,7 @@ const SEC_TITOLI = {
   'medici': 'Medici', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
   'assoc-servizi': 'Medici ↔ servizi', 'assoc-turni': 'Medici ↔ turni',
   'giornata': 'Giornata',
-  'statistiche': 'Statistiche', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
+  'statistiche': 'Statistiche', 'compensi': 'Compensi', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
 };
 const SEC_SOTTO = {
   'medici': 'I medici collegati all\'organizzazione e il codice di collegamento',
@@ -674,18 +678,20 @@ const SEC_SOTTO = {
   'assoc-turni': 'I turni di ogni medico, a colpo d\'occhio',
   'giornata': 'Gli appuntamenti del giorno su tutte le sedi, in sola lettura',
   'statistiche': 'La visione d\'insieme dell\'attivit\u00e0',
+  'compensi': 'Tariffe dei medici e riconciliazione degli importi liquidati',
   'agenda': 'Gestisci disponibilit\u00e0 e prenotazioni del medico',
   'preferenze': 'Le impostazioni dell\'organizzazione'
 };
 
 function switchTab(t){
-  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','agenda','preferenze'].forEach(x => {
+  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','compensi','agenda','preferenze'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
   document.getElementById('sec-title').textContent = SEC_TITOLI[t] || '';
   document.getElementById('sec-sub').textContent = SEC_SOTTO[t] || '';
-  if(t === 'statistiche'){ initStatFiltri(); loadStatVisite(); initCompensi(); }
+  if(t === 'statistiche'){ initStatFiltri(); loadStatVisite(); }
+  if(t === 'compensi'){ initCompensi(); }
   if(t === 'giornata') initGiornata();
 }
 
