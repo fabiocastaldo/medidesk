@@ -12,7 +12,8 @@
 // In uscita: SOLO aggregati economici per sede×medico. Nessuna riga appuntamento,
 // nessun dato del paziente attraversa il confine. Le scritture (modello, regola,
 // regola_tutti, liquidato) sono vincolate al perimetro coop verificato server-side.
-// Regole quota: percentuale sul compenso, fisso a visita, o canone mensile fisso.
+// Regole quota (medico_versa): percentuale sul PREZZO PIENO della visita (dal
+// listino del medico, vigente per data), fisso a visita, o canone mensile fisso.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MODELLI = ['centro_paga', 'medico_versa', 'nessuno'];
@@ -262,14 +263,12 @@ export default async function handler(req, res) {
     if (!listinoPerChiave.has(k)) listinoPerChiave.set(k, []);
     listinoPerChiave.get(k).push(p);
   }
-  function compensoMedico(centroId, tipoVisita, data) {
+  function tariffaVigenteRow(centroId, tipoVisita, data) {
     const cands = (listinoPerChiave.get(`${String(centroId).toLowerCase()}|${String(tipoVisita || '').trim().toLowerCase()}`) || [])
       .filter(p => (p.valido_dal || '') <= (data || ''));
     if (!cands.length) return null;
     cands.sort((x, y) => (y.valido_dal || '').localeCompare(x.valido_dal || ''));
-    const tar = cands[0];
-    if (tar.tipo === 'percentuale') return (tar.prezzo == null) ? null : (Number(tar.compenso) / 100) * Number(tar.prezzo);
-    return (tar.compenso == null) ? null : Number(tar.compenso);
+    return cands[0];
   }
 
   const regolaPerChiave = new Map();
@@ -283,9 +282,10 @@ export default async function handler(req, res) {
   const sedeDiCentro = new Map(centri.map(c => [String(c.id).toLowerCase(), c.coop_sede_id ? String(c.coop_sede_id).toLowerCase() : null]));
 
   // aggregazione per sede×medico (solo sedi con modello ≠ nessuno)
-  const agg = new Map(); // chiave sede|medico → { visite, senza_tariffa, base, fissoN }
+  const agg = new Map(); // sede|medico → { visite, mancantiComp, mancantiPrezzo, baseComp, basePrezzo, fissoN }
+  const AGG0 = () => ({ visite: 0, mancantiComp: 0, mancantiPrezzo: 0, baseComp: 0, basePrezzo: 0, fissoN: 0 });
   function aggDi(k) {
-    if (!agg.has(k)) agg.set(k, { visite: 0, senza_tariffa: 0, base: 0, fissoN: 0 });
+    if (!agg.has(k)) agg.set(k, AGG0());
     return agg.get(k);
   }
   for (const v of (Array.isArray(visite) ? visite : [])) {
@@ -298,9 +298,17 @@ export default async function handler(req, res) {
     const a = aggDi(`${sedeId}|${m}`);
     a.visite += 1;
     a.fissoN += 1;
-    const comp = compensoMedico(v.centro_id, v.tipo_visita, v.data);
-    if (comp == null || !Number.isFinite(comp)) a.senza_tariffa += 1;
-    else a.base += comp;
+    const tar = tariffaVigenteRow(v.centro_id, v.tipo_visita, v.data);
+    let comp = null, prezzo = null;
+    if (tar) {
+      if (tar.tipo === 'percentuale') comp = (tar.prezzo == null) ? null : (Number(tar.compenso) / 100) * Number(tar.prezzo);
+      else comp = (tar.compenso == null) ? null : Number(tar.compenso);
+      prezzo = (tar.prezzo == null) ? null : Number(tar.prezzo);
+    }
+    if (comp == null || !Number.isFinite(comp)) a.mancantiComp += 1;
+    else a.baseComp += comp;
+    if (prezzo == null || !Number.isFinite(prezzo)) a.mancantiPrezzo += 1;
+    else a.basePrezzo += prezzo;
   }
 
   // righe: una per coppia sede×medico sulle sedi con modello ≠ nessuno
@@ -309,22 +317,26 @@ export default async function handler(req, res) {
     const [sedeId, medicoId] = chiave.split('|');
     const modello = modelloDiSede.get(sedeId) || 'nessuno';
     if (modello === 'nessuno') continue;
-    const a = agg.get(chiave) || { visite: 0, senza_tariffa: 0, base: 0, fissoN: 0 };
+    const a = agg.get(chiave) || AGG0();
     const regola = regolaPerChiave.get(chiave) || null;
-    let importo = null;
+    let importo = null, senzaTariffa;
     if (modello === 'centro_paga') {
-      importo = round2(a.base);
-    } else if (regola) {
-      if (regola.tipo === 'percentuale') importo = round2(a.base * regola.valore / 100);
-      else if (regola.tipo === 'mensile') importo = round2(regola.valore);
-      else importo = round2(a.fissoN * regola.valore);
+      importo = round2(a.baseComp);
+      senzaTariffa = a.mancantiComp;
+    } else {
+      senzaTariffa = a.mancantiPrezzo;
+      if (regola) {
+        if (regola.tipo === 'percentuale') importo = round2(a.basePrezzo * regola.valore / 100);
+        else if (regola.tipo === 'mensile') importo = round2(regola.valore);
+        else importo = round2(a.fissoN * regola.valore);
+      }
     }
     righe.push({
       sede_id: sedeId,
       medico_id: medicoId,
       verso: modello,
       visite: a.visite,
-      senza_tariffa: a.senza_tariffa,
+      senza_tariffa: senzaTariffa,
       importo,
       regola,
       liquidato: liquidatoPerChiave.has(chiave) ? liquidatoPerChiave.get(chiave) : null

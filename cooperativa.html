@@ -487,12 +487,12 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     <section id="tab-compensi" class="card-lite hidden">
       <div class="stat-block">
         <h3>Modello per sede</h3>
-        <p class="stat-hint">Chi paga chi? Per ogni sede scegli il verso del denaro: il centro paga il medico (compensi importati dal listino del medico sulla sede), il medico riconosce una quota al centro (percentuale sul compenso, cifra fissa a visita o canone mensile), oppure nessun conteggio.</p>
+        <p class="stat-hint">Chi paga chi? Per ogni sede scegli il verso del denaro: il centro paga il medico (compensi importati dal listino del medico sulla sede), il medico riconosce una quota al centro (percentuale sul prezzo pieno della visita, cifra fissa a visita o canone mensile), oppure nessun conteggio.</p>
         <div id="cmp-modelli"></div>
       </div>
       <div class="stat-block">
         <h3>Quota al centro — regole per medico</h3>
-        <p class="stat-hint">Solo per le sedi in cui il medico riconosce una quota al centro: percentuale sul compenso del medico (dal suo listino), cifra fissa per visita erogata o canone mensile. La riga «Applica a tutti» imposta la stessa regola per ogni medico della sede; le regole individuali restano modificabili. Lascia il valore vuoto per rimuovere la regola.</p>
+        <p class="stat-hint">Solo per le sedi in cui il medico riconosce una quota al centro: percentuale sul prezzo pieno della visita (dal listino del medico, vigente per data), cifra fissa per visita erogata o canone mensile. La riga «Applica a tutti» imposta la stessa regola per ogni medico della sede; le regole individuali restano modificabili. Lascia il valore vuoto per rimuovere la regola.</p>
         <div id="cmp-regole"></div>
       </div>
       <div class="stat-block">
@@ -1002,7 +1002,7 @@ function _cmpSede(id){
 }
 function _cmpRegolaLabel(r){
   if(!r) return 'regola mancante';
-  if(r.tipo === 'percentuale') return Number(r.valore) + '% sul compenso';
+  if(r.tipo === 'percentuale') return Number(r.valore) + '% sul prezzo';
   if(r.tipo === 'mensile') return '€ ' + _eurCmp(r.valore) + ' al mese';
   return '€ ' + _eurCmp(r.valore) + ' a visita';
 }
@@ -1101,7 +1101,7 @@ function renderRegole(){
     h += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;padding:8px 10px;border:1px dashed var(--border);border-radius:8px;font-size:13px">'
       + '<span style="color:var(--ink3)">Applica a tutti i medici della sede:</span>'
       + '<select id="regt-' + sidA + '-tipo" style="font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px">'
-      + '<option value="percentuale">% sul compenso</option><option value="fisso">€ a visita</option><option value="mensile">€ al mese</option></select>'
+      + '<option value="percentuale">% sul prezzo</option><option value="fisso">€ a visita</option><option value="mensile">€ al mese</option></select>'
       + '<input id="regt-' + sidA + '-val" type="number" step="0.01" min="0" placeholder="—" style="width:90px;text-align:right;font-size:13px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px">'
       + '<button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" onclick="setRegolaTutti(\'' + sidA + '\')">Applica a tutti</button></div>';
     h += '<table style="width:100%;max-width:640px;border-collapse:collapse;font-size:13.5px"><tbody>';
@@ -1113,7 +1113,7 @@ function renderRegole(){
         + '<td style="padding:8px 0">' + esc(_cmpMedNome(c.medico_id)) + '</td>'
         + '<td style="text-align:right;padding:8px 0;white-space:nowrap">'
         + '<select id="' + key + '-tipo" onchange="setRegola(\'' + mid + '\', \'' + sid + '\')" style="font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px">'
-        + '<option value="percentuale"' + (!r || r.tipo === 'percentuale' ? ' selected' : '') + '>% sul compenso</option>'
+        + '<option value="percentuale"' + (!r || r.tipo === 'percentuale' ? ' selected' : '') + '>% sul prezzo</option>'
         + '<option value="fisso"' + (r && r.tipo === 'fisso' ? ' selected' : '') + '>€ a visita</option>'
         + '<option value="mensile"' + (r && r.tipo === 'mensile' ? ' selected' : '') + '>€ al mese</option></select> '
         + '<input id="' + key + '-val" type="number" step="0.01" min="0" placeholder="—" value="' + (r ? Number(r.valore) : '') + '" onchange="setRegola(\'' + mid + '\', \'' + sid + '\')" style="width:90px;text-align:right;font-size:13px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px">'
@@ -1217,7 +1217,7 @@ function renderCompTbl(){
   });
   const st = righe.reduce((s, r) => s + (r.senza_tariffa || 0), 0);
   if(st > 0){
-    h += '<div style="margin-top:10px;font-size:12px;color:var(--ink3)">' + st + ' visit' + (st === 1 ? 'a' : 'e') + ' senza tariffa nel listino del medico: escluse dal maturato e dalla quota percentuale, contate nella quota fissa a visita, irrilevanti per il canone mensile.</div>';
+    h += '<div style="margin-top:10px;font-size:12px;color:var(--ink3)">' + st + ' visit' + (st === 1 ? 'a' : 'e') + ' senza tariffa nel listino del medico (compenso per il maturato, prezzo per la quota percentuale): escluse dai calcoli percentuali, contate nella quota fissa a visita, irrilevanti per il canone mensile.</div>';
   }
   h += '<div style="margin-top:10px;font-size:11.5px;color:var(--ink3)">Gli importi si importano dal listino del medico sulla sede (tipo visita con lo stesso nome). Rendiconto privato di verifica — non è un documento fiscale.</div>';
   tbl.innerHTML = h;
