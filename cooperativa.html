@@ -359,6 +359,17 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <div id="sede-msg" class="hidden"></div>
       <div id="sedi-tbl"></div>
+      <div style="margin-top:26px;padding-top:18px;border-top:1px solid var(--border)">
+        <div style="font-weight:600;margin-bottom:4px;color:var(--brand-deep)">Sale (ambulatori)</div>
+        <p class="stat-hint">Le stanze di ogni sede. Assegnando un turno puoi indicare la sala: due turni sulla stessa sala non possono sovrapporsi.</p>
+        <div class="toolbar">
+          <div class="field" style="min-width:200px"><label for="sala-sede-sel">Sede</label><select id="sala-sede-sel"></select></div>
+          <div class="field" style="flex:1"><label for="sala-nome">Nome sala</label><input id="sala-nome" type="text" maxlength="60" placeholder="Es. Ambulatorio 1" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+          <button class="btn" onclick="creaSala()">Aggiungi sala</button>
+        </div>
+        <div id="sala-msg" class="hidden"></div>
+        <div id="sale-tbl"></div>
+      </div>
     </section>
 
     <section id="tab-turni" class="card-lite hidden">
@@ -407,7 +418,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     <section id="tab-assoc-turni" class="card-lite hidden">
       <div class="toolbar" style="padding-bottom:14px;border-bottom:1px solid var(--border)">
         <div class="field" style="flex:1.4"><label for="tf-medico">Medico</label><select id="tf-medico"></select></div>
-        <div class="field" style="flex:1.2"><label for="tf-sede">Sede</label><select id="tf-sede"></select></div>
+        <div class="field" style="flex:1.2"><label for="tf-sede">Sede</label><select id="tf-sede" onchange="syncTfSale()"></select></div>
+        <div class="field" style="min-width:150px"><label for="tf-sala">Sala <span style="font-weight:400;color:var(--ink3)">(opz.)</span></label><select id="tf-sala"><option value="">Nessuna</option></select></div>
         <div class="field" style="min-width:170px"><label>Giorni</label>
           <details class="gdd" id="tf-giorni-dd">
             <summary><span id="tf-giorni-label">Seleziona giorni</span><span style="color:var(--ink3)">▾</span></summary>
@@ -795,6 +807,11 @@ function renderPlancia(){
   const fS = document.getElementById('ft-sede');
   fS.innerHTML = '<option value="">Tutte le sedi</option>' + (d.sedi||[]).map(s =>
     `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('');
+  const selSala = document.getElementById('sala-sede-sel');
+  if(selSala) selSala.innerHTML = (d.sedi||[]).map(s =>
+    `<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('') || '<option value="">Nessuna sede</option>';
+  syncTfSale();
+  renderSaleTab();
 
   const box = document.getElementById('codice-box');
   const attivo = d.codici_attivi && d.codici_attivi[0];
@@ -1103,7 +1120,7 @@ function renderRegole(){
       + '<select id="regt-' + sidA + '-tipo" style="font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px">'
       + '<option value="percentuale">% sul prezzo</option><option value="fisso">€ a visita</option><option value="mensile">€ al mese</option></select>'
       + '<input id="regt-' + sidA + '-val" type="number" step="0.01" min="0" placeholder="—" style="width:90px;text-align:right;font-size:13px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px">'
-      + '<button class="btn btn-ghost" style="padding:6px 12px;font-size:12.5px" onclick="setRegolaTutti(\'' + sidA + '\')">Applica a tutti</button></div>';
+      + '<button class="btn btn-ghost" style="width:auto;margin:0;flex:none;padding:6px 12px;font-size:12.5px" onclick="setRegolaTutti(\'' + sidA + '\')">Applica a tutti</button></div>';
     h += '<table style="width:100%;max-width:640px;border-collapse:collapse;font-size:13.5px"><tbody>';
     medici.forEach(c => {
       const r = regMap[String(c.sede_id) + '|' + String(c.medico_id)];
@@ -2017,6 +2034,7 @@ function renderTurniTab(){
         if(fg !== '' && Number(t.giorno) !== Number(fg)) return;
         righe.push({ id: t.id, medico: nomeMedico(m), sede: c.nome, giorno: t.giorno,
           orario: String(t.inizio).slice(0,5) + '–' + String(t.fine).slice(0,5),
+          sala: t.coop_sala_id ? salaNome(t.coop_sala_id) : '',
           slot: t.durata_slot });
       });
     });
@@ -2032,9 +2050,10 @@ function renderTurniTab(){
     el.innerHTML = '<div class="empty">Nessun turno assegnato' + (fg !== '' || fm || fs ? ' con questi filtri' : '') + '</div>';
     return;
   }
-  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Sede</th><th>Giorno</th><th>Orario</th><th>Slot</th><th style="width:50px"></th></tr></thead><tbody>'
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Sede</th><th>Sala</th><th>Giorno</th><th>Orario</th><th>Slot</th><th style="width:50px"></th></tr></thead><tbody>'
     + righe.map(r => `<tr>
         <td style="font-weight:600">${esc(r.medico)}</td><td>${esc(r.sede)}</td>
+        <td>${r.sala ? esc(r.sala) : '—'}</td>
         <td>${GG[r.giorno] || ''}</td><td>${esc(r.orario)}</td><td>${esc(String(r.slot))} min</td>
         <td><button class="act-btn act-danger" title="Elimina turno" onclick="eliminaTurno('${esc(r.id)}','${esc(r.medico)}','${GG[r.giorno]||''} ${esc(r.orario)}')">✕</button></td>
       </tr>`).join('')
@@ -2230,6 +2249,53 @@ async function creaSede(){
   }
 }
 
+function salaNome(id){
+  const s=((_plancia||{}).sale||[]).find(x=>String(x.id)===String(id));
+  return s ? s.nome : '';
+}
+function syncTfSale(){
+  const sel=document.getElementById('tf-sala'); if(!sel) return;
+  const sede=(document.getElementById('tf-sede')||{}).value||'';
+  const sale=((_plancia||{}).sale||[]).filter(s=>s.attiva!==false && String(s.sede_id)===String(sede));
+  sel.innerHTML='<option value="">Nessuna</option>'+sale.map(s=>`<option value="${esc(s.id)}">${esc(s.nome)}</option>`).join('');
+}
+function renderSaleTab(){
+  const el=document.getElementById('sale-tbl'); if(!el||!_plancia) return;
+  const sale=_plancia.sale||[];
+  if(!sale.length){ el.innerHTML='<div class="empty">Nessuna sala. Aggiungila qui sopra: sui turni con sala scatta la guardia di occupazione.</div>'; return; }
+  const nomeSede=id=>{const s=(_plancia.sedi||[]).find(x=>String(x.id)===String(id)); return s?s.nome:'Sede';};
+  el.innerHTML='<table class="tbl"><thead><tr><th>Sede</th><th>Sala</th><th>Stato</th><th style="width:110px"></th></tr></thead><tbody>'
+    + sale.map(s=>`<tr${s.attiva===false?' style="opacity:.55"':''}><td>${esc(nomeSede(s.sede_id))}</td><td style="font-weight:600">${esc(s.nome)}</td><td>${s.attiva===false?'Disattivata':'Attiva'}</td>
+      <td><button class="act-btn" onclick="attivaSala('${esc(s.id)}', ${s.attiva===false})">${s.attiva===false?'Riattiva':'Disattiva'}</button></td></tr>`).join('')
+    + '</tbody></table>';
+}
+async function creaSala(){
+  const sede_id=(document.getElementById('sala-sede-sel')||{}).value||'';
+  const nome=((document.getElementById('sala-nome')||{}).value||'').trim();
+  if(!sede_id){ setBoxMsg('sala-msg','Crea prima una sede.','err'); return; }
+  if(!nome){ setBoxMsg('sala-msg','Il nome della sala è obbligatorio.','err'); return; }
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    const res=await fetch('/api/coop-sale',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({azione:'crea',sede_id:sede_id,nome:nome})});
+    const body=await res.json().catch(()=>({}));
+    if(!res.ok||!body.ok) throw new Error(body.error||'creazione');
+    _plancia.sale=_plancia.sale||[]; _plancia.sale.push(body.sala);
+    document.getElementById('sala-nome').value='';
+    setBoxMsg('sala-msg','Sala «'+body.sala.nome+'» creata ✓','ok');
+    renderSaleTab(); syncTfSale();
+  }catch(e){ setBoxMsg('sala-msg','Errore: '+(e&&e.message?e.message:'riprova'),'err'); }
+}
+async function attivaSala(salaId, attiva){
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    const res=await fetch('/api/coop-sale',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({azione:'stato',sala_id:salaId,attiva:attiva})});
+    const body=await res.json().catch(()=>({}));
+    if(!res.ok||!body.ok) throw new Error(body.error||'aggiornamento');
+    const s=(_plancia.sale||[]).find(x=>String(x.id)===String(salaId)); if(s) s.attiva=body.sala.attiva;
+    renderSaleTab(); syncTfSale();
+  }catch(e){ setBoxMsg('sala-msg','Errore: '+(e&&e.message?e.message:'riprova'),'err'); }
+}
+
 async function assegnaTurno(){
   const medico_id = document.getElementById('tf-medico').value;
   const sede_id = document.getElementById('tf-sede').value;
@@ -2248,6 +2314,7 @@ async function assegnaTurno(){
         durata_slot: Number(document.getElementById('tf-slot').value),
         data_inizio_validita: document.getElementById('tf-dal').value || undefined,
         data_fine_validita: document.getElementById('tf-al').value || undefined,
+        sala_id: (document.getElementById('tf-sala')||{}).value || undefined,
         sostituisce_turno_id: _turnoEdit || undefined
       })
     });

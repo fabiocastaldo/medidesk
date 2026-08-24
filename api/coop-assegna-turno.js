@@ -29,6 +29,7 @@ export default async function handler(req, res) {
   const sedeId = String(b.sede_id || '');
   const giorni = Array.isArray(b.giorni) ? b.giorni.map(Number) : [Number(b.giorno)];
   const sostituisce = (typeof b.sostituisce_turno_id === 'string' && /^[0-9a-fA-F-]{36}$/.test(b.sostituisce_turno_id)) ? b.sostituisce_turno_id : null;
+  const salaId = (typeof b.sala_id === 'string' && b.sala_id) ? b.sala_id : null;
   const inizio = String(b.inizio || '');
   const fine = String(b.fine || '');
   const slot = Number(b.durata_slot || 20);
@@ -77,6 +78,23 @@ export default async function handler(req, res) {
   const sede = (sedeRes && sedeRes.ok) ? (await sedeRes.json().catch(() => []))?.[0] : null;
   if (!sede || sede.attiva === false) {
     return res.status(404).json({ error: 'Sede non trovata o non attiva' });
+  }
+
+  // sala (opzionale): della cooperativa, attiva, e della STESSA sede del turno
+  let sala = null;
+  if (salaId) {
+    if (!isUuid(salaId)) return res.status(400).json({ error: 'Parametro sala_id non valido' });
+    const salaRes = await fetch(
+      `${supabaseUrl}/rest/v1/coop_sale?id=eq.${encodeURIComponent(salaId)}&cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id,sede_id,nome,attiva`,
+      { headers: srvHeaders }
+    ).catch(() => null);
+    sala = (salaRes && salaRes.ok) ? (await salaRes.json().catch(() => []))?.[0] : null;
+    if (!sala || sala.attiva === false) {
+      return res.status(404).json({ error: 'Sala non trovata o non attiva' });
+    }
+    if (String(sala.sede_id) !== String(sede.id)) {
+      return res.status(400).json({ error: 'La sala appartiene a un\'altra sede' });
+    }
   }
 
   // il medico deve essere collegato all'organizzazione
@@ -154,6 +172,17 @@ export default async function handler(req, res) {
       !(Number(t.giorno) === Number(exRow.giorno) && String(t.inizio) === String(exRow.inizio) && String(t.fine) === String(exRow.fine)));
   }
 
+  // guardia sala: i turni di CHIUNQUE sulla stessa sala (overlap giorno+orario+validità)
+  let turniSala = [];
+  if (sala) {
+    const tsRes = await fetch(
+      `${supabaseUrl}/rest/v1/turni?coop_sala_id=eq.${encodeURIComponent(sala.id)}&select=id,giorno,inizio,fine,data_inizio_validita,data_fine_validita`,
+      { headers: srvHeaders }
+    ).catch(() => null);
+    turniSala = (tsRes && tsRes.ok) ? await tsRes.json().catch(() => []) : [];
+    if (sostituisce) turniSala = turniSala.filter(t => String(t.id) !== String(sostituisce));
+  }
+
   const GG = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   const sovrapposto = (g) => {
     for (const t of (esistenti || [])) {
@@ -169,17 +198,32 @@ export default async function handler(req, res) {
     }
     return null;
   };
+  const salaOccupata = (g) => {
+    for (const t of (turniSala || [])) {
+      if (Number(t.giorno) !== g) continue;
+      const tIni = String(t.inizio).slice(0, 5);
+      const tFin = String(t.fine).slice(0, 5);
+      if (!(inizio < tFin && fine > tIni)) continue;
+      const vIni = t.data_inizio_validita || '0000-01-01';
+      const vFin = t.data_fine_validita || '9999-12-31';
+      if (dataIni <= vFin && (dataFin || '9999-12-31') >= vIni) {
+        return `sala ${sala.nome} occupata ${GG[g]} ${tIni}\u2013${tFin}`;
+      }
+    }
+    return null;
+  };
 
   const assegnati = [];
   const conflitti = [];
   for (const g of giorni) {
-    const conf = sovrapposto(g);
+    const conf = sovrapposto(g) || salaOccupata(g);
     if (conf) { conflitti.push(conf); continue; }
     const turnoRes = await fetch(`${supabaseUrl}/rest/v1/turni`, {
       method: 'POST',
       headers: { ...srvHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify({
         centro_id: centroId, giorno: g, inizio, fine, durata_slot: slot,
+        coop_sala_id: sala ? sala.id : null,
         frequenza_settimane: 1,
         data_inizio_validita: dataIni,
         data_fine_validita: dataFin
@@ -200,7 +244,7 @@ export default async function handler(req, res) {
 
   if (!assegnati.length) {
     return res.status(409).json({
-      error: 'Il medico ha già impegni in quelle fasce: ' + conflitti.join(', '),
+      error: 'Fasce non assegnabili: ' + conflitti.join(', '),
       conflitti
     });
   }
@@ -209,6 +253,7 @@ export default async function handler(req, res) {
     assegnati: assegnati.map(g => GG[g]),
     conflitti,
     centro: { id: centroId, nome: sede.nome },
-    sede: { id: sede.id, nome: sede.nome }
+    sede: { id: sede.id, nome: sede.nome },
+    sala: sala ? { id: sala.id, nome: sala.nome } : null
   });
 }

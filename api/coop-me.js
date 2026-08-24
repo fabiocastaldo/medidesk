@@ -53,9 +53,9 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Cooperativa non attiva' });
   }
 
-  const [mediciRes, codiciRes, sediRes, serviziRes] = await Promise.all([
+  const [mediciRes, codiciRes, sediRes, serviziRes, saleRes] = await Promise.all([
     fetch(
-      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_inizio_validita,data_fine_validita),medici(id,titolo,nome,cognome,specializzazione)`,
+      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_inizio_validita,data_fine_validita,coop_sala_id),medici(id,titolo,nome,cognome,specializzazione)`,
       { headers: srvHeaders }
     ).catch(() => null),
     fetch(
@@ -69,6 +69,10 @@ export default async function handler(req, res) {
     fetch(
       `${supabaseUrl}/rest/v1/coop_servizi?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,coop_servizi_medici(medico_id)&order=nome.asc`,
       { headers: srvHeaders }
+    ).catch(() => null),
+    fetch(
+      `${supabaseUrl}/rest/v1/coop_sale?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,sede_id,nome,attiva&order=created_at.asc`,
+      { headers: srvHeaders }
     ).catch(() => null)
   ]);
 
@@ -76,6 +80,7 @@ export default async function handler(req, res) {
   const codiciData = (codiciRes && codiciRes.ok) ? await codiciRes.json().catch(() => []) : [];
   const sediData = (sediRes && sediRes.ok) ? await sediRes.json().catch(() => []) : [];
   const serviziData = (serviziRes && serviziRes.ok) ? await serviziRes.json().catch(() => []) : [];
+  const saleData = (saleRes && saleRes.ok) ? await saleRes.json().catch(() => []) : [];
 
   // aggrego per medico: un medico può avere più sede-centri collegati
   const perMedico = new Map();
@@ -102,6 +107,7 @@ export default async function handler(req, res) {
     medici: Array.from(perMedico.values()),
     codici_attivi: codiciData || [],
     sedi: sediData || [],
+    sale: saleData || [],
     servizi: (serviziData || []).map(s => ({
       id: s.id, nome: s.nome, attivo: s.attivo !== false,
       medici: (s.coop_servizi_medici || []).map(a => String(a.medico_id))

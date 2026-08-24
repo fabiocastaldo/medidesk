@@ -761,7 +761,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .stats-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 
 .chart-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
-.chart-row-label{flex:0 0 110px;color:var(--ink2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-row-label{flex:0 0 170px;color:var(--ink2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chart-row-bar{flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden;position:relative}
 .chart-row-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
 .chart-row-value{flex:0 0 60px;text-align:right;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;font-size:12px}
@@ -772,7 +772,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   .stats-kpi-row{grid-template-columns:repeat(2,1fr)}
   .stats-grid-2{grid-template-columns:1fr}
   .stats-kpi-value{font-size:22px}
-  .chart-row-label{flex:0 0 90px;font-size:12px}
+  .chart-row-label{flex:0 0 120px;font-size:12px}
 }
 
 .stats-insights{background:linear-gradient(135deg, color-mix(in srgb, var(--brand-bright) 10%, var(--surface)), color-mix(in srgb, var(--brand-bright) 3%, var(--surface)));border:1px solid color-mix(in srgb, var(--brand-bright) 16%, transparent);border-radius:var(--r-md);padding:14px 16px;margin-bottom:20px}
@@ -2723,7 +2723,6 @@ var _terminaTurnoState = null;
 
 // ── SUPABASE ──
 let supabaseClient = null;
-let ANTHROPIC_KEY_RUNTIME = '';   // flag: 'server' se /api/analyze è disponibile, mai contiene la chiave reale
 
 function _initSupabaseWithConfig(cfg){
   try {
@@ -2744,7 +2743,6 @@ async function loadConfig(){
     const res = await fetch('/api/config');
     if(res.ok){
       const cfg = await res.json();
-      ANTHROPIC_KEY_RUNTIME = 'server'; // chiave gestita server-side da /api/analyze
       if(cfg.url && cfg.anonKey){
         _initSupabaseWithConfig(cfg);
         return;
@@ -5015,6 +5013,7 @@ async function saveTurno(){
   if(aggiunti.length){
     save(); renderCentri(); renderAgenda();
     aggiunti.forEach(g => checkTurnoFestivita(c.id, g));
+    checkTurnoFerie(c.id, aggiunti);
   }
   if(aggiunti.length && !conflitti.length){
     const _dd = document.getElementById('turno-giorni-dd'); if(_dd) _dd.removeAttribute('open');
@@ -6917,7 +6916,7 @@ async function _fpVisite(p){
 }
 
 function _storiaBoxHTML(pazId, testo, titolo, extraHtml){
-  return `<div class="storia-box"><div class="section-title" style="margin:0 0 12px">${titolo}</div>${extraHtml||''}<div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
+  return `<div class="storia-box"><div class="section-title" style="margin:0 0 12px">${titolo}</div>${extraHtml||''}<div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button><button class="btn btn-sm btn-secondary" style="color:#b3261e" onclick="eliminaSintesi('${pazId}')">Elimina</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
 }
 
 async function _salvaSintesi(p, testo, fonte){
@@ -6961,6 +6960,26 @@ async function _renderSintesiSalvata(pazId){
   }
 }
 
+async function eliminaSintesi(pazId){
+  const p=S.pazienti.find(x=>String(x.id)===String(pazId)); if(!p) return;
+  if(!(await confermaModale('Eliminare la sintesi clinica salvata? Potrai rigenerarla in qualsiasi momento dalle note e dai referti del fascicolo.', { titolo:'Elimina sintesi', ok:'Elimina' }))) return;
+  if(!isOnline()){ showToast('Operazione disponibile solo online'); return; }
+  try{
+    const { data, error } = await supabaseClient.from('pazienti')
+      .update({ sintesi_clinica: null, sintesi_generata_il: null, sintesi_meta: null })
+      .eq('id', p.id).select('id');
+    if(error) throw error;
+    if(!data || !data.length) throw new Error('nessuna riga aggiornata');
+    p.sintesiEnc=null; p.sintesiGenerataIl=null; p.sintesiMeta=null;
+    const container=document.getElementById('storia-container-'+pazId);
+    if(container) container.innerHTML='';
+    showToast('Sintesi eliminata ✓');
+  } catch(e){
+    console.warn('[Delphi~Med] eliminazione sintesi fallita:', e.message);
+    showToast('Eliminazione non riuscita: '+e.message);
+  }
+}
+
 async function sintetizzaStoria(pazId){
   const p=S.pazienti.find(x=>String(x.id)===String(pazId)); if(!p) return;
   const container=document.getElementById('storia-container-'+pazId); if(!container) return;
@@ -6982,7 +7001,7 @@ async function sintetizzaStoria(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const data=await res.json();
     const testo=data.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button><button class="btn btn-sm btn-secondary" style="color:#b3261e" onclick="eliminaSintesi('${pazId}')">Elimina</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
     _salvaSintesi(p, testo, 'note');
   } catch(err){
@@ -7046,7 +7065,7 @@ async function sintetizzaReferti(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const dataR=await res.json();
     const testo=dataR.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
+    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button><button class="btn btn-sm btn-secondary" style="color:#b3261e" onclick="eliminaSintesi('${pazId}')">Elimina</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
     _salvaSintesi(p, testo, 'referti');
   } catch(err){
@@ -8996,6 +9015,24 @@ async function removeArea(idx){
 
 // ── CHIUSURE (FERIE) ──
 var _pendingFestivita = null;
+
+function checkTurnoFerie(centroId, giorni){
+  // Guardia ferie: se nei prossimi 90 giorni il nuovo turno cade in periodi di
+  // chiusura del centro, avvisa (informativo: quegli slot risultano già chiusi).
+  const oggi=new Date(); oggi.setHours(12,0,0,0);
+  const fino=new Date(oggi); fino.setDate(oggi.getDate()+90);
+  let n=0, prima=null;
+  for(let cur=new Date(oggi); cur<=fino; cur.setDate(cur.getDate()+1)){
+    if(giorni.includes(cur.getDay())){
+      const ds=fmt(cur);
+      if(isChiusura(ds, centroId)){ n++; if(!prima) prima=ds; }
+    }
+  }
+  if(!n) return;
+  setTimeout(()=>{
+    showToast('Attenzione: '+n+' dat'+(n===1?'a':'e')+' del nuovo turno cad'+(n===1?'e':'ono')+' in un periodo di ferie (prima: '+formatDate(prima)+')');
+  }, 2200);
+}
 
 function checkTurnoFestivita(centroId, giorno){
   const oggi = new Date(); oggi.setHours(12,0,0,0);
