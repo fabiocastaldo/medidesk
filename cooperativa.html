@@ -486,21 +486,23 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
     <section id="tab-compensi" class="card-lite hidden">
       <div class="stat-block">
+        <h3>Modello per sede</h3>
+        <p class="stat-hint">Chi paga chi? Per ogni sede scegli il verso del denaro: il centro paga il medico (compensi importati dal listino del medico sulla sede), il medico riconosce una quota al centro (percentuale sul compenso o cifra fissa a visita), oppure nessun conteggio.</p>
+        <div id="cmp-modelli"></div>
+      </div>
+      <div class="stat-block">
+        <h3>Quota al centro — regole per medico</h3>
+        <p class="stat-hint">Solo per le sedi in cui il medico riconosce una quota al centro: percentuale sul compenso del medico (dal suo listino) oppure cifra fissa per visita erogata. Lascia il valore vuoto per rimuovere la regola.</p>
+        <div id="cmp-regole"></div>
+      </div>
+      <div class="stat-block">
         <h3>Riconciliazione</h3>
-        <p class="stat-hint">Compenso maturato dai medici sulle visite erogate del mese, secondo le tariffe dell'organizzazione, a confronto con gli importi liquidati. Solo aggregati economici: nessun dato dei pazienti.</p>
+        <p class="stat-hint">Visite erogate del mese sulle sedi dell'organizzazione, raggruppate per verso del denaro. Gli importi si calcolano dal listino del medico sulla sede. Solo aggregati economici: nessun dato dei pazienti.</p>
         <div class="stat-filtri">
           <div class="field" style="max-width:190px;flex:none"><label for="cmp-mese">Mese</label><input type="month" id="cmp-mese" onchange="loadCompensi()"></div>
           <button class="btn btn-ghost" style="padding:9px 16px" onclick="exportCompensiCSV()">Esporta CSV</button>
         </div>
         <div id="cmp-tbl"></div>
-      </div>
-      <div class="stat-block">
-        <h3>Tariffe per medico</h3>
-        <p class="stat-hint">Compenso al medico per ogni servizio del listino (tab Servizi). Lascia il campo vuoto per rimuovere la tariffa.</p>
-        <div class="stat-filtri">
-          <div class="field" style="max-width:280px;flex:none"><label for="cmp-tar-medico">Medico</label><select id="cmp-tar-medico" onchange="renderTariffe()"><option value="">Seleziona…</option></select></div>
-        </div>
-        <div id="cmp-tar-tbl"></div>
       </div>
     </section>
 
@@ -678,7 +680,7 @@ const SEC_SOTTO = {
   'assoc-turni': 'I turni di ogni medico, a colpo d\'occhio',
   'giornata': 'Gli appuntamenti del giorno su tutte le sedi, in sola lettura',
   'statistiche': 'La visione d\'insieme dell\'attivit\u00e0',
-  'compensi': 'Tariffe dei medici e riconciliazione degli importi liquidati',
+  'compensi': 'Chi paga chi per ogni sede: modello, regole e riconciliazione mensile',
   'agenda': 'Gestisci disponibilit\u00e0 e prenotazioni del medico',
   'preferenze': 'Le impostazioni dell\'organizzazione'
 };
@@ -982,14 +984,26 @@ function exportStatCSV(){
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
-// ── RICONCILIAZIONE COMPENSI (tariffe per medico, maturato vs liquidato) ──
+// ── COMPENSI PER SEDE (modello del verso, regole quota, riconciliazione) ──
 let _cmpBusy = false, _cmpLast = null, _cmpInit = false;
+const _CMP_VERSO = { centro_paga: 'Il centro paga il medico', medico_versa: 'Il medico riconosce una quota al centro', nessuno: 'Nessun conteggio' };
 
 function _eurCmp(n){
   const r = Math.round((Number(n) + Number.EPSILON) * 100) / 100;
   return r.toLocaleString('it-IT', r % 1 === 0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 function _csvNum(n){ return String(n).replace('.', ','); }
+function _cmpMedNome(id){
+  const m = (((_cmpLast || {}).body || {}).medici || []).find(x => String(x.medico_id).toLowerCase() === String(id).toLowerCase());
+  return m ? m.nome : 'Medico';
+}
+function _cmpSede(id){
+  return (((_cmpLast || {}).body || {}).sedi || []).find(x => String(x.sede_id).toLowerCase() === String(id).toLowerCase()) || null;
+}
+function _cmpRegolaLabel(r){
+  if(!r) return 'regola mancante';
+  return r.tipo === 'percentuale' ? (Number(r.valore) + '% sul compenso') : ('€ ' + _eurCmp(r.valore) + ' a visita');
+}
 
 function initCompensi(){
   if(!_cmpInit){
@@ -997,15 +1011,6 @@ function initCompensi(){
     if(el && !el.value){
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
       el.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-    }
-    const sm = document.getElementById('cmp-tar-medico');
-    if(sm && _plancia){
-      (_plancia.medici || []).forEach(m => {
-        const o = document.createElement('option');
-        o.value = String(m.medico_id);
-        o.textContent = ((m.titolo ? m.titolo + ' ' : '') + (m.nome || '') + ' ' + (m.cognome || '')).trim();
-        sm.appendChild(o);
-      });
     }
     _cmpInit = true;
   }
@@ -1029,12 +1034,104 @@ async function loadCompensi(){
     const body = await res.json().catch(() => null);
     if(!res.ok || !body) throw new Error('fetch');
     _cmpLast = { body: body, meseKey: meseKey };
+    renderModelloSedi();
+    renderRegole();
     renderCompTbl();
-    renderTariffe();
   } catch(_e) {
-    tbl.innerHTML = '<div class="empty">Riconciliazione non disponibile. Riprova.</div>';
+    tbl.innerHTML = '<div class="empty">Compensi non disponibili. Riprova.</div>';
   } finally {
     _cmpBusy = false;
+  }
+}
+
+function renderModelloSedi(){
+  const el = document.getElementById('cmp-modelli');
+  const b = (_cmpLast || {}).body;
+  if(!el || !b) return;
+  const sedi = b.sedi || [];
+  if(!sedi.length){ el.innerHTML = '<div class="empty">Nessuna sede: creala nella tab Sedi.</div>'; return; }
+  let h = '<table style="width:100%;max-width:640px;border-collapse:collapse;font-size:13.5px"><tbody>';
+  sedi.forEach(s => {
+    const dis = s.attiva === false;
+    h += '<tr style="border-bottom:1px solid var(--border)' + (dis ? ';opacity:.55' : '') + '">'
+      + '<td style="padding:8px 0;font-weight:600">' + esc(s.nome || 'Sede') + (dis ? ' <span style="font-weight:400;color:var(--ink3)">(disattivata)</span>' : '') + '</td>'
+      + '<td style="text-align:right;padding:8px 0">'
+      + '<select onchange="setModelloSede(\'' + esc(String(s.sede_id)) + '\', this.value)" style="font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px;max-width:320px">'
+      + ['nessuno','centro_paga','medico_versa'].map(v => '<option value="' + v + '"' + (s.modello === v ? ' selected' : '') + '>' + _CMP_VERSO[v] + '</option>').join('')
+      + '</select></td></tr>';
+  });
+  h += '</tbody></table>';
+  el.innerHTML = h;
+}
+
+async function setModelloSede(sedeId, modello){
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-compensi', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'modello', sede_id: sedeId, modello: modello })
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
+    loadCompensi();
+  } catch(e) {
+    alert('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'));
+    renderModelloSedi();
+  }
+}
+
+function renderRegole(){
+  const el = document.getElementById('cmp-regole');
+  const b = (_cmpLast || {}).body;
+  if(!el || !b) return;
+  const sediMV = (b.sedi || []).filter(s => s.modello === 'medico_versa');
+  if(!sediMV.length){ el.innerHTML = '<div class="empty">Nessuna sede con quota al centro: le regole compaiono quando una sede usa quel modello.</div>'; return; }
+  const regMap = {};
+  (b.regole || []).forEach(r => { regMap[String(r.sede_id) + '|' + String(r.medico_id)] = r; });
+  const coppie = b.coppie || [];
+  let h = '';
+  sediMV.forEach(s => {
+    const medici = coppie.filter(c => String(c.sede_id) === String(s.sede_id));
+    h += '<div style="margin-bottom:14px"><div style="font-weight:600;margin-bottom:6px">' + esc(s.nome || 'Sede') + '</div>';
+    if(!medici.length){ h += '<div class="empty">Nessun medico collegato a questa sede.</div></div>'; return; }
+    h += '<table style="width:100%;max-width:640px;border-collapse:collapse;font-size:13.5px"><tbody>';
+    medici.forEach(c => {
+      const r = regMap[String(c.sede_id) + '|' + String(c.medico_id)];
+      const sid = esc(String(c.sede_id)), mid = esc(String(c.medico_id));
+      const key = 'reg-' + String(c.sede_id) + '-' + String(c.medico_id);
+      h += '<tr style="border-bottom:1px solid var(--border)">'
+        + '<td style="padding:8px 0">' + esc(_cmpMedNome(c.medico_id)) + '</td>'
+        + '<td style="text-align:right;padding:8px 0;white-space:nowrap">'
+        + '<select id="' + key + '-tipo" onchange="setRegola(\'' + mid + '\', \'' + sid + '\')" style="font-size:13px;padding:5px 8px;border:1.5px solid var(--border);border-radius:6px">'
+        + '<option value="percentuale"' + (!r || r.tipo === 'percentuale' ? ' selected' : '') + '>% sul compenso</option>'
+        + '<option value="fisso"' + (r && r.tipo === 'fisso' ? ' selected' : '') + '>€ a visita</option></select> '
+        + '<input id="' + key + '-val" type="number" step="0.01" min="0" placeholder="—" value="' + (r ? Number(r.valore) : '') + '" onchange="setRegola(\'' + mid + '\', \'' + sid + '\')" style="width:90px;text-align:right;font-size:13px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px">'
+        + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  });
+  el.innerHTML = h;
+}
+
+async function setRegola(medicoId, sedeId){
+  const key = 'reg-' + sedeId + '-' + medicoId;
+  const tipo = (document.getElementById(key + '-tipo') || {}).value || 'percentuale';
+  const raw = (document.getElementById(key + '-val') || {}).value;
+  const valore = (raw === '' || raw == null) ? null : (isNaN(parseFloat(raw)) ? null : parseFloat(raw));
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-compensi', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'regola', medico_id: medicoId, sede_id: sedeId, tipo: tipo, valore: valore })
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
+    loadCompensi();
+  } catch(e) {
+    alert('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'));
+    renderRegole();
   }
 }
 
@@ -1042,40 +1139,61 @@ function renderCompTbl(){
   const tbl = document.getElementById('cmp-tbl');
   const b = (_cmpLast || {}).body;
   if(!b){ tbl.innerHTML = ''; return; }
-  const righe = b.medici || [];
-  if(!righe.length){ tbl.innerHTML = '<div class="empty">Nessun medico collegato all\'organizzazione</div>'; return; }
-  let h = '<table style="width:100%;border-collapse:collapse;font-size:13.5px">'
-    + '<thead><tr style="border-bottom:1px solid var(--border);color:var(--ink3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">'
-    + '<th style="text-align:left;padding:6px 0">Medico</th>'
-    + '<th style="text-align:right;padding:6px 8px">Maturato</th>'
-    + '<th style="text-align:right;padding:6px 8px">Senza tariffa</th>'
-    + '<th style="text-align:right;padding:6px 8px">Liquidato</th>'
-    + '<th style="text-align:right;padding:6px 0">Delta</th></tr></thead><tbody>';
-  righe.forEach(r => {
-    const liq = r.liquidato == null ? null : Number(r.liquidato);
-    const delta = liq == null ? null : (Number(r.maturato) - liq);
-    let dStr, dCol;
-    if(delta == null){ dStr = '—'; dCol = 'inherit'; }
-    else if(delta > 0.005){ dStr = '+€ ' + _eurCmp(delta); dCol = '#b3261e'; }
-    else if(delta < -0.005){ dStr = '−€ ' + _eurCmp(Math.abs(delta)); dCol = '#1d7a4f'; }
-    else { dStr = '€ 0'; dCol = 'inherit'; }
-    h += '<tr style="border-bottom:1px solid var(--border)">'
-      + '<td style="padding:8px 0">' + esc(r.nome) + '</td>'
-      + '<td style="text-align:right;padding:8px 8px">€ ' + _eurCmp(r.maturato) + '</td>'
-      + '<td style="text-align:right;padding:8px 8px;color:var(--ink3)">' + (r.senza_tariffa > 0 ? String(r.senza_tariffa) : '—') + '</td>'
-      + '<td style="text-align:right;padding:8px 8px"><input type="number" step="0.01" min="0" value="' + (liq == null ? '' : liq) + '" onchange="setLiquidato(\'' + esc(String(r.medico_id)) + '\', this.value)" style="width:100px;text-align:right;font-size:13px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px"></td>'
-      + '<td style="text-align:right;padding:8px 0;font-weight:600;color:' + dCol + '">' + dStr + '</td></tr>';
+  const righe = b.righe || [];
+  if(!righe.length){
+    tbl.innerHTML = '<div class="empty">Nessuna sede con conteggio attivo: imposta il modello per sede qui sopra.</div>';
+    return;
+  }
+  const gruppi = [
+    { verso: 'centro_paga', colImporto: 'Da liquidare', colPagato: 'Liquidato' },
+    { verso: 'medico_versa', colImporto: 'Dovuto dal medico', colPagato: 'Versato' }
+  ];
+  let h = '';
+  gruppi.forEach(g => {
+    const rg = righe.filter(r => r.verso === g.verso);
+    if(!rg.length) return;
+    h += '<div style="font-weight:600;margin:14px 0 6px">' + _CMP_VERSO[g.verso] + '</div>';
+    h += '<table style="width:100%;border-collapse:collapse;font-size:13.5px">'
+      + '<thead><tr style="border-bottom:1px solid var(--border);color:var(--ink3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">'
+      + '<th style="text-align:left;padding:6px 0">Sede</th>'
+      + '<th style="text-align:left;padding:6px 8px">Medico</th>'
+      + '<th style="text-align:right;padding:6px 8px">Visite</th>'
+      + '<th style="text-align:right;padding:6px 8px">Senza tariffa</th>'
+      + (g.verso === 'medico_versa' ? '<th style="text-align:right;padding:6px 8px">Regola</th>' : '')
+      + '<th style="text-align:right;padding:6px 8px">' + g.colImporto + '</th>'
+      + '<th style="text-align:right;padding:6px 8px">' + g.colPagato + '</th>'
+      + '<th style="text-align:right;padding:6px 0">Delta</th></tr></thead><tbody>';
+    rg.forEach(r => {
+      const liq = r.liquidato == null ? null : Number(r.liquidato);
+      const imp = r.importo == null ? null : Number(r.importo);
+      const delta = (imp == null || liq == null) ? null : (imp - liq);
+      let dStr, dCol;
+      if(delta == null){ dStr = '—'; dCol = 'inherit'; }
+      else if(delta > 0.005){ dStr = '+€ ' + _eurCmp(delta); dCol = '#b3261e'; }
+      else if(delta < -0.005){ dStr = '−€ ' + _eurCmp(Math.abs(delta)); dCol = '#1d7a4f'; }
+      else { dStr = '€ 0'; dCol = 'inherit'; }
+      const sede = _cmpSede(r.sede_id);
+      h += '<tr style="border-bottom:1px solid var(--border)">'
+        + '<td style="padding:8px 0">' + esc(sede ? sede.nome : 'Sede') + '</td>'
+        + '<td style="padding:8px 8px">' + esc(_cmpMedNome(r.medico_id)) + '</td>'
+        + '<td style="text-align:right;padding:8px 8px">' + String(Number(r.visite || 0)) + '</td>'
+        + '<td style="text-align:right;padding:8px 8px;color:var(--ink3)">' + (r.senza_tariffa > 0 ? String(r.senza_tariffa) : '—') + '</td>'
+        + (g.verso === 'medico_versa' ? '<td style="text-align:right;padding:8px 8px;' + (r.regola ? '' : 'color:#b3261e;') + 'font-size:12.5px">' + esc(_cmpRegolaLabel(r.regola)) + '</td>' : '')
+        + '<td style="text-align:right;padding:8px 8px">' + (imp == null ? '—' : '€ ' + _eurCmp(imp)) + '</td>'
+        + '<td style="text-align:right;padding:8px 8px"><input type="number" step="0.01" min="0" value="' + (liq == null ? '' : liq) + '" onchange="setLiquidato(\'' + esc(String(r.medico_id)) + '\', \'' + esc(String(r.sede_id)) + '\', this.value)" style="width:100px;text-align:right;font-size:13px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px"></td>'
+        + '<td style="text-align:right;padding:8px 0;font-weight:600;color:' + dCol + '">' + dStr + '</td></tr>';
+    });
+    h += '</tbody></table>';
   });
-  h += '</tbody></table>';
   const st = righe.reduce((s, r) => s + (r.senza_tariffa || 0), 0);
   if(st > 0){
-    h += '<div style="margin-top:10px;font-size:12px;color:var(--ink3)">' + st + ' visit' + (st === 1 ? 'a' : 'e') + ' senza tariffa configurata (esclus' + (st === 1 ? 'a' : 'e') + ' dal maturato).</div>';
+    h += '<div style="margin-top:10px;font-size:12px;color:var(--ink3)">' + st + ' visit' + (st === 1 ? 'a' : 'e') + ' senza tariffa nel listino del medico: escluse dal maturato e dalla quota percentuale, contate nella quota fissa a visita.</div>';
   }
-  h += '<div style="margin-top:10px;font-size:11.5px;color:var(--ink3)">Rendiconto privato di verifica — non è un documento fiscale.</div>';
+  h += '<div style="margin-top:10px;font-size:11.5px;color:var(--ink3)">Gli importi si importano dal listino del medico sulla sede (tipo visita con lo stesso nome). Rendiconto privato di verifica — non è un documento fiscale.</div>';
   tbl.innerHTML = h;
 }
 
-async function setLiquidato(medicoId, raw){
+async function setLiquidato(medicoId, sedeId, raw){
   const importo = (raw === '' || raw == null) ? null : (isNaN(parseFloat(raw)) ? null : parseFloat(raw));
   const meseKey = ((_cmpLast || {}).meseKey || '');
   const parts = meseKey.split('-');
@@ -1086,56 +1204,16 @@ async function setLiquidato(medicoId, raw){
     const res = await fetch('/api/coop-compensi', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ azione: 'liquidato', medico_id: medicoId, anno: anno, mese: mese, importo: importo })
+      body: JSON.stringify({ azione: 'liquidato', medico_id: medicoId, sede_id: sedeId, anno: anno, mese: mese, importo: importo })
     });
     const body = await res.json().catch(() => null);
     if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
-    const r = (((_cmpLast || {}).body || {}).medici || []).find(x => String(x.medico_id).toLowerCase() === String(medicoId).toLowerCase());
+    const r = (((_cmpLast || {}).body || {}).righe || []).find(x => String(x.medico_id).toLowerCase() === String(medicoId).toLowerCase() && String(x.sede_id).toLowerCase() === String(sedeId).toLowerCase());
     if(r) r.liquidato = importo;
     renderCompTbl();
   } catch(e) {
     alert('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'));
     renderCompTbl();
-  }
-}
-
-function renderTariffe(){
-  const el = document.getElementById('cmp-tar-tbl');
-  const b = (_cmpLast || {}).body;
-  const mid = (document.getElementById('cmp-tar-medico') || {}).value || '';
-  if(!b || !mid){ el.innerHTML = mid ? '' : '<div class="empty">Scegli un medico per gestirne le tariffe</div>'; return; }
-  const servizi = (b.servizi || []).filter(s => s.attivo !== false);
-  if(!servizi.length){ el.innerHTML = '<div class="empty">Nessun servizio attivo nel listino dell\'organizzazione</div>'; return; }
-  const tarMap = {};
-  (b.tariffe || []).forEach(t => { if(String(t.medico_id).toLowerCase() === mid.toLowerCase()) tarMap[String(t.servizio_id).toLowerCase()] = Number(t.compenso); });
-  let h = '<table style="width:100%;max-width:520px;border-collapse:collapse;font-size:13.5px"><tbody>';
-  servizi.forEach(s => {
-    const k = String(s.id).toLowerCase();
-    const v = Object.prototype.hasOwnProperty.call(tarMap, k) ? tarMap[k] : null;
-    h += '<tr style="border-bottom:1px solid var(--border)">'
-      + '<td style="padding:8px 0">' + esc(s.nome || 'Servizio') + '</td>'
-      + '<td style="text-align:right;padding:8px 0;white-space:nowrap"><input type="number" step="0.01" min="0" placeholder="—" value="' + (v == null ? '' : v) + '" onchange="setTariffa(\'' + esc(String(s.id)) + '\', this.value)" style="width:100px;text-align:right;font-size:13px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px"> €</td></tr>';
-  });
-  h += '</tbody></table>';
-  el.innerHTML = h;
-}
-
-async function setTariffa(servizioId, raw){
-  const mid = (document.getElementById('cmp-tar-medico') || {}).value || '';
-  if(!mid) return;
-  const compenso = (raw === '' || raw == null) ? null : (isNaN(parseFloat(raw)) ? null : parseFloat(raw));
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    const res = await fetch('/api/coop-compensi', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ azione: 'tariffa', medico_id: mid, servizio_id: servizioId, compenso: compenso })
-    });
-    const body = await res.json().catch(() => null);
-    if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
-    loadCompensi();
-  } catch(e) {
-    alert('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'));
   }
 }
 
@@ -1146,13 +1224,25 @@ function exportCompensiCSV(){
   }
   const b = _cmpLast.body;
   const righe = [];
-  righe.push(['Riconciliazione compensi', _cmpLast.meseKey].map(_csvCell).join(';'));
-  righe.push('');
-  righe.push(['Medico', 'Maturato', 'Visite senza tariffa', 'Liquidato', 'Delta'].map(_csvCell).join(';'));
-  (b.medici || []).forEach(r => {
-    const liq = r.liquidato == null ? '' : _csvNum(Number(r.liquidato));
-    const delta = r.liquidato == null ? '' : _csvNum(Math.round((Number(r.maturato) - Number(r.liquidato) + Number.EPSILON) * 100) / 100);
-    righe.push([r.nome, _csvNum(Number(r.maturato)), String(Number(r.senza_tariffa || 0)), liq, delta].map(_csvCell).join(';'));
+  righe.push(['Compensi per sede', _cmpLast.meseKey].map(_csvCell).join(';'));
+  const blocchi = [
+    { verso: 'centro_paga', importo: 'Da liquidare', pagato: 'Liquidato' },
+    { verso: 'medico_versa', importo: 'Dovuto dal medico', pagato: 'Versato' }
+  ];
+  blocchi.forEach(g => {
+    const rg = (b.righe || []).filter(r => r.verso === g.verso);
+    if(!rg.length) return;
+    righe.push('');
+    righe.push([_CMP_VERSO[g.verso]].map(_csvCell).join(';'));
+    righe.push(['Sede', 'Medico', 'Visite', 'Senza tariffa', 'Regola', g.importo, g.pagato, 'Delta'].map(_csvCell).join(';'));
+    rg.forEach(r => {
+      const sede = _cmpSede(r.sede_id);
+      const imp = r.importo == null ? '' : _csvNum(Number(r.importo));
+      const liq = r.liquidato == null ? '' : _csvNum(Number(r.liquidato));
+      const delta = (r.importo == null || r.liquidato == null) ? '' : _csvNum(Math.round((Number(r.importo) - Number(r.liquidato) + Number.EPSILON) * 100) / 100);
+      const regola = g.verso === 'medico_versa' ? _cmpRegolaLabel(r.regola) : '';
+      righe.push([sede ? sede.nome : 'Sede', _cmpMedNome(r.medico_id), String(Number(r.visite || 0)), String(Number(r.senza_tariffa || 0)), regola, imp, liq, delta].map(_csvCell).join(';'));
+    });
   });
   const blob = new Blob(['\uFEFF' + righe.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');

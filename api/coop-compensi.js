@@ -1,18 +1,27 @@
 // api/coop-compensi.js
-// Riconciliazione compensi per la plancia organizzazione.
+// Compensi per la plancia organizzazione — modello per SEDE (chi paga chi).
+// Ogni coop_sedi ha modello_compensi: 'centro_paga' (il centro paga il medico),
+// 'medico_versa' (il medico riconosce una quota al centro), 'nessuno' (default).
 // Perimetro: identico a coop-statistiche — SOLO i sede-centri della cooperativa
 // (centri.cooperativa_id), quindi solo medici attivati con codice, per costruzione.
-// In uscita: aggregati economici per medico (maturato, liquidato, visite senza
-// tariffa) più tariffe e servizi dell'organizzazione. Nessuna riga appuntamento,
-// nessun dato del paziente attraversa il confine. Le scritture (tariffa,
-// liquidato) sono vincolate al perimetro coop verificato server-side: medico e
-// servizio devono appartenere alla cooperativa del chiamante.
+// Il maturato del medico si IMPORTA dal suo listino (prestazioni_centro) letto
+// ESCLUSIVAMENTE sui sede-centri della cooperativa: i centri privati del medico
+// non entrano mai qui. La replica della vigenza è quella del rendiconto medico:
+// candidate = stesso centro + stesso tipo_visita + valido_dal <= data visita,
+// vince il valido_dal più recente; percentuale senza prezzo = tariffa assente.
+// In uscita: SOLO aggregati economici per sede×medico. Nessuna riga appuntamento,
+// nessun dato del paziente attraversa il confine. Le scritture (modello, regola,
+// liquidato) sono vincolate al perimetro coop verificato server-side.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MODELLI = ['centro_paga', 'medico_versa', 'nessuno'];
 
 function euroNum(v) {
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+function round2(n) {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
 export default async function handler(req, res) {
@@ -54,62 +63,88 @@ export default async function handler(req, res) {
   }
   const coopId = seg.cooperativa_id;
 
-  // sede-centri della cooperativa: definiscono i medici del perimetro
+  // sede-centri della cooperativa: perimetro medici + mappa centro→sede
   const centriRes = await fetch(
-    `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id,medico_id`,
+    `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id,medico_id,coop_sede_id`,
     { headers: srvHeaders }
   ).catch(() => null);
   let centri = (centriRes && centriRes.ok) ? await centriRes.json().catch(() => []) : [];
   if (!Array.isArray(centri)) centri = [];
   const mediciCoop = new Set(centri.filter(c => c.medico_id).map(c => String(c.medico_id).toLowerCase()));
+  // coppie sede×medico esistenti (solo centri agganciati a una sede)
+  const coppie = new Set(
+    centri
+      .filter(c => c.medico_id && c.coop_sede_id)
+      .map(c => `${String(c.coop_sede_id).toLowerCase()}|${String(c.medico_id).toLowerCase()}`)
+  );
 
   const jsonHeaders = { ...srvHeaders, 'Content-Type': 'application/json' };
 
-  // ── POST: scritture perimetrate (tariffa | liquidato) ──
+  // ── POST: scritture perimetrate (modello | regola | liquidato) ──
   if (req.method === 'POST') {
     const b = req.body || {};
     const azione = b.azione;
+
+    if (azione === 'modello') {
+      const sedeId = typeof b.sede_id === 'string' ? b.sede_id : '';
+      if (!UUID_RE.test(sedeId)) return res.status(400).json({ error: 'Parametro sede_id non valido' });
+      const modello = typeof b.modello === 'string' ? b.modello : '';
+      if (!MODELLI.includes(modello)) return res.status(400).json({ error: 'Parametro modello non valido' });
+      const upRes = await fetch(
+        `${supabaseUrl}/rest/v1/coop_sedi?id=eq.${encodeURIComponent(sedeId)}&cooperativa_id=eq.${encodeURIComponent(coopId)}`,
+        {
+          method: 'PATCH',
+          headers: { ...jsonHeaders, 'Prefer': 'return=representation' },
+          body: JSON.stringify({ modello_compensi: modello })
+        }
+      ).catch(() => null);
+      if (!upRes || !upRes.ok) return res.status(500).json({ error: 'Salvataggio modello non riuscito' });
+      const rows = await upRes.json().catch(() => []);
+      const r = Array.isArray(rows) ? rows[0] : null;
+      if (!r) return res.status(403).json({ error: 'Sede fuori dal perimetro dell\'organizzazione' });
+      return res.status(200).json({ ok: true, azione: 'modello', sede: { sede_id: r.id, modello: r.modello_compensi } });
+    }
+
+    // regola e liquidato: richiedono medico e sede nel perimetro, con coppia esistente
     const medicoId = typeof b.medico_id === 'string' ? b.medico_id : '';
+    const sedeId = typeof b.sede_id === 'string' ? b.sede_id : '';
     if (!UUID_RE.test(medicoId)) return res.status(400).json({ error: 'Parametro medico_id non valido' });
+    if (!UUID_RE.test(sedeId)) return res.status(400).json({ error: 'Parametro sede_id non valido' });
     if (!mediciCoop.has(medicoId.toLowerCase())) {
       return res.status(403).json({ error: 'Medico fuori dal perimetro dell\'organizzazione' });
     }
+    if (!coppie.has(`${sedeId.toLowerCase()}|${medicoId.toLowerCase()}`)) {
+      return res.status(403).json({ error: 'Il medico non opera su questa sede' });
+    }
 
-    if (azione === 'tariffa') {
-      const servizioId = typeof b.servizio_id === 'string' ? b.servizio_id : '';
-      if (!UUID_RE.test(servizioId)) return res.status(400).json({ error: 'Parametro servizio_id non valido' });
-      const svRes = await fetch(
-        `${supabaseUrl}/rest/v1/coop_servizi?id=eq.${encodeURIComponent(servizioId)}&cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id`,
-        { headers: srvHeaders }
-      ).catch(() => null);
-      const sv = (svRes && svRes.ok) ? await svRes.json().catch(() => []) : [];
-      if (!Array.isArray(sv) || !sv.length) {
-        return res.status(403).json({ error: 'Servizio fuori dal perimetro dell\'organizzazione' });
-      }
-      if (b.compenso === null || b.compenso === '' || b.compenso === undefined) {
+    if (azione === 'regola') {
+      if (b.valore === null || b.valore === '' || b.valore === undefined) {
         const delRes = await fetch(
-          `${supabaseUrl}/rest/v1/coop_tariffe?cooperativa_id=eq.${encodeURIComponent(coopId)}&medico_id=eq.${encodeURIComponent(medicoId)}&servizio_id=eq.${encodeURIComponent(servizioId)}`,
+          `${supabaseUrl}/rest/v1/coop_regole_compensi?cooperativa_id=eq.${encodeURIComponent(coopId)}&medico_id=eq.${encodeURIComponent(medicoId)}&sede_id=eq.${encodeURIComponent(sedeId)}`,
           { method: 'DELETE', headers: { ...srvHeaders, 'Prefer': 'return=representation' } }
         ).catch(() => null);
-        if (!delRes || !delRes.ok) return res.status(500).json({ error: 'Rimozione tariffa non riuscita' });
+        if (!delRes || !delRes.ok) return res.status(500).json({ error: 'Rimozione regola non riuscita' });
         const rows = await delRes.json().catch(() => []);
-        return res.status(200).json({ ok: true, azione: 'tariffa', rimossa: Array.isArray(rows) ? rows.length : 0 });
+        return res.status(200).json({ ok: true, azione: 'regola', rimossa: Array.isArray(rows) ? rows.length : 0 });
       }
-      const compenso = euroNum(b.compenso);
-      if (compenso === null) return res.status(400).json({ error: 'Parametro compenso non valido' });
+      const tipo = typeof b.tipo === 'string' ? b.tipo : '';
+      if (tipo !== 'percentuale' && tipo !== 'fisso') return res.status(400).json({ error: 'Parametro tipo non valido' });
+      const valore = euroNum(b.valore);
+      if (valore === null) return res.status(400).json({ error: 'Parametro valore non valido' });
+      if (tipo === 'percentuale' && valore > 100) return res.status(400).json({ error: 'La percentuale non può superare 100' });
       const upRes = await fetch(
-        `${supabaseUrl}/rest/v1/coop_tariffe?on_conflict=cooperativa_id,medico_id,servizio_id`,
+        `${supabaseUrl}/rest/v1/coop_regole_compensi?on_conflict=cooperativa_id,medico_id,sede_id`,
         {
           method: 'POST',
           headers: { ...jsonHeaders, 'Prefer': 'resolution=merge-duplicates,return=representation' },
-          body: JSON.stringify({ cooperativa_id: coopId, medico_id: medicoId, servizio_id: servizioId, compenso })
+          body: JSON.stringify({ cooperativa_id: coopId, medico_id: medicoId, sede_id: sedeId, tipo, valore })
         }
       ).catch(() => null);
-      if (!upRes || !upRes.ok) return res.status(500).json({ error: 'Salvataggio tariffa non riuscito' });
+      if (!upRes || !upRes.ok) return res.status(500).json({ error: 'Salvataggio regola non riuscito' });
       const rows = await upRes.json().catch(() => []);
       const r = Array.isArray(rows) ? rows[0] : null;
-      if (!r) return res.status(500).json({ error: 'Salvataggio tariffa non confermato' });
-      return res.status(200).json({ ok: true, azione: 'tariffa', tariffa: { medico_id: r.medico_id, servizio_id: r.servizio_id, compenso: Number(r.compenso) } });
+      if (!r) return res.status(500).json({ error: 'Salvataggio regola non confermato' });
+      return res.status(200).json({ ok: true, azione: 'regola', regola: { medico_id: r.medico_id, sede_id: r.sede_id, tipo: r.tipo, valore: Number(r.valore) } });
     }
 
     if (azione === 'liquidato') {
@@ -118,7 +153,7 @@ export default async function handler(req, res) {
       if (!Number.isInteger(mese) || mese < 1 || mese > 12) return res.status(400).json({ error: 'Parametro mese non valido' });
       if (b.importo === null || b.importo === '' || b.importo === undefined) {
         const delRes = await fetch(
-          `${supabaseUrl}/rest/v1/coop_compensi_liquidati?cooperativa_id=eq.${encodeURIComponent(coopId)}&medico_id=eq.${encodeURIComponent(medicoId)}&anno=eq.${anno}&mese=eq.${mese}`,
+          `${supabaseUrl}/rest/v1/coop_compensi_liquidati?cooperativa_id=eq.${encodeURIComponent(coopId)}&medico_id=eq.${encodeURIComponent(medicoId)}&sede_id=eq.${encodeURIComponent(sedeId)}&anno=eq.${anno}&mese=eq.${mese}`,
           { method: 'DELETE', headers: { ...srvHeaders, 'Prefer': 'return=representation' } }
         ).catch(() => null);
         if (!delRes || !delRes.ok) return res.status(500).json({ error: 'Rimozione importo non riuscita' });
@@ -128,73 +163,135 @@ export default async function handler(req, res) {
       const importo = euroNum(b.importo);
       if (importo === null) return res.status(400).json({ error: 'Parametro importo non valido' });
       const upRes = await fetch(
-        `${supabaseUrl}/rest/v1/coop_compensi_liquidati?on_conflict=cooperativa_id,medico_id,anno,mese`,
+        `${supabaseUrl}/rest/v1/coop_compensi_liquidati?on_conflict=cooperativa_id,medico_id,sede_id,anno,mese`,
         {
           method: 'POST',
           headers: { ...jsonHeaders, 'Prefer': 'resolution=merge-duplicates,return=representation' },
-          body: JSON.stringify({ cooperativa_id: coopId, medico_id: medicoId, anno, mese, importo })
+          body: JSON.stringify({ cooperativa_id: coopId, medico_id: medicoId, sede_id: sedeId, anno, mese, importo })
         }
       ).catch(() => null);
       if (!upRes || !upRes.ok) return res.status(500).json({ error: 'Salvataggio importo non riuscito' });
       const rows = await upRes.json().catch(() => []);
       const r = Array.isArray(rows) ? rows[0] : null;
       if (!r) return res.status(500).json({ error: 'Salvataggio importo non confermato' });
-      return res.status(200).json({ ok: true, azione: 'liquidato', liquidato: { medico_id: r.medico_id, anno: r.anno, mese: r.mese, importo: Number(r.importo) } });
+      return res.status(200).json({ ok: true, azione: 'liquidato', liquidato: { medico_id: r.medico_id, sede_id: r.sede_id, anno: r.anno, mese: r.mese, importo: Number(r.importo) } });
     }
 
     return res.status(400).json({ error: 'Azione non valida' });
   }
 
-  // ── GET ?anno=&mese=: quadro riconciliazione del mese ──
+  // ── GET ?anno=&mese=: quadro del mese, raggruppabile per verso ──
   const q = req.query || {};
   const anno = Number(q.anno), mese = Number(q.mese);
   if (!Number.isInteger(anno) || anno < 2020 || anno > 2100) return res.status(400).json({ error: 'Parametro anno non valido' });
   if (!Number.isInteger(mese) || mese < 1 || mese > 12) return res.status(400).json({ error: 'Parametro mese non valido' });
 
-  const vuoto = { anno, mese, medici: [], servizi: [], tariffe: [] };
-  if (!centri.length) return res.status(200).json(vuoto);
+  const sedRes = await fetch(
+    `${supabaseUrl}/rest/v1/coop_sedi?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id,nome,attiva,modello_compensi&order=created_at.asc`,
+    { headers: srvHeaders }
+  ).catch(() => null);
+  let sedi = (sedRes && sedRes.ok) ? await sedRes.json().catch(() => []) : [];
+  if (!Array.isArray(sedi)) sedi = [];
+  const modelloDiSede = new Map(sedi.map(s => [String(s.id).toLowerCase(), s.modello_compensi || 'nessuno']));
 
   const mm = String(mese).padStart(2, '0');
   const dal = `${anno}-${mm}-01`;
   const al = `${anno}-${mm}-${String(new Date(Date.UTC(anno, mese, 0)).getUTCDate()).padStart(2, '0')}`;
 
-  const [svRes, tarRes, liqRes, appRes] = await Promise.all([
-    fetch(`${supabaseUrl}/rest/v1/coop_servizi?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id,nome,attivo`, { headers: srvHeaders }).catch(() => null),
-    fetch(`${supabaseUrl}/rest/v1/coop_tariffe?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=medico_id,servizio_id,compenso`, { headers: srvHeaders }).catch(() => null),
-    fetch(`${supabaseUrl}/rest/v1/coop_compensi_liquidati?cooperativa_id=eq.${encodeURIComponent(coopId)}&anno=eq.${anno}&mese=eq.${mese}&select=medico_id,importo`, { headers: srvHeaders }).catch(() => null),
-    fetch(`${supabaseUrl}/rest/v1/appuntamenti?centro_id=in.(${centri.map(c => `"${c.id}"`).join(',')})&erogata=is.true&or=(cancelled.is.null,cancelled.eq.false)&data=gte.${dal}&data=lte.${al}&select=tipo_visita,medico_id`, { headers: srvHeaders }).catch(() => null)
+  const vuoto = {
+    anno, mese,
+    sedi: sedi.map(s => ({ sede_id: s.id, nome: s.nome, attiva: s.attiva !== false, modello: s.modello_compensi || 'nessuno' })),
+    medici: [], coppie: [], regole: [], righe: []
+  };
+  if (!centri.length) return res.status(200).json(vuoto);
+
+  const inCentri = centri.map(c => `"${c.id}"`).join(',');
+  const [regRes, liqRes, appRes, preRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/coop_regole_compensi?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=medico_id,sede_id,tipo,valore`, { headers: srvHeaders }).catch(() => null),
+    fetch(`${supabaseUrl}/rest/v1/coop_compensi_liquidati?cooperativa_id=eq.${encodeURIComponent(coopId)}&anno=eq.${anno}&mese=eq.${mese}&select=medico_id,sede_id,importo`, { headers: srvHeaders }).catch(() => null),
+    fetch(`${supabaseUrl}/rest/v1/appuntamenti?centro_id=in.(${inCentri})&erogata=is.true&or=(cancelled.is.null,cancelled.eq.false)&data=gte.${dal}&data=lte.${al}&select=tipo_visita,medico_id,centro_id,data`, { headers: srvHeaders }).catch(() => null),
+    fetch(`${supabaseUrl}/rest/v1/prestazioni_centro?centro_id=in.(${inCentri})&select=centro_id,tipo_visita,prezzo,compenso,tipo,valido_dal`, { headers: srvHeaders }).catch(() => null)
   ]);
   if (!appRes || !appRes.ok) return res.status(500).json({ error: 'Lettura visite non riuscita' });
+  if (!preRes || !preRes.ok) return res.status(500).json({ error: 'Lettura listini non riuscita' });
 
-  const servizi = (svRes && svRes.ok) ? (await svRes.json().catch(() => [])) : [];
-  const tariffe = (tarRes && tarRes.ok) ? (await tarRes.json().catch(() => [])) : [];
+  const regole = (regRes && regRes.ok) ? (await regRes.json().catch(() => [])) : [];
   const liquidati = (liqRes && liqRes.ok) ? (await liqRes.json().catch(() => [])) : [];
   const visite = await appRes.json().catch(() => []);
+  const listino = await preRes.json().catch(() => []);
 
-  const servizioIdPerNome = new Map();
-  for (const s of (Array.isArray(servizi) ? servizi : [])) {
-    servizioIdPerNome.set(String(s.nome || '').trim().toLowerCase(), String(s.id).toLowerCase());
+  // listino per centro+tipo_visita (replica di _tariffaVigente del rendiconto medico)
+  const listinoPerChiave = new Map();
+  for (const p of (Array.isArray(listino) ? listino : [])) {
+    const k = `${String(p.centro_id).toLowerCase()}|${String(p.tipo_visita || '').trim().toLowerCase()}`;
+    if (!listinoPerChiave.has(k)) listinoPerChiave.set(k, []);
+    listinoPerChiave.get(k).push(p);
   }
-  const tariffaPerChiave = new Map();
-  for (const t of (Array.isArray(tariffe) ? tariffe : [])) {
-    tariffaPerChiave.set(`${String(t.medico_id).toLowerCase()}|${String(t.servizio_id).toLowerCase()}`, Number(t.compenso));
+  function compensoMedico(centroId, tipoVisita, data) {
+    const cands = (listinoPerChiave.get(`${String(centroId).toLowerCase()}|${String(tipoVisita || '').trim().toLowerCase()}`) || [])
+      .filter(p => (p.valido_dal || '') <= (data || ''));
+    if (!cands.length) return null;
+    cands.sort((x, y) => (y.valido_dal || '').localeCompare(x.valido_dal || ''));
+    const tar = cands[0];
+    if (tar.tipo === 'percentuale') return (tar.prezzo == null) ? null : (Number(tar.compenso) / 100) * Number(tar.prezzo);
+    return (tar.compenso == null) ? null : Number(tar.compenso);
   }
-  const liquidatoPerMedico = new Map();
+
+  const regolaPerChiave = new Map();
+  for (const r of (Array.isArray(regole) ? regole : [])) {
+    regolaPerChiave.set(`${String(r.sede_id).toLowerCase()}|${String(r.medico_id).toLowerCase()}`, { tipo: r.tipo, valore: Number(r.valore) });
+  }
+  const liquidatoPerChiave = new Map();
   for (const l of (Array.isArray(liquidati) ? liquidati : [])) {
-    liquidatoPerMedico.set(String(l.medico_id).toLowerCase(), Number(l.importo));
+    liquidatoPerChiave.set(`${String(l.sede_id).toLowerCase()}|${String(l.medico_id).toLowerCase()}`, Number(l.importo));
   }
+  const sedeDiCentro = new Map(centri.map(c => [String(c.id).toLowerCase(), c.coop_sede_id ? String(c.coop_sede_id).toLowerCase() : null]));
 
-  const maturato = new Map(), senzaTariffa = new Map();
+  // aggregazione per sede×medico (solo sedi con modello ≠ nessuno)
+  const agg = new Map(); // chiave sede|medico → { visite, senza_tariffa, base, fissoN }
+  function aggDi(k) {
+    if (!agg.has(k)) agg.set(k, { visite: 0, senza_tariffa: 0, base: 0, fissoN: 0 });
+    return agg.get(k);
+  }
   for (const v of (Array.isArray(visite) ? visite : [])) {
     const m = v.medico_id ? String(v.medico_id).toLowerCase() : '';
     if (!m) continue;
-    const svId = servizioIdPerNome.get(String(v.tipo_visita || '').trim().toLowerCase());
-    const comp = svId != null ? tariffaPerChiave.get(`${m}|${svId}`) : undefined;
-    if (comp == null || !Number.isFinite(comp)) {
-      senzaTariffa.set(m, (senzaTariffa.get(m) || 0) + 1);
-    } else {
-      maturato.set(m, (maturato.get(m) || 0) + comp);
+    const sedeId = sedeDiCentro.get(String(v.centro_id).toLowerCase());
+    if (!sedeId) continue;
+    const modello = modelloDiSede.get(sedeId) || 'nessuno';
+    if (modello === 'nessuno') continue;
+    const a = aggDi(`${sedeId}|${m}`);
+    a.visite += 1;
+    a.fissoN += 1;
+    const comp = compensoMedico(v.centro_id, v.tipo_visita, v.data);
+    if (comp == null || !Number.isFinite(comp)) a.senza_tariffa += 1;
+    else a.base += comp;
+  }
+
+  // righe: una per coppia sede×medico sulle sedi con modello ≠ nessuno
+  const righe = [];
+  for (const chiave of coppie) {
+    const [sedeId, medicoId] = chiave.split('|');
+    const modello = modelloDiSede.get(sedeId) || 'nessuno';
+    if (modello === 'nessuno') continue;
+    const a = agg.get(chiave) || { visite: 0, senza_tariffa: 0, base: 0, fissoN: 0 };
+    const regola = regolaPerChiave.get(chiave) || null;
+    let importo = null;
+    if (modello === 'centro_paga') {
+      importo = round2(a.base);
+    } else if (regola) {
+      importo = regola.tipo === 'percentuale' ? round2(a.base * regola.valore / 100) : round2(a.fissoN * regola.valore);
     }
+    righe.push({
+      sede_id: sedeId,
+      medico_id: medicoId,
+      verso: modello,
+      visite: a.visite,
+      senza_tariffa: a.senza_tariffa,
+      importo,
+      regola,
+      liquidato: liquidatoPerChiave.has(chiave) ? liquidatoPerChiave.get(chiave) : null
+    });
   }
 
   // risoluzione nomi (soli id → etichette; nessun dato paziente)
@@ -210,18 +307,19 @@ export default async function handler(req, res) {
       medNomi.set(String(m.id).toLowerCase(), [m.titolo, m.nome, m.cognome].filter(Boolean).join(' ').trim() || 'Medico');
     }
   }
-
-  const medici = [...mediciCoop].map(id => ({
-    medico_id: id,
-    nome: medNomi.get(id) || 'Medico',
-    maturato: Math.round(((maturato.get(id) || 0) + Number.EPSILON) * 100) / 100,
-    senza_tariffa: senzaTariffa.get(id) || 0,
-    liquidato: liquidatoPerMedico.has(id) ? liquidatoPerMedico.get(id) : null
-  })).sort((a, b) => b.maturato - a.maturato || a.nome.localeCompare(b.nome));
+  const nomeDiSede = new Map(sedi.map(s => [String(s.id).toLowerCase(), s.nome || 'Sede']));
+  righe.sort((a, b) =>
+    (nomeDiSede.get(a.sede_id) || '').localeCompare(nomeDiSede.get(b.sede_id) || '') ||
+    (medNomi.get(a.medico_id) || '').localeCompare(medNomi.get(b.medico_id) || '')
+  );
 
   return res.status(200).json({
-    anno, mese, medici,
-    servizi: (Array.isArray(servizi) ? servizi : []).map(s => ({ id: s.id, nome: s.nome, attivo: s.attivo !== false })),
-    tariffe: (Array.isArray(tariffe) ? tariffe : []).map(t => ({ medico_id: t.medico_id, servizio_id: t.servizio_id, compenso: Number(t.compenso) }))
+    anno, mese,
+    sedi: sedi.map(s => ({ sede_id: s.id, nome: s.nome, attiva: s.attiva !== false, modello: s.modello_compensi || 'nessuno' })),
+    medici: [...mediciCoop].map(id => ({ medico_id: id, nome: medNomi.get(id) || 'Medico' }))
+      .sort((a, b) => a.nome.localeCompare(b.nome)),
+    coppie: [...coppie].map(k => { const [s, m] = k.split('|'); return { sede_id: s, medico_id: m }; }),
+    regole: (Array.isArray(regole) ? regole : []).map(r => ({ medico_id: String(r.medico_id).toLowerCase(), sede_id: String(r.sede_id).toLowerCase(), tipo: r.tipo, valore: Number(r.valore) })),
+    righe
   });
 }
