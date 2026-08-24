@@ -1,4 +1,5 @@
 // api/cancel-appointment.js
+import { avvisaListaAttesa } from '../lib/waitlist.js';
 // Fix P0 RLS `appuntamenti` (strada 1 — difesa in profondità).
 // Sostituisce l'accesso anon diretto al DB dalla pagina pubblica ?cancel=<token>:
 // lookup e cancellazione passano da qui con service_role, match SEMPRE sul token
@@ -133,49 +134,10 @@ export default async function handler(req, res) {
           }).catch(() => {});
         }
       } catch { /* soft-fail */ }
-      // Lista d'attesa (v1): avvisa gli iscritti attivi dello stesso medico+centro
-      // il cui appuntamento (non cancellato) è a data/ora successiva allo slot liberato.
-      // Best-effort, soft-fail, cap 10 destinatari per cancellazione.
-      try {
-        const hostW = req.headers['x-forwarded-host'] || req.headers.host;
-        if (hostW && appt0.medico_id) {
-          const q = `lista_attesa?attivo=eq.true&medico_id=eq.${encodeURIComponent(appt0.medico_id)}` +
-                    (appt0.centro_id ? `&centro_id=eq.${encodeURIComponent(appt0.centro_id)}` : '') +
-                    `&select=id,appuntamento_id,appuntamenti!inner(id,data,ora,cancelled,cancellation_token)` +
-                    `&appuntamenti.cancelled=eq.false&limit=50`;
-          const rw = await sb(q);
-          if (rw.ok) {
-            const subs = await rw.json().catch(() => []);
-            const oraSlot = (appt0.ora || '00:00').substring(0, 5);
-            const slotTs = `${appt0.data}T${oraSlot}`;
-            const targets = (Array.isArray(subs) ? subs : [])
-              .filter(s => {
-                const a = s.appuntamenti;
-                if (!a || a.cancelled || !a.data) return false;
-                const ts = `${a.data}T${(a.ora || '00:00').substring(0, 5)}`;
-                return ts > slotTs;
-              })
-              .slice(0, 10);
-            for (const s of targets) {
-              await fetch(`https://${hostW}/api/send-email`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tipo: 'avviso_lista_attesa',
-                  appt_id: s.appuntamenti.id,
-                  cancellation_token: s.appuntamenti.cancellation_token,
-                  slot_data: appt0.data,
-                  slot_ora: oraSlot
-                })
-              }).catch(() => {});
-              await sb(`lista_attesa?id=eq.${encodeURIComponent(s.id)}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ notified_at: new Date().toISOString() })
-              }).catch(() => {});
-            }
-          }
-        }
-      } catch { /* soft-fail */ }
+      // Lista d'attesa (v1): hook condiviso in lib/waitlist.js (solo slot futuri,
+      // best-effort, cap 10 destinatari).
+      const hostW = req.headers['x-forwarded-host'] || req.headers.host;
+      await avvisaListaAttesa({ sb, host: hostW, appt: appt0 });
       return res.status(200).json({ ok: true });
     }
 

@@ -1,4 +1,5 @@
 // api/coop-cancella.js
+import { avvisaListaAttesa } from '../lib/waitlist.js';
 // Roadmap plancia voce 1 — ciclo di vita appuntamento dalla plancia (tappa 1: cancellazione).
 // La segreteria della cooperativa identifica l'occupante di uno slot (lookup) e
 // cancella l'appuntamento (cancel) sui sede-centri coop. Perimetro SEMPRE
@@ -20,10 +21,8 @@
 // Effetti best-effort dopo il cancel (soft-fail, mai bloccanti):
 //   1) notifica_medico_cancellazione (gate su medici.mail_medico_cancellazione, lato send-email)
 //   2) cancellazione_paziente_coop al paziente (solo se ha email)
-//   3) hook lista d'attesa — replicato da api/cancel-appointment.js righe 138-178
-//      (chiude l'asimmetria: prima scattava solo dal cancel pubblico). Scatta
-//      solo se lo slot liberato è futuro. TODO(refactor): estrarre in modulo
-//      condiviso api/_waitlist.js e importarlo da entrambi gli endpoint.
+//   3) hook lista d'attesa — condiviso in lib/waitlist.js (chiude l'asimmetria:
+//      prima scattava solo dal cancel pubblico; solo slot futuri)
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 
@@ -187,52 +186,9 @@ export default async function handler(req, res) {
         }
       } catch { /* soft-fail */ }
 
-      // 3) hook lista d'attesa — replica di api/cancel-appointment.js (v1):
-      // avvisa gli iscritti attivi dello stesso medico+centro il cui appuntamento
-      // (non cancellato) è a data/ora successiva allo slot liberato. Solo slot
-      // futuri, best-effort, cap 10 destinatari.
-      try {
-        const oraSlot = String(appt0.ora || '00:00').slice(0, 5);
-        const slotTs = `${appt0.data}T${oraSlot}`;
-        const nowTs = new Date().toLocaleDateString('en-CA') + 'T' +
-                      String(new Date().getHours()).padStart(2, '0') + ':' +
-                      String(new Date().getMinutes()).padStart(2, '0');
-        if (host && appt0.medico_id && slotTs > nowTs) {
-          const q = `lista_attesa?attivo=eq.true&medico_id=eq.${encodeURIComponent(appt0.medico_id)}` +
-                    (appt0.centro_id ? `&centro_id=eq.${encodeURIComponent(appt0.centro_id)}` : '') +
-                    `&select=id,appuntamento_id,appuntamenti!inner(id,data,ora,cancelled,cancellation_token)` +
-                    `&appuntamenti.cancelled=eq.false&limit=50`;
-          const rw = await sb(q);
-          if (rw.ok) {
-            const subs = await rw.json().catch(() => []);
-            const targets = (Array.isArray(subs) ? subs : [])
-              .filter(s => {
-                const a = s.appuntamenti;
-                if (!a || a.cancelled || !a.data) return false;
-                const ts = `${a.data}T${String(a.ora || '00:00').slice(0, 5)}`;
-                return ts > slotTs;
-              })
-              .slice(0, 10);
-            for (const s of targets) {
-              await fetch(`https://${host}/api/send-email`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tipo: 'avviso_lista_attesa',
-                  appt_id: s.appuntamenti.id,
-                  cancellation_token: s.appuntamenti.cancellation_token,
-                  slot_data: appt0.data,
-                  slot_ora: oraSlot
-                })
-              }).catch(() => {});
-              await sb(`lista_attesa?id=eq.${encodeURIComponent(s.id)}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ notified_at: new Date().toISOString() })
-              }).catch(() => {});
-            }
-          }
-        }
-      } catch { /* soft-fail */ }
+      // 3) hook lista d'attesa — condiviso in lib/waitlist.js (solo slot futuri,
+      // best-effort, cap 10 destinatari).
+      await avvisaListaAttesa({ sb, host, appt: appt0 });
 
       // dati minimi per la riprogrammazione in un gesto (solo nel response del
       // cancel, mai nel lookup: minimizzazione — servono solo per riprenotare)

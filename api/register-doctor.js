@@ -267,7 +267,7 @@ export default async function handler(req, res) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Template email admin (identico a buildAdminRegistrationEmail del frontend)
+// Template email admin (unica implementazione: il frontend non ne ha una copia)
 // ─────────────────────────────────────────────────────────────────────────────
 function buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordineProvincia, approveLink }) {
   const rows =
