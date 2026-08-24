@@ -11,10 +11,12 @@
 // vince il valido_dal più recente; percentuale senza prezzo = tariffa assente.
 // In uscita: SOLO aggregati economici per sede×medico. Nessuna riga appuntamento,
 // nessun dato del paziente attraversa il confine. Le scritture (modello, regola,
-// liquidato) sono vincolate al perimetro coop verificato server-side.
+// regola_tutti, liquidato) sono vincolate al perimetro coop verificato server-side.
+// Regole quota: percentuale sul compenso, fisso a visita, o canone mensile fisso.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MODELLI = ['centro_paga', 'medico_versa', 'nessuno'];
+const REGOLA_TIPI = ['percentuale', 'fisso', 'mensile'];
 
 function euroNum(v) {
   const n = Number(v);
@@ -105,6 +107,39 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, azione: 'modello', sede: { sede_id: r.id, modello: r.modello_compensi } });
     }
 
+    if (azione === 'regola_tutti') {
+      const sedeId = typeof b.sede_id === 'string' ? b.sede_id : '';
+      if (!UUID_RE.test(sedeId)) return res.status(400).json({ error: 'Parametro sede_id non valido' });
+      const mediciSede = [...coppie].filter(k => k.startsWith(`${sedeId.toLowerCase()}|`)).map(k => k.split('|')[1]);
+      if (!mediciSede.length) return res.status(403).json({ error: 'Nessun medico collegato a questa sede' });
+      if (b.valore === null || b.valore === '' || b.valore === undefined) {
+        const delRes = await fetch(
+          `${supabaseUrl}/rest/v1/coop_regole_compensi?cooperativa_id=eq.${encodeURIComponent(coopId)}&sede_id=eq.${encodeURIComponent(sedeId)}`,
+          { method: 'DELETE', headers: { ...srvHeaders, 'Prefer': 'return=representation' } }
+        ).catch(() => null);
+        if (!delRes || !delRes.ok) return res.status(500).json({ error: 'Rimozione regole non riuscita' });
+        const rows = await delRes.json().catch(() => []);
+        return res.status(200).json({ ok: true, azione: 'regola_tutti', rimosse: Array.isArray(rows) ? rows.length : 0 });
+      }
+      const tipo = typeof b.tipo === 'string' ? b.tipo : '';
+      if (!REGOLA_TIPI.includes(tipo)) return res.status(400).json({ error: 'Parametro tipo non valido' });
+      const valore = euroNum(b.valore);
+      if (valore === null) return res.status(400).json({ error: 'Parametro valore non valido' });
+      if (tipo === 'percentuale' && valore > 100) return res.status(400).json({ error: 'La percentuale non pu\u00f2 superare 100' });
+      const upRes = await fetch(
+        `${supabaseUrl}/rest/v1/coop_regole_compensi?on_conflict=cooperativa_id,medico_id,sede_id`,
+        {
+          method: 'POST',
+          headers: { ...jsonHeaders, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+          body: JSON.stringify(mediciSede.map(m => ({ cooperativa_id: coopId, medico_id: m, sede_id: sedeId, tipo, valore })))
+        }
+      ).catch(() => null);
+      if (!upRes || !upRes.ok) return res.status(500).json({ error: 'Salvataggio regole non riuscito' });
+      const rows = await upRes.json().catch(() => []);
+      if (!Array.isArray(rows) || rows.length !== mediciSede.length) return res.status(500).json({ error: 'Salvataggio regole non confermato' });
+      return res.status(200).json({ ok: true, azione: 'regola_tutti', applicate: rows.length });
+    }
+
     // regola e liquidato: richiedono medico e sede nel perimetro, con coppia esistente
     const medicoId = typeof b.medico_id === 'string' ? b.medico_id : '';
     const sedeId = typeof b.sede_id === 'string' ? b.sede_id : '';
@@ -128,7 +163,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, azione: 'regola', rimossa: Array.isArray(rows) ? rows.length : 0 });
       }
       const tipo = typeof b.tipo === 'string' ? b.tipo : '';
-      if (tipo !== 'percentuale' && tipo !== 'fisso') return res.status(400).json({ error: 'Parametro tipo non valido' });
+      if (!REGOLA_TIPI.includes(tipo)) return res.status(400).json({ error: 'Parametro tipo non valido' });
       const valore = euroNum(b.valore);
       if (valore === null) return res.status(400).json({ error: 'Parametro valore non valido' });
       if (tipo === 'percentuale' && valore > 100) return res.status(400).json({ error: 'La percentuale non può superare 100' });
@@ -280,7 +315,9 @@ export default async function handler(req, res) {
     if (modello === 'centro_paga') {
       importo = round2(a.base);
     } else if (regola) {
-      importo = regola.tipo === 'percentuale' ? round2(a.base * regola.valore / 100) : round2(a.fissoN * regola.valore);
+      if (regola.tipo === 'percentuale') importo = round2(a.base * regola.valore / 100);
+      else if (regola.tipo === 'mensile') importo = round2(regola.valore);
+      else importo = round2(a.fissoN * regola.valore);
     }
     righe.push({
       sede_id: sedeId,
