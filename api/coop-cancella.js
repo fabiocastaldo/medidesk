@@ -56,7 +56,7 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,cooperativa_id,cooperative(id,stato)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,cooperativa_id,cooperative(id,stato)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
@@ -153,7 +153,7 @@ export default async function handler(req, res) {
         {
           method: 'PATCH',
           headers: { 'Prefer': 'return=representation' },
-          body: JSON.stringify({ cancelled: true, cancelled_at: new Date().toISOString() })
+          body: JSON.stringify({ cancelled: true, cancelled_at: new Date().toISOString(), cancellata_da_segreteria_id: seg.id })
         }
       );
       if (!r1.ok) return res.status(500).json({ error: 'Errore server' });

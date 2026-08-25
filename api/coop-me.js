@@ -37,14 +37,41 @@ export default async function handler(req, res) {
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
 
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,nome,stato,cooperativa_id,cooperative(id,nome,stato,booking_pubblico,mail_conferma_paziente,mail_notifica_medico,mail_ricevuta_segreteria)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,nome,ruolo,email,stato,cooperativa_id,cooperative(id,nome,stato,booking_pubblico,mail_conferma_paziente,mail_notifica_medico,mail_ricevuta_segreteria)`,
     { headers: srvHeaders }
   ).catch(() => null);
   if (!segRes || !segRes.ok) {
     return res.status(403).json({ error: 'Verifica account fallita' });
   }
   const segData = await segRes.json().catch(() => []);
-  const seg = segData?.[0];
+  let seg = segData?.[0];
+  // primo accesso di un operatore OTP: aggancio dell'utenza alla riga autorizzata (match email)
+  if (!seg && userData.email) {
+    const mail = String(userData.email).toLowerCase();
+    const bindRes = await fetch(
+      `${supabaseUrl}/rest/v1/segreterie?email=eq.${encodeURIComponent(mail)}&user_id=is.null&stato=eq.attiva&select=id`,
+      { headers: srvHeaders }
+    ).catch(() => null);
+    const libera = (bindRes && bindRes.ok) ? (await bindRes.json().catch(() => []))?.[0] : null;
+    if (libera) {
+      const upRes = await fetch(
+        `${supabaseUrl}/rest/v1/segreterie?id=eq.${encodeURIComponent(libera.id)}&user_id=is.null`,
+        {
+          method: 'PATCH',
+          headers: { ...srvHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+          body: JSON.stringify({ user_id: userData.id })
+        }
+      ).catch(() => null);
+      const bound = (upRes && upRes.ok) ? (await upRes.json().catch(() => []))?.[0] : null;
+      if (bound) {
+        const reRes = await fetch(
+          `${supabaseUrl}/rest/v1/segreterie?id=eq.${encodeURIComponent(libera.id)}&select=id,nome,ruolo,email,stato,cooperativa_id,cooperative(id,nome,stato,booking_pubblico,mail_conferma_paziente,mail_notifica_medico,mail_ricevuta_segreteria)`,
+          { headers: srvHeaders }
+        ).catch(() => null);
+        seg = (reRes && reRes.ok) ? (await reRes.json().catch(() => []))?.[0] : null;
+      }
+    }
+  }
   if (!seg || seg.stato !== 'attiva') {
     return res.status(403).json({ error: 'Account non abilitato' });
   }
@@ -103,7 +130,8 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     cooperativa: { id: coop.id, nome: coop.nome, stato: coop.stato, booking_pubblico: coop.booking_pubblico === true, mail_conferma_paziente: coop.mail_conferma_paziente !== false, mail_notifica_medico: coop.mail_notifica_medico, mail_ricevuta_segreteria: coop.mail_ricevuta_segreteria !== false },
-    segreteria: { nome: seg.nome },
+    segreteria: { nome: seg.nome, ruolo: seg.ruolo || 'admin' },
+    ruolo: seg.ruolo || 'admin',
     medici: Array.from(perMedico.values()),
     codici_attivi: codiciData || [],
     sedi: sediData || [],
