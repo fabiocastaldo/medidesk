@@ -237,6 +237,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
 .paz-row{display:block;width:100%;text-align:left;padding:9px 12px;margin:4px 0;border:1px solid #dfe5e4;border-radius:8px;background:#fff;cursor:pointer;font-size:13.5px}
 .paz-row:hover{border-color:var(--brand-deep);background:#f6faf9}
+.login-mode{flex:1;border:none;background:transparent;padding:9px;border-radius:8px;font-size:13.5px;font-weight:600;color:#5a6b69;cursor:pointer}
+.login-mode.active{background:#fff;color:#0C726E;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
@@ -262,26 +264,36 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   <div class="cardpane">
     <div class="card">
       <h1>Plancia organizzazioni</h1>
-      <p class="sub">Accedi con le credenziali fornite in fase di attivazione.</p>
-      <div class="field">
-        <label for="login-email">Email</label>
-        <input id="login-email" type="email" autocomplete="username" required>
+      <div style="display:flex;gap:6px;margin:14px 0 16px;background:#eef2f1;border-radius:10px;padding:4px">
+        <button type="button" class="login-mode active" id="mode-admin" onclick="setLoginMode('admin')">Amministratore</button>
+        <button type="button" class="login-mode" id="mode-seg" onclick="setLoginMode('seg')">Segreteria</button>
       </div>
-      <div class="field">
-        <label for="login-password">Password</label>
-        <input id="login-password" type="password" autocomplete="current-password" required>
+      <div id="login-admin-block">
+        <p class="sub" style="margin-top:0">Accedi con le credenziali fornite in fase di attivazione.</p>
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn" id="login-btn" onclick="doLogin()">Accedi</button>
       </div>
-      <button class="btn" id="login-btn" onclick="doLogin()">Accedi</button>
-      <div id="login-msg" class="hidden"></div>
-      <div style="margin-top:16px;border-top:1px solid #dfe5e4;padding-top:14px">
-        <div style="font-size:13px;color:#5a6b69;margin-bottom:8px">Operatore di segreteria? Entra senza password: inserisci qui sopra la tua email autorizzata e richiedi un codice.</div>
-        <button class="btn" id="otp-send-btn" style="background:transparent;color:#0C726E;border:1.5px solid #0C726E" onclick="otpSend()">Inviami un codice</button>
+      <div id="login-seg-block" class="hidden">
+        <p class="sub" style="margin-top:0">Niente password: ricevi un codice monouso alla tua email, se l'amministratore l'ha autorizzata.</p>
+        <div class="field">
+          <label for="otp-email">Email autorizzata</label>
+          <input id="otp-email" type="email" autocomplete="username">
+        </div>
+        <button class="btn" id="otp-send-btn" onclick="otpSend()">Inviami un codice</button>
         <div class="field hidden" id="otp-code-field" style="margin-top:10px">
           <label for="otp-code">Codice ricevuto via email</label>
           <input id="otp-code" type="text" inputmode="numeric" maxlength="8" placeholder="123456">
         </div>
         <button class="btn hidden" id="otp-verify-btn" onclick="otpVerify()">Verifica ed entra</button>
       </div>
+      <div id="login-msg" class="hidden"></div>
       <span class="helplink">La tua organizzazione non è ancora attiva?
         <a href="mailto:info@delphi-med.com?subject=Attivazione%20cooperativa%20Delphi~Med">Richiedi l'attivazione</a>
       </span>
@@ -1341,9 +1353,17 @@ function exportCompensiCSV(){
 }
 
 // ── ACCESSO OPERATORE CON CODICE EMAIL (OTP) ──
+function setLoginMode(m){
+  const admin = m === 'admin';
+  document.getElementById('login-admin-block').classList.toggle('hidden', !admin);
+  document.getElementById('login-seg-block').classList.toggle('hidden', admin);
+  document.getElementById('mode-admin').classList.toggle('active', admin);
+  document.getElementById('mode-seg').classList.toggle('active', !admin);
+  setMsg('');
+}
 async function otpSend(){
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  if(!email){ setMsg('Inserisci la tua email autorizzata nel campo Email qui sopra.', 'err'); return; }
+  const email = document.getElementById('otp-email').value.trim().toLowerCase();
+  if(!email){ setMsg('Inserisci la tua email autorizzata.', 'err'); return; }
   const btn = document.getElementById('otp-send-btn');
   btn.disabled = true; setMsg('');
   try {
@@ -1360,7 +1380,7 @@ async function otpSend(){
   }
 }
 async function otpVerify(){
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const email = document.getElementById('otp-email').value.trim().toLowerCase();
   const token = document.getElementById('otp-code').value.trim();
   if(!email || !token){ setMsg('Servono email e codice.', 'err'); return; }
   const btn = document.getElementById('otp-verify-btn');
