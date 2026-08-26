@@ -324,6 +324,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     <div class="payoff">Plancia organizzazione</div>
     <nav>
       <button class="sitem active" id="tabbtn-medici" onclick="switchTab('medici')">Medici</button>
+      <button class="sitem" id="tabbtn-segreteria" onclick="switchTab('segreteria')">Segreteria</button>
       <button class="sitem" id="tabbtn-sedi" onclick="switchTab('sedi')">Sedi</button>
       <button class="sitem" id="tabbtn-turni" onclick="switchTab('turni')">Turni</button>
       <button class="sitem" id="tabbtn-servizi" onclick="switchTab('servizi')">Servizi</button>
@@ -617,6 +618,21 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
     </section>
 
+    <section id="tab-segreteria" class="card-lite hidden">
+      <p class="stat-hint">Persone autorizzate al trattamento (art. 29 GDPR): inserisci email e nome dell'operatore. L'operatore entra dalla pagina di accesso con un codice ricevuto via email — nessuna password. Ogni variazione finisce nel registro auditabile qui sotto.</p>
+        <div class="toolbar">
+          <div class="field" style="flex:1.2"><label for="op-email">Email</label><input id="op-email" type="email" maxlength="120" placeholder="operatore@esempio.it"></div>
+          <div class="field" style="flex:1"><label for="op-nome">Nome e cognome</label><input id="op-nome" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+          <button class="btn" onclick="aggiungiOperatore()">Autorizza</button>
+        </div>
+        <div id="op-msg" class="hidden"></div>
+        <div id="op-tbl"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn" style="width:auto;margin:0;background:transparent;color:var(--brand-mid);border:1px solid var(--border);padding:8px 14px;font-size:12.5px" onclick="exportRegistroCSV()">Registro autorizzati (Excel)</button>
+          <button class="btn" style="width:auto;margin:0;background:transparent;color:var(--brand-mid);border:1px solid var(--border);padding:8px 14px;font-size:12.5px" onclick="exportRegistroPDF()">Registro autorizzati (PDF)</button>
+        </div>
+    </section>
+
     <section id="tab-preferenze" class="card-lite hidden">
       <h2 style="font-size:16px;color:var(--brand-mid);margin-bottom:14px">Preferenze dell'organizzazione</h2>
       <div class="pref-row">
@@ -649,22 +665,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <div id="pref-msg" class="hidden" style="margin-top:12px"></div>
     
-      <div style="margin-top:26px;padding-top:18px;border-top:1px solid var(--border)" id="pref-operatori">
-        <div style="font-weight:600;margin-bottom:4px;color:var(--brand-deep)">Operatori di segreteria</div>
-        <p class="stat-hint">Persone autorizzate al trattamento (art. 29 GDPR): inserisci email e nome dell'operatore. L'operatore entra dalla pagina di accesso con un codice ricevuto via email — nessuna password. Ogni variazione finisce nel registro auditabile qui sotto.</p>
-        <div class="toolbar">
-          <div class="field" style="flex:1.2"><label for="op-email">Email</label><input id="op-email" type="email" maxlength="120" placeholder="operatore@esempio.it"></div>
-          <div class="field" style="flex:1"><label for="op-nome">Nome e cognome</label><input id="op-nome" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
-          <button class="btn" onclick="aggiungiOperatore()">Autorizza</button>
-        </div>
-        <div id="op-msg" class="hidden"></div>
-        <div id="op-tbl"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          <button class="btn" style="width:auto;margin:0;background:transparent;color:var(--brand-mid);border:1px solid var(--border);padding:8px 14px;font-size:12.5px" onclick="exportRegistroCSV()">Registro autorizzati (Excel)</button>
-          <button class="btn" style="width:auto;margin:0;background:transparent;color:var(--brand-mid);border:1px solid var(--border);padding:8px 14px;font-size:12.5px" onclick="exportRegistroPDF()">Registro autorizzati (PDF)</button>
-        </div>
-      </div>
-    </section>
+          </section>
 
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
     <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
@@ -716,13 +717,14 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 
 const SEC_TITOLI = {
-  'medici': 'Medici', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
+  'medici': 'Medici', 'segreteria': 'Segreteria', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
   'assoc-servizi': 'Medici ↔ servizi', 'assoc-turni': 'Medici ↔ turni',
   'giornata': 'Giornata',
   'statistiche': 'Statistiche', 'compensi': 'Compensi', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
 };
 const SEC_SOTTO = {
   'medici': 'I medici collegati all\'organizzazione e il codice di collegamento',
+  'segreteria': 'Le persone autorizzate: accessi, registro e lettere di nomina',
   'sedi': 'Le sedi operative dell\'organizzazione',
   'turni': 'Il registro dei turni assegnati',
   'servizi': 'Il catalogo dei servizi dell\'organizzazione',
@@ -735,10 +737,10 @@ const SEC_SOTTO = {
   'preferenze': 'Le impostazioni dell\'organizzazione'
 };
 
-const _ADMIN_TABS = ['sedi','turni','servizi','assoc-servizi','assoc-turni','statistiche','compensi','preferenze'];
+const _ADMIN_TABS = ['segreteria','sedi','turni','servizi','assoc-servizi','assoc-turni','statistiche','compensi','preferenze'];
 function switchTab(t){
   if(_plancia && _plancia.ruolo !== 'admin' && _ADMIN_TABS.includes(t)) return;
-  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','compensi','agenda','preferenze'].forEach(x => {
+  ['medici','segreteria','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','compensi','agenda','preferenze'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
@@ -747,7 +749,7 @@ function switchTab(t){
   if(t === 'statistiche'){ initStatFiltri(); loadStatVisite(); }
   if(t === 'compensi'){ initCompensi(); }
   if(t === 'giornata') initGiornata();
-  if(t === 'preferenze'){ loadOperatori(); }
+  if(t === 'segreteria'){ loadOperatori(); }
 }
 
 function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
@@ -816,7 +818,7 @@ function updateTfGiorniLabel(){
 
 function applyRuolo(){
   const admin = !_plancia || _plancia.ruolo === 'admin';
-  ['sedi','turni','servizi','statistiche','compensi','preferenze'].forEach(x => {
+  ['segreteria','sedi','turni','servizi','statistiche','compensi','preferenze'].forEach(x => {
     const b = document.getElementById('tabbtn-' + x); if(b) b.style.display = admin ? '' : 'none';
   });
   const grp = document.getElementById('submenu-assoc');
