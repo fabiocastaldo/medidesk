@@ -621,8 +621,9 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     <section id="tab-segreteria" class="card-lite hidden">
       <p class="stat-hint">Persone autorizzate al trattamento (art. 29 GDPR): inserisci email e nome dell'operatore. L'operatore entra dalla pagina di accesso con un codice ricevuto via email — nessuna password. Ogni variazione finisce nel registro auditabile qui sotto.</p>
         <div class="toolbar">
-          <div class="field" style="flex:1.2"><label for="op-email">Email</label><input id="op-email" type="email" maxlength="120" placeholder="operatore@esempio.it"></div>
-          <div class="field" style="flex:1"><label for="op-nome">Nome e cognome</label><input id="op-nome" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+          <div class="field" style="flex:1"><label for="op-nome">Nome</label><input id="op-nome" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+          <div class="field" style="flex:1"><label for="op-cognome">Cognome</label><input id="op-cognome" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+          <div class="field" style="flex:1.3"><label for="op-email">Email</label><input id="op-email" type="email" maxlength="120" placeholder="operatore@esempio.it"></div>
           <button class="btn" onclick="aggiungiOperatore()">Autorizza</button>
         </div>
         <div id="op-msg" class="hidden"></div>
@@ -630,6 +631,14 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
           <button class="btn" style="width:auto;margin:0;background:transparent;color:var(--brand-mid);border:1px solid var(--border);padding:8px 14px;font-size:12.5px" onclick="exportRegistroCSV()">Registro autorizzati (Excel)</button>
           <button class="btn" style="width:auto;margin:0;background:transparent;color:var(--brand-mid);border:1px solid var(--border);padding:8px 14px;font-size:12.5px" onclick="exportRegistroPDF()">Registro autorizzati (PDF)</button>
+        </div>
+        <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border)">
+          <div style="font-weight:600;margin-bottom:4px;color:var(--brand-deep)">Intestazione legale del titolare</div>
+          <p class="stat-hint">Compare in testa a registro e lettere di nomina (es. «Poliambulatorio X S.r.l. — Via Roma 1, Napoli — P.IVA 01234567890»). Finché è vuota, i documenti escono col nome della struttura e lo spazio da completare.</p>
+          <div class="toolbar">
+            <div class="field" style="flex:1"><label for="op-intestazione">Intestazione</label><input id="op-intestazione" type="text" maxlength="240"></div>
+            <button class="btn" onclick="salvaIntestazione()">Salva</button>
+          </div>
         </div>
     </section>
 
@@ -1419,6 +1428,8 @@ async function loadOperatori(){
     const body = await res.json().catch(() => null);
     if(!res.ok || !body) throw new Error((body && body.error) || 'caricamento');
     _operatori = body;
+    const it = document.getElementById('op-intestazione');
+    if(it && !it.value) it.value = (body.cooperativa || {}).intestazione_legale || '';
     renderOperatori();
   } catch(e){
     el.innerHTML = '<div class="empty">Elenco non disponibile. Riprova.</div>';
@@ -1431,7 +1442,7 @@ function renderOperatori(){
   if(!rows.length){ el.innerHTML = '<div class="empty">Nessun autorizzato.</div>'; return; }
   el.innerHTML = '<table class="tbl"><thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>Stato</th><th>Dal</th><th>Primo accesso</th><th style="width:150px"></th></tr></thead><tbody>'
     + rows.map(o => '<tr' + (o.stato !== 'attiva' ? ' style="opacity:.55"' : '') + '>'
-      + '<td style="font-weight:600">' + esc(o.nome) + '</td><td>' + esc(o.email || '—') + '</td>'
+      + '<td style="font-weight:600">' + esc(_opEsteso(o)) + '</td><td>' + esc(o.email || '—') + '</td>'
       + '<td>' + (o.ruolo === 'admin' ? 'Admin' : 'Operatore') + '</td><td>' + esc(o.stato) + '</td>'
       + '<td>' + esc(fmtData(o.dal)) + '</td><td>' + (o.primo_accesso_effettuato ? 'sì' : 'non ancora') + '</td>'
       + '<td style="white-space:nowrap">'
@@ -1444,18 +1455,19 @@ function renderOperatori(){
 async function aggiungiOperatore(){
   const email = (document.getElementById('op-email') || {}).value.trim();
   const nome = (document.getElementById('op-nome') || {}).value.trim();
-  if(!email || !nome){ setOpMsg('Servono email e nome.', 'err'); return; }
+  const cognome = (document.getElementById('op-cognome') || {}).value.trim();
+  if(!email || !nome || !cognome){ setOpMsg('Servono nome, cognome ed email.', 'err'); return; }
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-operatori', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ azione: 'aggiungi', email: email, nome: nome })
+      body: JSON.stringify({ azione: 'aggiungi', email: email, nome: nome, cognome: cognome })
     });
     const body = await res.json().catch(() => null);
     if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'autorizzazione');
-    document.getElementById('op-email').value = ''; document.getElementById('op-nome').value = '';
-    setOpMsg('Operatore ' + body.operatore.nome + ' autorizzato ✓ — al primo accesso userà il codice via email.', 'info');
+    document.getElementById('op-email').value = ''; document.getElementById('op-nome').value = ''; document.getElementById('op-cognome').value = '';
+    setOpMsg('Operatore ' + _opEsteso(body.operatore) + ' autorizzato ✓ — al primo accesso userà il codice via email.', 'info');
     loadOperatori();
   } catch(e){ setOpMsg('Errore: ' + (e && e.message ? e.message : 'riprova'), 'err'); }
 }
@@ -1475,16 +1487,33 @@ async function statoOperatore(id, attiva){
   } catch(e){ setOpMsg('Errore: ' + (e && e.message ? e.message : 'riprova'), 'err'); }
 }
 
-function _opNomi(){ const m = {}; ((_operatori || {}).autorizzati || []).forEach(o => { m[o.id] = o.nome; }); return m; }
+async function salvaIntestazione(){
+  const intestazione = (document.getElementById('op-intestazione') || {}).value.trim();
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-operatori', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'titolare', intestazione: intestazione })
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
+    if(_operatori && _operatori.cooperativa) _operatori.cooperativa.intestazione_legale = body.intestazione_legale;
+    setOpMsg('Intestazione salvata ✓', 'info');
+  } catch(e){ setOpMsg('Errore: ' + (e && e.message ? e.message : 'riprova'), 'err'); }
+}
+
+function _opEsteso(o){ return [o.nome, o.cognome].filter(Boolean).join(' '); }
+function _opNomi(){ const m = {}; ((_operatori || {}).autorizzati || []).forEach(o => { m[o.id] = _opEsteso(o); }); return m; }
 
 function exportRegistroCSV(){
   if(!_operatori){ alert('Apri prima l\'elenco (tab Preferenze).'); return; }
   const nomi = _opNomi();
   const righe = [];
-  righe.push(['Registro delle persone autorizzate al trattamento', (_operatori.cooperativa || {}).nome || '', new Date().toLocaleDateString('it-IT')].map(_csvCell).join(';'));
+  righe.push(['Registro delle persone autorizzate al trattamento', (_operatori.cooperativa || {}).intestazione_legale || (_operatori.cooperativa || {}).nome || '', new Date().toLocaleDateString('it-IT')].map(_csvCell).join(';'));
   righe.push('');
   righe.push(['Nome', 'Email', 'Ruolo', 'Stato', 'Autorizzata dal', 'Primo accesso effettuato'].map(_csvCell).join(';'));
-  (_operatori.autorizzati || []).forEach(o => righe.push([o.nome, o.email || '', o.ruolo, o.stato, fmtData(o.dal), o.primo_accesso_effettuato ? 'sì' : 'no'].map(_csvCell).join(';')));
+  (_operatori.autorizzati || []).forEach(o => righe.push([_opEsteso(o), o.email || '', o.ruolo, o.stato, fmtData(o.dal), o.primo_accesso_effettuato ? 'sì' : 'no'].map(_csvCell).join(';')));
   righe.push('');
   righe.push(['Storico variazioni (log inalterabile)'].map(_csvCell).join(';'));
   righe.push(['Data e ora', 'Persona', 'Azione', 'Eseguita da', 'Note'].map(_csvCell).join(';'));
@@ -1510,11 +1539,11 @@ function exportRegistroPDF(){
   let y = 18;
   doc.setFontSize(14); doc.text('Registro delle persone autorizzate al trattamento', 14, y); y += 7;
   doc.setFontSize(10); doc.setTextColor(90);
-  doc.text(((_operatori.cooperativa || {}).nome || '') + ' — generato il ' + new Date().toLocaleString('it-IT'), 14, y); y += 4;
+  doc.text(((_operatori.cooperativa || {}).intestazione_legale || (_operatori.cooperativa || {}).nome || '') + ' — generato il ' + new Date().toLocaleString('it-IT'), 14, y); y += 4;
   doc.text('Art. 29 GDPR / art. 2-quaterdecies D.lgs 196/2003 — registro generato automaticamente dal sistema, storico inalterabile.', 14, y); y += 9;
   doc.setTextColor(0); doc.setFontSize(11); doc.text('Autorizzati', 14, y); y += 6; doc.setFontSize(9.5);
   (_operatori.autorizzati || []).forEach(o => {
-    doc.text('• ' + o.nome + '  <' + (o.email || '—') + '>  — ' + (o.ruolo === 'admin' ? 'Admin' : 'Operatore') + ', stato: ' + o.stato + ', dal ' + fmtData(o.dal) + (o.primo_accesso_effettuato ? '' : ' (primo accesso non ancora effettuato)'), 16, y);
+    doc.text('• ' + _opEsteso(o) + '  <' + (o.email || '—') + '>  — ' + (o.ruolo === 'admin' ? 'Admin' : 'Operatore') + ', stato: ' + o.stato + ', dal ' + fmtData(o.dal) + (o.primo_accesso_effettuato ? '' : ' (primo accesso non ancora effettuato)'), 16, y);
     y = _pdfNuovaRiga(doc, y, 6);
   });
   y += 4; doc.setFontSize(11); doc.text('Storico variazioni', 14, y); y += 6; doc.setFontSize(9.5);
@@ -1528,7 +1557,8 @@ function exportRegistroPDF(){
 function letteraNomina(id){
   const o = ((_operatori || {}).autorizzati || []).find(x => String(x.id) === String(id));
   if(!o){ alert('Operatore non trovato: ricarica l\'elenco.'); return; }
-  const coopNome = ((_operatori || {}).cooperativa || {}).nome || 'l\'organizzazione';
+  const coop = ((_operatori || {}).cooperativa || {});
+  const coopNome = coop.intestazione_legale || (coop.nome ? (coop.nome + ' (dati legali da completare: ______________________________________)') : 'l\'organizzazione');
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   let y = 20;
@@ -1536,7 +1566,7 @@ function letteraNomina(id){
   doc.setFontSize(10); doc.setTextColor(90); doc.text('Art. 29 Regolamento (UE) 2016/679 — art. 2-quaterdecies D.lgs 196/2003', 14, y); y += 10;
   doc.setTextColor(0); doc.setFontSize(10.5);
   const par = (t) => { const lines = doc.splitTextToSize(t, 180); doc.text(lines, 14, y); y += lines.length * 5.4 + 3; if(y > 260){ doc.addPage(); y = 20; } };
-  par('Il Titolare del trattamento ' + coopNome + ' designa ' + o.nome + (o.email ? ' (' + o.email + ')' : '') + ' quale persona autorizzata al trattamento dei dati personali, con decorrenza dal ' + fmtData(o.dal) + ', nell\'ambito delle attività di segreteria della piattaforma Delphi~Med.');
+  par('Il Titolare del trattamento ' + coopNome + ' designa il/la Sig./Sig.ra ' + _opEsteso(o) + (o.email ? ' (' + o.email + ')' : '') + ', C.F. ______________________' + ' quale persona autorizzata al trattamento dei dati personali, con decorrenza dal ' + fmtData(o.dal) + ', nell\'ambito delle attività di segreteria della piattaforma Delphi~Med.');
   par('Perimetro del trattamento autorizzato: gestione delle prenotazioni per conto dei pazienti (visione degli appuntamenti di giornata; prenotazione, cancellazione e riprogrammazione; anagrafica minima di prenotazione: nome, cognome, contatti, tipo di visita). È espressamente escluso ogni accesso al contenuto clinico dei pazienti (fascicoli, referti, sintesi, note), che resta nella titolarità dei singoli medici e non è tecnicamente accessibile dal profilo assegnato.');
   par('Istruzioni: trattare i dati esclusivamente per le finalità di prenotazione; utilizzare soltanto il proprio account personale, senza cedere a terzi il codice di accesso ricevuto via email; mantenere il riserbo sulle informazioni conosciute in ragione dell\'incarico anche dopo la sua cessazione; segnalare senza ritardo al Titolare ogni incidente, accesso anomalo o violazione anche solo sospetta; non estrarre, copiare o comunicare dati al di fuori delle procedure della piattaforma.');
   par('Ogni operazione di prenotazione o cancellazione eseguita è tracciata con l\'identità dell\'operatore. L\'autorizzazione può essere sospesa o revocata in qualsiasi momento, con effetto immediato; le variazioni sono annotate nel registro delle persone autorizzate.');
@@ -1546,7 +1576,7 @@ function letteraNomina(id){
   doc.text('__________________________', 14, y); doc.text('__________________________', 120, y); y += 10;
   doc.setFontSize(8.5); doc.setTextColor(120);
   doc.text('Documento generato automaticamente da Delphi~Med. Da verificare e adattare a cura del Titolare con il proprio consulente legale.', 14, y);
-  doc.save('nomina_' + (o.nome || 'operatore').replace(/\s+/g, '_').toLowerCase() + '.pdf');
+  doc.save('nomina_' + (_opEsteso(o) || 'operatore').replace(/\s+/g, '_').toLowerCase() + '.pdf');
 }
 
 // ── GIORNATA (sola lettura: stato scritto dal medico, la plancia legge) ──

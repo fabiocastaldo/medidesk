@@ -41,7 +41,7 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,ruolo,cooperativa_id,cooperative(id,nome,stato)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,ruolo,cooperativa_id,cooperative(id,nome,stato,intestazione_legale)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
@@ -65,15 +65,15 @@ export default async function handler(req, res) {
   // ── GET: registro autorizzati + log ──
   if (req.method === 'GET') {
     const [opRes, logRes] = await Promise.all([
-      fetch(`${supabaseUrl}/rest/v1/segreterie?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id,nome,email,ruolo,stato,created_at,user_id&order=created_at.asc`, { headers: srvHeaders }).catch(() => null),
+      fetch(`${supabaseUrl}/rest/v1/segreterie?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=id,nome,cognome,email,ruolo,stato,created_at,user_id&order=created_at.asc`, { headers: srvHeaders }).catch(() => null),
       fetch(`${supabaseUrl}/rest/v1/coop_autorizzazioni_log?cooperativa_id=eq.${encodeURIComponent(coopId)}&select=segreteria_id,azione,eseguita_da,note,created_at&order=created_at.asc`, { headers: srvHeaders }).catch(() => null)
     ]);
     const operatori = (opRes && opRes.ok) ? (await opRes.json().catch(() => [])) : [];
     const log = (logRes && logRes.ok) ? (await logRes.json().catch(() => [])) : [];
     return res.status(200).json({
-      cooperativa: { id: seg.cooperative.id, nome: seg.cooperative.nome },
+      cooperativa: { id: seg.cooperative.id, nome: seg.cooperative.nome, intestazione_legale: seg.cooperative.intestazione_legale || '' },
       autorizzati: (Array.isArray(operatori) ? operatori : []).map(o => ({
-        id: o.id, nome: o.nome, email: o.email || null, ruolo: o.ruolo,
+        id: o.id, nome: o.nome, cognome: o.cognome || '', email: o.email || null, ruolo: o.ruolo,
         stato: o.stato, dal: o.created_at, primo_accesso_effettuato: !!o.user_id
       })),
       log: Array.isArray(log) ? log : []
@@ -87,20 +87,36 @@ export default async function handler(req, res) {
   if (azione === 'aggiungi') {
     const email = String(b.email == null ? '' : b.email).trim().toLowerCase();
     const nome = String(b.nome == null ? '' : b.nome).replace(/\s+/g, ' ').trim().slice(0, 80);
+    const cognome = String(b.cognome == null ? '' : b.cognome).replace(/\s+/g, ' ').trim().slice(0, 80);
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Email non valida' });
-    if (!nome) return res.status(400).json({ error: 'Il nome dell\'operatore è obbligatorio' });
+    if (!nome || !cognome) return res.status(400).json({ error: 'Nome e cognome dell\'operatore sono obbligatori' });
     const insRes = await fetch(`${supabaseUrl}/rest/v1/segreterie`, {
       method: 'POST',
       headers: { ...jsonHeaders, 'Prefer': 'return=representation' },
-      body: JSON.stringify({ cooperativa_id: coopId, nome, email, ruolo: 'operatore', stato: 'attiva' })
+      body: JSON.stringify({ cooperativa_id: coopId, nome, cognome, email, ruolo: 'operatore', stato: 'attiva' })
     }).catch(() => null);
     if (insRes && insRes.status === 409) {
       return res.status(409).json({ error: 'Questa email è già autorizzata' });
     }
     const op = (insRes && insRes.ok) ? (await insRes.json().catch(() => []))?.[0] : null;
     if (!op?.id) return res.status(500).json({ error: 'Autorizzazione non riuscita' });
-    await scriviLog(op.id, 'autorizzata', `operatore ${nome} <${email}>`);
-    return res.status(200).json({ ok: true, operatore: { id: op.id, nome: op.nome, email: op.email, ruolo: op.ruolo, stato: op.stato, dal: op.created_at, primo_accesso_effettuato: false } });
+    await scriviLog(op.id, 'autorizzata', `operatore ${nome} ${cognome} <${email}>`);
+    return res.status(200).json({ ok: true, operatore: { id: op.id, nome: op.nome, cognome: op.cognome || '', email: op.email, ruolo: op.ruolo, stato: op.stato, dal: op.created_at, primo_accesso_effettuato: false } });
+  }
+
+  if (azione === 'titolare') {
+    const intestazione = String(b.intestazione == null ? '' : b.intestazione).replace(/\s+/g, ' ').trim().slice(0, 240);
+    const upRes = await fetch(
+      `${supabaseUrl}/rest/v1/cooperative?id=eq.${encodeURIComponent(coopId)}`,
+      {
+        method: 'PATCH',
+        headers: { ...jsonHeaders, 'Prefer': 'return=representation' },
+        body: JSON.stringify({ intestazione_legale: intestazione })
+      }
+    ).catch(() => null);
+    const rows = (upRes && upRes.ok) ? await upRes.json().catch(() => []) : [];
+    if (!Array.isArray(rows) || !rows[0]) return res.status(500).json({ error: 'Salvataggio non riuscito' });
+    return res.status(200).json({ ok: true, intestazione_legale: rows[0].intestazione_legale || '' });
   }
 
   if (azione === 'stato') {
@@ -120,8 +136,8 @@ export default async function handler(req, res) {
     const rows = await upRes.json().catch(() => []);
     const r = Array.isArray(rows) ? rows[0] : null;
     if (!r) return res.status(404).json({ error: 'Operatore non trovato' });
-    await scriviLog(r.id, attiva ? 'riattivata' : 'sospesa', `operatore ${r.nome} <${r.email || ''}>`);
-    return res.status(200).json({ ok: true, operatore: { id: r.id, nome: r.nome, email: r.email, ruolo: r.ruolo, stato: r.stato, dal: r.created_at, primo_accesso_effettuato: !!r.user_id } });
+    await scriviLog(r.id, attiva ? 'riattivata' : 'sospesa', `operatore ${r.nome} ${r.cognome || ''} <${r.email || ''}>`);
+    return res.status(200).json({ ok: true, operatore: { id: r.id, nome: r.nome, cognome: r.cognome || '', email: r.email, ruolo: r.ruolo, stato: r.stato, dal: r.created_at, primo_accesso_effettuato: !!r.user_id } });
   }
 
   return res.status(400).json({ error: 'Azione non valida' });
