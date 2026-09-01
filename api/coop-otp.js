@@ -2,8 +2,8 @@
 // Gate alla sorgente per l'accesso operatori (art.29): il codice monouso viene
 // richiesto a Supabase Auth SOLO se l'email è in segreterie con stato=attiva e la
 // cooperativa è attiva. Altrimenti non parte nessuna email e non nasce nessuna utenza.
-// Risposta parlante (decisione di prodotto 01/09: feedback esplicito per l'operatore; il rate limit
-// IP/email resta l'unica mitigazione all'enumerazione delle email autorizzate).
+// Risposta parlante ma binaria (decisione di prodotto 01/09): 'codice inviato' oppure un unico
+// messaggio di non autorizzazione. Il rate limit IP/email (in memoria, per istanza) mitiga l'enumerazione.
 // Nessuna scrittura su DB: la sola scrittura (utenza auth al primo accesso) è di GoTrue.
 
 const rateMap = new Map();
@@ -48,14 +48,10 @@ export default async function handler(req, res) {
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
-  if (!seg) {
+  // Un solo messaggio per sconosciuta / sospesa / organizzazione non attiva (decisione 01/09):
+  // l'oracolo resta binario (autorizzata-attiva vs no), il rate limit e' la mitigazione.
+  if (!seg || seg.stato !== 'attiva' || seg.cooperative?.stato !== 'attiva') {
     return res.status(403).json({ error: 'Questa email non è autorizzata da nessuna organizzazione. Chiedi all\'amministratore di aggiungerti nella tab Segreteria.' });
-  }
-  if (seg.stato !== 'attiva') {
-    return res.status(403).json({ error: 'La tua autorizzazione è sospesa. Rivolgiti all\'amministratore della tua organizzazione.' });
-  }
-  if (seg.cooperative?.stato !== 'attiva') {
-    return res.status(403).json({ error: 'L\'organizzazione non è attiva.' });
   }
 
   {
