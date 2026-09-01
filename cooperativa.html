@@ -1378,11 +1378,13 @@ async function otpSend(){
   const btn = document.getElementById('otp-send-btn');
   btn.disabled = true; setMsg('');
   try {
-    const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-    if(error) throw error;
+    const r = await fetch('/api/coop-otp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+    const j = await r.json().catch(() => ({}));
+    if(r.status === 403 || r.status === 429){ setMsg(j.error || 'Accesso non consentito.', 'err'); return; }
+    if(!r.ok) throw new Error(j.error || ('coop-otp ' + r.status));
     document.getElementById('otp-code-field').classList.remove('hidden');
     document.getElementById('otp-verify-btn').classList.remove('hidden');
-    setMsg('Codice inviato a ' + email + '. Controlla la posta (vale un\'ora).', 'info');
+    setMsg(j.message || ('Codice inviato a ' + email + '. Controlla la posta: vale un\'ora.'), 'info');
   } catch(e){
     console.error('[Plancia] otpSend:', e.message);
     setMsg('Invio non riuscito: ' + (e && e.message ? e.message : 'riprova tra qualche minuto.'), 'err');
