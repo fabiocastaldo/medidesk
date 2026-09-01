@@ -2265,7 +2265,7 @@ function renderMediciTab(){
   const q = (document.getElementById('medici-search').value || '').toLowerCase().trim();
   const rows = (d.medici||[]).filter(m => {
     if(!q) return true;
-    return (nomeMedico(m) + ' ' + (m.specializzazione||'') + ' ' + (m.telefono||'') + ' ' + (m.email_pubblica||'')).toLowerCase().includes(q);
+    return (nomeMedico(m) + ' ' + (m.specializzazione||'') + ' ' + (m.telefono||'') + ' ' + (m.email||'')).toLowerCase().includes(q);
   });
   const el = document.getElementById('medici-tbl');
   if(!rows.length){
@@ -2278,7 +2278,7 @@ function renderMediciTab(){
         const nt = (m.centri||[]).reduce((k,c) => k + (c.turni||[]).length, 0);
         const contatti = [
           m.telefono ? `<a href="tel:${esc(String(m.telefono).replace(/\s+/g,''))}">${esc(m.telefono)}</a>` : '',
-          m.email_pubblica ? `<a href="mailto:${esc(m.email_pubblica)}">${esc(m.email_pubblica)}</a>` : ''
+          m.email ? `<a href="mailto:${esc(m.email)}">${esc(m.email)}</a>` : ''
         ].filter(Boolean).join('<br>') || '—';
         return `<tr><td style="font-weight:600">${esc(nomeMedico(m))}</td><td>${esc(m.specializzazione||'—')}</td><td>${contatti}</td><td>${sedi}</td><td>${nt}</td></tr>`;
       }).join('')
