@@ -82,7 +82,7 @@ export default async function handler(req, res) {
 
   const [mediciRes, codiciRes, sediRes, serviziRes, saleRes] = await Promise.all([
     fetch(
-      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_inizio_validita,data_fine_validita,coop_sala_id),medici(id,titolo,nome,cognome,specializzazione)`,
+      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_inizio_validita,data_fine_validita,coop_sala_id),medici(id,titolo,nome,cognome,specializzazione,telefono,email_pubblica)`,
       { headers: srvHeaders }
     ).catch(() => null),
     fetch(
@@ -122,6 +122,10 @@ export default async function handler(req, res) {
         nome: m.nome || '',
         cognome: m.cognome || '',
         specializzazione: m.specializzazione || '',
+        // Recapiti professionali scelti dal medico (Impostazioni > Telefono pubblico / Email pubblica);
+        // il medico e informato che la segreteria del centro li vede sempre. MAI l'email di login.
+        telefono: m.telefono || '',
+        email_pubblica: m.email_pubblica || '',
         centri: []
       });
     }

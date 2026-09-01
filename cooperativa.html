@@ -2265,18 +2265,22 @@ function renderMediciTab(){
   const q = (document.getElementById('medici-search').value || '').toLowerCase().trim();
   const rows = (d.medici||[]).filter(m => {
     if(!q) return true;
-    return (nomeMedico(m) + ' ' + (m.specializzazione||'')).toLowerCase().includes(q);
+    return (nomeMedico(m) + ' ' + (m.specializzazione||'') + ' ' + (m.telefono||'') + ' ' + (m.email_pubblica||'')).toLowerCase().includes(q);
   });
   const el = document.getElementById('medici-tbl');
   if(!rows.length){
     el.innerHTML = '<div class="empty">' + (q ? 'Nessun medico corrisponde alla ricerca' : 'Nessun medico collegato. Genera un codice e consegnalo al medico.') + '</div>';
     return;
   }
-  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Specializzazione</th><th>Sedi</th><th>Turni</th></tr></thead><tbody>'
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Medico</th><th>Specializzazione</th><th>Contatti</th><th>Sedi</th><th>Turni</th></tr></thead><tbody>'
     + rows.map(m => {
         const sedi = (m.centri||[]).map(c => esc(c.nome)).join(', ') || '—';
         const nt = (m.centri||[]).reduce((k,c) => k + (c.turni||[]).length, 0);
-        return `<tr><td style="font-weight:600">${esc(nomeMedico(m))}</td><td>${esc(m.specializzazione||'—')}</td><td>${sedi}</td><td>${nt}</td></tr>`;
+        const contatti = [
+          m.telefono ? `<a href="tel:${esc(String(m.telefono).replace(/\s+/g,''))}">${esc(m.telefono)}</a>` : '',
+          m.email_pubblica ? `<a href="mailto:${esc(m.email_pubblica)}">${esc(m.email_pubblica)}</a>` : ''
+        ].filter(Boolean).join('<br>') || '—';
+        return `<tr><td style="font-weight:600">${esc(nomeMedico(m))}</td><td>${esc(m.specializzazione||'—')}</td><td>${contatti}</td><td>${sedi}</td><td>${nt}</td></tr>`;
       }).join('')
     + '</tbody></table>';
 }
