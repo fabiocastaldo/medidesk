@@ -5280,6 +5280,7 @@ function getSlots(centro, dateStr, escludiPassati=false){
   const dow = d.getDay();
   const turni = (centro.turni||[]).filter(t=>{
     if(t.giorno!==dow) return false;
+    if(t.dataInizioValidita && dateStr < t.dataInizioValidita) return false; // "dal": allineato al gate server (lib/slot-guard, coop-prenota)
     if(t.dataFineValidita && dateStr > t.dataFineValidita) return false;
     const freq = t.frequenza||1;
     if(freq > 1 && t.dataInizioValidita){
@@ -5333,6 +5334,7 @@ function getAllSlotsWithStatus(centro, dateStr){
   const dow = d.getDay();
   const turni = (centro.turni||[]).filter(t=>{
     if(t.giorno!==dow) return false;
+    if(t.dataInizioValidita && dateStr < t.dataInizioValidita) return false; // "dal": allineato al gate server (lib/slot-guard, coop-prenota)
     if(t.dataFineValidita && dateStr > t.dataFineValidita) return false;
     const freq = t.frequenza||1;
     if(freq > 1 && t.dataInizioValidita){
