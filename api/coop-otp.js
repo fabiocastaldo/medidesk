@@ -2,7 +2,8 @@
 // Gate alla sorgente per l'accesso operatori (art.29): il codice monouso viene
 // richiesto a Supabase Auth SOLO se l'email è in segreterie con stato=attiva e la
 // cooperativa è attiva. Altrimenti non parte nessuna email e non nasce nessuna utenza.
-// Risposta uniforme in ogni caso (nessun oracolo sulle email autorizzate).
+// Risposta parlante (decisione di prodotto 01/09: feedback esplicito per l'operatore; il rate limit
+// IP/email resta l'unica mitigazione all'enumerazione delle email autorizzate).
 // Nessuna scrittura su DB: la sola scrittura (utenza auth al primo accesso) è di GoTrue.
 
 const rateMap = new Map();
@@ -18,7 +19,6 @@ function checkRate(key, limit) {
   e.count++; return true;
 }
 
-const MSG_UNIFORME = 'Se l\'indirizzo è autorizzato riceverai un codice entro un minuto.';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -44,13 +44,21 @@ export default async function handler(req, res) {
 
   // Lookup autorizzazione: email attiva in segreterie + cooperativa attiva.
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?email=eq.${encodeURIComponent(email)}&stato=eq.attiva&select=id,cooperative(stato)&limit=1`,
+    `${supabaseUrl}/rest/v1/segreterie?email=eq.${encodeURIComponent(email)}&select=id,stato,cooperative(stato)&order=stato.asc&limit=1`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
-  const autorizzata = !!seg && seg.cooperative?.stato === 'attiva';
+  if (!seg) {
+    return res.status(403).json({ error: 'Questa email non è autorizzata da nessuna organizzazione. Chiedi all\'amministratore di aggiungerti nella tab Segreteria.' });
+  }
+  if (seg.stato !== 'attiva') {
+    return res.status(403).json({ error: 'La tua autorizzazione è sospesa. Rivolgiti all\'amministratore della tua organizzazione.' });
+  }
+  if (seg.cooperative?.stato !== 'attiva') {
+    return res.status(403).json({ error: 'L\'organizzazione non è attiva.' });
+  }
 
-  if (autorizzata) {
+  {
     // GoTrue spedisce il codice (SMTP configurato nel progetto); create_user per il primo accesso.
     const otpRes = await fetch(`${supabaseUrl}/auth/v1/otp`, {
       method: 'POST',
@@ -64,5 +72,5 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(200).json({ ok: true, message: MSG_UNIFORME });
+  return res.status(200).json({ ok: true, message: 'Codice inviato a ' + email + '. Controlla la posta: vale un\'ora.' });
 }
