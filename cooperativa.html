@@ -2279,8 +2279,8 @@ function renderMediciTab(){
         const contatti = [
           m.telefono ? `<a href="tel:${esc(String(m.telefono).replace(/\s+/g,''))}">${esc(m.telefono)}</a>` : '',
           m.email ? `<a href="mailto:${esc(m.email)}">${esc(m.email)}</a>` : ''
-        ].filter(Boolean).join('<br>') || '—';
-        return `<tr><td style="font-weight:600">${esc(nomeMedico(m))}</td><td>${esc(m.specializzazione||'—')}</td><td>${contatti}</td><td>${sedi}</td><td>${nt}</td></tr>`;
+        ].filter(Boolean).join(' \u00b7 ') || '—';
+        return `<tr><td style="font-weight:600">${esc(nomeMedico(m))}</td><td>${esc(m.specializzazione||'—')}</td><td style="white-space:nowrap">${contatti}</td><td>${sedi}</td><td>${nt}</td></tr>`;
       }).join('')
     + '</tbody></table>';
 }
