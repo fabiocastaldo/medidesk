@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,cooperativa_id,cooperative(id,stato,mail_conferma_paziente,mail_notifica_medico,mail_ricevuta_segreteria)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,cooperativa_id,cooperative(id,stato,mail_conferma_paziente,mail_notifica_medico,mail_ricevuta_segreteria)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
@@ -144,6 +144,7 @@ export default async function handler(req, res) {
         tipo_visita: tipo || null,
         area_tematica: area || null,
         source: 'paziente',
+        segreteria_id: seg.id,
         cancellation_token: cancellationToken,
         consenso_base_at: consentTs,
         consenso_health_at: consentTs,

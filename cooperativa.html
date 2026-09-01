@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 :root{
   --brand-deep:#073C42; --brand-mid:#0C726E; --brand-bright:#16A89E; --brand-soft:#BFE7E2;
@@ -236,6 +237,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
 .paz-row{display:block;width:100%;text-align:left;padding:9px 12px;margin:4px 0;border:1px solid #dfe5e4;border-radius:8px;background:#fff;cursor:pointer;font-size:13.5px}
 .paz-row:hover{border-color:var(--brand-deep);background:#f6faf9}
+.login-mode{flex:1;border:none;background:transparent;padding:9px;border-radius:8px;font-size:13.5px;font-weight:600;color:#5a6b69;cursor:pointer}
+.login-mode.active{background:#fff;color:#0C726E;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
@@ -261,16 +264,35 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   <div class="cardpane">
     <div class="card">
       <h1>Plancia organizzazioni</h1>
-      <p class="sub">Accedi con le credenziali fornite in fase di attivazione.</p>
-      <div class="field">
-        <label for="login-email">Email</label>
-        <input id="login-email" type="email" autocomplete="username" required>
+      <div style="display:flex;gap:6px;margin:14px 0 16px;background:#eef2f1;border-radius:10px;padding:4px">
+        <button type="button" class="login-mode active" id="mode-admin" onclick="setLoginMode('admin')">Amministratore</button>
+        <button type="button" class="login-mode" id="mode-seg" onclick="setLoginMode('seg')">Segreteria</button>
       </div>
-      <div class="field">
-        <label for="login-password">Password</label>
-        <input id="login-password" type="password" autocomplete="current-password" required>
+      <div id="login-admin-block">
+        <p class="sub" style="margin-top:0">Accedi con le credenziali fornite in fase di attivazione.</p>
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn" id="login-btn" onclick="doLogin()">Accedi</button>
       </div>
-      <button class="btn" id="login-btn" onclick="doLogin()">Accedi</button>
+      <div id="login-seg-block" class="hidden">
+        <p class="sub" style="margin-top:0">Niente password: ricevi un codice monouso alla tua email, se l'amministratore l'ha autorizzata.</p>
+        <div class="field">
+          <label for="otp-email">Email autorizzata</label>
+          <input id="otp-email" type="email" autocomplete="username">
+        </div>
+        <button class="btn" id="otp-send-btn" onclick="otpSend()">Inviami un codice</button>
+        <div class="field hidden" id="otp-code-field" style="margin-top:10px">
+          <label for="otp-code">Codice ricevuto via email</label>
+          <input id="otp-code" type="text" inputmode="numeric" maxlength="8" placeholder="123456">
+        </div>
+        <button class="btn hidden" id="otp-verify-btn" onclick="otpVerify()">Verifica ed entra</button>
+      </div>
       <div id="login-msg" class="hidden"></div>
       <span class="helplink">La tua organizzazione non è ancora attiva?
         <a href="mailto:info@delphi-med.com?subject=Attivazione%20cooperativa%20Delphi~Med">Richiedi l'attivazione</a>
@@ -302,6 +324,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     <div class="payoff">Plancia organizzazione</div>
     <nav>
       <button class="sitem active" id="tabbtn-medici" onclick="switchTab('medici')">Medici</button>
+      <button class="sitem" id="tabbtn-segreteria" onclick="switchTab('segreteria')">Segreteria</button>
       <button class="sitem" id="tabbtn-sedi" onclick="switchTab('sedi')">Sedi</button>
       <button class="sitem" id="tabbtn-turni" onclick="switchTab('turni')">Turni</button>
       <button class="sitem" id="tabbtn-servizi" onclick="switchTab('servizi')">Servizi</button>
@@ -595,6 +618,30 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
     </section>
 
+    <section id="tab-segreteria" class="card-lite hidden">
+      <p class="stat-hint">Persone autorizzate al trattamento (art. 29 GDPR): inserisci email e nome dell'operatore. L'operatore entra dalla pagina di accesso con un codice ricevuto via email — nessuna password. Ogni variazione finisce nel registro auditabile qui sotto.</p>
+        <div class="toolbar">
+          <div class="field" style="flex:1"><label for="op-nome">Nome</label><input id="op-nome" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+          <div class="field" style="flex:1"><label for="op-cognome">Cognome</label><input id="op-cognome" type="text" maxlength="80" onblur="this.value=capitalizeWords(this.value.trim())"></div>
+          <div class="field" style="flex:1.3"><label for="op-email">Email</label><input id="op-email" type="email" maxlength="120" placeholder="operatore@esempio.it"></div>
+          <button class="btn" onclick="aggiungiOperatore()">Autorizza</button>
+        </div>
+        <div id="op-msg" class="hidden"></div>
+        <div id="op-tbl"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn" style="width:auto;margin:0;background:transparent;color:var(--brand-mid);border:1px solid var(--border);padding:8px 14px;font-size:12.5px" onclick="exportRegistroCSV()">Registro autorizzati (Excel)</button>
+          <button class="btn" style="width:auto;margin:0;background:transparent;color:var(--brand-mid);border:1px solid var(--border);padding:8px 14px;font-size:12.5px" onclick="exportRegistroPDF()">Registro autorizzati (PDF)</button>
+        </div>
+        <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border)">
+          <div style="font-weight:600;margin-bottom:4px;color:var(--brand-deep)">Intestazione legale del titolare</div>
+          <p class="stat-hint">Compare in testa a registro e lettere di nomina (es. «Poliambulatorio X S.r.l. — Via Roma 1, Napoli — P.IVA 01234567890»). Finché è vuota, i documenti escono col nome della struttura e lo spazio da completare.</p>
+          <div class="toolbar">
+            <div class="field" style="flex:1"><label for="op-intestazione">Intestazione</label><input id="op-intestazione" type="text" maxlength="240"></div>
+            <button class="btn" onclick="salvaIntestazione()">Salva</button>
+          </div>
+        </div>
+    </section>
+
     <section id="tab-preferenze" class="card-lite hidden">
       <h2 style="font-size:16px;color:var(--brand-mid);margin-bottom:14px">Preferenze dell'organizzazione</h2>
       <div class="pref-row">
@@ -626,7 +673,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         </span>
       </div>
       <div id="pref-msg" class="hidden" style="margin-top:12px"></div>
-    </section>
+    
+          </section>
 
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
     <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
@@ -678,13 +726,14 @@ function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&
 const GG = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 
 const SEC_TITOLI = {
-  'medici': 'Medici', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
+  'medici': 'Medici', 'segreteria': 'Segreteria', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
   'assoc-servizi': 'Medici ↔ servizi', 'assoc-turni': 'Medici ↔ turni',
   'giornata': 'Giornata',
   'statistiche': 'Statistiche', 'compensi': 'Compensi', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
 };
 const SEC_SOTTO = {
   'medici': 'I medici collegati all\'organizzazione e il codice di collegamento',
+  'segreteria': 'Le persone autorizzate: accessi, registro e lettere di nomina',
   'sedi': 'Le sedi operative dell\'organizzazione',
   'turni': 'Il registro dei turni assegnati',
   'servizi': 'Il catalogo dei servizi dell\'organizzazione',
@@ -697,8 +746,10 @@ const SEC_SOTTO = {
   'preferenze': 'Le impostazioni dell\'organizzazione'
 };
 
+const _ADMIN_TABS = ['segreteria','sedi','turni','servizi','assoc-servizi','assoc-turni','statistiche','compensi','preferenze'];
 function switchTab(t){
-  ['medici','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','compensi','agenda','preferenze'].forEach(x => {
+  if(_plancia && _plancia.ruolo !== 'admin' && _ADMIN_TABS.includes(t)) return;
+  ['medici','segreteria','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','compensi','agenda','preferenze'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
@@ -707,6 +758,7 @@ function switchTab(t){
   if(t === 'statistiche'){ initStatFiltri(); loadStatVisite(); }
   if(t === 'compensi'){ initCompensi(); }
   if(t === 'giornata') initGiornata();
+  if(t === 'segreteria'){ loadOperatori(); }
 }
 
 function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
@@ -773,7 +825,19 @@ function updateTfGiorniLabel(){
   document.getElementById('tf-giorni-label').textContent = sel.length ? sel.join(', ') : 'Seleziona giorni';
 }
 
+function applyRuolo(){
+  const admin = !_plancia || _plancia.ruolo === 'admin';
+  ['segreteria','sedi','turni','servizi','statistiche','compensi','preferenze'].forEach(x => {
+    const b = document.getElementById('tabbtn-' + x); if(b) b.style.display = admin ? '' : 'none';
+  });
+  const grp = document.getElementById('submenu-assoc');
+  if(grp){ grp.style.display = admin ? '' : 'none'; const sg = document.querySelector('.sgroup'); if(sg) sg.style.display = admin ? '' : 'none'; }
+  const gen = document.getElementById('btn-genera'); if(gen) gen.style.display = admin ? '' : 'none';
+  if(!admin) switchTab('giornata');
+}
+
 function renderPlancia(){
+  applyRuolo();
   const d = _plancia;
   if(!d) return;
   document.getElementById('plancia-who').textContent = d.cooperativa.nome;
@@ -1299,6 +1363,222 @@ function exportCompensiCSV(){
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
+// ── ACCESSO OPERATORE CON CODICE EMAIL (OTP) ──
+function setLoginMode(m){
+  const admin = m === 'admin';
+  document.getElementById('login-admin-block').classList.toggle('hidden', !admin);
+  document.getElementById('login-seg-block').classList.toggle('hidden', admin);
+  document.getElementById('mode-admin').classList.toggle('active', admin);
+  document.getElementById('mode-seg').classList.toggle('active', !admin);
+  setMsg('');
+}
+async function otpSend(){
+  const email = document.getElementById('otp-email').value.trim().toLowerCase();
+  if(!email){ setMsg('Inserisci la tua email autorizzata.', 'err'); return; }
+  const btn = document.getElementById('otp-send-btn');
+  btn.disabled = true; setMsg('');
+  try {
+    const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    if(error) throw error;
+    document.getElementById('otp-code-field').classList.remove('hidden');
+    document.getElementById('otp-verify-btn').classList.remove('hidden');
+    setMsg('Codice inviato a ' + email + '. Controlla la posta (vale un\'ora).', 'info');
+  } catch(e){
+    console.error('[Plancia] otpSend:', e.message);
+    setMsg('Invio non riuscito: ' + (e && e.message ? e.message : 'riprova tra qualche minuto.'), 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function otpVerify(){
+  const email = document.getElementById('otp-email').value.trim().toLowerCase();
+  const token = document.getElementById('otp-code').value.trim();
+  if(!email || !token){ setMsg('Servono email e codice.', 'err'); return; }
+  const btn = document.getElementById('otp-verify-btn');
+  btn.disabled = true; setMsg('');
+  try {
+    const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+    if(error){ setMsg('Codice non valido o scaduto. Richiedine uno nuovo.', 'err'); return; }
+    enterPlancia();
+  } catch(e){
+    console.error('[Plancia] otpVerify:', e.message);
+    setMsg('Verifica non riuscita. Riprova.', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── OPERATORI DI SEGRETERIA (art. 29): autorizzazioni, registro, nomine ──
+let _operatori = null;
+const _AZIONE_LABEL = { autorizzata: 'Autorizzazione', sospesa: 'Sospensione', riattivata: 'Riattivazione', revocata: 'Revoca' };
+
+function setOpMsg(text, kind){
+  const el = document.getElementById('op-msg'); if(!el) return;
+  if(!text){ el.className = 'hidden'; el.textContent = ''; return; }
+  el.className = 'msg ' + (kind === 'err' ? 'msg-err' : 'msg-info');
+  el.textContent = text;
+}
+
+async function loadOperatori(){
+  const el = document.getElementById('op-tbl'); if(!el) return;
+  el.innerHTML = '<div class="empty">Caricamento…</div>';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-operatori', { headers: { 'Authorization': 'Bearer ' + session.access_token } });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body) throw new Error((body && body.error) || 'caricamento');
+    _operatori = body;
+    const it = document.getElementById('op-intestazione');
+    if(it && !it.value) it.value = (body.cooperativa || {}).intestazione_legale || '';
+    renderOperatori();
+  } catch(e){
+    el.innerHTML = '<div class="empty">Elenco non disponibile. Riprova.</div>';
+  }
+}
+
+function renderOperatori(){
+  const el = document.getElementById('op-tbl'); if(!el || !_operatori) return;
+  const rows = _operatori.autorizzati || [];
+  if(!rows.length){ el.innerHTML = '<div class="empty">Nessun autorizzato.</div>'; return; }
+  el.innerHTML = '<table class="tbl"><thead><tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>Stato</th><th>Dal</th><th>Primo accesso</th><th style="width:150px"></th></tr></thead><tbody>'
+    + rows.map(o => '<tr' + (o.stato !== 'attiva' ? ' style="opacity:.55"' : '') + '>'
+      + '<td style="font-weight:600">' + esc(_opEsteso(o)) + '</td><td>' + esc(o.email || '—') + '</td>'
+      + '<td>' + (o.ruolo === 'admin' ? 'Admin' : 'Operatore') + '</td><td>' + esc(o.stato) + '</td>'
+      + '<td>' + esc(fmtData(o.dal)) + '</td><td>' + (o.primo_accesso_effettuato ? 'sì' : 'non ancora') + '</td>'
+      + '<td style="white-space:nowrap">'
+      + (o.ruolo === 'operatore' ? ('<button class="act-btn" onclick="statoOperatore(\'' + esc(o.id) + '\', ' + (o.stato !== 'attiva') + ')">' + (o.stato !== 'attiva' ? 'Riattiva' : 'Sospendi') + '</button> ') : '')
+      + '<button class="act-btn" title="Lettera di nomina (PDF)" onclick="letteraNomina(\'' + esc(o.id) + '\')">Nomina</button>'
+      + '</td></tr>').join('')
+    + '</tbody></table>';
+}
+
+async function aggiungiOperatore(){
+  const email = (document.getElementById('op-email') || {}).value.trim();
+  const nome = (document.getElementById('op-nome') || {}).value.trim();
+  const cognome = (document.getElementById('op-cognome') || {}).value.trim();
+  if(!email || !nome || !cognome){ setOpMsg('Servono nome, cognome ed email.', 'err'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-operatori', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'aggiungi', email: email, nome: nome, cognome: cognome })
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'autorizzazione');
+    document.getElementById('op-email').value = ''; document.getElementById('op-nome').value = ''; document.getElementById('op-cognome').value = '';
+    setOpMsg('Operatore ' + _opEsteso(body.operatore) + ' autorizzato ✓ — al primo accesso userà il codice via email.', 'info');
+    loadOperatori();
+  } catch(e){ setOpMsg('Errore: ' + (e && e.message ? e.message : 'riprova'), 'err'); }
+}
+
+async function statoOperatore(id, attiva){
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-operatori', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'stato', segreteria_id: id, attiva: attiva })
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'aggiornamento');
+    setOpMsg((attiva ? 'Riattivazione' : 'Sospensione') + ' registrata ✓ (effetto immediato).', 'info');
+    loadOperatori();
+  } catch(e){ setOpMsg('Errore: ' + (e && e.message ? e.message : 'riprova'), 'err'); }
+}
+
+async function salvaIntestazione(){
+  const intestazione = (document.getElementById('op-intestazione') || {}).value.trim();
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-operatori', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'titolare', intestazione: intestazione })
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
+    if(_operatori && _operatori.cooperativa) _operatori.cooperativa.intestazione_legale = body.intestazione_legale;
+    setOpMsg('Intestazione salvata ✓', 'info');
+  } catch(e){ setOpMsg('Errore: ' + (e && e.message ? e.message : 'riprova'), 'err'); }
+}
+
+function _opEsteso(o){ return [o.nome, o.cognome].filter(Boolean).join(' '); }
+function _opNomi(){ const m = {}; ((_operatori || {}).autorizzati || []).forEach(o => { m[o.id] = _opEsteso(o); }); return m; }
+
+function exportRegistroCSV(){
+  if(!_operatori){ alert('Apri prima l\'elenco (tab Preferenze).'); return; }
+  const nomi = _opNomi();
+  const righe = [];
+  righe.push(['Registro delle persone autorizzate al trattamento', (_operatori.cooperativa || {}).intestazione_legale || (_operatori.cooperativa || {}).nome || '', new Date().toLocaleDateString('it-IT')].map(_csvCell).join(';'));
+  righe.push('');
+  righe.push(['Nome', 'Email', 'Ruolo', 'Stato', 'Autorizzata dal', 'Primo accesso effettuato'].map(_csvCell).join(';'));
+  (_operatori.autorizzati || []).forEach(o => righe.push([_opEsteso(o), o.email || '', o.ruolo, o.stato, fmtData(o.dal), o.primo_accesso_effettuato ? 'sì' : 'no'].map(_csvCell).join(';')));
+  righe.push('');
+  righe.push(['Storico variazioni (log inalterabile)'].map(_csvCell).join(';'));
+  righe.push(['Data e ora', 'Persona', 'Azione', 'Eseguita da', 'Note'].map(_csvCell).join(';'));
+  (_operatori.log || []).forEach(l => righe.push([new Date(l.created_at).toLocaleString('it-IT'), nomi[l.segreteria_id] || '', _AZIONE_LABEL[l.azione] || l.azione, nomi[l.eseguita_da] || '', l.note || ''].map(_csvCell).join(';')));
+  const blob = new Blob(['\uFEFF' + righe.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'registro_autorizzati.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+function _pdfNuovaRiga(doc, y, step){
+  if(y > 275){ doc.addPage(); return 18; }
+  return y + step;
+}
+
+function exportRegistroPDF(){
+  if(!_operatori){ alert('Apri prima l\'elenco (tab Preferenze).'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const nomi = _opNomi();
+  let y = 18;
+  doc.setFontSize(14); doc.text('Registro delle persone autorizzate al trattamento', 14, y); y += 7;
+  doc.setFontSize(10); doc.setTextColor(90);
+  doc.text(((_operatori.cooperativa || {}).intestazione_legale || (_operatori.cooperativa || {}).nome || '') + ' — generato il ' + new Date().toLocaleString('it-IT'), 14, y); y += 4;
+  doc.text('Art. 29 GDPR / art. 2-quaterdecies D.lgs 196/2003 — registro generato automaticamente dal sistema, storico inalterabile.', 14, y); y += 9;
+  doc.setTextColor(0); doc.setFontSize(11); doc.text('Autorizzati', 14, y); y += 6; doc.setFontSize(9.5);
+  (_operatori.autorizzati || []).forEach(o => {
+    doc.text('• ' + _opEsteso(o) + '  <' + (o.email || '—') + '>  — ' + (o.ruolo === 'admin' ? 'Admin' : 'Operatore') + ', stato: ' + o.stato + ', dal ' + fmtData(o.dal) + (o.primo_accesso_effettuato ? '' : ' (primo accesso non ancora effettuato)'), 16, y);
+    y = _pdfNuovaRiga(doc, y, 6);
+  });
+  y += 4; doc.setFontSize(11); doc.text('Storico variazioni', 14, y); y += 6; doc.setFontSize(9.5);
+  (_operatori.log || []).forEach(l => {
+    doc.text('• ' + new Date(l.created_at).toLocaleString('it-IT') + ' — ' + (_AZIONE_LABEL[l.azione] || l.azione) + ' — ' + (nomi[l.segreteria_id] || '') + ' (eseguita da ' + (nomi[l.eseguita_da] || '—') + ')', 16, y);
+    y = _pdfNuovaRiga(doc, y, 6);
+  });
+  doc.save('registro_autorizzati.pdf');
+}
+
+function letteraNomina(id){
+  const o = ((_operatori || {}).autorizzati || []).find(x => String(x.id) === String(id));
+  if(!o){ alert('Operatore non trovato: ricarica l\'elenco.'); return; }
+  const coop = ((_operatori || {}).cooperativa || {});
+  const coopNome = coop.intestazione_legale || (coop.nome ? (coop.nome + ' (dati legali da completare: ______________________________________)') : 'l\'organizzazione');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 20;
+  doc.setFontSize(13); doc.text('Lettera di designazione a persona autorizzata al trattamento', 14, y); y += 6;
+  doc.setFontSize(10); doc.setTextColor(90); doc.text('Art. 29 Regolamento (UE) 2016/679 — art. 2-quaterdecies D.lgs 196/2003', 14, y); y += 10;
+  doc.setTextColor(0); doc.setFontSize(10.5);
+  const par = (t) => { const lines = doc.splitTextToSize(t, 180); doc.text(lines, 14, y); y += lines.length * 5.4 + 3; if(y > 260){ doc.addPage(); y = 20; } };
+  par('Il Titolare del trattamento ' + coopNome + ' designa il/la Sig./Sig.ra ' + _opEsteso(o) + (o.email ? ' (' + o.email + ')' : '') + ', C.F. ______________________' + ' quale persona autorizzata al trattamento dei dati personali, con decorrenza dal ' + fmtData(o.dal) + ', nell\'ambito delle attività di segreteria della piattaforma Delphi~Med.');
+  par('Perimetro del trattamento autorizzato: gestione delle prenotazioni per conto dei pazienti (visione degli appuntamenti di giornata; prenotazione, cancellazione e riprogrammazione; anagrafica minima di prenotazione: nome, cognome, contatti, tipo di visita). È espressamente escluso ogni accesso al contenuto clinico dei pazienti (fascicoli, referti, sintesi, note), che resta nella titolarità dei singoli medici e non è tecnicamente accessibile dal profilo assegnato.');
+  par('Istruzioni: trattare i dati esclusivamente per le finalità di prenotazione; utilizzare soltanto il proprio account personale, senza cedere a terzi il codice di accesso ricevuto via email; mantenere il riserbo sulle informazioni conosciute in ragione dell\'incarico anche dopo la sua cessazione; segnalare senza ritardo al Titolare ogni incidente, accesso anomalo o violazione anche solo sospetta; non estrarre, copiare o comunicare dati al di fuori delle procedure della piattaforma.');
+  par('Ogni operazione di prenotazione o cancellazione eseguita è tracciata con l\'identità dell\'operatore. L\'autorizzazione può essere sospesa o revocata in qualsiasi momento, con effetto immediato; le variazioni sono annotate nel registro delle persone autorizzate.');
+  y += 8;
+  doc.text('Data ________________________', 14, y); y += 14;
+  doc.text('Il Titolare del trattamento', 14, y); doc.text('La persona autorizzata', 120, y); y += 16;
+  doc.text('__________________________', 14, y); doc.text('__________________________', 120, y); y += 10;
+  doc.setFontSize(8.5); doc.setTextColor(120);
+  doc.text('Documento generato automaticamente da Delphi~Med. Da verificare e adattare a cura del Titolare con il proprio consulente legale.', 14, y);
+  doc.save('nomina_' + (_opEsteso(o) || 'operatore').replace(/\s+/g, '_').toLowerCase() + '.pdf');
+}
+
 // ── GIORNATA (sola lettura: stato scritto dal medico, la plancia legge) ──
 let _gioBusy = false;
 function initGiornata(){
@@ -1340,10 +1620,10 @@ async function loadGiornata(){
         : '<span style="color:#0a8074;font-weight:600">Prenotato</span>');
     tbl.innerHTML = sedi.map(sede =>
       '<div class="stat-block"><h3>' + esc(sede.nome) + '</h3>'
-      + '<table class="tbl"><thead><tr><th style="width:70px">Ora</th><th>Paziente</th><th>Tipo</th><th>Medico</th><th style="width:110px">Stato</th></tr></thead><tbody>'
+      + '<table class="tbl"><thead><tr><th style="width:70px">Ora</th><th>Paziente</th><th>Tipo</th><th>Medico</th><th>Prenotato da</th><th style="width:110px">Stato</th></tr></thead><tbody>'
       + sede.appuntamenti.map(a =>
           '<tr' + (a.stato === 'cancellato' ? ' style="opacity:.6"' : '') + '><td>' + esc(a.ora) + '</td><td>' + esc(a.paziente || '—')
-          + '</td><td>' + esc(a.tipo || '—') + '</td><td>' + esc(a.medico || '—') + '</td><td>' + statoBadge(a.stato) + '</td></tr>'
+          + '</td><td>' + esc(a.tipo || '—') + '</td><td>' + esc(a.medico || '—') + '</td><td style="color:var(--ink3);font-size:12.5px">' + esc(a.prenotato_da || '—') + '</td><td>' + statoBadge(a.stato) + '</td></tr>'
         ).join('')
       + '</tbody></table></div>'
     ).join('');
@@ -2385,8 +2665,7 @@ function copiaCodice(){
 async function routeSession(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ show('view-login'); return; }
-  if(isCooperativa(session.user)){ enterPlancia(); }
-  else { console.log('[Plancia] Sessione presente ma senza ruolo cooperativa'); show('view-denied'); }
+  enterPlancia(); // è coop-me a decidere (403 → view-denied): vale per Admin e operatori OTP
 }
 
 async function doLogin(){
@@ -2399,8 +2678,7 @@ async function doLogin(){
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if(error){ setMsg('Credenziali non valide. Controlla email e password.', 'err'); return; }
-    if(isCooperativa(data.user)){ enterPlancia(); }
-    else { show('view-denied'); }
+    enterPlancia();
   } catch(e){
     console.error('[Plancia] login:', e.message);
     setMsg('Accesso non riuscito. Riprova.', 'err');

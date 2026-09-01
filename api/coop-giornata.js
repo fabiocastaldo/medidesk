@@ -70,7 +70,7 @@ export default async function handler(req, res) {
   const inList = centri.map(c => `"${c.id}"`).join(',');
   const appRes = await fetch(
     `${supabaseUrl}/rest/v1/appuntamenti?centro_id=in.(${inList})&data=eq.${encodeURIComponent(giorno)}` +
-    `&select=id,ora,tipo_visita,nome_paziente,cognome_paziente,cancelled,erogata,centro_id,medico_id,per_conto,source&order=ora.asc`,
+    `&select=id,ora,tipo_visita,nome_paziente,cognome_paziente,cancelled,erogata,centro_id,medico_id,per_conto,source,segreteria_id&order=ora.asc`,
     { headers: srvHeaders }
   ).catch(() => null);
   if (!appRes || !appRes.ok) {
@@ -94,6 +94,15 @@ export default async function handler(req, res) {
     }
   }
 
+  // nomi delle segreterie (per «prenotato da»)
+  const segNomi = new Map();
+  const sgRes = await fetch(
+    `${supabaseUrl}/rest/v1/segreterie?cooperativa_id=eq.${encodeURIComponent(seg.cooperativa_id)}&select=id,nome`,
+    { headers: srvHeaders }
+  ).catch(() => null);
+  const sgRows = (sgRes && sgRes.ok) ? await sgRes.json().catch(() => []) : [];
+  for (const x of (Array.isArray(sgRows) ? sgRows : [])) segNomi.set(String(x.id), x.nome || '');
+
   const perSede = new Map(centri.map(c => [c.id, { centro_id: c.id, nome: c.nome || 'Sede', appuntamenti: [] }]));
   const totali = { prenotati: 0, erogate: 0, cancellati: 0 };
   for (const a of appts) {
@@ -110,7 +119,8 @@ export default async function handler(req, res) {
       medico: medici.get(a.medico_id) || '',
       stato,
       per_conto: a.per_conto === true,
-      source: a.source || ''
+      source: a.source || '',
+      prenotato_da: a.segreteria_id ? (segNomi.get(String(a.segreteria_id)) || '') : ''
     });
   }
 

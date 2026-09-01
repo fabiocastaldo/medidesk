@@ -490,7 +490,7 @@ export default async function handler(req, res) {
     const row = (rowRes && rowRes.ok) ? (await rowRes.json().catch(() => []))?.[0] : null;
     const coopId = row?.centri?.cooperativa_id;
     if (!coopId) return res.status(200).json({ ok: true, skipped: 'appuntamento non di cooperativa' });
-    const segRes = await fetch(`${supabaseUrl}/rest/v1/segreterie?cooperativa_id=eq.${encodeURIComponent(coopId)}&stato=eq.attiva&select=user_id&limit=1`, { headers: srvH }).catch(() => null);
+    const segRes = await fetch(`${supabaseUrl}/rest/v1/segreterie?cooperativa_id=eq.${encodeURIComponent(coopId)}&stato=eq.attiva&select=user_id&order=ruolo.asc&limit=1`, { headers: srvH }).catch(() => null);
     const segRow = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
     if (!segRow?.user_id) return res.status(200).json({ ok: true, skipped: 'segreteria non trovata' });
     const uRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(segRow.user_id)}`, { headers: srvH }).catch(() => null);
