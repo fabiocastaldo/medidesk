@@ -2,16 +2,16 @@
 // Tappa 3 prenotazioni per-terzi: la segreteria della cooperativa prenota
 // per conto del paziente su uno slot dei sede-centri coop del medico.
 // Rivalidazione SERVER-SIDE completa (il client propone, il server dispone):
-// perimetro cooperativa, turno attivo che copre lo slot (griglia inclusa),
-// guardia ferie BLOCCANTE (in coop-agenda era informativa), concorrenza
+// perimetro cooperativa, copertura dello slot via lib/slot-guard.js (turno attivo
+// con griglia OPPURE giornata singola), guardia ferie BLOCCANTE, concorrenza
 // arbitrata dal DB via appuntamenti_slot_unique: 23505 -> 409 slot_taken.
 // Dati minimi per-terzi: nome/cognome/telefono + dichiarazione di consenso
 // raccolto dal paziente (consenso_versione 'cons-coop-tel-1' marca il canale).
 
 import { randomUUID } from 'node:crypto';
+import { verificaSlot } from '../lib/slot-guard.js';
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
-const t2m = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
 
   // Perimetro: il centro deve appartenere alla cooperativa del chiamante ED essere del medico indicato
   const centroRes = await fetch(
-    `${supabaseUrl}/rest/v1/centri?id=eq.${encodeURIComponent(centroId)}&cooperativa_id=eq.${encodeURIComponent(seg.cooperativa_id)}&medico_id=eq.${encodeURIComponent(medicoId)}&select=id,turni(giorno,inizio,fine,durata_slot,frequenza_settimane,data_inizio_validita,data_fine_validita)`,
+    `${supabaseUrl}/rest/v1/centri?id=eq.${encodeURIComponent(centroId)}&cooperativa_id=eq.${encodeURIComponent(seg.cooperativa_id)}&medico_id=eq.${encodeURIComponent(medicoId)}&select=id`,
     { headers: srvHeaders }
   ).catch(() => null);
   const centro = (centroRes && centroRes.ok) ? (await centroRes.json().catch(() => []))?.[0] : null;
@@ -85,45 +85,13 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Centro non collegato all\'organizzazione' });
   }
 
-  // Turno attivo che copre lo slot: giorno, finestra Dal/Al, frequenza, griglia oraria
-  const dow = new Date(data + 'T12:00:00').getDay();
-  const oraMin = t2m(ora);
-  const copre = (centro.turni || []).some(t => {
-    if (t.giorno !== dow) return false;
-    const dal = t.data_inizio_validita || null;
-    const al  = t.data_fine_validita || null;
-    if (dal && data < dal) return false;
-    if (al && data > al) return false;
-    const freq = t.frequenza_settimane || 1;
-    if (freq > 1 && dal) {
-      const diffW = Math.round((new Date(data + 'T12:00:00') - new Date(dal + 'T12:00:00')) / (7 * 24 * 3600 * 1000));
-      if (diffW < 0 || diffW % freq !== 0) return false;
-    }
-    const ini = t2m(String(t.inizio).slice(0, 5));
-    const fin = t2m(String(t.fine).slice(0, 5));
-    const slot = Number(t.durata_slot) || 0;
-    if (!slot) return false;
-    return oraMin >= ini && (oraMin - ini) % slot === 0 && oraMin + slot <= fin;
-  });
-  if (!copre) {
-    return res.status(422).json({ error: 'Nessun turno attivo copre questo orario' });
-  }
-
-  // Guardia ferie BLOCCANTE: chiusura del medico sulla data che tocca il centro (o tutti)
-  const chRes = await fetch(
-    `${supabaseUrl}/rest/v1/chiusure?medico_id=eq.${encodeURIComponent(medicoId)}&data_inizio=lte.${data}&data_fine=gte.${data}&select=centri_ids`,
-    { headers: srvHeaders }
-  ).catch(() => null);
-  const chiusure = (chRes && chRes.ok) ? await chRes.json().catch(() => []) : null;
-  if (!Array.isArray(chiusure)) {
-    return res.status(500).json({ error: 'Verifica chiusure non riuscita' });
-  }
-  const inFerie = chiusure.some(ch => {
-    const ids = ch.centri_ids || [];
-    return ids.length === 0 || ids.some(cid => String(cid) === String(centroId));
-  });
-  if (inFerie) {
-    return res.status(422).json({ error: 'Il medico è chiuso per ferie in questa data' });
+  // Gate di copertura: stesso arbitro del booking pubblico (lib/slot-guard.js):
+  // turno attivo (giorno, dal/al, frequenza, griglia) OPPURE giornata singola
+  // (disponibilita_singole) sulla data; ferie del medico bloccanti. 422 / 502.
+  const sb = (path) => fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: srvHeaders });
+  const v = await verificaSlot({ sb, medicoId, centroId, data, ora });
+  if (!v.ok) {
+    return res.status(v.status).json({ error: v.error });
   }
 
   // INSERT: la concorrenza la arbitra il DB (appuntamenti_slot_unique) -> un vincitore, 409 agli altri

@@ -1,7 +1,7 @@
 // api/coop-agenda.js
 // Agenda prenotabile della plancia (tappa 2 prenotazioni per-terzi).
 // Restituisce, per un medico della cooperativa e un intervallo di date:
-// i suoi sede-centri coop con i turni, gli slot occupati (SOLO data/ora/centro,
+// i suoi sede-centri coop con i turni e le giornate singole, gli slot occupati (SOLO data/ora/centro,
 // nessun dato del paziente) e le chiusure del medico che toccano quei centri
 // (da qui nasce la guardia ferie). Perimetro: solo centri con cooperativa_id
 // della cooperativa del chiamante — i centri privati del medico non esistono.
@@ -82,6 +82,16 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Lettura agenda non riuscita' });
   }
 
+  // giornate singole dei centri nell'intervallo (stessa fonte del booking pubblico)
+  const gsRes = await fetch(
+    `${supabaseUrl}/rest/v1/disponibilita_singole?centro_id=in.(${inList})&data=gte.${da}&data=lte.${a}&select=centro_id,data,inizio,fine,durata_slot`,
+    { headers: srvHeaders }
+  ).catch(() => null);
+  const singole = (gsRes && gsRes.ok) ? await gsRes.json().catch(() => []) : null;
+  if (!Array.isArray(singole)) {
+    return res.status(500).json({ error: 'Lettura giornate singole non riuscita' });
+  }
+
   // chiusure del medico che intersecano l'intervallo
   const chRes = await fetch(
     `${supabaseUrl}/rest/v1/chiusure?medico_id=eq.${encodeURIComponent(medicoId)}&data_fine=gte.${da}&data_inizio=lte.${a}&select=data_inizio,data_fine,centri_ids`,
@@ -116,6 +126,12 @@ export default async function handler(req, res) {
         frequenza: t.frequenza_settimane || 1,
         dal: t.data_inizio_validita || null,
         al: t.data_fine_validita || null
+      })),
+      singole: singole.filter(g => String(g.centro_id) === String(c.id)).map(g => ({
+        data: g.data,
+        inizio: String(g.inizio || '').slice(0, 5),
+        fine: String(g.fine || '').slice(0, 5),
+        slot: g.durata_slot
       }))
     })),
     occupati: occupati.map(o => ({ centro_id: o.centro_id, data: o.data, ora: String(o.ora || '').slice(0, 5) })),
