@@ -8,6 +8,7 @@
 // appartenere al medico), con in più i campi consenso della via diretta.
 
 import { randomUUID } from 'node:crypto';
+import { verificaSlot } from '../lib/slot-guard.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 60;
@@ -102,6 +103,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Riferimenti non validi' });
     }
   } catch { return res.status(502).json({ error: 'Verifica fallita' }); }
+
+  // 1-bis) Gate alla sorgente: lo slot deve essere offerto da un turno/giornata singola e non in ferie
+  {
+    const v = await verificaSlot({ sb, medicoId, centroId, data, ora });
+    if (!v.ok) return res.status(v.status).json({ error: v.error });
+  }
 
   // 2) INSERT appuntamento (service-role); token generato server-side
   const consentTs = new Date().toISOString();

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { verificaSlot } from '../lib/slot-guard.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 60;
@@ -87,6 +88,12 @@ export default async function handler(req, res) {
   }
   const medicoId = resolved.medico_id;
   const centroId = resolved.centro.id;
+
+  // 1-bis) Gate alla sorgente: lo slot deve essere offerto da un turno/giornata singola e non in ferie
+  {
+    const v = await verificaSlot({ sb, medicoId, centroId, data, ora });
+    if (!v.ok) return res.status(v.status).json({ error: v.error });
+  }
 
   // 2) INSERT appuntamento (service-role, RLS bypassata)
   const consentTs = new Date().toISOString();
