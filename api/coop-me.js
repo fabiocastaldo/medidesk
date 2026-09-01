@@ -82,7 +82,7 @@ export default async function handler(req, res) {
 
   const [mediciRes, codiciRes, sediRes, serviziRes, saleRes] = await Promise.all([
     fetch(
-      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_inizio_validita,data_fine_validita,coop_sala_id),medici(id,titolo,nome,cognome,specializzazione)`,
+      `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_inizio_validita,data_fine_validita,coop_sala_id),medici(id,titolo,nome,cognome,specializzazione,telefono,email_pubblica,email)`,
       { headers: srvHeaders }
     ).catch(() => null),
     fetch(
@@ -122,6 +122,11 @@ export default async function handler(req, res) {
         nome: m.nome || '',
         cognome: m.cognome || '',
         specializzazione: m.specializzazione || '',
+        // Recapiti per l'organizzazione: telefono pubblico (il medico e informato che la segreteria
+        // lo vede sempre) ed email pubblica se impostata, altrimenti l'email dell'account, che e gia
+        // il canale con cui send-email avvisa il medico delle prenotazioni della segreteria.
+        telefono: m.telefono || '',
+        email: m.email_pubblica || m.email || '',
         centri: []
       });
     }
