@@ -1771,15 +1771,24 @@ function _agSlotsGiorno(dataStr){
   (d.centri || []).forEach(c => {
     if(_agChiuso(dataStr, c.id)){ out.push({ centro: c, chiuso: true, slots: [] }); return; }
     const slots = [];
-    _agTurniDelGiorno(c, dataStr).forEach(t => {
+    // turni del giorno + giornate singole sulla data (stessa unione di getSlots del medico)
+    const finestre = _agTurniDelGiorno(c, dataStr)
+      .concat((c.singole || []).filter(g => g.data === dataStr));
+    const visti = new Set();
+    finestre.forEach(t => {
+      if(!t.slot) return;
       let cur = _t2m(t.inizio); const end = _t2m(t.fine);
       while(cur + t.slot <= end){
         const ora = _m2t(cur);
-        const passato = dataStr < oggi || (dataStr === oggi && cur <= nowMin);
-        slots.push({ ora, occupato: occ.has(c.id + '|' + dataStr + '|' + ora), passato });
+        if(!visti.has(ora)){
+          visti.add(ora);
+          const passato = dataStr < oggi || (dataStr === oggi && cur <= nowMin);
+          slots.push({ ora, occupato: occ.has(c.id + '|' + dataStr + '|' + ora), passato });
+        }
         cur += t.slot;
       }
     });
+    slots.sort((x, y) => x.ora.localeCompare(y.ora));
     if(slots.length) out.push({ centro: c, chiuso: false, slots });
   });
   return out;
