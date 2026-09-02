@@ -2617,6 +2617,21 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
+<!-- MODAL CONFERMA SPOSTAMENTO (drag agenda) -->
+<div class="modal-overlay" id="modal-confirm-sposta">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title" id="sposta-title">Conferma spostamento</span>
+      <button class="modal-close" onclick="_wgAnnullaSposta()">&#10005;</button>
+    </div>
+    <div class="modal-body" id="sposta-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="sposta-annulla" onclick="_wgAnnullaSposta()">Annulla</button>
+      <button class="btn btn-primary" id="sposta-ok">Sposta</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL TERMINA TURNO DAL -->
 <div class="modal-overlay" id="modal-termina-turno">
   <div class="modal" style="max-width:420px">
@@ -5648,6 +5663,8 @@ function apptShowSlots(){
 function apptSelectFreeOra(){
   const v = (document.getElementById('appt-free-ora')||{}).value;
   if(!v){ showToast('Scegli un orario'); return; }
+  const occ = S.appuntamenti.find(function(x){ return x.data === A.dateStr && String(x.centroId) === String(A.centroId) && x.ora === v && !x.cancelled; });
+  if(occ){ showToast('Alle ' + v + ' c\'\u00e8 gi\u00e0 un appuntamento (' + (occ.cognome||'') + '): non \u00e8 possibile, scegli un minuto diverso'); return; }
   apptSelectSlot(v);
 }
 
@@ -5969,6 +5986,7 @@ function renderWeekGrid(days){
 
 // === Agenda: drag & drop sulla griglia settimanale (fase 2) ===
 var _wgDrag = null;
+var _wgPending = null;
 function initWeekGridDrag(){
   const wrap = document.getElementById('week-grid-wrap');
   if(!wrap || wrap._dragInit) return;
@@ -6020,26 +6038,77 @@ async function _wgDropAppt(id, ds, targetMin, reset){
   const _oggiStr = new Date().toLocaleDateString('en-CA');
   const _n = new Date(); const _nowMin = _n.getHours()*60 + _n.getMinutes();
   if(ds < _oggiStr || (ds === _oggiStr && timeToMin(best) <= _nowMin)){ reset(); showToast('Non puoi spostare un appuntamento nel passato'); return; }
+  _wgPending = { a: a, ds: ds, best: best, reset: reset };
+  document.getElementById('sposta-title').textContent = 'Conferma spostamento';
+  document.getElementById('sposta-body').innerHTML =
+    '<p style="margin:0 0 10px;font-size:14px">Spostare l\'appuntamento di <strong>' + escapeHtml((a.cognome||'') + ' ' + (a.nome||'')) + '</strong>?</p>' +
+    '<div class="confirm-row"><span class="confirm-key">Da</span><span>' + escapeHtml(_wgFmtGiorno(a.data) + ' ore ' + a.ora) + '</span></div>' +
+    '<div class="confirm-row"><span class="confirm-key">A</span><span>' + escapeHtml(_wgFmtGiorno(ds) + ' ore ' + best) + '</span></div>' +
+    '<div class="confirm-row"><span class="confirm-key">Centro</span><span>' + escapeHtml(centro.nome) + '</span></div>';
+  const _okBtn = document.getElementById('sposta-ok');
+  _okBtn.textContent = 'Sposta';
+  _okBtn.onclick = _wgConfermaSposta;
+  document.getElementById('sposta-annulla').textContent = 'Annulla';
+  openModal('modal-confirm-sposta');
+}
+
+function _wgFmtGiorno(ds){
+  return new Date(ds + 'T12:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function _wgAnnullaSposta(){
+  closeModal('modal-confirm-sposta');
+  if(_wgPending){ _wgPending.reset(); _wgPending = null; }
+  renderAgenda();
+}
+
+async function _wgConfermaSposta(){
+  const p = _wgPending; if(!p) return;
+  const a = p.a;
   if(isOnline() && S.medicoId){
     try {
-      const { error } = await supabaseClient.from('appuntamenti').update({ data: ds, ora: best }).eq('id', a.id).select('id').single();
+      const { error } = await supabaseClient.from('appuntamenti').update({ data: p.ds, ora: p.best }).eq('id', a.id).select('id').single();
       if(error) throw error;
     } catch(e){
-      reset();
+      _wgAnnullaSposta();
       showToast(e && e.code === '23505' ? 'Slot gi\u00e0 occupato: spostamento annullato' : 'Spostamento non riuscito: ' + (e.message || ''));
-      renderAgenda();
       return;
     }
   }
-  a.data = ds; a.ora = best;
+  a.data = p.ds; a.ora = p.best;
   save();
   renderAgenda(); renderDashboard(); updateStats();
-  const dFmt = new Date(ds + 'T12:00:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
-  if(centro.email){
-    showToastAction('Spostato a ' + dFmt + ' ore ' + best, 'Avvisa il centro', function(){ sendNotificaCentro('spostamento', a, true); showToast('Email di aggiornamento inviata al centro'); }, 8000);
-  } else {
-    showToast('Spostato a ' + dFmt + ' ore ' + best);
+  // Passo 2: conferma invio notifiche (centro + medico)
+  const centro = S.centri.find(c => String(c.id) === String(a.centroId));
+  document.getElementById('sposta-title').textContent = 'Appuntamento spostato';
+  document.getElementById('sposta-body').innerHTML =
+    '<p style="margin:0;font-size:14px;line-height:1.6">Inviare una email di aggiornamento' +
+    (centro && centro.email ? ' alla segreteria di <strong>' + escapeHtml(centro.nome) + '</strong> e' : '') +
+    ' a te?</p>';
+  const _okBtn = document.getElementById('sposta-ok');
+  _okBtn.textContent = 'Invia notifiche';
+  _okBtn.onclick = _wgInviaNotifiche;
+  document.getElementById('sposta-annulla').textContent = 'Non inviare';
+}
+
+async function _wgInviaNotifiche(){
+  const p = _wgPending; _wgPending = null;
+  closeModal('modal-confirm-sposta');
+  if(!p) return;
+  const a = p.a;
+  const centro = S.centri.find(c => String(c.id) === String(a.centroId));
+  if(centro && centro.email) sendNotificaCentro('spostamento', a, true);
+  if(isOnline() && S.medicoId && a.id){
+    try {
+      const _jwt = await getAuthJwt();
+      fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
+        body: JSON.stringify({ tipo: 'notifica_medico_spostamento', appt_id: a.id })
+      }).catch(function(){});
+    } catch(e){ /* soft-fail */ }
   }
+  showToast('Notifiche di spostamento inviate');
 }
 
 function renderWeekLegend(days){
