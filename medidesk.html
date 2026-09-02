@@ -6354,9 +6354,7 @@ function openAppuntamentoFromAgenda(){
 }
 
 function openOverbookingFromAgenda(){
-  if(S.selectedDay){
-    A.prefillDate = S.selectedDay;
-  }
+  A.prefillDate = null; // niente salto alla giornata: l'overbooking parte dall'inizio del wizard
   openModal('modal-appuntamento');
   A.free = true;
   const _t = document.getElementById('appt-modal-title'); if(_t) _t.textContent = 'Overbooking \u2014 orario libero';
