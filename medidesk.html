@@ -355,6 +355,14 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .mc-day:not(.empty):not(.selected):hover{background:var(--accent-light)}
 .mc-num{font-size:13px;font-weight:600;color:var(--ink)}
 .mc-dots-row{display:flex;align-items:center;flex-wrap:nowrap;overflow:hidden;gap:3px;margin-top:3px}
+.mc-rows{display:flex;flex-direction:column;gap:2px;margin-top:2px;overflow:hidden}
+.mc-row{display:flex;align-items:center;gap:4px;font-size:10.5px;line-height:1.3;color:var(--ink2);white-space:nowrap;overflow:hidden}
+.mc-row-dot{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
+.mc-row-t{font-weight:600}
+.mc-row-txt{overflow:hidden;text-overflow:ellipsis}
+.mc-row-more{color:var(--ink3)}
+@media(max-width:960px){.mc-rows{display:none}}
+@media(min-width:961px){.mc-dots-row{display:none}}
 .mc-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
 .mc-dot-turno{opacity:.55}
 .mc-count{font-size:9px;color:var(--ink3);font-weight:600;line-height:1}
@@ -6238,6 +6246,22 @@ function renderMonthView(){
       `<span class="mc-dot mc-dot-turno" style="background:${c.colore}" title="${c.nome}"></span>`
     ).join('');
     const _blkDay = (S.blocchi||[]).some(b=>b.data===ds); const _blkDot = _blkDay ? '<span class="mc-dot" style="background:#9aa3af" title="Occupato (agenda del centro)"></span>' : ''; const dotsHtml = apptDots + turniDots + _blkDot;
+    // Righe desktop: fascia oraria per centro + numero pazienti
+    const _mcH = (mm)=>{ const h=Math.floor(mm/60), m2=mm%60; return m2 ? h+':'+String(m2).padStart(2,'0') : String(h); };
+    const mcRows = [];
+    S.centri.filter(c=>c.attivo!==false).forEach(c=>{
+      const _fasce = _turniAttiviGiorno(c, ds, date).concat((c.giornateSingole||[]).filter(g=>g.data===ds));
+      const _n = byCentroM[String(c.id)]||0;
+      if(!_fasce.length && !_n) return;
+      let _rng='';
+      if(_fasce.length){
+        const _mins=_fasce.map(f=>timeToMin(f.inizio)), _maxs=_fasce.map(f=>timeToMin(f.fine));
+        _rng=_mcH(Math.min.apply(null,_mins))+'\u2013'+_mcH(Math.max.apply(null,_maxs));
+      }
+      mcRows.push({col:c.colore||'#9AA8A5', nome:c.nome, rng:_rng, n:_n});
+    });
+    if(_blkDay) mcRows.push({col:'#9aa3af', nome:'Occupato', rng:'', n:0});
+    const mcRowsHtml = mcRows.slice(0,3).map(r=>`<div class="mc-row"><span class="mc-row-dot" style="background:${r.col}"></span><span class="mc-row-txt">${r.rng?`<span class="mc-row-t">${r.rng}</span> `:''}${escapeHtml(r.nome)}${r.n?` \u00b7 <b>${r.n}</b>`:''}</span></div>`).join('') + (mcRows.length>3?`<div class="mc-row mc-row-more">+${mcRows.length-3} altri</div>`:'');
     // Avviso turno su festività
     const turniWarn = hol.isHoliday && dayAppts.length ? `<span class="mc-holiday-warn" title="Appuntamenti in festività">⚠️</span>` : '';
     let cls = 'mc-day';
@@ -6254,6 +6278,7 @@ function renderMonthView(){
         <span class="mc-num">${d}</span>${holIndicator}${chiusuraIcon}${turniWarn}
       </div>
       ${hol.isHoliday?`<div class="mc-holiday-name">${hol.name}</div>`:''}
+      <div class="mc-rows">${mcRowsHtml}</div>
       <div class="mc-dots-row">${dotsHtml}${extra}</div>
     </div>`;
   }
