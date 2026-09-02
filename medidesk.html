@@ -5489,7 +5489,7 @@ function apptPathCenter(){
   try {
     const list=document.getElementById('appt-centri-list');
     if(!list) return;
-    const withTurni=S.centri.filter(c=>c.attivo!==false && c.turni&&c.turni.length);
+    const withTurni=S.centri.filter(c=>c.attivo!==false && (A.free || (c.turni&&c.turni.length)));
     if(!withTurni.length){
       list.innerHTML='<div style="text-align:center;padding:24px;color:var(--ink3)">Nessun centro con turni configurati.<br><br><button class="btn btn-secondary btn-sm" onclick="closeModal(\'modal-appuntamento\');showPage(\'centri\')">Vai a Centri</button></div>';
     } else {
@@ -5530,7 +5530,7 @@ function renderApptCalA(){
     const date=new Date(A.calYear,A.calMonth,d);
     const ds=fmt(date);
     const isPast=date<today;
-    const hasSlots=!isPast&&centro&&hasAvailability(centro,ds);
+    const hasSlots=!isPast&&centro&&(A.free||hasAvailability(centro,ds));
     let cls='cal-day';
     if(isPast||!hasSlots) cls+=' '+(isPast?'past':'noavail');
     else cls+=' available';
@@ -5570,7 +5570,7 @@ function renderApptCalB(){
     const ds=fmt(date);
     const isPast=date<today;
     // Verifica se c'è almeno un centro con disponibilità in quel giorno
-    const hasAny = !isPast && S.centri.some(c=>c.attivo!==false && hasAvailability(c,ds));
+    const hasAny = !isPast && S.centri.some(c=>c.attivo!==false && (A.free || hasAvailability(c,ds)));
     let cls='cal-day';
     if(isPast||!hasAny) cls+=' '+(isPast?'past':'noavail');
     else cls+=' available';
@@ -5589,7 +5589,7 @@ function apptShowCentriForDate(){
   const d=new Date(A.dateStr+'T12:00:00');
   document.getElementById('appt-step-2b-label').textContent =
     'Centri disponibili — '+d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
-  const centriDispo = S.centri.filter(c=>c.attivo!==false && hasAvailability(c,A.dateStr));
+  const centriDispo = S.centri.filter(c=>c.attivo!==false && (A.free || hasAvailability(c,A.dateStr)));
   const list=document.getElementById('appt-centri-day-list');
   if(!centriDispo.length){
     list.innerHTML='<div style="text-align:center;padding:24px;color:var(--ink3)">Nessun centro con disponibilità in questa data.</div>';
@@ -5598,7 +5598,7 @@ function apptShowCentriForDate(){
       const slots=getSlots(c,A.dateStr);
       return `<button class="centro-btn" onclick="apptSelectCentroFromDate('${c.id}')">
         <strong>${c.nome}</strong>
-        <span>${c.indirizzo||''} · ${slots.length} slot disponibili</span>
+        <span>${c.indirizzo||''} · ${A.free?'orario libero':slots.length+' slot disponibili'}</span>
       </button>`;
     }).join('');
   }
