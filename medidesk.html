@@ -1373,7 +1373,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-agenda" class="page">
       <div class="page-header">
         <div><div class="page-title">Agenda</div><div class="page-subtitle">Appuntamenti e prenotazioni</div></div>
-        <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="importaGiornata()">Importa giornata</button><button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button></div>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="importaGiornata()">Importa giornata</button><button class="btn btn-secondary" onclick="openOverbookingFromAgenda()">Overbooking</button><button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button></div>
       </div>
       <div style="margin-bottom:16px">
         <div class="view-toggle">
@@ -2759,7 +2759,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- ══════════════ SCRIPT ══════════════ -->
 <script>
 // ── DICHIARAZIONI GLOBALI (in cima per evitare TDZ) ──
-var A = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, prefillDate:null };
+var A = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, prefillDate:null, free:false };
 var bk = { centroId:null, dateStr:null, ora:null, calYear:null, calMonth:null, medicoId:null, medicoEmail:'', medicoNome:'', slotOccupati:[], _centroData:null };
 var _turnoTargetId = null;
 let _centroEditId = null;
@@ -5429,6 +5429,7 @@ function apptResetWizard(){
     A.calYear = new Date().getFullYear();
     A.calMonth = new Date().getMonth();
     A.prefillDate = prevPrefill;
+    A.free = false;
 
     ['appt-nome','appt-cognome','appt-tel','appt-email','appt-note'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.value='';
@@ -5626,6 +5627,11 @@ function apptShowSlots(){
   const d=new Date(A.dateStr+'T12:00:00');
   document.getElementById('appt-step-3-label').textContent =
     `Orario — ${centro.nome} · ${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}`;
+  if(A.free){
+    document.getElementById('appt-slots').innerHTML = `<div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;justify-content:center;padding:6px 0"><input type="time" class="form-input" id="appt-free-ora" style="max-width:150px" value="${A.ora||''}"><button class="btn btn-primary" onclick="apptSelectFreeOra()">Conferma orario</button></div><p style="grid-column:1/-1;color:var(--ink3);font-size:12px;text-align:center;margin:6px 0 0">Overbooking: inserimento libero, fuori dalla griglia degli slot.</p>`;
+    apptStep(3);
+    return;
+  }
   document.getElementById('appt-slots').innerHTML = slotsAll.length
     ? slotsAll.map(s=>{
         if(s.libero){
@@ -5637,6 +5643,12 @@ function apptShowSlots(){
       }).join('')
     : '<p style="color:var(--ink3);font-size:13px;grid-column:1/-1;text-align:center">Nessuno slot configurato per questo giorno.</p>';
   apptStep(3);
+}
+
+function apptSelectFreeOra(){
+  const v = (document.getElementById('appt-free-ora')||{}).value;
+  if(!v){ showToast('Scegli un orario'); return; }
+  apptSelectSlot(v);
 }
 
 function apptSelectSlot(ora){
@@ -5738,6 +5750,7 @@ async function saveAppuntamento(){
     }
   } catch(err){
     console.error('saveAppuntamento error:', err);
+    if(err && err.code === '23505'){ showToast('Orario gi\u00e0 occupato per quel centro: scegli un altro minuto'); return; }
     showToast('Errore salvataggio: '+err.message);
   }
 }
@@ -5909,7 +5922,7 @@ function renderWeekGrid(days){
   const H = (maxH-minH)/60*WG_HOUR_PX;
   const y = m => (m-minH)/60*WG_HOUR_PX;
   const hasAllday = perDay.some(p=>p.blocchi.length || p.chiuso || p.hol.isHoliday);
-  let h = '<div class="wg">';
+  let h = `<div class="wg" data-minh="${minH}">`;
   h += '<div class="wg-corner"></div>';
   perDay.forEach(p=>{
     h += `<div class="wg-hcell${p.ds===today?' wg-today':''}"><span class="wg-dow">${DAYS_IT[p.d.getDay()]}</span><span class="wg-num">${p.d.getDate()}</span></div>`;
@@ -5933,7 +5946,7 @@ function renderWeekGrid(days){
   const _now = new Date();
   const nowMin = _now.getHours()*60 + _now.getMinutes();
   perDay.forEach(p=>{
-    let col = `<div class="wg-col${p.chiuso?' wg-chiusura':''}" style="height:${H}px">`;
+    let col = `<div class="wg-col${p.chiuso?' wg-chiusura':''}" data-ds="${p.ds}" style="height:${H}px">`;
     p.bands.forEach(b=>{
       col += `<div class="wg-band" style="top:${y(b.ini)}px;height:${Math.max(2,y(b.fine)-y(b.ini))}px;background:${escapeAttr(b.colore)}"></div>`;
     });
@@ -5941,7 +5954,7 @@ function renderWeekGrid(days){
       const w = 100/e.nCols, l = e.col*w;
       const hh = Math.max(20, y(e.fine)-y(e.ini)-2);
       const riga2 = (hh>=34 && e.tipo) ? `<div style="font-size:10px;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(e.tipo)}</div>` : '';
-      col += `<div class="wg-evt${e.cancelled?' wg-cancelled':''}" style="top:${y(e.ini)+1}px;height:${hh}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px);background:${escapeAttr(e.colore)}" onclick="showApptDetail('${escapeAttr(e.id)}')" title="${escapeAttr(e.ora+' '+(e.cognome||'')+' '+(e.nome||''))}"><span class="wg-evt-t">${escapeHtml(e.ora)}</span> <span class="wg-evt-n">${escapeHtml((e.cognome||'')+(e.nome?' '+e.nome:''))}</span>${riga2}</div>`;
+      col += `<div class="wg-evt${e.cancelled?' wg-cancelled':''}" data-id="${escapeAttr(e.id)}" style="top:${y(e.ini)+1}px;height:${hh}px;left:calc(${l}% + 2px);width:calc(${w}% - 4px);background:${escapeAttr(e.colore)}" onclick="showApptDetail('${escapeAttr(e.id)}')" title="${escapeAttr(e.ora+' '+(e.cognome||'')+' '+(e.nome||''))}"><span class="wg-evt-t">${escapeHtml(e.ora)}</span> <span class="wg-evt-n">${escapeHtml((e.cognome||'')+(e.nome?' '+e.nome:''))}</span>${riga2}</div>`;
     });
     if(p.ds===today && nowMin>=minH && nowMin<=maxH){
       col += `<div class="wg-now" style="top:${y(nowMin)}px"></div>`;
@@ -5951,6 +5964,82 @@ function renderWeekGrid(days){
   });
   h += '</div>';
   wrap.innerHTML = h;
+  initWeekGridDrag();
+}
+
+// === Agenda: drag & drop sulla griglia settimanale (fase 2) ===
+var _wgDrag = null;
+function initWeekGridDrag(){
+  const wrap = document.getElementById('week-grid-wrap');
+  if(!wrap || wrap._dragInit) return;
+  wrap._dragInit = true;
+  wrap.addEventListener('mousedown', function(ev){
+    if(ev.button !== 0) return;
+    const el = ev.target.closest('.wg-evt');
+    if(!el || el.classList.contains('wg-cancelled') || !el.dataset.id) return;
+    _wgDrag = { id: el.dataset.id, el: el, startX: ev.clientX, startY: ev.clientY, moved: false };
+    ev.preventDefault();
+  });
+  document.addEventListener('mousemove', function(ev){
+    if(!_wgDrag) return;
+    const dx = ev.clientX - _wgDrag.startX, dy = ev.clientY - _wgDrag.startY;
+    if(!_wgDrag.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+    _wgDrag.moved = true;
+    const s = _wgDrag.el.style;
+    s.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    s.zIndex = 30; s.opacity = .75; s.pointerEvents = 'none';
+  });
+  document.addEventListener('mouseup', function(ev){
+    if(!_wgDrag) return;
+    const d = _wgDrag; _wgDrag = null;
+    if(!d.moved) return; // click semplice: lascia lavorare showApptDetail
+    document.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); }, { capture: true, once: true });
+    const reset = function(){ const s = d.el.style; s.transform=''; s.zIndex=''; s.opacity=''; s.pointerEvents=''; };
+    const wg = document.querySelector('#week-grid-wrap .wg');
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    const col = under && under.closest ? under.closest('.wg-col') : null;
+    if(!wg || !col || !col.dataset.ds){ reset(); return; }
+    const minH = parseInt(wg.dataset.minh, 10) || 0;
+    const rect = col.getBoundingClientRect();
+    const targetMin = minH + Math.round((ev.clientY - rect.top) / WG_HOUR_PX * 60);
+    _wgDropAppt(d.id, col.dataset.ds, targetMin, reset);
+  });
+}
+async function _wgDropAppt(id, ds, targetMin, reset){
+  const a = S.appuntamenti.find(x => String(x.id) === String(id));
+  if(!a){ reset(); return; }
+  const centro = S.centri.find(c => String(c.id) === String(a.centroId));
+  if(!centro){ reset(); showToast('Centro non trovato'); return; }
+  // Slot liberi del giorno target (stessa semantica di getSlots); lo slot attuale conta come libero se resto nello stesso giorno
+  let liberi = getSlots(centro, ds);
+  if(a.data === ds && a.ora && !liberi.includes(a.ora)) liberi = liberi.concat([a.ora]);
+  if(!liberi.length){ reset(); showToast('Nessuno slot disponibile per ' + centro.nome + ' in quel giorno'); return; }
+  let best = null, bestD = Infinity;
+  liberi.forEach(function(s2){ const dd = Math.abs(timeToMin(s2) - targetMin); if(dd < bestD){ bestD = dd; best = s2; } });
+  if(ds === a.data && best === a.ora){ reset(); return; }
+  const _oggiStr = new Date().toLocaleDateString('en-CA');
+  const _n = new Date(); const _nowMin = _n.getHours()*60 + _n.getMinutes();
+  if(ds < _oggiStr || (ds === _oggiStr && timeToMin(best) <= _nowMin)){ reset(); showToast('Non puoi spostare un appuntamento nel passato'); return; }
+  if(isOnline() && S.medicoId){
+    try {
+      const { error } = await supabaseClient.from('appuntamenti').update({ data: ds, ora: best }).eq('id', a.id).select('id').single();
+      if(error) throw error;
+    } catch(e){
+      reset();
+      showToast(e && e.code === '23505' ? 'Slot gi\u00e0 occupato: spostamento annullato' : 'Spostamento non riuscito: ' + (e.message || ''));
+      renderAgenda();
+      return;
+    }
+  }
+  a.data = ds; a.ora = best;
+  save();
+  renderAgenda(); renderDashboard(); updateStats();
+  const dFmt = new Date(ds + 'T12:00:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+  if(centro.email){
+    showToastAction('Spostato a ' + dFmt + ' ore ' + best, 'Avvisa il centro', function(){ sendNotificaCentro('spostamento', a, true); showToast('Email di aggiornamento inviata al centro'); }, 8000);
+  } else {
+    showToast('Spostato a ' + dFmt + ' ore ' + best);
+  }
 }
 
 function renderWeekLegend(days){
@@ -6182,6 +6271,17 @@ function openAppuntamentoFromAgenda(){
     A.prefillDate = S.selectedDay;
   }
   openModal('modal-appuntamento');
+  A.free = false;
+  const _t = document.getElementById('appt-modal-title'); if(_t) _t.textContent = 'Nuovo appuntamento';
+}
+
+function openOverbookingFromAgenda(){
+  if(S.selectedDay){
+    A.prefillDate = S.selectedDay;
+  }
+  openModal('modal-appuntamento');
+  A.free = true;
+  const _t = document.getElementById('appt-modal-title'); if(_t) _t.textContent = 'Overbooking \u2014 orario libero';
 }
 
 var _mostraCancellati = false;
@@ -7804,13 +7904,13 @@ function selectSkin(skin){
 
 // ── NOTIFICHE EMAIL ──
 
-async function sendNotificaCentro(tipo, appt){
+async function sendNotificaCentro(tipo, appt, force){
   const toggleMap={
     nuova_prenotazione:   S.settings.notifNuovaPrenotazione,
     cancellazione:        S.settings.notifCancellazioneMedico,
     appuntamento_manuale: S.settings.notifAppuntamentoManuale
   };
-  if(!toggleMap[tipo]) return;
+  if(!toggleMap[tipo] && !force) return;
   const centro=S.centri.find(c=>String(c.id)===String(appt.centroId||appt.centro_id));
   if(!centro||!centro.email) return;
   if(!isOnline() || !S.medicoId) return;

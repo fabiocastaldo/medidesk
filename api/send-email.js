@@ -600,7 +600,7 @@ export default async function handler(req, res) {
   } else if (tipo === 'notifica_centro_evento') {
     const { appt_id, evento } = body;
     if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
-    const EVENTI_VALIDI = ['nuova_prenotazione', 'appuntamento_manuale', 'cancellazione'];
+    const EVENTI_VALIDI = ['nuova_prenotazione', 'appuntamento_manuale', 'cancellazione', 'spostamento'];
     if (!evento || !EVENTI_VALIDI.includes(evento)) {
       return res.status(400).json({ error: `evento deve essere uno di: ${EVENTI_VALIDI.join(', ')}` });
     }
@@ -608,7 +608,7 @@ export default async function handler(req, res) {
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
     if (!appt.centroEmail) return res.status(400).json({ error: 'Il centro non ha un indirizzo email configurato' });
     const dataFmt = formatDateIt(appt.data);
-    const soggetti = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento' };
+    const soggetti = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento', spostamento: 'Spostamento appuntamento' };
     to            = appt.centroEmail;
     subject       = `${soggetti[evento]} — ${appt.pazienteNome}, ${dataFmt}`;
     html          = buildHtmlNotificaCentro({ evento, paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
@@ -769,11 +769,12 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
 }
 
 function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_visita, medico_nome, centro_nome }) {
-  const LABELS = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento' };
+  const LABELS = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento', spostamento: 'Spostamento appuntamento' };
   const INTRO  = {
     nuova_prenotazione: `&Egrave; appena arrivata una nuova prenotazione online per ${medArt(medico_nome)}. Vi giriamo i dettagli per la vostra agenda.`,
     appuntamento_manuale: `${medArtMai(medico_nome)} ha inserito un nuovo appuntamento. Di seguito i dettagli.`,
-    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento ${medDi(medico_nome)}: lo slot &egrave; di nuovo disponibile.`
+    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento ${medDi(medico_nome)}: lo slot &egrave; di nuovo disponibile.`,
+    spostamento: `${medArtMai(medico_nome)} ha spostato un appuntamento. Di seguito i nuovi dettagli aggiornati.`
   };
   const label = LABELS[evento] || evento;
   const intro = INTRO[evento] || `Vi inoltriamo un aggiornamento relativo all&apos;agenda ${medDi(medico_nome)}.`;
