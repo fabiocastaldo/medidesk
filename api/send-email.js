@@ -322,11 +322,11 @@ const VALID_TIPI = new Set([
   'account_eliminazione', 'notifica_prenotazione_coop',
   'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione',
   'notifica_medico_cancellazione', 'notifica_medico_appuntamento',
-  'avviso_lista_attesa'
+  'spostamento_paziente', 'avviso_lista_attesa'
 ]);
 
 const PATH1_TIPI = new Set([
-  'notifica_medico_appuntamento',
+  'notifica_medico_appuntamento', 'spostamento_paziente',
   'conferma_appt_medico', 'cancellazione_paziente', 'notifica_centro_evento',
   'chiusura_studio_centro', 'account_eliminazione'
 ]);
@@ -520,6 +520,25 @@ export default async function handler(req, res) {
     targetType    = 'appuntamento';
     targetId      = body.appt_id;
 
+  } else if (tipo === 'spostamento_paziente') {
+    const { appt_id } = body;
+    if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
+    const appt = await lookupAppt(appt_id, authCtx.medicoId, supabaseUrl, serviceKey);
+    if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    if (!appt.emailPaziente) return res.status(200).json({ ok: true, skipped: 'paziente senza email' });
+    const dataFmtSp = formatDateIt(appt.data);
+    to            = appt.emailPaziente;
+    subject       = `Appuntamento spostato \u2014 nuova data ${dataFmtSp}`;
+    html          = buildHtmlSpostamentoPaziente({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), data_fmt: esc(dataFmtSp), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_indirizzo: esc(appt.centroIndirizzo || '') });
+    if (appt.apptId && appt.data && appt.ora) {
+      const _ics = buildICS({ apptId: appt.apptId, data: appt.data, ora: appt.ora, summary: buildIcsSummary(appt.tipoVisita, appt.medicoNome), description: appt.medicoNome ? `Appuntamento spostato con ${appt.medicoNome}` : 'Appuntamento spostato', location: [appt.centroNome, appt.centroIndirizzo].filter(Boolean).join(', ') });
+      icsAttachment = { filename: 'appuntamento.ics', content: Buffer.from(_ics).toString('base64'), contentType: 'text/calendar; charset=utf-8' };
+    }
+    replyTo       = appt.medicoEmail;
+    medicoIdAudit = authCtx.medicoId;
+    targetType    = 'appuntamento';
+    targetId      = appt_id;
+
   } else if (tipo === 'notifica_medico_appuntamento') {
     const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
@@ -600,7 +619,7 @@ export default async function handler(req, res) {
   } else if (tipo === 'notifica_centro_evento') {
     const { appt_id, evento } = body;
     if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
-    const EVENTI_VALIDI = ['nuova_prenotazione', 'appuntamento_manuale', 'cancellazione'];
+    const EVENTI_VALIDI = ['nuova_prenotazione', 'appuntamento_manuale', 'cancellazione', 'spostamento'];
     if (!evento || !EVENTI_VALIDI.includes(evento)) {
       return res.status(400).json({ error: `evento deve essere uno di: ${EVENTI_VALIDI.join(', ')}` });
     }
@@ -608,7 +627,7 @@ export default async function handler(req, res) {
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
     if (!appt.centroEmail) return res.status(400).json({ error: 'Il centro non ha un indirizzo email configurato' });
     const dataFmt = formatDateIt(appt.data);
-    const soggetti = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento' };
+    const soggetti = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento', spostamento: 'Spostamento appuntamento' };
     to            = appt.centroEmail;
     subject       = `${soggetti[evento]} — ${appt.pazienteNome}, ${dataFmt}`;
     html          = buildHtmlNotificaCentro({ evento, paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome) });
@@ -768,12 +787,29 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
   return emailShell(body);
 }
 
+function buildHtmlSpostamentoPaziente({ paziente_nome, medico_nome, centro_nome, data_fmt, ora, tipo_visita, centro_indirizzo }) {
+  const rows =
+    detailRow('Medico', medico_nome) +
+    detailRow('Nuova data', data_fmt) +
+    detailRow('Nuovo orario', ora) +
+    detailRow('Centro', centro_nome, { last: !centro_indirizzo && !tipo_visita }) +
+    (centro_indirizzo ? detailRow('Indirizzo', centro_indirizzo, { last: !tipo_visita }) : '') +
+    (tipo_visita ? detailRow('Tipo visita', tipo_visita, { last: true }) : '');
+  const body =
+    emailTitle('Appuntamento spostato') +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${paziente_nome},<br>il Suo appuntamento ${medDi(medico_nome)} &egrave; stato spostato. Di seguito i nuovi dettagli; il codice di cancellazione gi&agrave; in Suo possesso resta valido.</p>` +
+    detailCard(rows) +
+    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">In allegato trova l&apos;evento aggiornato per il Suo calendario.</p>`;
+  return emailShell(body);
+}
+
 function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_visita, medico_nome, centro_nome }) {
-  const LABELS = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento' };
+  const LABELS = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento', spostamento: 'Spostamento appuntamento' };
   const INTRO  = {
     nuova_prenotazione: `&Egrave; appena arrivata una nuova prenotazione online per ${medArt(medico_nome)}. Vi giriamo i dettagli per la vostra agenda.`,
     appuntamento_manuale: `${medArtMai(medico_nome)} ha inserito un nuovo appuntamento. Di seguito i dettagli.`,
-    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento ${medDi(medico_nome)}: lo slot &egrave; di nuovo disponibile.`
+    cancellazione: `Vi segnaliamo la cancellazione di un appuntamento ${medDi(medico_nome)}: lo slot &egrave; di nuovo disponibile.`,
+    spostamento: `${medArtMai(medico_nome)} ha spostato un appuntamento. Di seguito i nuovi dettagli aggiornati.`
   };
   const label = LABELS[evento] || evento;
   const intro = INTRO[evento] || `Vi inoltriamo un aggiornamento relativo all&apos;agenda ${medDi(medico_nome)}.`;
