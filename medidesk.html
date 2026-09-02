@@ -1349,7 +1349,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-agenda" class="page">
       <div class="page-header">
         <div><div class="page-title">Agenda</div><div class="page-subtitle">Appuntamenti e prenotazioni</div></div>
-        <button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="importaGiornata()">Importa giornata</button><button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button></div>
       </div>
       <div style="margin-bottom:16px">
         <div class="view-toggle">
@@ -2662,7 +2662,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <div class="modal">
     <div class="modal-header"><span class="modal-title">Importa giornata</span><button class="modal-close" onclick="closeModal('modal-import-agenda')">&#10005;</button></div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Centro: <strong id="import-centro-label"></strong></p>
+      <div class="form-group"><label class="form-label">Centro</label><select class="form-input" id="import-centro-sel" onchange="_importCentroId=this.value"></select></div>
       <div class="form-group">
         <label class="form-label">Foto / PDF dell'agenda</label>
         <input class="form-input" id="import-file" type="file" accept="image/*,application/pdf">
@@ -4554,7 +4554,7 @@ function renderCentroCard(c, isActive){
           <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
         </div>
         ${isActive && c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
-        ${isActive && c.gestione==='centro'?`<button class="btn btn-sm btn-secondary" onclick="importaGiornata('${c.id}')">Importa</button>`:''}
+        
         <div class="centro-actions">
           ${c.gestione!=='cooperativa'?`<button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro"><svg class="ic"><use href="#ic-edit"/></svg></button>`:''}
           <button class="centro-act" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
@@ -4677,9 +4677,16 @@ let _importRighe = [];
 
 function importaGiornata(centroId){
   if(!isOnline()){ showToast('Serve la connessione per importare'); return; }
-  const c = S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
-  _importCentroId = centroId;
-  const lbl = document.getElementById('import-centro-label'); if(lbl) lbl.textContent = c.nome;
+  const eleggibili = S.centri.filter(c => c.attivo !== false && c.gestione === 'centro');
+  if(!eleggibili.length){ showToast('Nessun centro con agenda gestita dal centro'); return; }
+  const sel = document.getElementById('import-centro-sel');
+  if(sel){
+    sel.innerHTML = eleggibili.map(c => `<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('');
+    if(centroId && eleggibili.some(c => String(c.id) === String(centroId))) sel.value = String(centroId);
+    _importCentroId = sel.value;
+  } else {
+    _importCentroId = centroId || eleggibili[0].id;
+  }
   const f = document.getElementById('import-file'); if(f) f.value = '';
   const t = document.getElementById('import-text'); if(t) t.value = '';
   const rv = document.getElementById('import-review'); if(rv) rv.innerHTML = '';
