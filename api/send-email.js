@@ -322,11 +322,11 @@ const VALID_TIPI = new Set([
   'account_eliminazione', 'notifica_prenotazione_coop',
   'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione',
   'notifica_medico_cancellazione', 'notifica_medico_appuntamento',
-  'notifica_medico_spostamento', 'avviso_lista_attesa'
+  'spostamento_paziente', 'avviso_lista_attesa'
 ]);
 
 const PATH1_TIPI = new Set([
-  'notifica_medico_appuntamento', 'notifica_medico_spostamento',
+  'notifica_medico_appuntamento', 'spostamento_paziente',
   'conferma_appt_medico', 'cancellazione_paziente', 'notifica_centro_evento',
   'chiusura_studio_centro', 'account_eliminazione'
 ]);
@@ -520,20 +520,24 @@ export default async function handler(req, res) {
     targetType    = 'appuntamento';
     targetId      = body.appt_id;
 
-  } else if (tipo === 'notifica_medico_spostamento') {
-    const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
+  } else if (tipo === 'spostamento_paziente') {
+    const { appt_id } = body;
+    if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
+    const appt = await lookupAppt(appt_id, authCtx.medicoId, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
-    if (String(appt.apptMedicoId) !== String(authCtx.medicoId)) {
-      return res.status(404).json({ error: 'not_found' });
-    }
-    if (!appt.medicoEmail) return res.status(200).json({ ok: true, skipped: 'medico senza email' });
+    if (!appt.emailPaziente) return res.status(200).json({ ok: true, skipped: 'paziente senza email' });
     const dataFmtSp = formatDateIt(appt.data);
-    to            = appt.medicoEmail;
-    subject       = `Appuntamento spostato \u2014 ${appt.pazienteNome}, ${dataFmtSp}`;
-    html          = buildHtmlNotificaMedicoEvento({ evento: 'spostamento', medico_nome: esc(appt.medicoNome), paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtSp), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_nome: esc(appt.centroNome) });
-    medicoIdAudit = appt.apptMedicoId;
+    to            = appt.emailPaziente;
+    subject       = `Appuntamento spostato \u2014 nuova data ${dataFmtSp}`;
+    html          = buildHtmlSpostamentoPaziente({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), data_fmt: esc(dataFmtSp), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_indirizzo: esc(appt.centroIndirizzo || '') });
+    if (appt.apptId && appt.data && appt.ora) {
+      const _ics = buildICS({ apptId: appt.apptId, data: appt.data, ora: appt.ora, summary: buildIcsSummary(appt.tipoVisita, appt.medicoNome), description: appt.medicoNome ? `Appuntamento spostato con ${appt.medicoNome}` : 'Appuntamento spostato', location: [appt.centroNome, appt.centroIndirizzo].filter(Boolean).join(', ') });
+      icsAttachment = { filename: 'appuntamento.ics', content: Buffer.from(_ics).toString('base64'), contentType: 'text/calendar; charset=utf-8' };
+    }
+    replyTo       = appt.medicoEmail;
+    medicoIdAudit = authCtx.medicoId;
     targetType    = 'appuntamento';
-    targetId      = body.appt_id;
+    targetId      = appt_id;
 
   } else if (tipo === 'notifica_medico_appuntamento') {
     const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
@@ -783,6 +787,22 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
   return emailShell(body);
 }
 
+function buildHtmlSpostamentoPaziente({ paziente_nome, medico_nome, centro_nome, data_fmt, ora, tipo_visita, centro_indirizzo }) {
+  const rows =
+    detailRow('Medico', medico_nome) +
+    detailRow('Nuova data', data_fmt) +
+    detailRow('Nuovo orario', ora) +
+    detailRow('Centro', centro_nome, { last: !centro_indirizzo && !tipo_visita }) +
+    (centro_indirizzo ? detailRow('Indirizzo', centro_indirizzo, { last: !tipo_visita }) : '') +
+    (tipo_visita ? detailRow('Tipo visita', tipo_visita, { last: true }) : '');
+  const body =
+    emailTitle('Appuntamento spostato') +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${paziente_nome},<br>il Suo appuntamento ${medDi(medico_nome)} &egrave; stato spostato. Di seguito i nuovi dettagli; il codice di cancellazione gi&agrave; in Suo possesso resta valido.</p>` +
+    detailCard(rows) +
+    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">In allegato trova l&apos;evento aggiornato per il Suo calendario.</p>`;
+  return emailShell(body);
+}
+
 function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_visita, medico_nome, centro_nome }) {
   const LABELS = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento', spostamento: 'Spostamento appuntamento' };
   const INTRO  = {
@@ -808,12 +828,11 @@ function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_vi
 }
 
 function buildHtmlNotificaMedicoEvento({ evento, medico_nome, paziente_nome, data_fmt, ora, tipo_visita, centro_nome }) {
-  const TITOLI = { prenotazione: 'Nuova prenotazione online', cancellazione: 'Prenotazione cancellata dal paziente', appuntamento: 'Appuntamento registrato', spostamento: 'Appuntamento spostato' };
+  const TITOLI = { prenotazione: 'Nuova prenotazione online', cancellazione: 'Prenotazione cancellata dal paziente', appuntamento: 'Appuntamento registrato' };
   const INTRI = {
     prenotazione: 'un paziente ha prenotato una visita dalla Sua pagina pubblica. Di seguito i dettagli.',
     cancellazione: 'il paziente ha cancellato la propria prenotazione: lo slot &egrave; di nuovo disponibile in agenda.',
-    appuntamento: 'ecco il riepilogo dell&apos;appuntamento che ha appena inserito, per i Suoi archivi.',
-    spostamento: 'ecco i nuovi dettagli dell&apos;appuntamento appena spostato in agenda.'
+    appuntamento: 'ecco il riepilogo dell&apos;appuntamento che ha appena inserito, per i Suoi archivi.'
   };
   const rows =
     detailRow('Paziente', paziente_nome) +
