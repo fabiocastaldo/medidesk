@@ -415,9 +415,9 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-table tbody tr:nth-child(even){background:var(--surface2)}
 .paz-row:hover{background:var(--accent-light)}
 .paz-table td{padding:8px 14px;white-space:nowrap}
-.paz-table th:nth-child(2){width:320px}
-.paz-table th:nth-child(3){width:70px}
-.paz-table th:nth-child(4){width:280px}
+.paz-table th:nth-child(2){width:340px}
+.paz-table th:nth-child(3){width:80px}
+.paz-table th:nth-child(4){width:140px}
 .paz-dim{color:var(--ink3);opacity:.55}
 .paz-act{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;margin-left:6px;transition:all .12s;white-space:nowrap}
 .paz-act:hover{border-color:var(--accent);background:var(--accent-light)}
@@ -9858,11 +9858,10 @@ function renderPazienti(){
 function _pazRowHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
   const contatti=[r.email,r.tel].filter(Boolean).map(escapeHtml).join(' &middot; ')||'<span class="paz-dim">&ndash;</span>';
-  const btnErog=(r.next&&r.next.id)?`<button class="paz-act paz-act-erog${r.next.erogata===true?' is-erogata':''}" onclick="event.stopPropagation();toggleErogata('${escapeAttr(String(r.next.id))}',{silent:true})">${r.next.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>`:'';
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const azioni=btnErog+btnVis;
+  const azioni=btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span></td>
     <td style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px">${contatti}</td>
@@ -9873,7 +9872,6 @@ function _pazRowHTML(r){
 function _pazCardHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
   const meta=[r.nascita,r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
-  const cErog=(r.next&&r.next.id)?`<button class="paz-act paz-act-erog${r.next.erogata===true?' is-erogata':''}" onclick="event.stopPropagation();toggleErogata('${escapeAttr(String(r.next.id))}',{silent:true})">${r.next.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>`:'';
   const cVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
@@ -9882,7 +9880,7 @@ function _pazCardHTML(r){
       <div class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</div>
       <div class="paziente-meta">${meta||('&nbsp;')}</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')+cErog+cVis}</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')+cVis}</div>
   </div>`;
 }
 
