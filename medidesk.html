@@ -414,11 +414,10 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-row{cursor:pointer;transition:background .12s}
 .paz-row:hover{background:var(--accent-light)}
 .paz-badge-pren{display:inline-block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);background:var(--accent-light);border-radius:20px;padding:2px 8px;margin-left:8px;vertical-align:1px}
-.paz-table th:nth-child(2){width:110px}
-.paz-table th:nth-child(3){width:230px}
-.paz-table th:nth-child(4){width:200px}
-.paz-table th:nth-child(5){width:70px}
-.paz-table th:nth-child(6){width:96px}
+.paz-table th:nth-child(2){width:240px}
+.paz-table th:nth-child(3){width:210px}
+.paz-table th:nth-child(4){width:70px}
+.paz-table th:nth-child(5){width:96px}
 .paz-dim{color:var(--ink3);opacity:.55}
 .paz-next-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
@@ -9852,7 +9851,7 @@ function renderPazienti(){
     tEl.insertAdjacentHTML('beforeend','<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>');
     return;
   }
-  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Nascita</th><th>Contatti</th><th>Prossimo appuntamento</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Contatti</th><th>Prossimo appuntamento</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
   cEl.innerHTML=list.map(_pazCardHTML).join('');
 }
 
@@ -9875,7 +9874,6 @@ function _pazRowHTML(r){
   const azioni=btnErog+btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><div style="display:flex;align-items:center;gap:10px"><div class="paziente-avatar" style="width:34px;height:34px;font-size:13px">${initials}</div><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${badge}</span></div></td>
-    <td>${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="font-size:12.5px">${contatti}</td>
     <td>${_pazNextHTML(r)}</td>
     <td style="text-align:center">${r.tipo==='paziente'?r.nVisite:'<span class="paz-dim">&ndash;</span>'}</td>
