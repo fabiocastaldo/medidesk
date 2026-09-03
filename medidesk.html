@@ -156,7 +156,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .wg-chip{font-size:10px;line-height:1.4;border-radius:4px;padding:1px 5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wg-gutter{position:relative}
 .wg-hlabel{position:absolute;right:6px;transform:translateY(-50%);font-size:10.5px;color:var(--ink3)}
-.wg-col{position:relative;border-left:1px solid var(--border);background-image:linear-gradient(var(--border) 1px,transparent 1px);background-size:100% 48px}
+.wg-col{cursor:pointer;position:relative;border-left:1px solid var(--border);background-image:linear-gradient(var(--border) 1px,transparent 1px);background-size:100% 48px}
 .wg-col.wg-chiusura{background-color:var(--surface2);background-image:repeating-linear-gradient(45deg,transparent,transparent 7px,rgba(21,33,31,.04) 7px,rgba(21,33,31,.04) 14px)}
 .wg-band{position:absolute;left:0;right:0;opacity:.12;pointer-events:none}
 .wg-evt{position:absolute;border-radius:6px;padding:2px 6px;font-size:11.5px;line-height:1.25;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;box-shadow:0 1px 2px rgba(21,33,31,.18);z-index:2}
@@ -6037,6 +6037,43 @@ function initWeekGridDrag(){
     const targetMin = minH + Math.round((ev.clientY - rect.top) / WG_HOUR_PX * 60);
     _wgDropAppt(d.id, col.dataset.ds, targetMin, reset);
   });
+  // Click su cella vuota: nuovo appuntamento precompilato (slot libero piu' vicino tra i centri attivi)
+  wrap.addEventListener('click', function(ev){
+    if(ev.target.closest('.wg-evt')) return; // dettaglio appuntamento
+    const col = ev.target.closest('.wg-col');
+    if(!col || !col.dataset.ds) return;
+    if(col.classList.contains('wg-chiusura')){ showToast('Giornata di chiusura'); return; }
+    const wg = document.querySelector('#week-grid-wrap .wg');
+    if(!wg) return;
+    const minH = parseInt(wg.dataset.minh, 10) || 0;
+    const rect = col.getBoundingClientRect();
+    const targetMin = minH + Math.round((ev.clientY - rect.top) / WG_HOUR_PX * 60);
+    _wgNuovoApptDaCella(col.dataset.ds, targetMin);
+  });
+}
+
+function _wgNuovoApptDaCella(ds, targetMin){
+  const _oggiStr = new Date().toLocaleDateString('en-CA');
+  const _n = new Date(); const _nowMin = _n.getHours()*60 + _n.getMinutes();
+  if(ds < _oggiStr || (ds === _oggiStr && targetMin <= _nowMin)){ showToast('Non puoi creare un appuntamento nel passato'); return; }
+  let best = null, bestD = Infinity, bestCentro = null;
+  S.centri.forEach(function(c){
+    if(c.attivo === false) return;
+    getSlots(c, ds).forEach(function(s2){
+      const m = timeToMin(s2);
+      if(ds === _oggiStr && m <= _nowMin) return;
+      const dd = Math.abs(m - targetMin);
+      if(dd < bestD){ bestD = dd; best = s2; bestCentro = c; }
+    });
+  });
+  if(!best){ showToast('Nessuno slot libero in questa giornata: usa Overbooking'); return; }
+  A.prefillDate = null;
+  openModal('modal-appuntamento');
+  A.free = false;
+  A.centroId = String(bestCentro.id);
+  A.dateStr = ds;
+  apptShowSlots();
+  apptSelectSlot(best);
 }
 async function _wgDropAppt(id, ds, targetMin, reset){
   const a = S.appuntamenti.find(x => String(x.id) === String(id));
