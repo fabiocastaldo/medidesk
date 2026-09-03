@@ -6037,6 +6037,48 @@ function initWeekGridDrag(){
     const targetMin = minH + Math.round((ev.clientY - rect.top) / WG_HOUR_PX * 60);
     _wgDropAppt(d.id, col.dataset.ds, targetMin, reset);
   });
+  // Doppio click su cella vuota DENTRO una fascia: nuovo appuntamento precompilato sullo slot libero piu' vicino
+  wrap.addEventListener('dblclick', function(ev){
+    if(ev.target.closest('.wg-evt')) return; // dettaglio appuntamento
+    const col = ev.target.closest('.wg-col');
+    if(!col || !col.dataset.ds) return;
+    if(col.classList.contains('wg-chiusura')) return;
+    const wg = document.querySelector('#week-grid-wrap .wg');
+    if(!wg) return;
+    const minH = parseInt(wg.dataset.minh, 10) || 0;
+    const rect = col.getBoundingClientRect();
+    const targetMin = minH + Math.round((ev.clientY - rect.top) / WG_HOUR_PX * 60);
+    _wgNuovoApptDaCella(col.dataset.ds, targetMin);
+  });
+}
+
+function _wgNuovoApptDaCella(ds, targetMin){
+  const _oggiStr = new Date().toLocaleDateString('en-CA');
+  const _n = new Date(); const _nowMin = _n.getHours()*60 + _n.getMinutes();
+  if(ds < _oggiStr || (ds === _oggiStr && targetMin <= _nowMin)){ showToast('Non puoi creare un appuntamento nel passato'); return; }
+  const _d = new Date(ds + 'T12:00:00');
+  let best = null, bestD = Infinity, bestCentro = null, dentroFascia = false;
+  S.centri.forEach(function(c){
+    if(c.attivo === false) return;
+    const fasce = _turniAttiviGiorno(c, ds, _d).concat((c.giornateSingole||[]).filter(function(g){ return g.data === ds; }));
+    if(!fasce.some(function(f){ return timeToMin(f.inizio) <= targetMin && targetMin <= timeToMin(f.fine); })) return;
+    dentroFascia = true;
+    getSlots(c, ds).forEach(function(s2){
+      const m = timeToMin(s2);
+      if(ds === _oggiStr && m <= _nowMin) return;
+      const dd = Math.abs(m - targetMin);
+      if(dd < bestD){ bestD = dd; best = s2; bestCentro = c; }
+    });
+  });
+  if(!dentroFascia) return; // fuori dalle fasce: nessuna reazione
+  if(!best){ showToast('Nessuno slot libero in questa fascia: usa Overbooking'); return; }
+  A.prefillDate = null;
+  openModal('modal-appuntamento');
+  A.free = false;
+  A.centroId = String(bestCentro.id);
+  A.dateStr = ds;
+  apptShowSlots();
+  apptSelectSlot(best);
 }
 async function _wgDropAppt(id, ds, targetMin, reset){
   const a = S.appuntamenti.find(x => String(x.id) === String(id));
