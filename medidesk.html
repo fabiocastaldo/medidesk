@@ -9819,6 +9819,7 @@ function renderPazienti(){
   const visti=new Set(S.pazienti.map(p=>(p.nome+'|'+p.cognome).toLowerCase()));
   const pren={};
   futuri.forEach(a=>{
+    if(!((a.nome||'').trim()||(a.cognome||'').trim())) return;
     const k=((a.nome||'')+'|'+(a.cognome||'')).toLowerCase();
     if(visti.has(k)||pren[k]) return;
     pren[k]=a;
