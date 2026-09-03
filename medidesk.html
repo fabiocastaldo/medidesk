@@ -6809,12 +6809,13 @@ function showPazienteDetail(id){
   const nReferti = visite.reduce((s,v)=>s+getFotoPaths(v.foto_url).length,0);
   const canSint = nReferti>0 || visite.some(v=>(v.clinica||'').trim());
   const sintLabel = nReferti>0 ? `Sintetizza dai referti (${nReferti})` : 'Sintetizza storia clinica';
+  const _fb=(!p.email||!p.tel)?_contattiDaPrenotazioni(p):{email:'',tel:''};
   document.getElementById('modal-paziente-body').innerHTML=`
     <div class="extracted-fields" style="margin-bottom:16px">
       <div class="field-row"><span class="field-key">Nome</span><span class="field-val">${escapeHtml(p.nome)} ${escapeHtml(p.cognome)}</span></div>
       <div class="field-row"><span class="field-key">Nascita</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-nascita" placeholder="GG/MM/AAAA" value="${escapeAttr(p.nascita||'')}"></span></div>
-      <div class="field-row"><span class="field-key">Email</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-email" type="email" placeholder="aggiungi" value="${escapeAttr(p.email||'')}"></span></div>
-      <div class="field-row"><span class="field-key">Telefono</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-tel" placeholder="aggiungi" value="${escapeAttr(p.tel||'')}"></span></div>
+      <div class="field-row"><span class="field-key">Email</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-email" type="email" placeholder="aggiungi" value="${escapeAttr(p.email||_fb.email||'')}"></span></div>
+      <div class="field-row"><span class="field-key">Telefono</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-tel" placeholder="aggiungi" value="${escapeAttr(p.tel||_fb.tel||'')}"></span></div>
       <div style="text-align:right;margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="savePazienteAnagrafica('${escapeAttr(id)}')">Salva anagrafica</button></div>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
@@ -7574,7 +7575,7 @@ async function sintetizzaReferti(pazId){
 }
 
 // ── VISITA / FASCICOLO (flusso a step) ──
-var V = { selectedPazienteId:null, isNewPaziente:false, refertoFiles:[], _previewUrls:[] };
+var V = { selectedPazienteId:null, selectedApptId:null, isNewPaziente:false, refertoFiles:[], _previewUrls:[] };
 
 function openModalVisita(){
   V.selectedPazienteId = null;
@@ -7701,6 +7702,7 @@ function visitaSelectNew(){
 }
 
 function goToVisitaUpload(paziente, appt){
+  V.selectedApptId = appt ? appt.id : null;
   const infoEl = document.getElementById('visita-paziente-info');
   if(paziente){
     infoEl.innerHTML = `
@@ -7906,6 +7908,11 @@ async function saveVisita(){
     paz.visite.unshift(visita);
     save();
     closeModal('modal-nuova-visita');
+    if(V.selectedApptId){
+      const _a=S.appuntamenti.find(x=>String(x.id)===String(V.selectedApptId));
+      V.selectedApptId=null;
+      if(_a && _a.erogata!==true && !_a.cancelled) await toggleErogata(_a.id,{silent:true});
+    }
     renderPazienti(); updateStats(); renderDashboard();
     return { paz, visita };
   } catch(err){
@@ -9805,6 +9812,17 @@ function _pazOggiIso(){
   const d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+function _contattiDaPrenotazioni(p){
+  let email='', tel='';
+  const nl=p.nome.toLowerCase(), cl=p.cognome.toLowerCase();
+  (S.appuntamenti||[]).forEach(a=>{
+    if(a.cancelled) return;
+    if((a.nome||'').toLowerCase()!==nl||(a.cognome||'').toLowerCase()!==cl) return;
+    if(!email && a.email) email=a.email;
+    if(!tel && a.tel) tel=a.tel;
+  });
+  return { email, tel };
+}
 function renderPazienti(){
   const tEl=document.getElementById('pazienti-table');
   const cEl=document.getElementById('pazienti-list');
@@ -9824,7 +9842,8 @@ function renderPazienti(){
   const rows=[];
   S.pazienti.forEach(p=>{
     const next=futuri.find(a=>(a.nome||'').toLowerCase()===p.nome.toLowerCase()&&(a.cognome||'').toLowerCase()===p.cognome.toLowerCase())||null;
-    rows.push({tipo:'paziente',id:p.id,nome:p.nome,cognome:p.cognome,nascita:p.nascita||'',email:p.email||'',tel:p.tel||'',nVisite:(p.visite||[]).length,next,centri:_pazCentriIds(p)});
+    const fb=(!p.email||!p.tel)?_contattiDaPrenotazioni(p):{email:'',tel:''};
+    rows.push({tipo:'paziente',id:p.id,nome:p.nome,cognome:p.cognome,nascita:p.nascita||'',email:p.email||fb.email||'',tel:p.tel||fb.tel||'',nVisite:(p.visite||[]).length,next,centri:_pazCentriIds(p)});
   });
   const visti=new Set(S.pazienti.map(p=>(p.nome+'|'+p.cognome).toLowerCase()));
   const pren={};
