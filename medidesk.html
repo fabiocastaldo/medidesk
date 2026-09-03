@@ -422,6 +422,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-act{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;margin-left:6px;transition:all .12s;white-space:nowrap}
 .paz-act:hover{border-color:var(--accent);background:var(--accent-light)}
 .paz-act.is-erogata{color:#16a34a;border-color:#16a34a}
+.paz-act-erog{min-width:150px;text-align:center}
 .paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
 @media(min-width:961px){#pazienti-list{display:none}}
 @media(max-width:960px){#pazienti-table{display:none}}
@@ -1439,10 +1440,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-pazienti" class="page">
       <div class="page-header">
         <div><div class="page-title">Pazienti <span class="paz-count" id="paz-count"></span></div><div class="page-subtitle">Fascicoli clinici e prenotati</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-secondary" onclick="openNuovoPaziente()">+ Nuovo paziente</button>
-          <button class="btn btn-primary" onclick="openModalVisita()">+ Carica visita</button>
-        </div>
+        <button class="btn btn-primary" onclick="openNuovoPaziente()">+ Crea fascicolo paziente</button>
       </div>
       <div class="search-bar" style="flex-wrap:wrap">
         <div class="search-input-wrap" style="min-width:200px">
@@ -2542,7 +2540,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- MODAL NUOVO PAZIENTE -->
 <div class="modal-overlay" id="modal-nuovo-paziente">
   <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-title">Nuovo paziente</span><button class="modal-close" onclick="closeModal('modal-nuovo-paziente')">&#10005;</button></div>
+    <div class="modal-header"><span class="modal-title">Crea fascicolo paziente</span><button class="modal-close" onclick="closeModal('modal-nuovo-paziente')">&#10005;</button></div>
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="np-nome" autocomplete="off"></div>
       <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="np-cognome" autocomplete="off"></div>
@@ -6590,7 +6588,7 @@ function showApptDetail(id){
       ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
     </div>
     ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${escapeAttr(id)}')">Ripristina appuntamento</button>`:''}
-    ${!a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:12px" onclick="toggleErogata('${escapeAttr(id)}')">${a.erogata===true?'Annulla erogazione':'Segna come erogata'}</button>`:''}`;
+`;
   document.getElementById('btn-delete-appt').onclick = ()=>deleteAppuntamento(id);
   openModal('modal-appt-detail');
 }
@@ -7979,7 +7977,7 @@ function renderDashboard(){
         <div class="appt-info"><div class="appt-patient">${a.cognome} ${a.nome}</div><div class="appt-detail">${a.tipo||'Visita'}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}${a.erogata===true?' · <span style="color:#16a34a">erogata</span>':''}</div></div>
         ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${c.nome}</div>`:''}
         <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end" onclick="event.stopPropagation()">
-          <button class="paz-act${a.erogata===true?' is-erogata':''}" onclick="toggleErogata('${a.id}',{silent:true})">${a.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>
+          <button class="paz-act paz-act-erog${a.erogata===true?' is-erogata':''}" onclick="toggleErogata('${a.id}',{silent:true})">${a.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>
           <button class="paz-act" onclick="caricaVisitaDaAppt('${a.id}')">Carica visita</button>
         </div>
       </div>`;
@@ -9860,7 +9858,7 @@ function renderPazienti(){
 function _pazRowHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
   const contatti=[r.email,r.tel].filter(Boolean).map(escapeHtml).join(' &middot; ')||'<span class="paz-dim">&ndash;</span>';
-  const btnErog=(r.next&&r.next.id)?`<button class="paz-act${r.next.erogata===true?' is-erogata':''}" onclick="event.stopPropagation();toggleErogata('${escapeAttr(String(r.next.id))}',{silent:true})">${r.next.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>`:'';
+  const btnErog=(r.next&&r.next.id)?`<button class="paz-act paz-act-erog${r.next.erogata===true?' is-erogata':''}" onclick="event.stopPropagation();toggleErogata('${escapeAttr(String(r.next.id))}',{silent:true})">${r.next.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>`:'';
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
@@ -9875,7 +9873,7 @@ function _pazRowHTML(r){
 function _pazCardHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
   const meta=[r.nascita,r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
-  const cErog=(r.next&&r.next.id)?`<button class="paz-act${r.next.erogata===true?' is-erogata':''}" onclick="event.stopPropagation();toggleErogata('${escapeAttr(String(r.next.id))}',{silent:true})">${r.next.erogata===true?'Erogata \u2713':'Segna erogata'}</button>`:'';
+  const cErog=(r.next&&r.next.id)?`<button class="paz-act paz-act-erog${r.next.erogata===true?' is-erogata':''}" onclick="event.stopPropagation();toggleErogata('${escapeAttr(String(r.next.id))}',{silent:true})">${r.next.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>`:'';
   const cVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
