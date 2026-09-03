@@ -7908,11 +7908,15 @@ async function saveVisita(){
     paz.visite.unshift(visita);
     save();
     closeModal('modal-nuova-visita');
+    let _apptDaErogare=null;
     if(V.selectedApptId){
-      const _a=S.appuntamenti.find(x=>String(x.id)===String(V.selectedApptId));
+      _apptDaErogare=S.appuntamenti.find(x=>String(x.id)===String(V.selectedApptId));
       V.selectedApptId=null;
-      if(_a && _a.erogata!==true && !_a.cancelled) await toggleErogata(_a.id,{silent:true});
+    } else if(paz){
+      _apptDaErogare=S.appuntamenti.find(x=>!x.cancelled && x.erogata!==true && x.data===dataVisitaIso &&
+        (x.nome||'').toLowerCase()===paz.nome.toLowerCase() && (x.cognome||'').toLowerCase()===paz.cognome.toLowerCase());
     }
+    if(_apptDaErogare && _apptDaErogare.erogata!==true && !_apptDaErogare.cancelled) await toggleErogata(_apptDaErogare.id,{silent:true});
     renderPazienti(); updateStats(); renderDashboard();
     return { paz, visita };
   } catch(err){
