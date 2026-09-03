@@ -494,6 +494,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .cal-day.available:hover{background:var(--accent);color:#fff}
 .cal-day.selected{background:var(--accent);color:#fff}
 .cal-day.past,.cal-day.noavail{color:var(--ink3);cursor:default}
+.cal-day.free-ok{background:var(--surface2);color:var(--ink2);font-weight:500}
+.cal-day.free-ok:hover{background:var(--accent-light);color:var(--accent)}
 .slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
 .slot-btn{padding:10px;border:2px solid var(--border);border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:14px;font-weight:600;color:var(--accent);transition:all .15s;font-family:'DM Sans',sans-serif}
 .slot-btn:hover,.slot-btn.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -5404,6 +5406,11 @@ function hasAvailability(centro, dateStr){
   return getSlots(centro, dateStr).length > 0;
 }
 
+// Overbooking: presenza del medico nel giorno (turni attivi o giornata singola), indipendente dagli slot liberi
+function _presenzaGiorno(c, ds, d){
+  return _turniAttiviGiorno(c, ds, d).length>0 || (c.giornateSingole||[]).some(g=>g.data===ds);
+}
+
 // Per il medico: ritorna TUTTI gli slot del turno con stato (libero/occupato + paziente)
 function getAllSlotsWithStatus(centro, dateStr){
   const d = new Date(dateStr+'T12:00:00');
@@ -5539,7 +5546,7 @@ function renderApptCalA(){
     const hasSlots=!isPast&&centro&&(A.free||hasAvailability(centro,ds));
     let cls='cal-day';
     if(isPast||!hasSlots) cls+=' '+(isPast?'past':'noavail');
-    else cls+=' available';
+    else cls+=((A.free&&!_presenzaGiorno(centro,ds,date))?' free-ok':' available');
     if(ds===A.dateStr) cls+=' selected';
     html+=`<div class="${cls}" ${hasSlots?`onclick="apptSelectDateA('${ds}')"`:''}>${d}</div>`;
   }
@@ -5579,7 +5586,7 @@ function renderApptCalB(){
     const hasAny = !isPast && S.centri.some(c=>c.attivo!==false && (A.free || hasAvailability(c,ds)));
     let cls='cal-day';
     if(isPast||!hasAny) cls+=' '+(isPast?'past':'noavail');
-    else cls+=' available';
+    else cls+=((A.free&&!S.centri.some(c=>c.attivo!==false&&_presenzaGiorno(c,ds,date)))?' free-ok':' available');
     if(ds===A.dateStr) cls+=' selected';
     html+=`<div class="${cls}" ${hasAny?`onclick="apptSelectDateB('${ds}')"`:''}>${d}</div>`;
   }
@@ -5600,11 +5607,13 @@ function apptShowCentriForDate(){
   if(!centriDispo.length){
     list.innerHTML='<div style="text-align:center;padding:24px;color:var(--ink3)">Nessun centro con disponibilità in questa data.</div>';
   } else {
-    list.innerHTML=centriDispo.map(c=>{
+    const _ord=A.free?[...centriDispo].sort((x,y)=>Number(_presenzaGiorno(y,A.dateStr,d))-Number(_presenzaGiorno(x,A.dateStr,d))):centriDispo;
+    list.innerHTML=_ord.map(c=>{
       const slots=getSlots(c,A.dateStr);
+      const pres=A.free&&_presenzaGiorno(c,A.dateStr,d);
       return `<button class="centro-btn" onclick="apptSelectCentroFromDate('${c.id}')">
         <strong>${c.nome}</strong>
-        <span>${c.indirizzo||''} · ${A.free?'orario libero':slots.length+' slot disponibili'}</span>
+        <span>${c.indirizzo||''} · ${A.free?(pres?'<b style=\"color:var(--accent)\">sei in sede</b> · orario libero':'orario libero'):slots.length+' slot disponibili'}</span>
       </button>`;
     }).join('');
   }
