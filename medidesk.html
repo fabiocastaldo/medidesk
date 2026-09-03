@@ -2684,10 +2684,18 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- MODAL GIORNATA SINGOLA -->
 <div class="modal-overlay" id="modal-giornata-singola">
   <div class="modal">
-    <div class="modal-header"><span class="modal-title">Aggiungi giornata singola</span><button class="modal-close" onclick="closeModal('modal-giornata-singola')">✕</button></div>
+    <div class="modal-header"><span class="modal-title">Aggiungi giornate singole</span><button class="modal-close" onclick="closeModal('modal-giornata-singola')">✕</button></div>
     <div class="modal-body">
       <p style="font-size:13px;color:var(--ink2);margin-bottom:16px">Centro: <strong id="giornata-centro-label"></strong></p>
-      <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="giornata-data" type="date"></div>
+      <div class="form-group"><label class="form-label">Date &mdash; seleziona una o pi&ugrave; giornate</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px">
+          <button class="btn btn-sm btn-secondary" onclick="gsCalNav(-1)">&#8592;</button>
+          <span id="gs-cal-title" style="font-weight:600"></span>
+          <button class="btn btn-sm btn-secondary" onclick="gsCalNav(1)">&#8594;</button>
+        </div>
+        <div class="cal-grid" id="gs-cal" style="margin-bottom:8px"></div>
+        <p id="gs-sel-count" style="font-size:12px;color:var(--ink2);margin:0"></p>
+      </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Inizio</label><input class="form-input" id="giornata-inizio" type="time" value="09:00"></div>
         <div class="form-group"><label class="form-label">Fine</label><input class="form-input" id="giornata-fine" type="time" value="13:00"></div>
@@ -2702,7 +2710,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-giornata-singola')">Annulla</button>
-      <button class="btn btn-primary" onclick="saveGiornataSingola()">Salva giornata</button>
+      <button class="btn btn-primary" onclick="saveGiornataSingola()">Salva</button>
     </div>
   </div>
 </div>
@@ -4584,7 +4592,7 @@ function renderCentroCard(c, isActive){
     </div>` : isActive?(c.gestione==='cooperativa'?'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">I turni di questa sede verranno assegnati dall\'organizzazione.</div>':'<div style="font-size:12px;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">Nessun turno configurato. Aggiungi i tuoi orari ricorrenti.</div>'):'';
 
   const giornate = (c.giornateSingole||[]).filter(g=>g.data>=todayStr).sort((a,b)=>a.data.localeCompare(b.data));
-  const giornateHtml = (giornate.length||(isActive && c.gestione!=='cooperativa')) ? `
+  const giornateHtml = giornate.length ? `
     <div class="turni-list" style="margin-top:8px">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;margin-bottom:4px">Giornate singole</div>
       ${giornate.map((g)=>`
@@ -4592,7 +4600,6 @@ function renderCentroCard(c, isActive){
           <span><svg class="ic" style="vertical-align:-.15em;margin-right:4px"><use href="#ic-calendar"/></svg>${formatDate(g.data)} ${g.inizio}–${g.fine} · slot ${g.slot} min</span>
           ${isActive?`<button class="centro-act centro-act-danger" onclick="deleteGiornataSingola('${c.id}','${g.data}','${g.inizio}')">✕</button>`:''}
         </div>`).join('')}
-      ${isActive && c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button>`:''}
     </div>` : '';
 
   return `
@@ -4603,7 +4610,7 @@ function renderCentroCard(c, isActive){
           <div class="centro-nome">${c.nome} ${c.gestione==='cooperativa'?'<span class="badge-coop">Cooperativa</span>':''} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
           <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
         </div>
-        ${isActive && c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
+        ${isActive && c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-secondary" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button> <button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
         
         <div class="centro-actions">
           ${c.gestione!=='cooperativa'?`<button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro"><svg class="ic"><use href="#ic-edit"/></svg></button>`:''}
@@ -5223,39 +5230,77 @@ async function _applicaTerminaTurno(centroId, idx, dataFine){
 }
 
 // ── GIORNATE SINGOLE ──
+var _gsSel=[], _gsY=0, _gsM=0;
+function gsCalNav(delta){
+  _gsM+=delta;
+  if(_gsM<0){_gsM=11;_gsY--;}
+  if(_gsM>11){_gsM=0;_gsY++;}
+  renderGsCal();
+}
+function gsToggleDay(ds){
+  const i=_gsSel.indexOf(ds);
+  if(i>=0) _gsSel.splice(i,1); else _gsSel.push(ds);
+  renderGsCal();
+}
+function renderGsCal(){
+  const c=S.centri.find(x=>String(x.id)===String(_giornataSingolaTargetId));
+  document.getElementById('gs-cal-title').textContent=MONTHS_IT[_gsM]+' '+_gsY;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const lastDay=new Date(_gsY,_gsM+1,0);
+  const firstDay=new Date(_gsY,_gsM,1);
+  let startDow=firstDay.getDay(); if(startDow===0)startDow=7; startDow--;
+  let html=DAYS_IT_SHORT.map(d=>`<div class="cal-day-hdr">${d}</div>`).join('');
+  for(let i=0;i<startDow;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=lastDay.getDate();d++){
+    const date=new Date(_gsY,_gsM,d);
+    const ds=fmt(date);
+    const isPast=date<today;
+    const gia=!!(c&&(c.giornateSingole||[]).some(g=>g.data===ds));
+    let cls='cal-day';
+    if(isPast) cls+=' past';
+    else if(gia) cls+=' noavail';
+    else if(_gsSel.indexOf(ds)>=0) cls+=' selected';
+    html+=`<div class="${cls}" ${(!isPast&&!gia)?`onclick="gsToggleDay('${ds}')"`:''} ${gia?'title="Giornata gi\u00e0 presente"':''}>${d}</div>`;
+  }
+  document.getElementById('gs-cal').innerHTML=html;
+  const n=_gsSel.length;
+  document.getElementById('gs-sel-count').textContent=n?(n===1?'1 giornata selezionata':n+' giornate selezionate'):'Nessuna giornata selezionata';
+}
 function openGiornataSingola(centroId){
   _giornataSingolaTargetId=centroId;
   const c=S.centri.find(x=>String(x.id)===String(centroId));
   document.getElementById('giornata-centro-label').textContent=c?c.nome:'';
-  document.getElementById('giornata-data').value='';
+  _gsSel=[];
+  const _now=new Date(); _gsY=_now.getFullYear(); _gsM=_now.getMonth();
   document.getElementById('giornata-inizio').value='09:00';
   document.getElementById('giornata-fine').value='13:00';
   document.getElementById('giornata-slot').value='30';
+  renderGsCal();
   openModal('modal-giornata-singola');
 }
 async function saveGiornataSingola(){
   const c=S.centri.find(x=>String(x.id)===String(_giornataSingolaTargetId)); if(!c) return;
-  const data=document.getElementById('giornata-data').value;
   const inizio=document.getElementById('giornata-inizio').value;
   const fine=document.getElementById('giornata-fine').value;
   const slot=parseInt(document.getElementById('giornata-slot').value);
-  if(!data){ showToast('Seleziona una data'); return; }
+  if(!_gsSel.length){ showToast('Seleziona almeno una giornata'); return; }
   if(inizio>=fine){ showToast('L\'ora di fine deve essere successiva all\'inizio'); return; }
-  const g={data,inizio,fine,slot,centroId:String(c.id)};
+  const dates=_gsSel.slice().sort();
+  const okMsg=dates.length===1?'Giornata aggiunta \u2713':dates.length+' giornate aggiunte \u2713';
   c.giornateSingole=c.giornateSingole||[];
   if(!isOnline()){
-    c.giornateSingole.push(g); save(); closeModal('modal-giornata-singola'); renderCentri();
-    showToast('Giornata aggiunta ✓'); return;
+    dates.forEach(function(data){ c.giornateSingole.push({data,inizio,fine,slot,centroId:String(c.id)}); });
+    save(); closeModal('modal-giornata-singola'); renderCentri();
+    showToast(okMsg); return;
   }
   try {
     const { data: {user} }=await supabaseClient.auth.getUser();
-    const { data: ins, error }=await supabaseClient.from('disponibilita_singole').insert({
-      centro_id:c.id, medico_id:S.medicoId||user?.id, data, inizio, fine, durata_slot:slot
-    }).select('id').single();
+    const rows=dates.map(function(data){ return { centro_id:c.id, medico_id:S.medicoId||user?.id, data, inizio, fine, durata_slot:slot }; });
+    const { data: ins, error }=await supabaseClient.from('disponibilita_singole').insert(rows).select('id,data');
     if(error) throw error;
-    c.giornateSingole.push({id:ins.id,...g});
+    (ins||[]).forEach(function(r){ c.giornateSingole.push({id:r.id,data:r.data,inizio,fine,slot,centroId:String(c.id)}); });
     save(); closeModal('modal-giornata-singola'); renderCentri();
-    showToast('Giornata aggiunta ✓');
+    showToast(okMsg);
   } catch(e){ console.error('[Delphi~Med] saveGiornataSingola:',e.message); showToast('Errore: '+e.message); }
 }
 async function deleteGiornataSingola(centroId, data, inizio){
