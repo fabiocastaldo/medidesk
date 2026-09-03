@@ -404,13 +404,20 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 /* ── CONDIVISIONE VISITA ── */
 .visita-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
 
-/* ── PAZIENTI PER CENTRO ── */
-.centro-group-hdr{display:flex;align-items:center;gap:8px;padding:10px 4px 6px;cursor:pointer;user-select:none;border-bottom:2px solid var(--border);margin-bottom:6px}
-.centro-group-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.centro-group-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;flex:1}
-.centro-group-count{font-size:12px;color:var(--ink3)}
-.centro-group-body{margin-bottom:20px}
-.centro-group-chevron{font-size:11px;color:var(--ink3);transition:transform .15s}
+/* ── PAZIENTI: TABELLA ── */
+.paz-count{font-size:15px;color:var(--ink3);font-weight:500}
+.search-bar .paz-filter-sel{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);cursor:pointer}
+.paz-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-soft);overflow:hidden;font-size:13.5px}
+.paz-table th{text-align:left;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);padding:12px 14px;border-bottom:2px solid var(--border);background:var(--surface2)}
+.paz-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.paz-table tbody tr:last-child td{border-bottom:none}
+.paz-row{cursor:pointer;transition:background .12s}
+.paz-row:hover{background:var(--accent-light)}
+.paz-badge-pren{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:1px}
+.paz-next-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
+@media(min-width:961px){#pazienti-list{display:none}}
+@media(max-width:960px){#pazienti-table{display:none}}
 
 @media(max-width:768px){
   .mc-day{min-height:48px;padding:3px}
@@ -1424,15 +1431,25 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <!-- PAZIENTI -->
     <div id="page-pazienti" class="page">
       <div class="page-header">
-        <div><div class="page-title">Pazienti</div><div class="page-subtitle">Fascicoli clinici</div></div>
-        <button class="btn btn-primary" onclick="openModalVisita()">+ Carica visita</button>
-      </div>
-      <div class="search-bar">
-        <div class="search-input-wrap">
-          <span class="sicon"><svg class="ic"><use href="#ic-search"/></svg></span>
-          <input class="search-input" id="search-pazienti" placeholder="Cerca per nome o cognome..." oninput="renderPazienti()">
+        <div><div class="page-title">Pazienti <span class="paz-count" id="paz-count"></span></div><div class="page-subtitle">Fascicoli clinici e prenotati</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="openNuovoPaziente()">+ Nuovo paziente</button>
+          <button class="btn btn-primary" onclick="openModalVisita()">+ Carica visita</button>
         </div>
       </div>
+      <div class="search-bar" style="flex-wrap:wrap">
+        <div class="search-input-wrap" style="min-width:200px">
+          <span class="sicon"><svg class="ic"><use href="#ic-search"/></svg></span>
+          <input class="search-input" id="search-pazienti" placeholder="Cerca per nome, email o telefono..." oninput="renderPazienti()">
+        </div>
+        <select class="paz-filter-sel" id="filtro-paz-centro" onchange="renderPazienti()"></select>
+        <select class="paz-filter-sel" id="filtro-paz-stato" onchange="renderPazienti()">
+          <option value="tutti">Tutti</option>
+          <option value="incura">In cura</option>
+          <option value="prenotati">Prenotati</option>
+        </select>
+      </div>
+      <div id="pazienti-table"></div>
       <div id="pazienti-list"></div>
     </div>
 
@@ -2515,6 +2532,24 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
+<!-- MODAL NUOVO PAZIENTE -->
+<div class="modal-overlay" id="modal-nuovo-paziente">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-title">Nuovo paziente</span><button class="modal-close" onclick="closeModal('modal-nuovo-paziente')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="np-nome" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="np-cognome" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Data di nascita</label><input class="form-input" id="np-nascita" placeholder="GG/MM/AAAA" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="np-email" type="email" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Telefono</label><input class="form-input" id="np-tel" autocomplete="off"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-nuovo-paziente')">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaNuovoPaziente()">Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL APPUNTAMENTO DETAIL -->
 <div class="modal-overlay" id="modal-appt-detail">
   <div class="modal">
@@ -3366,12 +3401,12 @@ async function loadPazientiFromDB(user){
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient.from('pazienti')
-      .select('id, nome, cognome, data_nascita, sintesi_clinica, sintesi_generata_il, sintesi_meta')
+      .select('id, nome, cognome, data_nascita, telefono, email, sintesi_clinica, sintesi_generata_il, sintesi_meta')
       .eq('medico_id', medico.id).order('cognome').order('nome');
     if(error) throw error;
     S.pazienti = (data || []).map(p => ({
       id: p.id, nome: p.nome||'', cognome: p.cognome||'',
-      nascita: isoToIt(p.data_nascita||''), visite: [],
+      nascita: isoToIt(p.data_nascita||''), tel: p.telefono||'', email: p.email||'', visite: [],
       sintesiEnc: p.sintesi_clinica||null, sintesiGenerataIl: p.sintesi_generata_il||null, sintesiMeta: p.sintesi_meta||null
     }));
     save();
@@ -6577,6 +6612,7 @@ async function toggleErogata(id){
     } catch(e){ showToast('Errore: '+e.message); return; }
   }
   a.erogata=nuovo;
+  if(nuovo) await _ensurePazienteDaAppt(a);
   save();
   showApptDetail(id);
   if(typeof renderDashboard==='function') renderDashboard();
@@ -6770,7 +6806,10 @@ function showPazienteDetail(id){
   document.getElementById('modal-paziente-body').innerHTML=`
     <div class="extracted-fields" style="margin-bottom:16px">
       <div class="field-row"><span class="field-key">Nome</span><span class="field-val">${escapeHtml(p.nome)} ${escapeHtml(p.cognome)}</span></div>
-      ${p.nascita?`<div class="field-row"><span class="field-key">Data nascita</span><span class="field-val">${escapeHtml(p.nascita)}</span></div>`:''}
+      <div class="field-row"><span class="field-key">Nascita</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-nascita" placeholder="GG/MM/AAAA" value="${escapeAttr(p.nascita||'')}"></span></div>
+      <div class="field-row"><span class="field-key">Email</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-email" type="email" placeholder="aggiungi" value="${escapeAttr(p.email||'')}"></span></div>
+      <div class="field-row"><span class="field-key">Telefono</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-tel" placeholder="aggiungi" value="${escapeAttr(p.tel||'')}"></span></div>
+      <div style="text-align:right;margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="savePazienteAnagrafica('${escapeAttr(id)}')">Salva anagrafica</button></div>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
     <div class="section-title">${visite.length} ${visite.length===1?'visita':'visite'}</div>
@@ -7620,9 +7659,9 @@ async function visitaSelectFromAppt(apptId){
         const { data: { user } } = await supabaseClient.auth.getUser();
         const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
         const { data: newPaz, error } = await supabaseClient.from('pazienti')
-          .insert({ medico_id: medico.id, nome: a.nome, cognome: a.cognome }).select('id').single();
+          .insert({ medico_id: medico.id, nome: a.nome, cognome: a.cognome, telefono: a.tel||null, email: a.email||null }).select('id').single();
         if(error) throw error;
-        paz = { id: newPaz.id, nome: a.nome, cognome: a.cognome, nascita:'', visite:[] };
+        paz = { id: newPaz.id, nome: a.nome, cognome: a.cognome, nascita:'', tel: a.tel||'', email: a.email||'', visite:[] };
         console.log('[Delphi~Med] Paziente creato da appuntamento:', { id: newPaz.id });
       } catch(e){
         console.error('[Delphi~Med] visitaSelectFromAppt:', e.message);
@@ -7633,6 +7672,8 @@ async function visitaSelectFromAppt(apptId){
     }
     S.pazienti.unshift(paz);
     save();
+  } else {
+    _riversaContatti(paz, a);
   }
   V.selectedPazienteId = paz.id;
   V.isNewPaziente = false;
@@ -9736,87 +9777,199 @@ function copyMailChiusura(i){
   const b=window._mailBozze[i];
   if(b) navigator.clipboard.writeText(b.testo).then(()=>showToast('Mail copiata ✓'));
 }
-// ── PAZIENTI PER CENTRO ──
+// ── PAZIENTI: TABELLA UNIFICATA (fascicoli + prenotati futuri) ──
+function _pazCentriIds(p){
+  const ids=new Set();
+  (S.appuntamenti||[]).forEach(a=>{
+    if(a.cancelled) return;
+    if((a.nome||'').toLowerCase()===p.nome.toLowerCase()&&(a.cognome||'').toLowerCase()===p.cognome.toLowerCase()) ids.add(String(a.centroId));
+  });
+  (p.visite||[]).forEach(v=>{
+    if(!v.luogo) return;
+    const c=S.centri.find(x=>x.nome.toLowerCase()===v.luogo.toLowerCase());
+    if(c) ids.add(String(c.id));
+  });
+  return ids;
+}
+function _pazOggiIso(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function renderPazienti(){
-  const el=document.getElementById('pazienti-list'); if(!el) return;
+  const tEl=document.getElementById('pazienti-table');
+  const cEl=document.getElementById('pazienti-list');
+  if(!tEl||!cEl) return;
   const q=(document.getElementById('search-pazienti')?.value||'').toLowerCase();
-  let list=S.pazienti;
-  if(q) list=list.filter(p=>`${p.nome} ${p.cognome}`.toLowerCase().includes(q));
-  if(!list.length){ el.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>'; return; }
-  // Se c'è una ricerca attiva, mostra piatto come prima
-  if(q){
-    el.innerHTML=_renderPazientiCards(list);
+  const selCentro=document.getElementById('filtro-paz-centro');
+  let fCentro=selCentro?selCentro.value:'';
+  const fStato=document.getElementById('filtro-paz-stato')?.value||'tutti';
+  if(selCentro){
+    selCentro.innerHTML='<option value="">Tutti i centri</option>'+S.centri.map(c=>`<option value="${escapeAttr(String(c.id))}">${escapeHtml(c.nome)}</option>`).join('');
+    selCentro.value=fCentro;
+    if(selCentro.value!==fCentro){ selCentro.value=''; fCentro=''; }
+  }
+  const oggiIso=_pazOggiIso();
+  const futuri=(S.appuntamenti||[]).filter(a=>!a.cancelled&&a.data&&a.data>=oggiIso)
+    .slice().sort((x,y)=>((x.data||'')+(x.ora||'')).localeCompare((y.data||'')+(y.ora||'')));
+  const rows=[];
+  S.pazienti.forEach(p=>{
+    const next=futuri.find(a=>(a.nome||'').toLowerCase()===p.nome.toLowerCase()&&(a.cognome||'').toLowerCase()===p.cognome.toLowerCase())||null;
+    rows.push({tipo:'paziente',id:p.id,nome:p.nome,cognome:p.cognome,nascita:p.nascita||'',email:p.email||'',tel:p.tel||'',nVisite:(p.visite||[]).length,next,centri:_pazCentriIds(p)});
+  });
+  const visti=new Set(S.pazienti.map(p=>(p.nome+'|'+p.cognome).toLowerCase()));
+  const pren={};
+  futuri.forEach(a=>{
+    const k=((a.nome||'')+'|'+(a.cognome||'')).toLowerCase();
+    if(visti.has(k)||pren[k]) return;
+    pren[k]=a;
+  });
+  Object.values(pren).forEach(a=>{
+    rows.push({tipo:'prenotato',apptId:a.id,nome:a.nome||'',cognome:a.cognome||'',nascita:'',email:a.email||'',tel:a.tel||'',nVisite:0,next:a,centri:new Set([String(a.centroId)])});
+  });
+  rows.sort((x,y)=>((x.cognome+' '+x.nome).localeCompare(y.cognome+' '+y.nome,'it')));
+  let list=rows;
+  if(q) list=list.filter(r=>(`${r.nome} ${r.cognome} ${r.email} ${r.tel}`).toLowerCase().includes(q));
+  if(fCentro) list=list.filter(r=>r.centri.has(fCentro));
+  if(fStato==='incura') list=list.filter(r=>r.tipo==='paziente');
+  if(fStato==='prenotati') list=list.filter(r=>r.tipo==='prenotato');
+  const cnt=document.getElementById('paz-count');
+  if(cnt) cnt.textContent='('+list.length+')';
+  if(!list.length){
+    tEl.innerHTML='';
+    cEl.innerHTML='<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>';
+    tEl.insertAdjacentHTML('beforeend','<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>');
     return;
   }
-  // Vista raggruppata per centro
-  const gruppi=[];
-  const pazInGruppo=new Set();
-  S.centri.forEach(c=>{
-    const pIds=new Set();
-    S.appuntamenti.filter(a=>String(a.centroId)===String(c.id)).forEach(a=>{
-      // cerca paziente per nome+cognome (gli appuntamenti non hanno pazienteId)
-      const p=list.find(p=>p.nome===a.nome&&p.cognome===a.cognome);
-      if(p){ pIds.add(String(p.id)); pazInGruppo.add(String(p.id)); }
-    });
-    list.forEach(p=>{
-      (p.visite||[]).forEach(v=>{
-        if(v.luogo&&v.luogo.toLowerCase()===c.nome.toLowerCase()){
-          pIds.add(String(p.id)); pazInGruppo.add(String(p.id));
-        }
-      });
-    });
-    const pazientiGruppo=list.filter(p=>pIds.has(String(p.id)));
-    if(pazientiGruppo.length) gruppi.push({centro:c, pazienti:pazientiGruppo});
-  });
-  const senzaCentro=list.filter(p=>!pazInGruppo.has(String(p.id)));
-  let html='';
-  gruppi.forEach(g=>{
-    const gid='cg-'+String(g.centro.id).replace(/[^a-z0-9]/gi,'');
-    html+=`<div class="centro-group-hdr" onclick="toggleCentroGroup('${gid}')">
-      <span class="centro-group-dot" style="background:${g.centro.colore}"></span>
-      <span class="centro-group-title" style="color:${g.centro.colore}">${g.centro.nome}</span>
-      <span class="centro-group-count">${g.pazienti.length} ${g.pazienti.length===1?'paziente':'pazienti'}</span>
-      <span class="centro-group-chevron" id="${gid}-chev">▾</span>
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Nascita</th><th>Contatti</th><th>Prossimo appuntamento</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
+  cEl.innerHTML=list.map(_pazCardHTML).join('');
+}
+
+function _pazNextHTML(r){
+  if(!r.next) return '<span style="color:var(--ink3)">&mdash;</span>';
+  const c=S.centri.find(x=>String(x.id)===String(r.next.centroId));
+  const dot=c?`<span class="paz-next-dot" style="background:${c.colore}" title="${escapeAttr(c.nome)}"></span>`:'';
+  const dd=(r.next.data||'').split('-').reverse().join('/');
+  return `${dot}${dd}${r.next.ora?' &middot; '+r.next.ora:''}`;
+}
+function _pazRowHTML(r){
+  const initials=((r.nome[0]||'')+(r.cognome[0]||'')).toUpperCase();
+  const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
+  const contatti=[r.email,r.tel].filter(Boolean).map(escapeHtml).join('<br>')||'<span style="color:var(--ink3)">&mdash;</span>';
+  const badge=r.tipo==='prenotato'?'<span class="paz-badge-pren">Prenotato</span>':'';
+  const azioni=r.tipo==='paziente'?`<button class="paz-quick" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>`:'';
+  return `<tr class="paz-row" onclick="${open}">
+    <td><div style="display:flex;align-items:center;gap:10px"><div class="paziente-avatar" style="width:34px;height:34px;font-size:13px">${initials}</div><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${badge}</span></div></td>
+    <td>${r.nascita?escapeHtml(r.nascita):'<span style="color:var(--ink3)">&mdash;</span>'}</td>
+    <td style="font-size:12.5px">${contatti}</td>
+    <td>${_pazNextHTML(r)}</td>
+    <td style="text-align:center">${r.tipo==='paziente'?r.nVisite:'<span style="color:var(--ink3)">&mdash;</span>'}</td>
+    <td style="text-align:right">${azioni}</td>
+  </tr>`;
+}
+function _pazCardHTML(r){
+  const initials=((r.nome[0]||'')+(r.cognome[0]||'')).toUpperCase();
+  const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
+  const meta=[r.nascita,r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
+  const nextTxt=r.next?('Prossimo: '+(r.next.data||'').split('-').reverse().join('/')+(r.next.ora?' '+r.next.ora:'')):'';
+  const badge=r.tipo==='prenotato'?'<span class="paz-badge-pren">Prenotato</span>':'';
+  const right=r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span><button class="paz-quick" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>`:'';
+  return `<div class="paziente-card" onclick="${open}">
+    <div class="paziente-avatar">${initials}</div>
+    <div class="paziente-info">
+      <div class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${badge}</div>
+      <div class="paziente-meta">${meta}${meta&&nextTxt?' \u00b7 ':''}${nextTxt}</div>
     </div>
-    <div class="centro-group-body" id="${gid}">${_renderPazientiCards(g.pazienti)}</div>`;
-  });
-  if(senzaCentro.length){
-    html+=`<div class="centro-group-hdr" onclick="toggleCentroGroup('cg-nocenter')">
-      <span class="centro-group-dot" style="background:#999"></span>
-      <span class="centro-group-title" style="color:var(--ink3)">Senza centro</span>
-      <span class="centro-group-count">${senzaCentro.length} ${senzaCentro.length===1?'paziente':'pazienti'}</span>
-      <span class="centro-group-chevron" id="cg-nocenter-chev">▾</span>
-    </div>
-    <div class="centro-group-body" id="cg-nocenter">${_renderPazientiCards(senzaCentro)}</div>`;
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">${right}</div>
+  </div>`;
+}
+
+async function _riversaContatti(paz, a){
+  if(!paz||!a) return;
+  const upd={};
+  if(!paz.tel && a.tel){ paz.tel=a.tel; upd.telefono=a.tel; }
+  if(!paz.email && a.email){ paz.email=a.email; upd.email=a.email; }
+  if(!Object.keys(upd).length) return;
+  save();
+  if(isOnline() && typeof paz.id==='string'){
+    try{
+      const { data, error } = await supabaseClient.from('pazienti').update(upd).eq('id', paz.id).select('id');
+      if(error) throw error;
+      if(!data||!data.length) throw new Error('nessuna riga aggiornata');
+    }catch(e){ console.warn('[Delphi~Med] riversamento contatti:', e.message); }
   }
-  el.innerHTML=html||'<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>';
 }
 
-function _renderPazientiCards(list){
-  return list.map(p=>{
-    const initials=(p.nome[0]||'')+(p.cognome[0]||'');
-    const n=(p.visite||[]).length;
-    return `<div class="paziente-card" onclick="showPazienteDetail('${p.id}')">
-      <div class="paziente-avatar">${initials.toUpperCase()}</div>
-      <div class="paziente-info">
-        <div class="paziente-name">${escapeHtml(p.cognome)} ${escapeHtml(p.nome)}</div>
-        <div class="paziente-meta">${p.nascita?'Nato/a il '+escapeHtml(p.nascita):''}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <span style="font-size:12px;color:var(--accent);font-weight:500">${n} ${n===1?'visita':'visite'}</span>
-        <button class="paz-quick" onclick="event.stopPropagation();openVisitaForPaziente('${p.id}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>
-      </div>
-    </div>`;
-  }).join('');
+async function _ensurePazienteDaAppt(a){
+  if(!a||!(a.nome||a.cognome)) return;
+  let paz=S.pazienti.find(p=>p.nome.toLowerCase()===(a.nome||'').toLowerCase()&&p.cognome.toLowerCase()===(a.cognome||'').toLowerCase());
+  if(paz){ await _riversaContatti(paz, a); return; }
+  if(isOnline() && S.medicoId){
+    try{
+      const { data: newPaz, error } = await supabaseClient.from('pazienti')
+        .insert({ medico_id: S.medicoId, nome: a.nome, cognome: a.cognome, telefono: a.tel||null, email: a.email||null })
+        .select('id').single();
+      if(error) throw error;
+      paz={ id:newPaz.id, nome:a.nome, cognome:a.cognome, nascita:'', tel:a.tel||'', email:a.email||'', visite:[] };
+    }catch(e){ console.warn('[Delphi~Med] fascicolo da erogazione:', e.message); return; }
+  } else {
+    paz={ id:Date.now(), nome:a.nome, cognome:a.cognome, nascita:'', tel:a.tel||'', email:a.email||'', visite:[] };
+  }
+  S.pazienti.unshift(paz);
+  save();
+  showToast('Fascicolo creato per '+paz.cognome+' '+paz.nome+' \u2713');
 }
 
-function toggleCentroGroup(gid){
-  const body=document.getElementById(gid);
-  const chev=document.getElementById(gid+'-chev');
-  if(!body) return;
-  const isOpen=body.style.display!=='none';
-  body.style.display=isOpen?'none':'block';
-  if(chev) chev.textContent=isOpen?'▸':'▾';
+function openNuovoPaziente(){
+  ['np-nome','np-cognome','np-nascita','np-email','np-tel'].forEach(i=>{const el=document.getElementById(i); if(el) el.value='';});
+  openModal('modal-nuovo-paziente');
+}
+async function salvaNuovoPaziente(){
+  const nome=capitalizeName(document.getElementById('np-nome').value.trim());
+  const cognome=capitalizeName(document.getElementById('np-cognome').value.trim());
+  if(!nome||!cognome){ showToast('Nome e cognome sono obbligatori'); return; }
+  const nascita=expandCompactDate(document.getElementById('np-nascita').value.trim());
+  const nascitaIso=itToIso(nascita);
+  if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
+  const email=document.getElementById('np-email').value.trim();
+  const tel=document.getElementById('np-tel').value.trim();
+  const dup=S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
+  if(dup && !(await confermaModale('Esiste gi\u00e0 un paziente con questo nome e cognome. Creare comunque un secondo fascicolo (caso di omonimia)?', { titolo:'Possibile omonimia', ok:'Crea comunque' }))) return;
+  let paz;
+  if(isOnline() && S.medicoId){
+    try{
+      const { data: newPaz, error } = await supabaseClient.from('pazienti')
+        .insert({ medico_id: S.medicoId, nome, cognome, data_nascita: nascitaIso||null, email: email||null, telefono: tel||null })
+        .select('id').single();
+      if(error) throw error;
+      paz={ id:newPaz.id, nome, cognome, nascita, tel, email, visite:[] };
+    }catch(e){ showToast('Errore: '+e.message); return; }
+  } else {
+    paz={ id:Date.now(), nome, cognome, nascita, tel, email, visite:[] };
+  }
+  S.pazienti.unshift(paz);
+  save(); closeModal('modal-nuovo-paziente'); renderPazienti();
+  showToast('Paziente creato \u2713');
+}
+
+async function savePazienteAnagrafica(id){
+  const p=S.pazienti.find(x=>String(x.id)===String(id)); if(!p) return;
+  const nascita=expandCompactDate(document.getElementById('paz-edit-nascita').value.trim());
+  const nascitaIso=itToIso(nascita);
+  if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
+  const email=document.getElementById('paz-edit-email').value.trim();
+  const tel=document.getElementById('paz-edit-tel').value.trim();
+  if(isOnline() && typeof p.id==='string'){
+    try{
+      const { data, error } = await supabaseClient.from('pazienti')
+        .update({ data_nascita: nascitaIso||null, email: email||null, telefono: tel||null })
+        .eq('id', p.id).select('id');
+      if(error) throw error;
+      if(!data||!data.length) throw new Error('nessuna riga aggiornata');
+    }catch(e){ showToast('Errore salvataggio: '+e.message); return; }
+  }
+  p.nascita=nascita; p.email=email; p.tel=tel;
+  save(); renderPazienti();
+  showToast('Anagrafica aggiornata \u2713');
 }
 
 // ── IMPOSTAZIONI ──
