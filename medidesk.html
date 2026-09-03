@@ -413,7 +413,13 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-table tbody tr:last-child td{border-bottom:none}
 .paz-row{cursor:pointer;transition:background .12s}
 .paz-row:hover{background:var(--accent-light)}
-.paz-badge-pren{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);background:var(--accent-light);border:1px solid var(--accent);border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:1px}
+.paz-badge-pren{display:inline-block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);background:var(--accent-light);border-radius:20px;padding:2px 8px;margin-left:8px;vertical-align:1px}
+.paz-table th:nth-child(2){width:110px}
+.paz-table th:nth-child(3){width:230px}
+.paz-table th:nth-child(4){width:200px}
+.paz-table th:nth-child(5){width:70px}
+.paz-table th:nth-child(6){width:96px}
+.paz-dim{color:var(--ink3);opacity:.55}
 .paz-next-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
 @media(min-width:961px){#pazienti-list{display:none}}
@@ -6601,7 +6607,7 @@ async function ripristinaAppuntamento(id){
   await sendNotificaCentro('nuova_prenotazione', a);
 }
 
-async function toggleErogata(id){
+async function toggleErogata(id, opts){
   const a=S.appuntamenti.find(x=>String(x.id)===String(id)); if(!a) return;
   if(a.cancelled){ showToast('Visita cancellata: non marcabile'); return; }
   const nuovo = !(a.erogata===true);
@@ -6614,8 +6620,9 @@ async function toggleErogata(id){
   a.erogata=nuovo;
   if(nuovo) await _ensurePazienteDaAppt(a);
   save();
-  showApptDetail(id);
+  if(!opts||!opts.silent) showApptDetail(id);
   if(typeof renderDashboard==='function') renderDashboard();
+  if(document.getElementById('pazienti-table')) renderPazienti();
   showToast(nuovo ? 'Segnata come erogata ✓' : 'Erogazione annullata');
 }
 
@@ -7970,6 +7977,10 @@ function renderDashboard(){
         <div class="appt-time">${a.ora}</div>
         <div class="appt-info"><div class="appt-patient">${a.cognome} ${a.nome}</div><div class="appt-detail">${a.tipo||'Visita'}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}${a.erogata===true?' · <span style="color:#16a34a">erogata</span>':''}</div></div>
         ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${c.nome}</div>`:''}
+        <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px" onclick="event.stopPropagation()">
+          <button class="paz-quick" style="width:34px;height:34px${a.erogata===true?';color:#16a34a':''}" onclick="toggleErogata('${a.id}',{silent:true})" title="${a.erogata===true?'Annulla erogazione':'Segna come erogata'}" aria-label="Segna come erogata"><svg class="ic"><use href="#ic-check"/></svg></button>
+          <button class="paz-quick" style="width:34px;height:34px" onclick="caricaVisitaDaAppt('${a.id}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>
+        </div>
       </div>`;
     }).join('');
   else upEl.innerHTML='<div style="text-align:center;padding:32px;color:var(--ink3)"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-sparkles"/></svg>Nessun appuntamento oggi</div>';
@@ -9846,7 +9857,7 @@ function renderPazienti(){
 }
 
 function _pazNextHTML(r){
-  if(!r.next) return '<span style="color:var(--ink3)">&mdash;</span>';
+  if(!r.next) return '<span class="paz-dim">&ndash;</span>';
   const c=S.centri.find(x=>String(x.id)===String(r.next.centroId));
   const dot=c?`<span class="paz-next-dot" style="background:${c.colore}" title="${escapeAttr(c.nome)}"></span>`:'';
   const dd=(r.next.data||'').split('-').reverse().join('/');
@@ -9855,15 +9866,19 @@ function _pazNextHTML(r){
 function _pazRowHTML(r){
   const initials=((r.nome[0]||'')+(r.cognome[0]||'')).toUpperCase();
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
-  const contatti=[r.email,r.tel].filter(Boolean).map(escapeHtml).join('<br>')||'<span style="color:var(--ink3)">&mdash;</span>';
+  const contatti=[r.email,r.tel].filter(Boolean).map(escapeHtml).join('<br>')||'<span class="paz-dim">&ndash;</span>';
   const badge=r.tipo==='prenotato'?'<span class="paz-badge-pren">Prenotato</span>':'';
-  const azioni=r.tipo==='paziente'?`<button class="paz-quick" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>`:'';
+  const btnErog=(r.next&&r.next.id)?`<button class="paz-quick" style="width:36px;height:36px${r.next.erogata===true?';color:#16a34a':''}" onclick="event.stopPropagation();toggleErogata('${escapeAttr(String(r.next.id))}',{silent:true})" title="${r.next.erogata===true?'Annulla erogazione':'Segna come erogata'}" aria-label="Segna come erogata"><svg class="ic"><use href="#ic-check"/></svg></button>`:'';
+  const btnVis=r.tipo==='paziente'
+    ?`<button class="paz-quick" style="width:36px;height:36px" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>`
+    :`<button class="paz-quick" style="width:36px;height:36px" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>`;
+  const azioni=btnErog+btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><div style="display:flex;align-items:center;gap:10px"><div class="paziente-avatar" style="width:34px;height:34px;font-size:13px">${initials}</div><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${badge}</span></div></td>
-    <td>${r.nascita?escapeHtml(r.nascita):'<span style="color:var(--ink3)">&mdash;</span>'}</td>
+    <td>${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="font-size:12.5px">${contatti}</td>
     <td>${_pazNextHTML(r)}</td>
-    <td style="text-align:center">${r.tipo==='paziente'?r.nVisite:'<span style="color:var(--ink3)">&mdash;</span>'}</td>
+    <td style="text-align:center">${r.tipo==='paziente'?r.nVisite:'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="text-align:right">${azioni}</td>
   </tr>`;
 }
@@ -9873,7 +9888,11 @@ function _pazCardHTML(r){
   const meta=[r.nascita,r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
   const nextTxt=r.next?('Prossimo: '+(r.next.data||'').split('-').reverse().join('/')+(r.next.ora?' '+r.next.ora:'')):'';
   const badge=r.tipo==='prenotato'?'<span class="paz-badge-pren">Prenotato</span>':'';
-  const right=r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span><button class="paz-quick" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>`:'';
+  const cErog=(r.next&&r.next.id)?`<button class="paz-quick" style="${r.next.erogata===true?'color:#16a34a':''}" onclick="event.stopPropagation();toggleErogata('${escapeAttr(String(r.next.id))}',{silent:true})" title="Segna come erogata" aria-label="Segna come erogata"><svg class="ic"><use href="#ic-check"/></svg></button>`:'';
+  const cVis=r.tipo==='paziente'
+    ?`<button class="paz-quick" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>`
+    :`<button class="paz-quick" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')" title="Carica visita" aria-label="Carica visita"><svg class="ic"><use href="#ic-upload"/></svg></button>`;
+  const right=(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')+cErog+cVis;
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-avatar">${initials}</div>
     <div class="paziente-info">
@@ -9918,6 +9937,15 @@ async function _ensurePazienteDaAppt(a){
   S.pazienti.unshift(paz);
   save();
   showToast('Fascicolo creato per '+paz.cognome+' '+paz.nome+' \u2713');
+}
+
+async function caricaVisitaDaAppt(apptId){
+  V.selectedPazienteId=null;
+  V.isNewPaziente=false;
+  const t=document.getElementById('visita-modal-title'); if(t) t.textContent='Nuova visita';
+  resetVisitaUpload();
+  openModal('modal-nuova-visita');
+  await visitaSelectFromAppt(apptId);
 }
 
 function openNuovoPaziente(){
