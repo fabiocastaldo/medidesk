@@ -157,7 +157,8 @@ function sanitizeMessages(raw) {
       const blocks = [];
       for (const b of m.content.slice(0, 12)) {
         if (b?.type === 'text' && typeof b.text === 'string') {
-          blocks.push({ type: 'text', text: b.text.slice(0, 4000) });
+          const t = b.text.slice(0, 4000);
+          if (t.trim()) blocks.push({ type: 'text', text: t });
         } else if (b?.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string') {
           blocks.push({ type: 'tool_use', id: b.id.slice(0, 80), name: b.name.slice(0, 60), input: b.input && typeof b.input === 'object' ? b.input : {} });
         } else if (b?.type === 'tool_result' && typeof b.tool_use_id === 'string') {
@@ -166,7 +167,7 @@ function sanitizeMessages(raw) {
           return null;
         }
       }
-      if (!blocks.length) return null;
+      if (!blocks.length) blocks.push({ type: 'text', text: '\u2014' });
       out.push({ role: m.role, content: blocks });
     } else {
       return null;
@@ -259,6 +260,7 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('assistant error:', err);
     const status = Number.isInteger(err?.status) ? err.status : 500;
-    res.status(status).json({ error: 'Si è verificato un errore. Riprova.' });
+    const detail = process.env.VERCEL_ENV === 'production' ? undefined : String(err?.message || err).slice(0, 300);
+    res.status(status).json({ error: 'Si è verificato un errore. Riprova.', detail });
   }
 }

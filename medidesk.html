@@ -12191,7 +12191,7 @@ async function astSend(){
       const res=await fetch('/api/assistant',{ method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+jwt },
         body: JSON.stringify({ messages: AST.api.slice(-24), context: astBuildContext() }) });
       const data=await res.json().catch(()=>({}));
-      if(!res.ok){ astBubble('a', data.error || 'Errore, riprova.'); break; }
+      if(!res.ok){ astBubble('a', (data.error || 'Errore, riprova.') + (data.detail ? '\n[diag] ' + data.detail : '')); break; }
       const content=Array.isArray(data.content)? data.content : [];
       content.filter(b=>b.type==='text' && b.text && b.text.trim()).forEach(b=>astBubble('a', b.text.trim()));
       const uses=content.filter(b=>b.type==='tool_use');
