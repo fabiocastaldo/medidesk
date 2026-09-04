@@ -12013,9 +12013,9 @@ _populateSpecSelect('reg-specializzazione', '— seleziona —');
 _populateSpecSelect('setting-spec', '— seleziona —');
 </script>
 <style id="ast-style">
-#ast-fab{position:fixed;right:20px;bottom:20px;z-index:1200;width:52px;height:52px;border-radius:50%;border:none;background:var(--brand-mid);color:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.22);display:none;align-items:center;justify-content:center}
+#ast-fab{position:fixed;right:20px;top:14px;z-index:1200;width:44px;height:44px;border-radius:50%;border:none;background:var(--brand-mid);color:#fff;font-size:19px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.22);display:none;align-items:center;justify-content:center}
 #ast-fab.ast-visible{display:flex}
-#ast-panel{position:fixed;right:20px;bottom:84px;z-index:1200;width:min(380px,calc(100vw - 32px));height:min(540px,calc(100vh - 120px));background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 34px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden}
+#ast-panel{position:fixed;right:20px;top:66px;z-index:1200;width:min(380px,calc(100vw - 32px));height:min(540px,calc(100vh - 120px));background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 34px rgba(0,0,0,.25);display:none;flex-direction:column;overflow:hidden}
 #ast-panel.ast-open{display:flex}
 .ast-head{background:var(--brand-deep);color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;font-weight:600}
 .ast-head button{background:none;border:none;color:#fff;font-size:16px;cursor:pointer}
@@ -12031,7 +12031,7 @@ _populateSpecSelect('setting-spec', '— seleziona —');
 #ast-ph.ast-fade{opacity:0}
 #ast-send{border:none;border-radius:10px;background:var(--brand-mid);color:#fff;padding:0 16px;font-size:14px;cursor:pointer}
 #ast-send:disabled{opacity:.5;cursor:default}
-@media (max-width:960px){#ast-fab{bottom:84px}#ast-panel{bottom:148px}}
+@media (max-width:960px){#ast-fab{top:10px;right:12px}#ast-panel{top:60px;right:12px;height:min(540px,calc(100vh - 160px))}}
 </style>
 <button id="ast-fab" title="Assistente" aria-label="Assistente">&#10024;</button>
 <div id="ast-panel" role="dialog" aria-label="Assistente Delphi~Med">
@@ -12228,6 +12228,8 @@ function astPhRotate(){
   AST.phTimer=setInterval(()=>{ if(!document.getElementById('ast-in').value && document.activeElement!==document.getElementById('ast-in')) astPhRotate(); }, 4000);
   async function vis(){ try{ const {data:{session}}=await supabaseClient.auth.getSession(); fab.classList.toggle('ast-visible', !!(session&&session.access_token)); }catch(_){ } }
   vis();
+  let _astVisTries=0;
+  const _astVisT=setInterval(()=>{ vis(); if(++_astVisTries>20) clearInterval(_astVisT); }, 1500);
   try{ supabaseClient.auth.onAuthStateChange(()=>vis()); }catch(_){ }
 })();
 </script>
