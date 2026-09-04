@@ -2,7 +2,7 @@ import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
 import { trialExpired } from '../lib/trial-gate.js';
 
 const rateMap = new Map();
-const RATE_LIMIT = 40;
+const RATE_LIMIT = 120;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 
 const bedrock = new AnthropicBedrock({ awsRegion: process.env.AWS_REGION || 'eu-central-1' });
