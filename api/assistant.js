@@ -245,7 +245,7 @@ export default async function handler(req, res) {
     }), 6000);
 
     const apiData = await bedrock.messages.create({
-      model: process.env.BEDROCK_ASSISTANT_MODEL_ID || 'eu.anthropic.claude-haiku-4-5',
+      model: process.env.BEDROCK_ASSISTANT_MODEL_ID || 'eu.anthropic.claude-haiku-4-5-20251001-v1:0',
       max_tokens: 1024,
       system: [
         { type: 'text', text: SYSTEM_STATIC, cache_control: { type: 'ephemeral' } },
