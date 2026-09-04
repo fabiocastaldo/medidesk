@@ -246,6 +246,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-booking-state{font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-light);border-radius:var(--r-sm);padding:1px 7px}
 .centro-booking-chevron{margin-left:auto;font-size:11px;color:var(--ink3);transition:transform .15s;transform:rotate(-90deg)}
 .centro-booking-hdr.open .centro-booking-chevron{transform:rotate(0)}
+.centro-turni-hdr{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.centro-turni-hdr .centro-booking-chevron{text-transform:none}
+.centro-turni-body{margin-top:8px}
 .centro-booking-body{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
 .centro-booking-body .share-url{flex:1;min-width:160px}
 .centro-booking-acts{display:flex;flex-wrap:wrap;gap:8px}
@@ -1396,7 +1399,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-agenda" class="page">
       <div class="page-header">
         <div><div class="page-title">Agenda</div><div class="page-subtitle">Appuntamenti e prenotazioni</div></div>
-        <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="importaGiornata()">Importa giornata</button><button class="btn btn-secondary" onclick="openOverbookingFromAgenda()">Overbooking</button><button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button></div>
+        <div class="agenda-actions" style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="importaGiornata()">Importa giornata</button><button class="btn btn-secondary" onclick="openOverbookingFromAgenda()">Overbooking</button><button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button></div>
       </div>
       <div style="margin-bottom:16px">
         <div class="view-toggle">
@@ -1975,6 +1978,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="mnu-sec-title">Account</div>
         <div class="mnu-grid">
           <button class="mnu-item" onclick="showPage('profilo')"><span class="mnu-ico"><svg class="ic"><use href="#ic-user"/></svg></span><span class="mnu-lbl">Profilo</span></button>
+          <button class="mnu-item" onclick="showPage('piani')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Piani</span></button>
           <button class="mnu-item" onclick="showPage('impostazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-settings"/></svg></span><span class="mnu-lbl">Impostazioni</span></button>
           <button class="mnu-item mnu-logout" id="mobile-logout-btn" onclick="signOut()"><span class="mnu-ico"><svg class="ic"><use href="#ic-logout"/></svg></span><span class="mnu-lbl">Esci</span></button>
         </div>
@@ -3970,7 +3974,7 @@ function showPage(id){
     }
   });
   // Sync bottom nav
-  const _menuPages = ['profilo','statistiche','prestazioni','impostazioni','manutenzione-archivio'];
+  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio'];
   const bnKey = _menuPages.includes(id) ? 'menu' : id;
   const bnItem = document.querySelector(`.bottom-nav-item[data-page="${bnKey}"]`);
   if(bnItem) bnItem.classList.add('active');
@@ -4702,7 +4706,14 @@ function renderCentroCard(c, isActive){
       </div>
       ` : ''}
       ` : ''}
-      ${turniHtml}${giornateHtml}
+      ${(turniHtml||giornateHtml) ? `
+      <div class="centro-turni-hdr ${_turniOpen.has(String(c.id))?'open':''}" onclick="toggleTurni('${c.id}')">
+        <svg class="ic"><use href="#ic-calendar"/></svg>
+        <span>Turni e disponibilit&agrave;</span>
+        <span class="centro-booking-chevron">&#8250;</span>
+      </div>
+      ${_turniOpen.has(String(c.id)) ? `<div class="centro-turni-body">${turniHtml}${giornateHtml}</div>` : ''}
+      ` : ''}
     </div>`;
 }
 
@@ -4716,6 +4727,12 @@ function toggleCentroLink(id){
   const k = String(id);
   if(_linkOpen.has(k)) _linkOpen.delete(k); else _linkOpen.add(k);
   _linkPending = null;
+  renderCentri();
+}
+let _turniOpen = new Set();
+function toggleTurni(id){
+  const k = String(id);
+  if(_turniOpen.has(k)) _turniOpen.delete(k); else _turniOpen.add(k);
   renderCentri();
 }
 function armBookingAction(id, action){
@@ -12032,6 +12049,14 @@ _populateSpecSelect('setting-spec', '— seleziona —');
 #ast-send{border:none;border-radius:10px;background:var(--brand-mid);color:#fff;padding:0 16px;font-size:14px;cursor:pointer}
 #ast-send:disabled{opacity:.5;cursor:default}
 @media (max-width:960px){#ast-fab{top:10px;right:12px}#ast-panel{top:60px;right:12px;height:min(540px,calc(100vh - 160px))}}
+body:has(.modal-overlay.open) #ast-fab.ast-visible{display:none}
+@media (max-width:768px){
+#ast-panel{top:0;left:0;right:0;bottom:0;width:100%;height:100dvh;max-height:100dvh;border-radius:0;border:none}
+.modal-close{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.booking-back{min-height:44px;display:inline-flex;align-items:center}
+.agenda-actions{display:grid !important;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+.agenda-actions .btn{width:100%;padding:10px 4px;font-size:13px;line-height:1.2;white-space:normal}
+}
 </style>
 <button id="ast-fab" title="Assistente" aria-label="Assistente">&#10024;</button>
 <div id="ast-panel" role="dialog" aria-label="Assistente Delphi~Med">
