@@ -12159,10 +12159,10 @@ const AST_REGISTRY = {
   leggi_statistiche(inp){
     const [da,a]=_astRange(inp);
     let rows=(S.appuntamenti||[]).filter(x=>String(x.data)>=da && String(x.data)<=a);
-    if(inp.centro){ const cq=String(inp.centro).toLowerCase(); const cid=((S.centri||[]).find(c=>String(c.nome||'').toLowerCase().includes(cq))||{}).id; if(cid!=null) rows=rows.filter(x=>String(x.centro_id)===String(cid)); }
+    if(inp.centro){ const cq=String(inp.centro).toLowerCase(); rows=rows.filter(x=>String(x.centroNome||'').toLowerCase().includes(cq)); }
     const eff=rows.filter(x=>!x.cancelled);
     const perC={}, perT={};
-    eff.forEach(x=>{ const cn=(((S.centri||[]).find(c=>String(c.id)===String(x.centro_id))||{}).nome)||'altro'; perC[cn]=(perC[cn]||0)+1; const t=x.tipo||'altro'; perT[t]=(perT[t]||0)+1; });
+    eff.forEach(x=>{ const cn=x.centroNome||'altro'; perC[cn]=(perC[cn]||0)+1; const t=x.tipo||'altro'; perT[t]=(perT[t]||0)+1; });
     return { periodo:{da:da,a:a}, totale:rows.length, effettuate:eff.length, cancellate:rows.length-eff.length, erogate:eff.filter(x=>x.erogata===true).length, per_centro:perC, per_tipo:perT };
   }
 };
