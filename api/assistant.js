@@ -101,6 +101,20 @@ const TOOLS = [
     }
   },
   {
+    name: 'leggi_dati',
+    description: "Legge i dati del medico gia' caricati nel gestionale. Argomenti: 'turni' (orari settimanali per centro CON stato scadenza: e' qui che vedi i turni in scadenza), 'centri' (sedi), 'chiusure' (ferie/chiusure), 'prestazioni' (listino), 'appuntamenti' (di una data o intervallo: passa data oppure da/a), 'giornate_singole'. Usalo per qualunque domanda sui dati del medico prima di dire che non puoi.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        argomento: { type: 'string', enum: ['turni', 'centri', 'chiusure', 'prestazioni', 'appuntamenti', 'giornate_singole'] },
+        data: { type: 'string', description: 'YYYY-MM-DD, per appuntamenti di un giorno' },
+        da: { type: 'string' },
+        a: { type: 'string' }
+      },
+      required: ['argomento']
+    }
+  },
+  {
     name: 'cerca_disponibilita',
     description: "Trova i primi slot LIBERI prenotabili: scandisce i giorni a partire da una data sui centri del medico usando la stessa griglia del wizard. Usalo per domande tipo 'prima data disponibile', 'primo slot libero', 'quando posso prenotare'. Restituisce data, ora e centro dei primi slot liberi.",
     input_schema: {
@@ -138,6 +152,7 @@ REGOLE TASSATIVE
 4. Le domande cliniche non sono compito tuo: rimanda alle sezioni referti e fascicolo, non interpretare contenuti sanitari.
 5. Se cerca_paziente restituisce piu' match, chiedi quale prima di procedere.
 6. Per richieste di prima disponibilita' o primo slot libero: usa cerca_disponibilita, proponi al medico lo slot trovato (data, ora, centro), e solo dopo il suo ok chiama prepara_appuntamento con quella data. Non chiedere al medico dati che puoi trovare da solo con i tool.
+7. Per domande sui dati del medico (turni e loro scadenze, sedi, chiusure, listino prestazioni, appuntamenti di un giorno) usa leggi_dati con l'argomento giusto. Non rispondere 'non ho una funzione per questo' senza aver provato leggi_dati.
 
 MAPPA DEL SITO
 - Dashboard: appuntamenti di oggi con azioni rapide "Segna come erogata" e "Carica visita"; banner scadenze.

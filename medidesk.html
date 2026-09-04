@@ -12157,6 +12157,55 @@ const AST_REGISTRY = {
     return { ok:true, erogata:a.erogata===true, paziente:_astApptLabel(a), ora:a.ora };
   },
 
+  leggi_dati(inp){
+    const arg=String(inp.argomento||'');
+    const oggi=_astToday();
+    if(arg==='centri'){
+      return { centri:(S.centri||[]).map(c=>({ nome:c.nome, indirizzo:c.indirizzo||'', attivo:c.attivo!==false, n_turni:(c.turni||[]).length })) };
+    }
+    if(arg==='turni'){
+      const gg=['domenica','lunedi','martedi','mercoledi','giovedi','venerdi','sabato'];
+      const d30=new Date(); d30.setDate(d30.getDate()+30);
+      const d60=new Date(); d60.setDate(d60.getDate()+60);
+      const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+      const s30=f(d30), s60=f(d60);
+      const out=[];
+      (S.centri||[]).forEach(c=>(c.turni||[]).forEach(t=>{
+        let scad='nessuna scadenza';
+        if(t.dataFineValidita){
+          if(t.dataFineValidita<=oggi) scad='scaduto';
+          else if(t.dataFineValidita<=s30) scad='IN SCADENZA entro 30 giorni';
+          else if(t.dataFineValidita<=s60) scad='in scadenza entro 60 giorni';
+          else scad='valido fino al '+t.dataFineValidita;
+        }
+        out.push({ centro:c.nome, giorno:gg[t.giorno]||t.giorno, orario:t.inizio+'-'+t.fine, slot_minuti:t.slot, ogni_n_settimane:t.frequenza||1, fine_validita:t.dataFineValidita||null, stato:scad });
+      }));
+      return { turni: out };
+    }
+    if(arg==='chiusure'){
+      return { chiusure:(S.chiusure||[]).map(ch=>({ dal:ch.data_inizio, al:ch.data_fine, etichetta:ch.etichetta||'' })) };
+    }
+    if(arg==='prestazioni'){
+      const rows=(S.prestazioniCentro||[]).filter(p=>(p.valido_dal||'')<=oggi);
+      return { prestazioni: rows.slice(0,60).map(p=>{
+        const c=(S.centri||[]).find(x=>String(x.id)===String(p.centro_id));
+        return { centro:c?c.nome:'', tipo:p.tipo_visita||'', importo:(p.importo!=null?p.importo:(p.prezzo!=null?p.prezzo:null)), valido_dal:p.valido_dal||null };
+      }) };
+    }
+    if(arg==='appuntamenti'){
+      let da=String(inp.data||inp.da||oggi), a=String(inp.data||inp.a||da);
+      const rows=(S.appuntamenti||[]).filter(x=>String(x.data)>=da && String(x.data)<=a).slice(0,40)
+        .map(x=>({ id:x.id, data:x.data, ora:x.ora, paziente:_astApptLabel(x), tipo:x.tipo||'', centro:x.centroNome||'', erogata:x.erogata===true, cancellata:x.cancelled===true }));
+      return { appuntamenti: rows };
+    }
+    if(arg==='giornate_singole'){
+      const out=[];
+      (S.centri||[]).forEach(c=>(c.giornateSingole||[]).forEach(g=>{ if(g.data>=oggi) out.push({ centro:c.nome, data:g.data, orario:g.inizio+'-'+g.fine }); }));
+      return { giornate_singole: out };
+    }
+    return { errore:'argomento non riconosciuto' };
+  },
+
   cerca_disponibilita(inp){
     const cq=inp.centro?String(inp.centro).toLowerCase():null;
     const centri=(S.centri||[]).filter(c=>c.attivo!==false && (!cq || String(c.nome||'').toLowerCase().includes(cq)));
