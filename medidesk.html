@@ -167,6 +167,22 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .wg-now{position:absolute;left:0;right:0;height:2px;background:#E11D48;z-index:4;pointer-events:none}
 .wg-now::before{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:#E11D48}
 @media(max-width:960px){#week-grid-wrap{display:none}#week-mobile{display:block}}
+.wmt{position:relative;margin-top:14px}
+.wmt-gutter{position:absolute;left:0;top:0;width:44px;bottom:0}
+.wmt-hlabel{position:absolute;left:0;width:40px;text-align:right;font-size:11px;color:var(--ink3);transform:translateY(-50%);padding-right:6px}
+.wmt-col{position:relative;margin-left:48px;border-left:1px solid var(--border)}
+.wmt-hline{position:absolute;left:0;right:0;border-top:1px solid var(--border);opacity:.55}
+.wmt-band{position:absolute;left:0;right:0;opacity:.10;pointer-events:none}
+.wmt-evt{position:absolute;left:4px;right:4px;border-radius:8px;padding:5px 8px;color:#fff;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.12);box-sizing:border-box}
+.wmt-evt .wmt-t{font-weight:700;font-size:12px}
+.wmt-evt .wmt-n{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.wmt-evt .wmt-sub{font-size:10px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wmt-evt.wmt-cancelled{background:repeating-linear-gradient(45deg,#b9b9b9,#b9b9b9 6px,#cfcfcf 6px,#cfcfcf 12px)!important;color:#555;text-decoration:line-through}
+.wmt-now{position:absolute;left:0;right:0;height:2px;background:#e5484d;z-index:5}
+.wmt-now::before{content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:#e5484d}
+.wmt-allday{margin:0 0 10px 48px;display:flex;flex-wrap:wrap;gap:6px}
+.wmt-allday .wg-chip{display:inline-block;color:#fff;font-size:11px;padding:2px 8px;border-radius:20px}
+.wmt-empty{text-align:center;padding:40px;color:var(--ink3)}
 .day-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border-radius:14px;cursor:pointer;font-size:13px;font-weight:500;background:var(--surface);border:0.5px solid var(--border);color:var(--ink2);transition:all .15s}
 .day-tab:hover{border-color:var(--accent);color:var(--accent)}
 .day-tab.active{background:linear-gradient(135deg,var(--brand-mid),var(--brand-deep));box-shadow:var(--shadow-soft);border-color:transparent;color:#fff}
@@ -6555,33 +6571,77 @@ function toggleMostraCancellati(){
 }
 function renderDayAppointments(){
   const container = document.getElementById('appointments-container');
-  let appts = S.appuntamenti.filter(a=>a.data===S.selectedDay).sort((a,b)=>a.ora.localeCompare(b.ora));
-  const blks = (S.blocchi||[]).filter(b=>b.data===S.selectedDay);
+  const ds = S.selectedDay;
+  const dObj = new Date(ds+'T12:00:00');
+  // bande turni/giornate del giorno (per durata slot e sfondo, come la griglia desktop)
+  const bands = [];
+  S.centri.filter(c=>c.attivo!==false).forEach(c=>{
+    _turniAttiviGiorno(c, ds, dObj).forEach(t=>bands.push({ini:timeToMin(t.inizio), fine:timeToMin(t.fine), slot:t.slot||30, colore:c.colore, centroId:String(c.id)}));
+    (c.giornateSingole||[]).filter(g=>g.data===ds).forEach(g=>bands.push({ini:timeToMin(g.inizio), fine:timeToMin(g.fine), slot:g.slot||30, colore:c.colore, centroId:String(c.id)}));
+  });
+  let appts = S.appuntamenti.filter(a=>a.data===ds);
   const hasCancelled = appts.some(a=>a.cancelled);
-  if(!_mostraCancellati) appts=appts.filter(a=>!a.cancelled);
-  if(!appts.length && !blks.length){
-    container.innerHTML=`<div style="text-align:center;padding:40px;color:var(--ink3)"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-sparkles"/></svg>Nessun appuntamento${hasCancelled?' <button class="btn btn-sm btn-secondary" style="margin-top:8px;display:block;margin:8px auto 0" onclick="toggleMostraCancellati()">Mostra cancellati</button>':''}</div>`; return;
-  }
-  const toggleBtn = hasCancelled ? `<div style="text-align:right;margin-bottom:8px"><button id="btn-mostra-cancellati" class="btn btn-sm btn-secondary" onclick="toggleMostraCancellati()">${_mostraCancellati?'Nascondi cancellati':'Mostra cancellati'}</button></div>` : '';
-  const _blkHtml = blks.map(function(b){ var _col=(function(){var _c=S.centri.find(function(x){return String(x.id)===String(b.centroId);});return _c?_c.colore:'#999';})(); var _nv=(b.nVisite==null?'':(' \u00b7 '+b.nVisite+' visite')); return '<div class="appt-card" style="opacity:.85;border-left:3px solid '+_col+'"><div class="appt-time"><svg class="ic" style="vertical-align:-.15em"><use href="#ic-center"/></svg></div><div class="appt-info"><div class="appt-patient">Occupato'+_nv+'</div><div class="appt-detail">Blocco occupazione (agenda del centro)</div></div>'+(b.centroNome?'<div class="appt-centro" style="background:'+_col+'22;color:'+_col+'">'+escapeHtml(b.centroNome)+'</div>':'')+'</div>'; }).join('');
-  container.innerHTML = toggleBtn + _blkHtml + appts.map(a=>{
-    const centro = S.centri.find(c=>String(c.id)===String(a.centroId));
-    const isOnlineAppt = a.source==='paziente';
-    const centroNomeDisplay = centro ? centro.nome : (a.centroNome||'');
-    const centroColore = centro ? centro.colore : '#999';
-    const centroOpacity = centro && centro.attivo===false ? '0.5' : '1';
-    const cancelledClass = a.cancelled ? ' appt-cancelled' : '';
-    return `<div class="appt-card${cancelledClass}" onclick="showApptDetail('${escapeAttr(a.id)}')">
-      <div class="appt-time">${escapeHtml(a.ora)}</div>
-      <div class="appt-info">
-        <div class="appt-patient">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}${a.cancelled?'<span class="badge-cancelled" style="font-size:10px;padding:1px 5px">Cancellato</span>':''}</div>
-        <div class="appt-detail">${escapeHtml(a.tipo||'Visita')}${a.area?' · '+escapeHtml(a.area):''}${isOnlineAppt?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg> Online':''} ${a.note?'· '+escapeHtml(a.note):''}</div>
-      </div>
-      ${centroNomeDisplay?`<div class="appt-centro" style="background:${escapeAttr(centroColore)}22;color:${escapeAttr(centroColore)};opacity:${centroOpacity}">${escapeHtml(centroNomeDisplay)}</div>`:''}
-    </div>`;
-  }).join('');
-}
+  if(!_mostraCancellati) appts = appts.filter(a=>!a.cancelled);
+  const blks = (S.blocchi||[]).filter(b=>b.data===ds);
+  const chiuso = isChiusura(ds);
+  const hol = isHoliday(ds);
+  // eventi con posizione temporale (durata dedotta dalla banda, come renderWeekGrid)
+  const evts = appts.map(a=>{
+    const ini = timeToMin(a.ora);
+    const band = bands.find(b=>String(b.centroId)===String(a.centroId) && ini>=b.ini && ini<b.fine);
+    const dur = band ? band.slot : 30;
+    const c = S.centri.find(x=>String(x.id)===String(a.centroId));
+    return {id:a.id, ini, fine:ini+dur, cognome:a.cognome, nome:a.nome, tipo:a.tipo, ora:a.ora, area:a.area, source:a.source, colore:c?c.colore:'#9AA8A5', centroNome:c?c.nome:(a.centroNome||''), cancelled:!!a.cancelled};
+  }).sort((x,y)=>x.ini-y.ini || String(x.id).localeCompare(String(y.id)));
+  // colonne per sovrapposti
+  const colsEnd = [];
+  evts.forEach(e=>{ let k=colsEnd.findIndex(m=>m<=e.ini); if(k===-1){k=colsEnd.length;colsEnd.push(0);} colsEnd[k]=e.fine; e.col=k; });
+  const nCols = Math.max(1, colsEnd.length);
+  evts.forEach(e=>{ e.nCols=nCols; });
 
+  const toggleBtn = hasCancelled ? `<div style="text-align:right;margin-bottom:8px"><button id="btn-mostra-cancellati" class="btn btn-sm btn-secondary" onclick="toggleMostraCancellati()">${_mostraCancellati?'Nascondi cancellati':'Mostra cancellati'}</button></div>` : '';
+
+  // riga "tutto il giorno": ferie, festivo, blocchi occupato
+  let alldayChips = '';
+  if(chiuso) alldayChips += '<span class="wg-chip" style="background:var(--ink3)">Ferie</span>';
+  else if(hol.isHoliday) alldayChips += `<span class="wg-chip" style="background:var(--pending-accent)">${escapeHtml(hol.name||'Festivo')}</span>`;
+  blks.forEach(b=>{ const c=S.centri.find(x=>String(x.id)===String(b.centroId)); const col=c?c.colore:'#9aa3af'; alldayChips += `<span class="wg-chip" style="background:${escapeAttr(col)}">Occupato${b.nVisite!=null?' \u00b7 '+b.nVisite:''}</span>`; });
+  const alldayHtml = alldayChips ? `<div class="wmt-allday">${alldayChips}</div>` : '';
+
+  if(!evts.length && !alldayChips){
+    container.innerHTML = toggleBtn + `<div class="wmt-empty"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-sparkles"/></svg>Nessun appuntamento</div>`;
+    return;
+  }
+
+  // scala oraria dinamica (default 8-20), come la griglia desktop
+  let minH=8*60, maxH=20*60;
+  bands.forEach(b=>{ minH=Math.min(minH,b.ini); maxH=Math.max(maxH,b.fine); });
+  evts.forEach(e=>{ minH=Math.min(minH,e.ini); maxH=Math.max(maxH,e.fine); });
+  minH=Math.floor(minH/60)*60; maxH=Math.ceil(maxH/60)*60;
+  const H=(maxH-minH)/60*WG_HOUR_PX;
+  const y=m=>(m-minH)/60*WG_HOUR_PX;
+
+  let h = toggleBtn + alldayHtml + `<div class="wmt" style="height:${H}px">`;
+  // gutter etichette ore
+  h += '<div class="wmt-gutter">';
+  for(let m=minH; m<=maxH; m+=60) h += `<div class="wmt-hlabel" style="top:${y(m)}px">${minToTime(m)}</div>`;
+  h += '</div>';
+  // colonna
+  h += `<div class="wmt-col" style="height:${H}px">`;
+  for(let m=minH+60; m<maxH; m+=60) h += `<div class="wmt-hline" style="top:${y(m)}px"></div>`;
+  bands.forEach(b=>{ h += `<div class="wmt-band" style="top:${y(b.ini)}px;height:${Math.max(2,y(b.fine)-y(b.ini))}px;background:${escapeAttr(b.colore)}"></div>`; });
+  evts.forEach(e=>{
+    const w=100/e.nCols, l=e.col*w;
+    const hh=Math.max(22, y(e.fine)-y(e.ini)-2);
+    const sub = hh>=40 ? `<div class="wmt-sub">${escapeHtml(e.tipo||'Visita')}${e.source==='paziente'?' \u00b7 Online':''}${e.centroNome?' \u00b7 '+escapeHtml(e.centroNome):''}</div>` : '';
+    h += `<div class="wmt-evt${e.cancelled?' wmt-cancelled':''}" data-id="${escapeAttr(e.id)}" style="top:${y(e.ini)+1}px;height:${hh}px;left:calc(${l}% + 4px);width:calc(${w}% - 8px);background:${escapeAttr(e.colore)}" onclick="showApptDetail('${escapeAttr(e.id)}')"><span class="wmt-t">${escapeHtml(e.ora)}</span> <span class="wmt-n">${escapeHtml((e.cognome||'')+(e.nome?' '+e.nome:''))}</span>${sub}</div>`;
+  });
+  // linea adesso
+  const today = fmt(new Date());
+  if(ds===today){ const _n=new Date(); const nm=_n.getHours()*60+_n.getMinutes(); if(nm>=minH && nm<=maxH) h += `<div class="wmt-now" style="top:${y(nm)}px"></div>`; }
+  h += '</div></div>';
+  container.innerHTML = h;
+}
 function showApptDetail(id){
   const a = S.appuntamenti.find(x=>String(x.id)===String(id)); if(!a) return;
   S.currentApptId = id;
