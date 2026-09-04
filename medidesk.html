@@ -12047,7 +12047,7 @@ _populateSpecSelect('setting-spec', '— seleziona —');
 // ── Assistente AI v1 ──
 // Registry tool → funzioni client verificate (assert nel gate):
 // showPage, showPazienteDetail, openAppuntamentoFromAgenda, caricaVisitaDaAppt,
-// goToVisitaUpload, resetVisitaUpload, toggleErogata, openModal, getAuthJwt
+// goToVisitaUpload, resetVisitaUpload, toggleErogata, openModal, getAuthJwt, getSlots
 const AST = { open:false, busy:false, api:[], phIdx:0, phTimer:null };
 
 const AST_EXAMPLES = [
@@ -12062,7 +12062,8 @@ const AST_EXAMPLES = [
   'Come sposto un appuntamento?',
   'Quale centro ha avuto piu\u0300 visite quest\u2019anno?',
   'Dove vedo i miei compensi?',
-  'Carica una visita per l\u2019appuntamento di oggi'
+  'Carica una visita per l\u2019appuntamento di oggi',
+  'Qual \u00e8 il primo slot libero della prossima settimana?'
 ];
 
 function astToggle(open){
@@ -12154,6 +12155,28 @@ const AST_REGISTRY = {
     if(!a) return { errore:'appuntamento non trovato' };
     await toggleErogata(a.id);
     return { ok:true, erogata:a.erogata===true, paziente:_astApptLabel(a), ora:a.ora };
+  },
+
+  cerca_disponibilita(inp){
+    const cq=inp.centro?String(inp.centro).toLowerCase():null;
+    const centri=(S.centri||[]).filter(c=>c.attivo!==false && (!cq || String(c.nome||'').toLowerCase().includes(cq)));
+    if(!centri.length) return { errore: cq? 'nessun centro col nome indicato' : 'nessun centro attivo' };
+    const max=Math.min(Math.max(parseInt(inp.max_risultati,10)||5,1),10);
+    const oggi=_astToday();
+    let start=String(inp.da||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(start) || start<oggi){ const d=new Date(); d.setDate(d.getDate()+1); start=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    const out=[];
+    const d0=new Date(start+'T12:00:00');
+    for(let g=0; g<60 && out.length<max; g++){
+      const d=new Date(d0); d.setDate(d0.getDate()+g);
+      const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      for(const c of centri){
+        const libere=getSlots(c, ds, ds===oggi);
+        for(const ora of libere){ out.push({ data:ds, ora:ora, centro:c.nome }); if(out.length>=max) break; }
+        if(out.length>=max) break;
+      }
+    }
+    return out.length? { slot_liberi: out } : { slot_liberi: [], nota:'nessuno slot libero nei prossimi 60 giorni con i turni attuali' };
   },
 
   leggi_statistiche(inp){

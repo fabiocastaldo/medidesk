@@ -101,6 +101,19 @@ const TOOLS = [
     }
   },
   {
+    name: 'cerca_disponibilita',
+    description: "Trova i primi slot LIBERI prenotabili: scandisce i giorni a partire da una data sui centri del medico usando la stessa griglia del wizard. Usalo per domande tipo 'prima data disponibile', 'primo slot libero', 'quando posso prenotare'. Restituisce data, ora e centro dei primi slot liberi.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        da: { type: 'string', description: 'YYYY-MM-DD da cui cercare; default domani' },
+        centro: { type: 'string', description: 'nome (anche parziale) del centro, opzionale' },
+        max_risultati: { type: 'integer', description: 'quanti slot restituire, default 5' }
+      },
+      required: []
+    }
+  },
+  {
     name: 'leggi_statistiche',
     description: "Calcola statistiche sugli appuntamenti del medico: totali, effettuate, cancellate, erogate, ripartizione per centro e per tipo. Periodo: oggi | settimana | mese | anno | intervallo (con da/a YYYY-MM-DD). Stessa fonte dati della pagina Statistiche.",
     input_schema: {
@@ -124,6 +137,7 @@ REGOLE TASSATIVE
 3. Rispondi breve, in italiano, come un collega pratico. Un'azione o una risposta per volta. Niente markdown: testo semplice.
 4. Le domande cliniche non sono compito tuo: rimanda alle sezioni referti e fascicolo, non interpretare contenuti sanitari.
 5. Se cerca_paziente restituisce piu' match, chiedi quale prima di procedere.
+6. Per richieste di prima disponibilita' o primo slot libero: usa cerca_disponibilita, proponi al medico lo slot trovato (data, ora, centro), e solo dopo il suo ok chiama prepara_appuntamento con quella data. Non chiedere al medico dati che puoi trovare da solo con i tool.
 
 MAPPA DEL SITO
 - Dashboard: appuntamenti di oggi con azioni rapide "Segna come erogata" e "Carica visita"; banner scadenze.
