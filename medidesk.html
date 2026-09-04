@@ -246,6 +246,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-booking-state{font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-light);border-radius:var(--r-sm);padding:1px 7px}
 .centro-booking-chevron{margin-left:auto;font-size:11px;color:var(--ink3);transition:transform .15s;transform:rotate(-90deg)}
 .centro-booking-hdr.open .centro-booking-chevron{transform:rotate(0)}
+.centro-turni-hdr{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.centro-turni-hdr .centro-booking-chevron{text-transform:none}
+.centro-turni-body{margin-top:8px}
 .centro-booking-body{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
 .centro-booking-body .share-url{flex:1;min-width:160px}
 .centro-booking-acts{display:flex;flex-wrap:wrap;gap:8px}
@@ -4703,7 +4706,14 @@ function renderCentroCard(c, isActive){
       </div>
       ` : ''}
       ` : ''}
-      ${turniHtml}${giornateHtml}
+      ${(turniHtml||giornateHtml) ? `
+      <div class="centro-turni-hdr ${_turniOpen.has(String(c.id))?'open':''}" onclick="toggleTurni('${c.id}')">
+        <svg class="ic"><use href="#ic-calendar"/></svg>
+        <span>Turni e disponibilit&agrave;</span>
+        <span class="centro-booking-chevron">&#8250;</span>
+      </div>
+      ${_turniOpen.has(String(c.id)) ? `<div class="centro-turni-body">${turniHtml}${giornateHtml}</div>` : ''}
+      ` : ''}
     </div>`;
 }
 
@@ -4717,6 +4727,12 @@ function toggleCentroLink(id){
   const k = String(id);
   if(_linkOpen.has(k)) _linkOpen.delete(k); else _linkOpen.add(k);
   _linkPending = null;
+  renderCentri();
+}
+let _turniOpen = new Set();
+function toggleTurni(id){
+  const k = String(id);
+  if(_turniOpen.has(k)) _turniOpen.delete(k); else _turniOpen.add(k);
   renderCentri();
 }
 function armBookingAction(id, action){
