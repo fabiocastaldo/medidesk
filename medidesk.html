@@ -261,9 +261,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-booking-hdr{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;font-weight:600;color:var(--ink2)}
 .centro-booking-hdr .ic{width:15px;height:15px;flex-shrink:0}
 .centro-booking-state{font-size:11px;font-weight:500;color:var(--accent);background:var(--accent-light);border-radius:var(--r-sm);padding:1px 7px}
-.centro-booking-chevron{margin-left:auto;font-size:11px;color:var(--ink3);transition:transform .15s;transform:rotate(-90deg)}
-.centro-booking-hdr.open .centro-booking-chevron{transform:rotate(0)}
-.centro-turni-hdr{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--ink3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.centro-booking-chevron{margin-left:auto;width:26px;height:26px;border-radius:50%;background:rgba(43,84,126,.10);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .18s,background .15s}
+.centro-booking-chevron svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.centro-booking-hdr.open .centro-booking-chevron,.centro-turni-hdr.open .centro-booking-chevron,.share-box.open .centro-booking-chevron{transform:rotate(180deg);background:rgba(43,84,126,.18)}
+.centro-turni-hdr{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;font-weight:600;color:var(--ink2);margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
 .centro-turni-hdr .centro-booking-chevron{text-transform:none}
 .centro-turni-body{margin-top:8px}
 .centro-booking-body{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
@@ -552,6 +553,11 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 /* ── LINK SHARE BOX ── */
 .share-box{background:var(--accent-light);border:1px solid #c0ddd5;border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap}
 .share-box p{font-size:13px;color:var(--accent);flex:1}
+.share-box{flex-direction:column;align-items:stretch}
+.share-hdr{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none}
+.share-hdr p{margin:0}
+.share-body{display:none;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.share-box.open .share-body{display:flex}
 .share-url{font-size:12px;font-family:monospace;background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 10px;flex:1;min-width:200px;word-break:break-all;color:var(--ink2)}
 
 /* ── PENDING ── */
@@ -645,7 +651,10 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
   .modal-footer .btn{width:100%}
 
   /* Share box */
-  .share-box{flex-direction:column;align-items:stretch;text-align:center;padding:14px}
+  .share-box{text-align:center;padding:14px}
+  .share-hdr{flex-direction:column;text-align:center}
+  .share-hdr .centro-booking-chevron{margin:6px auto 0}
+  .share-body{flex-direction:column;align-items:stretch}
   .share-box .btn{width:100%}
   .share-url{text-align:center;font-size:11px;width:100%}
 
@@ -1387,14 +1396,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="date-strip" id="date-strip"></div>
 
       <!-- SHARE BOX -->
-      <div class="share-box">
-        <span style="font-size:20px"><svg class="ic"><use href="#ic-link"/></svg></span>
-        <p><strong>Link prenotazione pazienti</strong><br>Condividi questo link con i tuoi pazienti per permettere loro di prenotare online.</p>
+      <div class="share-box" id="share-box">
+        <div class="share-hdr" onclick="toggleShareBox()">
+          <span style="font-size:20px"><svg class="ic"><use href="#ic-link"/></svg></span>
+          <p><strong>Link prenotazione pazienti</strong><br>Condividi questo link con i tuoi pazienti per permettere loro di prenotare online.</p>
+          <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </div>
+        <div class="share-body">
         <span class="share-url" id="share-url-display">—</span>
         <button class="btn btn-sm btn-primary" onclick="copyShareLink()">Copia link</button>
         <button class="btn btn-sm btn-secondary" onclick="openBookingPage()">Apri</button>
         <button class="btn btn-sm btn-secondary" onclick="shareWhatsApp()"><svg class="ic"><use href="#ic-message"/></svg>WhatsApp</button>
         <button class="btn btn-sm btn-secondary" onclick="openQRModal()"><svg class="ic"><use href="#ic-qr"/></svg>QR Code</button>
+        </div>
       </div>
 
       <!-- PENDING -->
@@ -4697,7 +4711,7 @@ function renderCentroCard(c, isActive){
           <svg class="ic"><use href="#ic-link"/></svg>
           <span>Link prenotazione</span>
           ${c.booking_token?'<span class="centro-booking-state">attivo</span>':''}
-          <span class="centro-booking-chevron">▾</span>
+          <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
         </div>
         ${_linkOpen.has(String(c.id)) ? `
         <div class="centro-booking-body">
@@ -4727,7 +4741,7 @@ function renderCentroCard(c, isActive){
       <div class="centro-turni-hdr ${_turniOpen.has(String(c.id))?'open':''}" onclick="toggleTurni('${c.id}')">
         <svg class="ic"><use href="#ic-calendar"/></svg>
         <span>Turni e disponibilit&agrave;</span>
-        <span class="centro-booking-chevron">&#8250;</span>
+        <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </div>
       ${_turniOpen.has(String(c.id)) ? `<div class="centro-turni-body">${turniHtml}${giornateHtml}</div>` : ''}
       ` : ''}
@@ -4747,6 +4761,7 @@ function toggleCentroLink(id){
   renderCentri();
 }
 let _turniOpen = new Set();
+function toggleShareBox(){ const b=document.getElementById('share-box'); if(b) b.classList.toggle('open'); }
 function toggleTurni(id){
   const k = String(id);
   if(_turniOpen.has(k)) _turniOpen.delete(k); else _turniOpen.add(k);
