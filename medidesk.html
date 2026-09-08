@@ -3202,10 +3202,13 @@ function startHomeWaves(){
     const u=Math.random()*2-1;
     const a=Math.random()*6.283;
     const r=Math.pow(Math.random(),.6)*.075;
-    PTS.push({u:u,dy:Math.cos(a)*r,dz:Math.sin(a)*r,tw:Math.random()*6.283,sz:.75+Math.random()*.7});
+    PTS.push({u:u,dy:Math.cos(a)*r,dz:Math.sin(a)*r,
+      x0:(Math.random()*2-1)*2.3,y0:(Math.random()*2-1)*1.5,z0:(Math.random()*2-1)*1.6,
+      d0:Math.random()*1.1,tw:Math.random()*6.283,sz:.75+Math.random()*.7});
   }
   const AMB=[];
   for(let k=0;k<60;k++)AMB.push({x:Math.random(),y:Math.random(),tw:Math.random()*6.283,sp:.3+Math.random()*.8});
+  let t0=null;
   function frame(t){
     const host=document.getElementById('view-home');
     if(!host||host.style.display==='none'){c._on=false;return;}
@@ -3213,7 +3216,8 @@ function startHomeWaves(){
     if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
     ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.clearRect(0,0,w,h);
-    const T=t/1000;
+    if(t0===null)t0=t;
+    const T=t/1000,tt=(t-t0)/1000;
     ctx.globalCompositeOperation='lighter';
     for(const a of AMB){
       const al=.05+.05*Math.sin(a.tw+T*a.sp);
@@ -3222,16 +3226,18 @@ function startHomeWaves(){
     }
     const cx=w/2,cy=h*.5,S=Math.min(w,1100)*.31,f=3.1;
     const th=T*.45,ct=Math.cos(th),st=Math.sin(th);
-    const ph=.32,cp=Math.cos(ph),sp=Math.sin(ph);
+    const ph=.22,cp=Math.cos(ph),sp=Math.sin(ph);
     const head=(T*.28)%2-1;
     for(const p of PTS){
-      const X=p.u,Y=.30*Math.sin(p.u*3.1416)+p.dy,Z=p.dz;
+      let e=(tt-p.d0)/1.5;e=e<0?0:(e>1?1:e);e=1-Math.pow(1-e,3);
+      const gX=p.u,gY=.17*Math.sin(p.u*3.1416)+p.dy,gZ=p.dz;
+      const X=p.x0+(gX-p.x0)*e,Y=p.y0+(gY-p.y0)*e,Z=p.z0+(gZ-p.z0)*e;
       const x1=X*ct+Z*st,z1=-X*st+Z*ct;
       const y2=Y*cp-z1*sp,z2=Y*sp+z1*cp;
       const k=f/(f+z2);
       const sx=cx+x1*S*k,sy=cy+y2*S*k;
       let du=Math.abs(p.u-head);du=Math.min(du,2-du);
-      const bri=(1+2.4*Math.exp(-du*du*30))*(.55+.45*Math.sin(p.tw+T*1.7));
+      const bri=(1+2.4*Math.exp(-du*du*30))*(.55+.45*Math.sin(p.tw+T*1.7))*(.35+.65*e);
       const rad=p.sz*2.1*k;
       ctx.fillStyle='rgba(130,195,255,'+Math.min(.32,.11*bri*k*k).toFixed(3)+')';
       ctx.beginPath();ctx.arc(sx,sy,rad*2.6,0,6.2832);ctx.fill();
