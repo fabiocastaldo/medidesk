@@ -3197,7 +3197,15 @@ function startHomeWaves(){
   if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   c._on=true;
   const ctx=c.getContext('2d');
-  const ROWS=30,COLS=64,ZN=2,DZ=.5;
+  const N=230,TR=7,P=new Array(N);
+  function seed(k,anywhere){
+    const z=.55+Math.random()*.9;
+    P[k]={x:anywhere?Math.random()*1.3-.15:-.15-Math.random()*.2,z:z,
+      v:(.045+Math.random()*.05)*z,ph:Math.random()*6.283,
+      am:.35+Math.random()*.85,wb:.25+Math.random()*.6,tr:[]};
+  }
+  for(let k=0;k<N;k++)seed(k,true);
+  let last=0;
   function frame(t){
     const host=document.getElementById('view-home');
     if(!host||host.style.display==='none'){c._on=false;return;}
@@ -3205,26 +3213,36 @@ function startHomeWaves(){
     if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
     ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.clearRect(0,0,w,h);
+    const dt=Math.min((t-last)/1000,.05)||.016;last=t;
     const T=t/1000;
-    const f=Math.max(w,h)*.9,cx=w/2,hy=h*.66,u=h/f;
-    const baseY=(h*.94-hy)*ZN/f;
-    for(let r=ROWS-1;r>=0;r--){
-      const z=ZN+r*DZ;
-      const xr=.65*w*z/f;
-      const alpha=Math.max(.06,.55-z*.034);
-      ctx.fillStyle='rgba(255,255,255,'+alpha.toFixed(3)+')';
-      const rad=Math.max(.5,5.5/z);
-      for(let q=0;q<=COLS;q++){
-        const gx=(q/COLS-.5)*2*xr;
-        const Y=u*(.055*Math.sin(gx/u*.055+T*.9+z*.6)+.09*Math.sin(z*1.1-T*.55)+.03*Math.sin(gx/u*.11-T*.4+z*1.7));
-        const sx=cx+gx*f/z;
-        const sy=hy+(baseY+Y)*f/z;
-        if(sy>h+6||sy<0||sx<-6||sx>w+6)continue;
-        ctx.beginPath();
-        ctx.arc(sx,sy,rad,0,6.2832);
-        ctx.fill();
-      }
+    ctx.globalCompositeOperation='lighter';
+    ctx.lineCap='round';ctx.lineJoin='round';
+    const yc=h*.74,A=h*.055,pulse=((T%5.5)/5.5)*1.4-.2;
+    for(let k=0;k<N;k++){
+      const p=P[k];
+      p.x+=p.v*dt;
+      if(p.x>1.18){seed(k,false);continue;}
+      const d=p.x-pulse;
+      const beat=d*Math.exp(-d*d*260)*1.9;
+      const bri=1+2.1*Math.exp(-d*d*140);
+      const y=yc+Math.sin(p.x*7.2+T*.35)*A*p.am
+            +Math.sin(p.ph+T*p.wb)*h*.012*p.z
+            -beat*h*p.z;
+      const sx=p.x*w,sy=y;
+      p.tr.push(sx,sy);
+      if(p.tr.length>TR*2)p.tr.splice(0,2);
+      if(p.tr.length<4)continue;
+      ctx.beginPath();
+      ctx.moveTo(p.tr[0],p.tr[1]);
+      for(let q=2;q<p.tr.length;q+=2)ctx.lineTo(p.tr[q],p.tr[q+1]);
+      ctx.strokeStyle='rgba(130,195,255,'+(.05*bri*p.z).toFixed(3)+')';
+      ctx.lineWidth=4.6*p.z;
+      ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,255,'+(.17*bri*p.z).toFixed(3)+')';
+      ctx.lineWidth=1.3*p.z;
+      ctx.stroke();
     }
+    ctx.globalCompositeOperation='source-over';
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
