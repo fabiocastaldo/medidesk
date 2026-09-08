@@ -3197,7 +3197,7 @@ function startHomeWaves(){
   if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   c._on=true;
   const ctx=c.getContext('2d');
-  const ROWS=26,COLS=56,ZN=2,DZ=.55;
+  const ROWS=30,COLS=64,ZN=2,DZ=.5;
   function frame(t){
     const host=document.getElementById('view-home');
     if(!host||host.style.display==='none'){c._on=false;return;}
@@ -3206,19 +3206,20 @@ function startHomeWaves(){
     ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.clearRect(0,0,w,h);
     const T=t/1000;
-    const f=Math.max(w,h)*.9,cx=w/2,hy=h*.58,baseY=1.55;
+    const f=Math.max(w,h)*.9,cx=w/2,hy=h*.50,u=h/f;
+    const baseY=(h*.94-hy)*ZN/f;
     for(let r=ROWS-1;r>=0;r--){
       const z=ZN+r*DZ;
       const xr=.65*w*z/f;
-      const alpha=Math.max(.04,.40-z*.023);
+      const alpha=Math.max(.08,.85-z*.052);
       ctx.fillStyle='rgba(255,255,255,'+alpha.toFixed(3)+')';
-      const rad=Math.max(.4,4.6/z);
+      const rad=Math.max(.6,7.5/z);
       for(let q=0;q<=COLS;q++){
         const gx=(q/COLS-.5)*2*xr;
-        const Y=.18*Math.sin(gx*1.3+T*.9+z*.6)+.28*Math.sin(z*1.1-T*.55)+.09*Math.sin(gx*2.6-T*.4+z*1.7);
+        const Y=u*(.10*Math.sin(gx/u*.055+T*.9+z*.6)+.16*Math.sin(z*1.1-T*.55)+.05*Math.sin(gx/u*.11-T*.4+z*1.7));
         const sx=cx+gx*f/z;
         const sy=hy+(baseY+Y)*f/z;
-        if(sy>h+4||sx<-4||sx>w+4)continue;
+        if(sy>h+6||sy<0||sx<-6||sx>w+6)continue;
         ctx.beginPath();
         ctx.arc(sx,sy,rad,0,6.2832);
         ctx.fill();
