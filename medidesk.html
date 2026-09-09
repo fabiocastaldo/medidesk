@@ -687,7 +687,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .auth-legal{font-size:11px;color:var(--ink3);text-align:center;margin-top:14px;line-height:1.5}
 .auth-legal a{color:var(--accent);text-decoration:underline}
 /* ── Auth: pannello brand desktop + toggle password ── */
-.auth-shell{width:100%;max-width:400px;margin:0 auto}
+.auth-shell{width:100%;max-width:400px;margin:0 auto;position:relative;z-index:1}
 .auth-brand{display:none}
 .auth-pwd-wrap{position:relative}
 .auth-pwd-wrap input{padding-right:44px}
@@ -700,7 +700,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
   .auth-brand-mark{font-family:'DM Serif Display',serif;font-size:34px;line-height:1;margin:0 0 8px}
   .auth-brand-payoff{font-size:14px;opacity:.85;margin:0 0 32px}
   .auth-brand-points{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:18px}
-  .auth-brand-points li{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.4;opacity:.92}
+  .auth-brand-points li{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.4;opacity:.92;transition:opacity .45s ease}
   .auth-brand-points .ic{width:20px;height:20px;flex-shrink:0;margin-top:1px}
   .auth-shell .auth-card{flex:1;max-width:none;border-radius:0;box-shadow:none}
   .auth-shell .auth-card .auth-logo{display:none}
@@ -781,6 +781,12 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-logo-wrap{display:flex;flex-direction:column;line-height:1.2}
 .home-logo{color:#fff;font-size:24px;font-weight:700;font-family:'Montserrat',sans-serif;letter-spacing:-.2px}
 .home-logo-payoff{color:rgba(255,255,255,.72);font-size:11.5px;font-weight:400;margin-top:4px;letter-spacing:.3px;font-family:'DM Sans',Arial,sans-serif}
+.home-header-nav{margin-left:auto;display:flex;align-items:center;gap:10px}
+.home-nav-link{display:inline-block;color:#fff;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;text-decoration:none;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);border-radius:999px;padding:9px 18px;cursor:pointer;transition:background .15s,border-color .15s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.home-nav-link:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.6)}
+.home-nav-link-solid{background:var(--brand-bright);border-color:var(--brand-bright)}
+.home-nav-link-solid:hover{background:color-mix(in srgb,var(--brand-bright) 85%,#000);border-color:color-mix(in srgb,var(--brand-bright) 85%,#000)}
+@media(max-width:640px){.home-nav-link{font-size:13px;padding:8px 13px}.home-logo-payoff{display:none}}
 .home-hero{padding:18px 20px 26px;text-align:center;flex-shrink:0;margin:auto 0;width:100%;box-sizing:border-box}
 .home-hero h2{color:#fff;font-size:28px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
 .home-hero-sub{color:rgba(255,255,255,.82);font-size:15px;margin:0 0 34px}
@@ -802,33 +808,57 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-scroll-cue svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 @keyframes homeCueBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 @media (prefers-reduced-motion:reduce){.home-scroll-cue{animation:none}#home-waves{display:none}}
-.home-body{flex:1;background:var(--paper)}
-.home-sections{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;max-width:1140px;margin:0 auto;padding:20px 24px 0}
-.home-section{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px 24px 22px;box-shadow:0 1px 2px rgba(7,60,66,.04)}
-.home-section h3{font-family:'Montserrat',sans-serif;font-size:19px;font-weight:700;color:var(--brand-deep);margin:0 0 6px;letter-spacing:-.2px}
-.home-section h3 span{color:var(--brand-mid)}
-.home-lead{font-size:14px;color:var(--ink2);margin:0 0 14px;line-height:1.5}
-.home-feature{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:14px;color:var(--ink);line-height:1.5}
-.home-feature::before{content:'\2713';color:var(--brand-mid);font-weight:700;flex-shrink:0;margin-top:1px}
-.home-cta-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:16px}
-.home-cta-btn{display:inline-block;background:var(--brand-mid);color:#fff;border:1.5px solid var(--brand-mid);border-radius:10px;padding:11px 22px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;text-decoration:none;transition:background .15s,border-color .15s,color .15s}
-.home-cta-btn:hover{background:color-mix(in srgb,var(--brand-mid) 85%,#000);border-color:color-mix(in srgb,var(--brand-mid) 85%,#000)}
-.home-cta-btn-outline{background:transparent;color:var(--brand-mid)}
-.home-cta-btn-outline:hover{background:color-mix(in srgb,var(--brand-mid) 8%,var(--surface));border-color:color-mix(in srgb,var(--brand-mid) 85%,#000);color:color-mix(in srgb,var(--brand-mid) 85%,#000)}
-.home-contact{max-width:1140px;margin:0 auto;padding:14px 24px 28px}
-.home-contact-card{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--border);border-radius:18px;padding:18px 28px}
-.home-contact-card h3{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:700;color:var(--brand-deep);margin:0 0 4px;letter-spacing:-.2px}
-.home-contact-card p{margin:0;font-size:14px;color:var(--ink2);line-height:1.5;max-width:640px}
-@media(max-width:960px){.home-sections{grid-template-columns:1fr;max-width:560px}.home-contact{max-width:560px}}
-.home-footer{background:#f0f0f0;padding:12px;text-align:center;font-size:12px;color:#aaa;flex-shrink:0}
+.home-body{flex:1;background:linear-gradient(180deg,var(--brand-deep) 0%,color-mix(in srgb,var(--brand-deep) 86%,#000) 55%,color-mix(in srgb,var(--brand-deep) 72%,#000) 100%)}
+.home-hero-perks{position:relative;z-index:1;font-size:13px;color:rgba(255,255,255,.62);margin-top:14px;letter-spacing:.01em}
+.hs{position:relative;overflow:hidden;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:96px 24px}
+.hs-stars,.hs-stars2{position:absolute;inset:0;z-index:0;pointer-events:none;background-repeat:repeat}
+.hs-stars{background-image:radial-gradient(1px 1px at 22px 34px,rgba(255,255,255,.55) 50%,transparent 51%),radial-gradient(1px 1px at 120px 190px,rgba(255,255,255,.38) 50%,transparent 51%),radial-gradient(1.5px 1.5px at 230px 110px,rgba(255,255,255,.5) 50%,transparent 51%),radial-gradient(1px 1px at 310px 240px,rgba(255,255,255,.32) 50%,transparent 51%);background-size:360px 300px;opacity:.5;animation:hsDrift 110s linear infinite}
+.hs-stars2{background-image:radial-gradient(1px 1px at 70px 130px,var(--brand-soft) 50%,transparent 51%),radial-gradient(1px 1px at 200px 50px,rgba(255,255,255,.3) 50%,transparent 51%);background-size:440px 380px;opacity:.35;animation:hsDrift 160s linear infinite reverse}
+@keyframes hsDrift{from{background-position:0 0}to{background-position:-360px 300px}}
+.hs-aur{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;pointer-events:none;will-change:transform}
+.hs-aur.a1{width:54vw;height:54vw;max-width:780px;max-height:780px;background:radial-gradient(circle,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 70%);top:-16%;left:-12%;animation:hsAur1 26s ease-in-out infinite alternate}
+.hs-aur.a2{width:48vw;height:48vw;max-width:700px;max-height:700px;background:radial-gradient(circle,color-mix(in srgb,var(--brand-mid) 60%,transparent),transparent 70%);bottom:-20%;right:-10%;animation:hsAur2 34s ease-in-out infinite alternate}
+.hs-aur.a3{width:32vw;height:32vw;max-width:460px;max-height:460px;background:radial-gradient(circle,color-mix(in srgb,var(--brand-soft) 32%,transparent),transparent 70%);top:28%;right:20%;opacity:.28;animation:hsAur3 40s ease-in-out infinite alternate}
+.hs-org .hs-aur.a1{left:auto;right:-14%;animation-duration:31s}
+.hs-org .hs-aur.a2{right:auto;left:-12%;animation-duration:27s}
+@keyframes hsAur1{from{transform:translate(0,0) scale(1)}to{transform:translate(9vw,6vh) scale(1.14)}}
+@keyframes hsAur2{from{transform:translate(0,0) scale(1.08)}to{transform:translate(-8vw,-7vh) scale(.94)}}
+@keyframes hsAur3{from{transform:translate(0,0)}to{transform:translate(-6vw,8vh) scale(1.18)}}
+.hs-inner{position:relative;z-index:1;max-width:1080px;width:100%;text-align:center}
+.hs-kicker{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--brand-soft);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 18px;margin-bottom:22px}
+.hs-title{font-family:'Montserrat',sans-serif;font-size:clamp(30px,4.6vw,52px);font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1.12;margin:0 0 14px}
+.hs-title em{font-style:normal;background:linear-gradient(90deg,var(--brand-bright),var(--brand-soft));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hs-sub{font-size:clamp(15px,1.6vw,18px);color:rgba(255,255,255,.78);line-height:1.6;max-width:640px;margin:0 auto 40px}
+.hs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;text-align:left;margin-bottom:34px}
+.hs-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:22px 20px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .35s ease,background .35s ease,border-color .35s ease}
+.hs-card:hover{transform:translateY(-6px);background:rgba(255,255,255,.11);border-color:color-mix(in srgb,var(--brand-bright) 55%,transparent)}
+.hs-card h4{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:700;color:#fff;margin:0 0 8px;display:flex;align-items:center;gap:10px}
+.hs-card h4::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--brand-bright);box-shadow:0 0 12px var(--brand-bright);flex-shrink:0}
+.hs-card p{font-size:14px;color:rgba(255,255,255,.72);line-height:1.55;margin:0}
+.hs-chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:36px}
+.hs-chip{font-size:13px;font-weight:600;color:#fff;border:1px solid color-mix(in srgb,var(--brand-bright) 60%,transparent);background:color-mix(in srgb,var(--brand-bright) 16%,transparent);border-radius:999px;padding:8px 16px}
+.hs-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.hs-btn{display:inline-block;background:var(--brand-bright);color:#fff;border:1.5px solid var(--brand-bright);border-radius:12px;padding:13px 28px;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;text-decoration:none;transition:transform .2s,box-shadow .2s;box-shadow:0 8px 30px color-mix(in srgb,var(--brand-bright) 35%,transparent)}
+.hs-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px color-mix(in srgb,var(--brand-bright) 50%,transparent)}
+.hs-btn-ghost{background:transparent;border-color:rgba(255,255,255,.35);box-shadow:none;font-weight:600}
+.hs-btn-ghost:hover{border-color:#fff;box-shadow:none}
+.hs-cue{position:absolute;left:calc(50% - 22px);bottom:22px;margin:0;z-index:2}
+.rv{opacity:0;transform:translateY(30px);transition:opacity .9s ease,transform .9s cubic-bezier(.22,.61,.36,1)}
+.rv.in{opacity:1;transform:none}
+.hs-grid .hs-card:nth-child(2){transition-delay:.12s}.hs-grid .hs-card:nth-child(3){transition-delay:.24s}.hs-grid .hs-card:nth-child(4){transition-delay:.36s}
+.home-contact{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:10px 24px 70px}
+.home-contact-card{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:24px 30px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.home-contact-card h3{font-family:'Montserrat',sans-serif;font-size:19px;font-weight:700;color:#fff;margin:0 0 4px;letter-spacing:-.2px}
+.home-contact-card p{margin:0;font-size:14px;color:rgba(255,255,255,.72);line-height:1.5;max-width:560px}
+@media(max-width:960px){.hs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.hs{padding:72px 18px}.hs-grid{grid-template-columns:1fr;gap:12px}.hs-card{padding:18px}.hs-sub{margin-bottom:30px}}
+@media (prefers-reduced-motion:reduce){.hs-aur,.hs-stars,.hs-stars2{animation:none}.rv{opacity:1;transform:none;transition:none}}
+.home-footer{background:color-mix(in srgb,var(--brand-deep) 72%,#000);padding:16px;text-align:center;font-size:12px;color:rgba(255,255,255,.4);flex-shrink:0}
 @media(max-width:640px){
   .home-hero{padding:32px 16px 36px}
   .home-hero h2{font-size:24px}
   .home-header{padding:14px 16px}
   .home-logo{font-size:20px}
-  .home-sections{padding:24px 16px}
-  .home-section{padding:22px 20px}
-  .home-section{padding:0}
 }
 
 /* ── STATISTICHE ── */
@@ -963,12 +993,17 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- ══════════════ HOME PUBBLICA ══════════════ -->
 <div id="view-home">
   <div class="home-top">
+  <div class="hs-stars"></div><div class="hs-stars2"></div>
   <canvas id="home-waves" aria-hidden="true"></canvas>
   <header class="home-header">
     <div class="home-logo-wrap">
       <span class="home-logo">Delphi~Med</span>
       <span class="home-logo-payoff">Il tuo medico, al tuo fianco</span>
     </div>
+    <nav class="home-header-nav">
+      <button class="home-nav-link home-nav-link-solid" onclick="showLoginView('login')">Accesso medici</button>
+      <a class="home-nav-link" href="/cooperative">Accesso organizzazioni</a>
+    </nav>
   </header>
 
   <section class="home-hero">
@@ -981,53 +1016,69 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="home-search-results" id="home-search-results"></div>
     <div id="home-search-msg" class="home-search-msg"></div>
+  <div class="home-hero-perks">Prenoti online senza account &middot; Conferma immediata &middot; Promemoria prima della visita &middot; Disdici quando vuoi &middot; Ti avvisiamo se si libera un posto prima</div>
   </section>
   <button class="home-scroll-cue" aria-label="Scopri di più" onclick="document.querySelector('.home-body').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
   </div>
 
   <div class="home-body">
-    <div class="home-sections">
-      <div class="home-section">
-        <h3>Per i <span>pazienti</span></h3>
-        <p class="home-lead">Prenoti online, senza creare un account.</p>
-        <div class="home-feature">Trovi il medico e prenoti in un attimo</div>
-        <div class="home-feature">Conferma immediata via email</div>
-        <div class="home-feature">Promemoria prima della visita</div>
-        <div class="home-feature">Disdici in autonomia, quando vuoi</div>
-        <div class="home-cta-row">
-          <button class="home-cta-btn home-cta-btn-outline" onclick="document.getElementById('home-search').focus();window.scrollTo({top:0,behavior:'smooth'})">Cerca il tuo medico</button>
+    <section class="hs hs-medici" id="sez-medici">
+      <div class="hs-stars"></div><div class="hs-stars2"></div>
+      <div class="hs-aur a1"></div><div class="hs-aur a2"></div><div class="hs-aur a3"></div>
+      <div class="hs-inner">
+        <div class="hs-kicker rv">Per i medici</div>
+        <h2 class="hs-title rv">Il tuo studio, <em>ovunque</em>.</h2>
+        <p class="hs-sub rv">Un&rsquo;unica agenda per tutti i tuoi ambulatori, il fascicolo di ogni paziente sempre con te, e un assistente IA integrato che lavora al tuo fianco.</p>
+        <div class="hs-grid">
+          <div class="hs-card rv"><h4>Un&rsquo;agenda sola</h4><p>Tutti i tuoi centri, turni e appuntamenti in un colpo d&rsquo;occhio, da qualsiasi dispositivo.</p></div>
+          <div class="hs-card rv"><h4>Fascicolo in tasca</h4><p>Storia clinica, visite e documenti del paziente a portata di tocco, anche in ambulatorio.</p></div>
+          <div class="hs-card rv"><h4>Assistente IA integrato</h4><p>Gli chiedi, e lui fa: ti affianca nelle operazioni di ogni giorno e genera referti e sintesi cliniche, sempre sotto il tuo controllo.</p></div>
+          <div class="hs-card rv"><h4>Prenotazioni autonome</h4><p>I pazienti prenotano dalla tua pagina pubblica &mdash; anche via QR code in studio &mdash; con conferme e promemoria automatici.</p></div>
+        </div>
+        <div class="hs-chips rv">
+          <span class="hs-chip">Pensato per lo specialista italiano</span>
+          <span class="hs-chip">Foto-referti cifrati</span>
+          <span class="hs-chip">I tuoi dati restano in Europa</span>
+          <span class="hs-chip">Statistiche e compensi sempre in ordine</span>
+        </div>
+        <div class="hs-cta rv">
+          <button class="hs-btn" onclick="showLoginView('login')">Registrati / Accedi</button>
         </div>
       </div>
-      <div class="home-section">
-        <h3>Per i <span>medici</span></h3>
-        <p class="home-lead">Tutto il tuo studio in un&rsquo;unica agenda.</p>
-        <div class="home-feature">Tutti gli ambulatori in un&rsquo;agenda sola</div>
-        <div class="home-feature">Fascicolo del paziente sempre con te</div>
-        <div class="home-feature">Referti e sintesi con l&rsquo;aiuto dell&rsquo;IA</div>
-        <div class="home-feature">Prenotazioni online e promemoria</div>
-        <div class="home-cta-row">
-          <button class="home-cta-btn" onclick="showLoginView('login')">Registrati / Accedi</button>
+      <button class="home-scroll-cue hs-cue" aria-label="Continua" onclick="document.getElementById('sez-org').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+    </section>
+    <section class="hs hs-org" id="sez-org">
+      <div class="hs-stars"></div><div class="hs-stars2"></div>
+      <div class="hs-aur a1"></div><div class="hs-aur a2"></div><div class="hs-aur a3"></div>
+      <div class="hs-inner">
+        <div class="hs-kicker rv">Per le organizzazioni</div>
+        <h2 class="hs-title rv">Una regia per <em>tutte le agende</em>.</h2>
+        <p class="hs-sub rv">Cooperative, poliambulatori e centri medici: sedi, turni e segreteria coordinati in un&rsquo;unica plancia, in tempo reale.</p>
+        <div class="hs-grid">
+          <div class="hs-card rv"><h4>Plancia unica</h4><p>Turni e agende di tutti i medici della struttura, aggiornati in tempo reale.</p></div>
+          <div class="hs-card rv"><h4>Segreteria in sicurezza</h4><p>Il front office prenota per conto dei medici con accessi dedicati e protetti.</p></div>
+          <div class="hs-card rv"><h4>Sedi e numeri live</h4><p>Statistiche per sede e per medico, sempre sotto gli occhi di chi coordina.</p></div>
+          <div class="hs-card rv"><h4>Attivazione guidata</h4><p>Si parte in pochi giorni, accompagnati, senza migrazioni dolorose.</p></div>
+        </div>
+        <div class="hs-chips rv">
+          <span class="hs-chip">Medici e struttura sulla stessa piattaforma</span>
+          <span class="hs-chip">Nessuna migrazione</span>
+          <span class="hs-chip">Statistiche e compensi per medico e sede</span>
+        </div>
+        <div class="hs-cta rv">
+          <a class="hs-btn" href="/cooperative">Accedi</a>
+          <a class="hs-btn hs-btn-ghost" href="mailto:info@delphi-med.com?subject=Richiesta%20demo%20Delphi~Med">Richiedi una demo</a>
         </div>
       </div>
-      <div class="home-section">
-        <h3>Per le <span>organizzazioni</span></h3>
-        <p class="home-lead">Cooperative, poliambulatori e centri medici.</p>
-        <div class="home-feature">Turni e agende in un&rsquo;unica plancia</div>
-        <div class="home-feature">La segreteria prenota in sicurezza</div>
-        <div class="home-feature">Sedi e statistiche in tempo reale</div>
-        <div class="home-feature">Attivazione guidata, senza migrazione</div>
-        <div class="home-cta-row">
-          <a class="home-cta-btn" href="/cooperative">Accedi</a>
-        </div>
-      </div>
-    </div>
+      <button class="home-scroll-cue hs-cue" aria-label="Continua" onclick="document.querySelector('.home-contact').scrollIntoView({behavior:'smooth',block:'center'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+    </section>
     <div class="home-contact">
-      <div class="home-contact-card">
+      <div class="home-contact-card rv">
         <div>
           <h3>Vuoi saperne di pi&ugrave;?</h3>
           <p>Per una demo, un preventivo o qualsiasi domanda, scrivici: ti rispondiamo personalmente.</p>
         </div>
-        <a class="home-cta-btn" href="mailto:info@delphi-med.com?subject=Richiesta%20informazioni%20Delphi~Med">Richiedi informazioni</a>
+        <a class="hs-btn" href="mailto:info@delphi-med.com?subject=Richiesta%20informazioni%20Delphi~Med">Richiedi informazioni</a>
       </div>
     </div>
   </div>
@@ -1037,6 +1088,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
 <!-- ══════════════ AUTH ══════════════ -->
 <div id="view-auth">
+  <div class="hs-stars"></div><div class="hs-stars2"></div>
   <div class="auth-shell">
     <div class="auth-brand">
       <div class="auth-brand-mark">Delphi~Med</div>
@@ -3191,6 +3243,14 @@ function checkSession(){
   });
 }
 
+function initHomeReveals(){
+  if(window._rvObs)return;
+  const els=document.querySelectorAll('#view-home .rv');
+  if(!('IntersectionObserver' in window)||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)){els.forEach(function(e){e.classList.add('in')});return;}
+  window._rvObs=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');window._rvObs.unobserve(x.target);}})},{threshold:.18});
+  els.forEach(function(e){window._rvObs.observe(e)});
+}
+
 function startHomeWaves(){
   const c=document.getElementById('home-waves');
   if(!c||c._on)return;
@@ -3201,7 +3261,7 @@ function startHomeWaves(){
   const A1=2.6,A2=9,A3=9.6,A4=11.2;
   for(let k=0;k<N;k++){
     PTS.push({u:Math.random()*2-1,a:Math.random()*6.283,
-      r:Math.pow(Math.random(),.6)*.075,
+      r:Math.pow(Math.random(),.6)*.06,
       uSpd:.05+Math.random()*.09,aSpd:(Math.random()<.5?-1:1)*(.6+Math.random()*1.4),
       x0:(Math.random()*2-1)*2.3,y0:(Math.random()*2-1)*1.5,z0:(Math.random()*2-1)*1.6,
       d0:Math.random()*1.1,tw:Math.random()*6.283,sp:.4+Math.random()*.9,sz:.75+Math.random()*.7,
@@ -3236,7 +3296,7 @@ function startHomeWaves(){
         p.u+=p.uSpd*dt;if(p.u>1)p.u-=2;
         p.a+=p.aSpd*dt;
         let e=(tt-p.d0)/1.5;e=e<0?0:(e>1?1:e);e=1-Math.pow(1-e,3);
-        const gX=p.u,gY=.17*Math.sin(p.u*3.1416)+Math.cos(p.a)*p.r,gZ=Math.sin(p.a)*p.r;
+        const gX=p.u,gY=.13*Math.sin(p.u*3.1416)+Math.cos(p.a)*p.r,gZ=Math.sin(p.a)*p.r;
         const X=p.x0+(gX-p.x0)*e,Y=p.y0+(gY-p.y0)*e,Z=p.z0+(gZ-p.z0)*e;
         const x1=X*ct+Z*st,z1=-X*st+Z*ct;
         const y2=Y*cp-z1*sp2,z2=Y*sp2+z1*cp;
@@ -3283,13 +3343,49 @@ function startHomeWaves(){
 function showAuthView(){
   document.getElementById('view-home').style.display    = 'flex';
   startHomeWaves();
+  initHomeReveals();
   document.getElementById('view-auth').style.display    = 'none';
   document.getElementById('view-app').style.display     = 'none';
   document.getElementById('view-booking').style.display = 'none';
 }
 
+const ABP=[
+  ['ic-calendar','Un&rsquo;unica agenda per tutti i tuoi centri'],
+  ['ic-users','Il fascicolo dei tuoi pazienti sempre con te'],
+  ['ic-sparkles','Sintesi cliniche generate in un tocco'],
+  ['ic-sparkles','Un assistente IA che lavora al tuo fianco'],
+  ['ic-qr','La tua pagina di prenotazione, con QR per lo studio'],
+  ['ic-clock','Lista d&rsquo;attesa: i pazienti anticipano se si libera un posto'],
+  ['ic-mail','Conferme e promemoria automatici via email'],
+  ['ic-check','Statistiche e compensi sempre in ordine'],
+  ['ic-camera','Foto-referti cifrati, dati in Europa']
+];
+function initAuthPoints(){
+  if(window._abpInt)return;
+  const lis=document.querySelectorAll('.auth-brand-points li');
+  if(!lis.length)return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  let base=0;
+  window._abpInt=setInterval(function(){
+    const va=document.getElementById('view-auth');
+    if(!va||va.style.display!=='flex')return;
+    base=(base+1)%ABP.length;
+    lis.forEach(function(li,i){
+      setTimeout(function(){
+        li.style.opacity='0';
+        setTimeout(function(){
+          const it=ABP[(base+i*3)%ABP.length];
+          li.innerHTML='<svg class="ic"><use href="#'+it[0]+'"/></svg><span>'+it[1]+'</span>';
+          li.style.opacity='';
+        },450);
+      },i*170);
+    });
+  },4200);
+}
+
 function showLoginView(tab){
   _inPasswordRecovery = false;
+  initAuthPoints();
   document.getElementById('view-home').style.display = 'none';
   document.getElementById('view-auth').style.display = 'flex';
   document.getElementById('auth-tabs').style.display = '';
