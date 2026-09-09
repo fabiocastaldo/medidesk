@@ -700,7 +700,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
   .auth-brand-mark{font-family:'DM Serif Display',serif;font-size:34px;line-height:1;margin:0 0 8px}
   .auth-brand-payoff{font-size:14px;opacity:.85;margin:0 0 32px}
   .auth-brand-points{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:18px}
-  .auth-brand-points li{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.4;opacity:.92}
+  .auth-brand-points li{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.4;opacity:.92;transition:opacity .45s ease}
   .auth-brand-points .ic{width:20px;height:20px;flex-shrink:0;margin-top:1px}
   .auth-shell .auth-card{flex:1;max-width:none;border-radius:0;box-shadow:none}
   .auth-shell .auth-card .auth-logo{display:none}
@@ -1016,7 +1016,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="home-search-results" id="home-search-results"></div>
     <div id="home-search-msg" class="home-search-msg"></div>
-  <div class="home-hero-perks">Prenoti online senza account &middot; Conferma immediata &middot; Promemoria prima della visita &middot; Disdici quando vuoi</div>
+  <div class="home-hero-perks">Prenoti online senza account &middot; Conferma immediata &middot; Promemoria prima della visita &middot; Disdici quando vuoi &middot; Ti avvisiamo se si libera un posto prima</div>
   </section>
   <button class="home-scroll-cue" aria-label="Scopri di più" onclick="document.querySelector('.home-body').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
   </div>
@@ -1033,12 +1033,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="hs-card rv"><h4>Un&rsquo;agenda sola</h4><p>Tutti i tuoi centri, turni e appuntamenti in un colpo d&rsquo;occhio, da qualsiasi dispositivo.</p></div>
           <div class="hs-card rv"><h4>Fascicolo in tasca</h4><p>Storia clinica, visite e documenti del paziente a portata di tocco, anche in ambulatorio.</p></div>
           <div class="hs-card rv"><h4>Assistente IA integrato</h4><p>Gli chiedi, e lui fa: ti affianca nelle operazioni di ogni giorno e genera referti e sintesi cliniche, sempre sotto il tuo controllo.</p></div>
-          <div class="hs-card rv"><h4>Prenotazioni autonome</h4><p>I pazienti prenotano online senza account, con conferme e promemoria automatici.</p></div>
+          <div class="hs-card rv"><h4>Prenotazioni autonome</h4><p>I pazienti prenotano dalla tua pagina pubblica &mdash; anche via QR code in studio &mdash; con conferme e promemoria automatici.</p></div>
         </div>
         <div class="hs-chips rv">
           <span class="hs-chip">Pensato per lo specialista italiano</span>
-          <span class="hs-chip">Referti e sintesi con l&rsquo;IA</span>
+          <span class="hs-chip">Foto-referti cifrati</span>
           <span class="hs-chip">I tuoi dati restano in Europa</span>
+          <span class="hs-chip">Statistiche e compensi sempre in ordine</span>
         </div>
         <div class="hs-cta rv">
           <button class="hs-btn" onclick="showLoginView('login')">Registrati / Accedi</button>
@@ -1062,7 +1063,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="hs-chips rv">
           <span class="hs-chip">Medici e struttura sulla stessa piattaforma</span>
           <span class="hs-chip">Nessuna migrazione</span>
-          <span class="hs-chip">Statistiche in tempo reale</span>
+          <span class="hs-chip">Statistiche e compensi per medico e sede</span>
         </div>
         <div class="hs-cta rv">
           <a class="hs-btn" href="/cooperative">Accedi</a>
@@ -3348,8 +3349,43 @@ function showAuthView(){
   document.getElementById('view-booking').style.display = 'none';
 }
 
+const ABP=[
+  ['ic-calendar','Un&rsquo;unica agenda per tutti i tuoi centri'],
+  ['ic-users','Il fascicolo dei tuoi pazienti sempre con te'],
+  ['ic-sparkles','Sintesi cliniche generate in un tocco'],
+  ['ic-sparkles','Un assistente IA che lavora al tuo fianco'],
+  ['ic-qr','La tua pagina di prenotazione, con QR per lo studio'],
+  ['ic-clock','Lista d&rsquo;attesa: i pazienti anticipano se si libera un posto'],
+  ['ic-mail','Conferme e promemoria automatici via email'],
+  ['ic-check','Statistiche e compensi sempre in ordine'],
+  ['ic-camera','Foto-referti cifrati, dati in Europa']
+];
+function initAuthPoints(){
+  if(window._abpInt)return;
+  const lis=document.querySelectorAll('.auth-brand-points li');
+  if(!lis.length)return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  let base=0;
+  window._abpInt=setInterval(function(){
+    const va=document.getElementById('view-auth');
+    if(!va||va.style.display!=='flex')return;
+    base=(base+1)%ABP.length;
+    lis.forEach(function(li,i){
+      setTimeout(function(){
+        li.style.opacity='0';
+        setTimeout(function(){
+          const it=ABP[(base+i*3)%ABP.length];
+          li.innerHTML='<svg class="ic"><use href="#'+it[0]+'"/></svg><span>'+it[1]+'</span>';
+          li.style.opacity='';
+        },450);
+      },i*170);
+    });
+  },4200);
+}
+
 function showLoginView(tab){
   _inPasswordRecovery = false;
+  initAuthPoints();
   document.getElementById('view-home').style.display = 'none';
   document.getElementById('view-auth').style.display = 'flex';
   document.getElementById('auth-tabs').style.display = '';
