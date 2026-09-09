@@ -786,7 +786,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-nav-link:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.6)}
 .home-nav-link-solid{background:var(--brand-bright);border-color:var(--brand-bright)}
 .home-nav-link-solid:hover{background:color-mix(in srgb,var(--brand-bright) 85%,#000);border-color:color-mix(in srgb,var(--brand-bright) 85%,#000)}
-@media(max-width:640px){.home-nav-link{font-size:13px;padding:8px 13px}.home-logo-payoff{display:none}}
+@media(max-width:640px){.home-header{flex-wrap:wrap;row-gap:8px}.home-header-nav{flex-wrap:wrap;justify-content:flex-end}.home-nav-link{font-size:12.5px;padding:9px 12px}.home-logo-payoff{display:none}}
 .home-hero{padding:18px 20px 26px;text-align:center;flex-shrink:0;margin:auto 0;width:100%;box-sizing:border-box}
 .home-hero h2{color:#fff;font-size:28px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
 .home-hero-sub{color:rgba(255,255,255,.82);font-size:15px;margin:0 0 34px}
@@ -809,7 +809,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 @keyframes homeCueBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 @media (prefers-reduced-motion:reduce){.home-scroll-cue{animation:none}#home-waves{display:none}}
 .home-body{flex:1;background:linear-gradient(180deg,var(--brand-deep) 0%,color-mix(in srgb,var(--brand-deep) 86%,#000) 55%,color-mix(in srgb,var(--brand-deep) 72%,#000) 100%)}
-.home-hero-perks{position:relative;z-index:1;font-size:13px;color:rgba(255,255,255,.62);margin-top:14px;letter-spacing:.01em}
 .hs{position:relative;overflow:hidden;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:96px 24px}
 .hs-stars,.hs-stars2{position:absolute;inset:0;z-index:0;pointer-events:none;background-repeat:repeat}
 .hs-stars{background-image:radial-gradient(1px 1px at 22px 34px,rgba(255,255,255,.55) 50%,transparent 51%),radial-gradient(1px 1px at 120px 190px,rgba(255,255,255,.38) 50%,transparent 51%),radial-gradient(1.5px 1.5px at 230px 110px,rgba(255,255,255,.5) 50%,transparent 51%),radial-gradient(1px 1px at 310px 240px,rgba(255,255,255,.32) 50%,transparent 51%);background-size:360px 300px;opacity:.5;animation:hsDrift 110s linear infinite}
@@ -1016,12 +1015,30 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="home-search-results" id="home-search-results"></div>
     <div id="home-search-msg" class="home-search-msg"></div>
-  <div class="home-hero-perks">Prenoti online senza account &middot; Conferma immediata &middot; Promemoria prima della visita &middot; Disdici quando vuoi &middot; Ti avvisiamo se si libera un posto prima</div>
   </section>
-  <button class="home-scroll-cue" aria-label="Scopri di più" onclick="document.querySelector('.home-body').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+  <button class="home-scroll-cue" aria-label="Scopri di più" onclick="document.getElementById('sez-pazienti').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
   </div>
 
   <div class="home-body">
+    <section class="hs hs-pazienti" id="sez-pazienti">
+      <div class="hs-stars"></div><div class="hs-stars2"></div>
+      <div class="hs-aur a1"></div><div class="hs-aur a2"></div><div class="hs-aur a3"></div>
+      <div class="hs-inner">
+        <div class="hs-kicker rv">Per i pazienti</div>
+        <h2 class="hs-title rv">Prenotare &egrave; <em>un attimo</em>.</h2>
+        <p class="hs-sub rv">Cerchi il tuo medico, scegli l&rsquo;orario e hai finito. Nessun account, nessuna attesa al telefono.</p>
+        <div class="hs-grid">
+          <div class="hs-card rv"><h4>Senza account</h4><p>Trovi il medico e prenoti in un attimo, senza registrarti.</p></div>
+          <div class="hs-card rv"><h4>Conferma immediata</h4><p>Ricevi subito l&rsquo;email di conferma e un promemoria prima della visita.</p></div>
+          <div class="hs-card rv"><h4>Disdici quando vuoi</h4><p>Annulli in autonomia dal link nella conferma, senza telefonate.</p></div>
+          <div class="hs-card rv"><h4>Anticipi la visita</h4><p>Se si libera un posto prima del tuo appuntamento, ti avvisiamo noi.</p></div>
+        </div>
+        <div class="hs-cta rv">
+          <button class="hs-btn" onclick="document.getElementById('home-search').focus();window.scrollTo({top:0,behavior:'smooth'})">Cerca il tuo medico</button>
+        </div>
+      </div>
+      <button class="home-scroll-cue hs-cue" aria-label="Continua" onclick="document.getElementById('sez-medici').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+    </section>
     <section class="hs hs-medici" id="sez-medici">
       <div class="hs-stars"></div><div class="hs-stars2"></div>
       <div class="hs-aur a1"></div><div class="hs-aur a2"></div><div class="hs-aur a3"></div>
@@ -1070,7 +1087,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <a class="hs-btn hs-btn-ghost" href="mailto:info@delphi-med.com?subject=Richiesta%20demo%20Delphi~Med">Richiedi una demo</a>
         </div>
       </div>
-      <button class="home-scroll-cue hs-cue" aria-label="Continua" onclick="document.querySelector('.home-contact').scrollIntoView({behavior:'smooth',block:'center'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+      <button class="home-scroll-cue hs-cue" aria-label="Continua" onclick="document.querySelector('.home-contact').scrollIntoView({behavior:'smooth',block:'start'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
     </section>
     <div class="home-contact">
       <div class="home-contact-card rv">
