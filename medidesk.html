@@ -687,7 +687,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .auth-legal{font-size:11px;color:var(--ink3);text-align:center;margin-top:14px;line-height:1.5}
 .auth-legal a{color:var(--accent);text-decoration:underline}
 /* ── Auth: pannello brand desktop + toggle password ── */
-.auth-shell{width:100%;max-width:400px;margin:0 auto}
+.auth-shell{width:100%;max-width:400px;margin:0 auto;position:relative;z-index:1}
 .auth-brand{display:none}
 .auth-pwd-wrap{position:relative}
 .auth-pwd-wrap input{padding-right:44px}
@@ -1028,16 +1028,16 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="hs-inner">
         <div class="hs-kicker rv">Per i medici</div>
         <h2 class="hs-title rv">Il tuo studio, <em>ovunque</em>.</h2>
-        <p class="hs-sub rv">Un&rsquo;unica agenda per tutti i tuoi ambulatori, il fascicolo di ogni paziente sempre con te, e un&rsquo;intelligenza che scrive i referti insieme a te.</p>
+        <p class="hs-sub rv">Un&rsquo;unica agenda per tutti i tuoi ambulatori, il fascicolo di ogni paziente sempre con te, e un assistente IA integrato che lavora al tuo fianco.</p>
         <div class="hs-grid">
           <div class="hs-card rv"><h4>Un&rsquo;agenda sola</h4><p>Tutti i tuoi centri, turni e appuntamenti in un colpo d&rsquo;occhio, da qualsiasi dispositivo.</p></div>
           <div class="hs-card rv"><h4>Fascicolo in tasca</h4><p>Storia clinica, visite e documenti del paziente a portata di tocco, anche in ambulatorio.</p></div>
-          <div class="hs-card rv"><h4>Referti con l&rsquo;IA</h4><p>Sintesi cliniche e referti generati in un tocco, sempre sotto il tuo controllo.</p></div>
+          <div class="hs-card rv"><h4>Assistente IA integrato</h4><p>Gli chiedi, e lui fa: ti affianca nelle operazioni di ogni giorno e genera referti e sintesi cliniche, sempre sotto il tuo controllo.</p></div>
           <div class="hs-card rv"><h4>Prenotazioni autonome</h4><p>I pazienti prenotano online senza account, con conferme e promemoria automatici.</p></div>
         </div>
         <div class="hs-chips rv">
           <span class="hs-chip">Pensato per lo specialista italiano</span>
-          <span class="hs-chip">IA integrata nel fascicolo</span>
+          <span class="hs-chip">Referti e sintesi con l&rsquo;IA</span>
           <span class="hs-chip">I tuoi dati restano in Europa</span>
         </div>
         <div class="hs-cta rv">
@@ -1087,6 +1087,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
 <!-- ══════════════ AUTH ══════════════ -->
 <div id="view-auth">
+  <div class="hs-stars"></div><div class="hs-stars2"></div>
   <div class="auth-shell">
     <div class="auth-brand">
       <div class="auth-brand-mark">Delphi~Med</div>
