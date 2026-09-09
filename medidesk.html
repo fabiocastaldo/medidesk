@@ -3261,7 +3261,7 @@ function startHomeWaves(){
   const A1=2.6,A2=9,A3=9.6,A4=11.2;
   for(let k=0;k<N;k++){
     PTS.push({u:Math.random()*2-1,a:Math.random()*6.283,
-      r:Math.pow(Math.random(),.6)*.075,
+      r:Math.pow(Math.random(),.6)*.06,
       uSpd:.05+Math.random()*.09,aSpd:(Math.random()<.5?-1:1)*(.6+Math.random()*1.4),
       x0:(Math.random()*2-1)*2.3,y0:(Math.random()*2-1)*1.5,z0:(Math.random()*2-1)*1.6,
       d0:Math.random()*1.1,tw:Math.random()*6.283,sp:.4+Math.random()*.9,sz:.75+Math.random()*.7,
@@ -3296,7 +3296,7 @@ function startHomeWaves(){
         p.u+=p.uSpd*dt;if(p.u>1)p.u-=2;
         p.a+=p.aSpd*dt;
         let e=(tt-p.d0)/1.5;e=e<0?0:(e>1?1:e);e=1-Math.pow(1-e,3);
-        const gX=p.u,gY=.17*Math.sin(p.u*3.1416)+Math.cos(p.a)*p.r,gZ=Math.sin(p.a)*p.r;
+        const gX=p.u,gY=.13*Math.sin(p.u*3.1416)+Math.cos(p.a)*p.r,gZ=Math.sin(p.a)*p.r;
         const X=p.x0+(gX-p.x0)*e,Y=p.y0+(gY-p.y0)*e,Z=p.z0+(gZ-p.z0)*e;
         const x1=X*ct+Z*st,z1=-X*st+Z*ct;
         const y2=Y*cp-z1*sp2,z2=Y*sp2+z1*cp;
