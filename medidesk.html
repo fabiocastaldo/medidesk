@@ -805,7 +805,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-body{flex:1;background:linear-gradient(180deg,var(--brand-deep) 0%,color-mix(in srgb,var(--brand-deep) 86%,#000) 55%,color-mix(in srgb,var(--brand-deep) 72%,#000) 100%)}
 .home-hero-perks{position:relative;z-index:1;font-size:13px;color:rgba(255,255,255,.62);margin-top:14px;letter-spacing:.01em}
 .hs{position:relative;overflow:hidden;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:96px 24px}
-.hs-stars,.hs-stars2{position:absolute;inset:0;pointer-events:none;background-repeat:repeat}
+.hs-stars,.hs-stars2{position:absolute;inset:0;z-index:0;pointer-events:none;background-repeat:repeat}
 .hs-stars{background-image:radial-gradient(1px 1px at 22px 34px,rgba(255,255,255,.55) 50%,transparent 51%),radial-gradient(1px 1px at 120px 190px,rgba(255,255,255,.38) 50%,transparent 51%),radial-gradient(1.5px 1.5px at 230px 110px,rgba(255,255,255,.5) 50%,transparent 51%),radial-gradient(1px 1px at 310px 240px,rgba(255,255,255,.32) 50%,transparent 51%);background-size:360px 300px;opacity:.5;animation:hsDrift 110s linear infinite}
 .hs-stars2{background-image:radial-gradient(1px 1px at 70px 130px,var(--brand-soft) 50%,transparent 51%),radial-gradient(1px 1px at 200px 50px,rgba(255,255,255,.3) 50%,transparent 51%);background-size:440px 380px;opacity:.35;animation:hsDrift 160s linear infinite reverse}
 @keyframes hsDrift{from{background-position:0 0}to{background-position:-360px 300px}}
@@ -836,6 +836,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .hs-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px color-mix(in srgb,var(--brand-bright) 50%,transparent)}
 .hs-btn-ghost{background:transparent;border-color:rgba(255,255,255,.35);box-shadow:none;font-weight:600}
 .hs-btn-ghost:hover{border-color:#fff;box-shadow:none}
+.hs-cue{position:absolute;left:calc(50% - 22px);bottom:22px;margin:0;z-index:2}
 .rv{opacity:0;transform:translateY(30px);transition:opacity .9s ease,transform .9s cubic-bezier(.22,.61,.36,1)}
 .rv.in{opacity:1;transform:none}
 .hs-grid .hs-card:nth-child(2){transition-delay:.12s}.hs-grid .hs-card:nth-child(3){transition-delay:.24s}.hs-grid .hs-card:nth-child(4){transition-delay:.36s}
@@ -986,6 +987,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- ══════════════ HOME PUBBLICA ══════════════ -->
 <div id="view-home">
   <div class="home-top">
+  <div class="hs-stars"></div><div class="hs-stars2"></div>
   <canvas id="home-waves" aria-hidden="true"></canvas>
   <header class="home-header">
     <div class="home-logo-wrap">
@@ -1032,6 +1034,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <button class="hs-btn" onclick="showLoginView('login')">Registrati / Accedi</button>
         </div>
       </div>
+      <button class="home-scroll-cue hs-cue" aria-label="Continua" onclick="document.getElementById('sez-org').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
     </section>
     <section class="hs hs-org" id="sez-org">
       <div class="hs-stars"></div><div class="hs-stars2"></div>
@@ -1056,6 +1059,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <a class="hs-btn hs-btn-ghost" href="mailto:info@delphi-med.com?subject=Richiesta%20demo%20Delphi~Med">Richiedi una demo</a>
         </div>
       </div>
+      <button class="home-scroll-cue hs-cue" aria-label="Continua" onclick="document.querySelector('.home-contact').scrollIntoView({behavior:'smooth',block:'center'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
     </section>
     <div class="home-contact">
       <div class="home-contact-card rv">
