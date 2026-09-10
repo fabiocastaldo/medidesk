@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sub-responsabili del trattamento — Delphi Med</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=DM+Sans:opsz,wght@9..40,400;9..40,700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;padding:0;background:#f0f4f8;font-family:'DM Sans',Arial,sans-serif;color:#1a1a1a}
+    header{position:relative;padding:14px 32px;display:flex;align-items:center;background:radial-gradient(130% 100% at 80% -10%,rgba(47,116,199,.7),transparent 62%),linear-gradient(225deg,#2F74C7 0%,#15487F 45%,#0B2B4D 100%)}
+    header::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(240deg,rgba(255,255,255,.22),rgba(255,255,255,.04) 40%,transparent 75%)}
+    .home-logo-wrap{position:relative;z-index:1;display:flex;flex-direction:column;line-height:1.2;text-decoration:none}
+    .home-logo{color:#fff;font-size:24px;font-weight:700;font-family:'Montserrat',sans-serif;letter-spacing:-.2px}
+    .home-logo-payoff{color:rgba(255,255,255,.72);font-size:11.5px;font-weight:400;margin-top:4px;letter-spacing:.3px;font-family:'DM Sans',Arial,sans-serif}
+    .container{max-width:820px;margin:48px auto;padding:0 24px 80px}
+    h1{font-size:28px;font-weight:700;color:#15487F;margin:0 0 8px}
+    .subtitle{font-size:14px;color:#888;margin:0 0 40px}
+    h2{font-size:18px;font-weight:700;color:#1a1a1a;margin:32px 0 10px}
+    p{font-size:15px;line-height:1.8;color:#444;margin:0 0 16px}
+    a{color:#15487F}
+    .card{background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 16px rgba(0,0,0,.06)}
+    table{width:100%;border-collapse:collapse;font-size:14px;line-height:1.6;color:#444;margin:0 0 16px}
+    th{background:#f0f4f8;color:#15487F;text-align:left;font-weight:700;padding:10px 12px;border:1px solid #dde5ee}
+    td{padding:10px 12px;border:1px solid #dde5ee;vertical-align:top}
+    @media (max-width:640px){table,thead,tbody,th,td,tr{display:block}thead{display:none}td{border:none;border-bottom:1px solid #eef2f7;padding:6px 0}td::before{content:attr(data-l);display:block;font-weight:700;color:#15487F;font-size:12.5px}tr{margin:0 0 18px;border:1px solid #dde5ee;border-radius:8px;padding:10px 12px}}
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="home-logo-wrap">
+      <span class="home-logo">Delphi~Med</span>
+      <span class="home-logo-payoff">Il tuo medico, al tuo fianco</span>
+    </a>
+  </header>
+  <div class="container">
+    <div class="card">
+      <h1>Sub-responsabili del trattamento</h1>
+      <p class="subtitle">Elenco previsto dall'Accordo sul trattamento dei dati (<a href="/dpa">DPA</a>, § 3(d)) — Aggiornato al 10 settembre 2026</p>
+
+      <h2>A cosa serve questa pagina</h2>
+      <p>Delphi~Med tratta i dati dei pazienti <strong>per conto dei medici</strong> che utilizzano il servizio, in qualità di responsabile del trattamento ai sensi dell'art. 28 del GDPR. Per erogare il servizio ci avvaliamo dei fornitori elencati di seguito (<strong>sub-responsabili</strong>), autorizzati in via generale dal DPA accettato da ciascun medico. Ogni sub-responsabile è vincolato da un contratto che gli impone obblighi equivalenti a quelli che Delphi~Med assume verso il medico.</p>
+
+      <h2>Elenco dei sub-responsabili</h2>
+      <table>
+        <thead><tr><th>Fornitore</th><th>Servizio</th><th>Luogo di elaborazione</th><th>Garanzie per il trasferimento</th></tr></thead>
+        <tbody>
+          <tr><td data-l="Fornitore">Supabase</td><td data-l="Servizio">Database, autenticazione, archiviazione dei referti</td><td data-l="Luogo di elaborazione">Unione Europea — Francoforte</td><td data-l="Garanzie">Accordo art. 28 + Clausole Contrattuali Standard + valutazione d'impatto sul trasferimento del fornitore; adesione all'EU-US Data Privacy Framework</td></tr>
+          <tr><td data-l="Fornitore">Amazon Web Services</td><td data-l="Servizio">Elaborazione delle funzioni di intelligenza artificiale (Bedrock) e gestione delle chiavi di cifratura dei referti (KMS)</td><td data-l="Luogo di elaborazione">Unione Europea — Francoforte (eu-central-1)</td><td data-l="Garanzie">Accordo art. 28 + Clausole Contrattuali Standard; il fornitore non conserva i contenuti né li utilizza per addestramento</td></tr>
+          <tr><td data-l="Fornitore">Vercel</td><td data-l="Servizio">Hosting dell'applicazione e funzioni serverless</td><td data-l="Luogo di elaborazione">Unione Europea — Francoforte (fra1) per le funzioni che trattano i dati; rete di distribuzione globale per i soli contenuti statici</td><td data-l="Garanzie">Accordo art. 28 + Clausole Contrattuali Standard</td></tr>
+          <tr><td data-l="Fornitore">Resend</td><td data-l="Servizio">Invio delle email transazionali (conferme, promemoria, notifiche); nessun dato relativo alla salute</td><td data-l="Luogo di elaborazione">Stati Uniti</td><td data-l="Garanzie">Accordo art. 28 + Clausole Contrattuali Standard</td></tr>
+          <tr><td data-l="Fornitore">Stripe</td><td data-l="Servizio">Gestione dei pagamenti (dall'attivazione del modulo)</td><td data-l="Luogo di elaborazione">Unione Europea / Stati Uniti</td><td data-l="Garanzie">Accordo art. 28 + Clausole Contrattuali Standard (alla messa in produzione)</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Nota sul fornitore del modello AI.</strong> Le funzioni di intelligenza artificiale utilizzano modelli sviluppati da Anthropic, eseguiti interamente su infrastruttura AWS nell'Unione Europea. Anthropic non ha accesso all'infrastruttura di elaborazione e non riceve alcun dato: per questo non compare nell'elenco dei sub-responsabili.</p>
+
+      <h2>Dove risiedono i dati</h2>
+      <p>I dati clinici <strong>risiedono e sono elaborati nell'Unione Europea (Francoforte)</strong>: database, archiviazione dei referti, elaborazione AI e chiavi di cifratura. Il contenuto clinico non lascia l'Unione. Alcuni fornitori hanno sede negli Stati Uniti: i relativi trasferimenti sono assistiti dalle Clausole Contrattuali Standard integrate dalle valutazioni d'impatto sul trasferimento e — finché vigente — dall'EU-US Data Privacy Framework per i fornitori aderenti. Delphi~Med monitora l'evoluzione del quadro (appello pendente presso la Corte di giustizia UE) e mantiene le Clausole Contrattuali Standard quale garanzia autonoma.</p>
+
+      <h2>Modifiche all'elenco</h2>
+      <p>L'aggiunta o la sostituzione di un sub-responsabile è comunicata ai medici via email, all'indirizzo dell'account, con un <strong>preavviso di 30 giorni</strong>, entro i quali il medico può proporre opposizione motivata secondo quanto previsto dal DPA. La presente pagina è aggiornata contestualmente.</p>
+      <p><strong>Storico delle modifiche:</strong> 10/09/2026 — prima pubblicazione dell'elenco.</p>
+
+      <h2>Contatti</h2>
+      <p>Per domande su questa pagina o sul trattamento dei dati: <a href="mailto:privacy@delphi-med.com">privacy@delphi-med.com</a>.</p>
+    </div>
+  </div>
+</body>
+</html>

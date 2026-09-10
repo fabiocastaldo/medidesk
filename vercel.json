@@ -28,6 +28,8 @@
     { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
     { "source": "/privacy-medici", "destination": "/privacy-medici.html" },
     { "source": "/termini-di-servizio", "destination": "/termini-di-servizio.html" },
+    { "source": "/dpa", "destination": "/dpa.html" },
+    { "source": "/sub-responsabili", "destination": "/sub-responsabili.html" },
     { "source": "/m/(.*)", "destination": "/api/medico?slug=$1" },
     { "source": "/c/(.*)", "destination": "/medidesk.html" },
     { "source": "/p/(.*)", "destination": "/medidesk.html" },
