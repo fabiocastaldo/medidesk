@@ -436,9 +436,10 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-table tbody tr:nth-child(even){background:var(--surface2)}
 .paz-row:hover{background:var(--accent-light)}
 .paz-table td{padding:8px 14px;white-space:nowrap}
-.paz-table th:nth-child(2){width:340px}
-.paz-table th:nth-child(3){width:80px}
-.paz-table th:nth-child(4){width:140px}
+.paz-table th:nth-child(2){width:130px}
+.paz-table th:nth-child(3){width:340px}
+.paz-table th:nth-child(4){width:80px}
+.paz-table th:nth-child(5){width:140px}
 .paz-dim{color:var(--ink3);opacity:.55}
 .paz-act{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;margin-left:6px;transition:all .12s;white-space:nowrap}
 .paz-act:hover{border-color:var(--accent);background:var(--accent-light)}
@@ -10285,7 +10286,7 @@ function renderPazienti(){
     tEl.insertAdjacentHTML('beforeend','<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>');
     return;
   }
-  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
   cEl.innerHTML=list.map(_pazCardHTML).join('');
 }
 
@@ -10298,6 +10299,7 @@ function _pazRowHTML(r){
   const azioni=btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span></td>
+    <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px">${contatti}</td>
     <td style="text-align:center">${r.tipo==='paziente'?r.nVisite:'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="text-align:right;white-space:nowrap">${azioni}</td>
