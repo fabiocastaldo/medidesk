@@ -2632,7 +2632,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="extracted-fields">
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
-            <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
+            <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita *</span><input class="form-input" id="ex-nascita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome" style="flex:1" oninput="capFirstInput(this)"></div>
             <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1" oninput="capFirstInput(this)"></div>
@@ -2668,7 +2668,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="np-nome" autocomplete="off"></div>
       <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="np-cognome" autocomplete="off"></div>
-      <div class="form-group"><label class="form-label">Data di nascita</label><input class="form-input" id="np-nascita" placeholder="GG/MM/AAAA" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Data di nascita *</label><input class="form-input" id="np-nascita" placeholder="GG/MM/AAAA" autocomplete="off"></div>
       <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="np-email" type="email" autocomplete="off"></div>
       <div class="form-group"><label class="form-label">Telefono</label><input class="form-input" id="np-tel" autocomplete="off"></div>
     </div>
@@ -8235,8 +8235,9 @@ async function saveVisita(){
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return null; }
       const nascita = expandCompactDate(document.getElementById('ex-nascita').value.trim());
+      if(!nascita){ showToast('La data di nascita \u00e8 obbligatoria: identifica il paziente in caso di omonimia'); return null; }
       const nascitaIso = itToIso(nascita);
-      if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return null; }
+      if(!nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return null; }
       const _cands = _pazientiOmonimi(nome, cognome);
       if(_cands.length>1){
         paz = await scegliPazienteOmonimo(_cands, {});
@@ -10377,8 +10378,9 @@ async function salvaNuovoPaziente(){
   const cognome=capitalizeName(document.getElementById('np-cognome').value.trim());
   if(!nome||!cognome){ showToast('Nome e cognome sono obbligatori'); return; }
   const nascita=expandCompactDate(document.getElementById('np-nascita').value.trim());
+  if(!nascita){ showToast('La data di nascita \u00e8 obbligatoria: identifica il paziente in caso di omonimia'); return; }
   const nascitaIso=itToIso(nascita);
-  if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
+  if(!nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
   const email=document.getElementById('np-email').value.trim();
   const tel=document.getElementById('np-tel').value.trim();
   const dup=S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
