@@ -436,9 +436,10 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-table tbody tr:nth-child(even){background:var(--surface2)}
 .paz-row:hover{background:var(--accent-light)}
 .paz-table td{padding:8px 14px;white-space:nowrap}
-.paz-table th:nth-child(2){width:340px}
-.paz-table th:nth-child(3){width:80px}
-.paz-table th:nth-child(4){width:140px}
+.paz-table th:nth-child(1){width:24%}
+.paz-table th:nth-child(2){width:150px}
+.paz-table th:nth-child(4){width:80px}
+.paz-table th:nth-child(5){width:140px}
 .paz-dim{color:var(--ink3);opacity:.55}
 .paz-act{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;margin-left:6px;transition:all .12s;white-space:nowrap}
 .paz-act:hover{border-color:var(--accent);background:var(--accent-light)}
@@ -789,6 +790,12 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-menu-dd.open{display:flex}
 .home-menu-dd button,.home-menu-dd a{display:block;width:100%;text-align:left;background:none;border:none;color:#fff;font-size:14.5px;font-weight:600;font-family:'DM Sans',sans-serif;text-decoration:none;padding:12px 14px;border-radius:10px;cursor:pointer;transition:background .15s}
 .home-menu-dd button:hover,.home-menu-dd a:hover{background:rgba(255,255,255,.1)}
+.omonimo-row{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;background:var(--surface2,#f6f7f9);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:border-color .15s,background .15s}
+.omonimo-row:hover{border-color:var(--accent);background:var(--surface,#fff)}
+.omonimo-row strong{font-size:14.5px;color:var(--ink)}
+.omonimo-row span{font-size:12.5px;color:var(--ink3)}
+.omonimo-row.omonimo-hint{border-color:var(--accent)}
+.omonimo-row .omonimo-badge{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);margin-top:2px}
 @media(max-width:640px){.home-logo-payoff{display:none}}
 .home-hero{padding:18px 20px 26px;text-align:center;flex-shrink:0;margin:auto 0;width:100%;box-sizing:border-box}
 .home-hero h2{color:#fff;font-size:28px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
@@ -2626,7 +2633,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="extracted-fields">
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
-            <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita</span><input class="form-input" id="ex-nascita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
+            <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita *</span><input class="form-input" id="ex-nascita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome" style="flex:1" oninput="capFirstInput(this)"></div>
             <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1" oninput="capFirstInput(this)"></div>
@@ -2662,7 +2669,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="np-nome" autocomplete="off"></div>
       <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="np-cognome" autocomplete="off"></div>
-      <div class="form-group"><label class="form-label">Data di nascita</label><input class="form-input" id="np-nascita" placeholder="GG/MM/AAAA" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label">Data di nascita *</label><input class="form-input" id="np-nascita" placeholder="GG/MM/AAAA" autocomplete="off"></div>
       <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="np-email" type="email" autocomplete="off"></div>
       <div class="form-group"><label class="form-label">Telefono</label><input class="form-input" id="np-tel" autocomplete="off"></div>
     </div>
@@ -2940,6 +2947,22 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-footer">
       <button class="btn btn-secondary" id="conferma-btn-annulla" onclick="_chiudiConferma(false)">Annulla</button>
       <button class="btn btn-primary" id="conferma-btn-ok" onclick="_chiudiConferma(true)">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-omonimi" style="z-index:99999" onclick="if(event.target===this)annullaOmonimi()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title">Pi&ugrave; fascicoli con questo nome</span>
+      <button class="modal-close" onclick="annullaOmonimi()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.5">Esistono pi&ugrave; fascicoli omonimi. Scegli quello giusto: la visita verr&agrave; registrata l&igrave;.</p>
+      <div id="omonimi-lista"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="annullaOmonimi()">Annulla</button>
     </div>
   </div>
 </div>
@@ -3675,12 +3698,12 @@ async function loadPazientiFromDB(user){
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient.from('pazienti')
-      .select('id, nome, cognome, data_nascita, telefono, email, sintesi_clinica, sintesi_generata_il, sintesi_meta')
+      .select('id, nome, cognome, data_nascita, telefono, email, created_at, sintesi_clinica, sintesi_generata_il, sintesi_meta')
       .eq('medico_id', medico.id).order('cognome').order('nome');
     if(error) throw error;
     S.pazienti = (data || []).map(p => ({
       id: p.id, nome: p.nome||'', cognome: p.cognome||'',
-      nascita: isoToIt(p.data_nascita||''), tel: p.telefono||'', email: p.email||'', visite: [],
+      nascita: isoToIt(p.data_nascita||''), tel: p.telefono||'', email: p.email||'', creato: (p.created_at||'').slice(0,10), visite: [],
       sintesiEnc: p.sintesi_clinica||null, sintesiGenerataIl: p.sintesi_generata_il||null, sintesiMeta: p.sintesi_meta||null
     }));
     save();
@@ -4259,6 +4282,58 @@ function showPage(id){
 
 // ── MODALS ──
 let _confermaResolve = null;
+let _omonimoResolve = null;
+function _pazientiOmonimi(nome,cognome){
+  const n=(nome||'').toLowerCase(), c=(cognome||'').toLowerCase();
+  return S.pazienti.filter(p=>(p.nome||'').toLowerCase()===n&&(p.cognome||'').toLowerCase()===c);
+}
+function annullaOmonimi(){
+  closeModal('modal-omonimi');
+  const r=_omonimoResolve; _omonimoResolve=null; if(r)r(null);
+}
+function scegliPazienteOmonimo(cands, hint){
+  if(!cands||!cands.length) return Promise.resolve(null);
+  if(cands.length===1) return Promise.resolve(cands[0]);
+  hint=hint||{};
+  const he=(hint.email||'').toLowerCase().trim();
+  const ht=String(hint.tel||'').replace(/\D/g,'');
+  const coincide=function(p){
+    const pe=(p.email||'').toLowerCase().trim();
+    const pt=String(p.tel||'').replace(/\D/g,'');
+    return (he&&pe&&pe===he)||(ht&&pt&&pt===ht);
+  };
+  const byContact=cands.filter(coincide);
+  if(byContact.length===1) return Promise.resolve(byContact[0]);
+  return new Promise(function(res){
+    _omonimoResolve=res;
+    const box=document.getElementById('omonimi-lista');
+    box.innerHTML=cands.map(function(p,i){
+      const vs=p.visite||[];
+      const nv=vs.length;
+      let ult=null;
+      for(const v of vs){ const k=itToIso(v.data||'')||''; if(k&&(!ult||k>ult.k)) ult={k:k,v:v}; }
+      const parti=[
+        p.nascita?('nato/a '+p.nascita):null,
+        p.email||null,
+        p.tel||null,
+        p.creato?('fascicolo creato il '+isoToIt(p.creato)):null,
+        nv?(nv+(nv===1?' visita':' visite')+(ult?(' \u00b7 ultima: '+ult.v.data+(ult.v.tipo?(' \u2014 '+ult.v.tipo):'')):'')):'nessuna visita',
+        p.sintesiEnc?'sintesi clinica presente':null
+      ];
+      const det=parti.filter(Boolean).join(' \u00b7 ');
+      const isHint=coincide(p);
+      return '<button class="omonimo-row'+(isHint?' omonimo-hint':'')+'" data-i="'+i+'"><strong>'+escapeHtml((p.cognome||'')+' '+(p.nome||''))+'</strong><span>'+escapeHtml(det||'nessun dettaglio')+'</span>'+(isHint?'<span class="omonimo-badge">contatti coincidenti con la prenotazione</span>':'')+'</button>';
+    }).join('');
+    box.querySelectorAll('.omonimo-row').forEach(function(b){
+      b.onclick=function(){
+        const p=cands[parseInt(b.getAttribute('data-i'),10)];
+        closeModal('modal-omonimi');
+        const r=_omonimoResolve; _omonimoResolve=null; if(r)r(p);
+      };
+    });
+    openModal('modal-omonimi');
+  });
+}
 function _chiudiConferma(val){
   closeModal('modal-conferma');
   const r = _confermaResolve; _confermaResolve = null;
@@ -7983,10 +8058,13 @@ function renderVisitaSearchResults(){
 async function visitaSelectFromAppt(apptId){
   const a = S.appuntamenti.find(x=>String(x.id)===String(apptId));
   if(!a) return;
-  let paz = S.pazienti.find(p=>
-    p.nome.toLowerCase()===a.nome.toLowerCase() &&
-    p.cognome.toLowerCase()===a.cognome.toLowerCase()
-  );
+  let paz = null;
+  const _cands = _pazientiOmonimi(a.nome, a.cognome);
+  if(_cands.length===1){ paz=_cands[0]; }
+  else if(_cands.length>1){
+    paz = await scegliPazienteOmonimo(_cands, {email:a.email, tel:a.tel});
+    if(!paz){ showToast('Scelta fascicolo annullata'); closeModal('modal-nuova-visita'); return; }
+  }
   if(!paz){
     if(isOnline()){
       try {
@@ -8158,9 +8236,16 @@ async function saveVisita(){
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return null; }
       const nascita = expandCompactDate(document.getElementById('ex-nascita').value.trim());
+      if(!nascita){ showToast('La data di nascita \u00e8 obbligatoria: identifica il paziente in caso di omonimia'); return null; }
       const nascitaIso = itToIso(nascita);
-      if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return null; }
-      paz = S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
+      if(!nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return null; }
+      const _cands = _pazientiOmonimi(nome, cognome);
+      if(_cands.length>1){
+        paz = await scegliPazienteOmonimo(_cands, {});
+        if(!paz){ showToast('Salvataggio annullato: fascicolo non scelto'); return null; }
+      } else {
+        paz = _cands[0] || null;
+      }
       if(!paz){
         if(isOnline() && S.medicoId){
           const { data: newPaz, error } = await supabaseClient.from('pazienti').insert({
@@ -10201,7 +10286,7 @@ function renderPazienti(){
     tEl.insertAdjacentHTML('beforeend','<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>');
     return;
   }
-  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
   cEl.innerHTML=list.map(_pazCardHTML).join('');
 }
 
@@ -10214,6 +10299,7 @@ function _pazRowHTML(r){
   const azioni=btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span></td>
+    <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px">${contatti}</td>
     <td style="text-align:center">${r.tipo==='paziente'?r.nVisite:'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="text-align:right;white-space:nowrap">${azioni}</td>
@@ -10252,7 +10338,13 @@ async function _riversaContatti(paz, a){
 
 async function _ensurePazienteDaAppt(a){
   if(!a||!(a.nome||a.cognome)) return;
-  let paz=S.pazienti.find(p=>p.nome.toLowerCase()===(a.nome||'').toLowerCase()&&p.cognome.toLowerCase()===(a.cognome||'').toLowerCase());
+  const _cands=_pazientiOmonimi(a.nome, a.cognome);
+  let paz=null;
+  if(_cands.length===1){ paz=_cands[0]; }
+  else if(_cands.length>1){
+    paz=await scegliPazienteOmonimo(_cands, {email:a.email, tel:a.tel});
+    if(!paz){ showToast('Fascicolo non assegnato: omonimia non risolta'); return; }
+  }
   if(paz){ await _riversaContatti(paz, a); return; }
   if(isOnline() && S.medicoId){
     try{
@@ -10288,8 +10380,9 @@ async function salvaNuovoPaziente(){
   const cognome=capitalizeName(document.getElementById('np-cognome').value.trim());
   if(!nome||!cognome){ showToast('Nome e cognome sono obbligatori'); return; }
   const nascita=expandCompactDate(document.getElementById('np-nascita').value.trim());
+  if(!nascita){ showToast('La data di nascita \u00e8 obbligatoria: identifica il paziente in caso di omonimia'); return; }
   const nascitaIso=itToIso(nascita);
-  if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
+  if(!nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
   const email=document.getElementById('np-email').value.trim();
   const tel=document.getElementById('np-tel').value.trim();
   const dup=S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
