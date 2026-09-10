@@ -789,6 +789,12 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-menu-dd.open{display:flex}
 .home-menu-dd button,.home-menu-dd a{display:block;width:100%;text-align:left;background:none;border:none;color:#fff;font-size:14.5px;font-weight:600;font-family:'DM Sans',sans-serif;text-decoration:none;padding:12px 14px;border-radius:10px;cursor:pointer;transition:background .15s}
 .home-menu-dd button:hover,.home-menu-dd a:hover{background:rgba(255,255,255,.1)}
+.omonimo-row{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;background:var(--surface2,#f6f7f9);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:border-color .15s,background .15s}
+.omonimo-row:hover{border-color:var(--accent);background:var(--surface,#fff)}
+.omonimo-row strong{font-size:14.5px;color:var(--ink)}
+.omonimo-row span{font-size:12.5px;color:var(--ink3)}
+.omonimo-row.omonimo-hint{border-color:var(--accent)}
+.omonimo-row .omonimo-badge{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);margin-top:2px}
 @media(max-width:640px){.home-logo-payoff{display:none}}
 .home-hero{padding:18px 20px 26px;text-align:center;flex-shrink:0;margin:auto 0;width:100%;box-sizing:border-box}
 .home-hero h2{color:#fff;font-size:28px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
@@ -2943,6 +2949,22 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="modal-omonimi" style="z-index:99999" onclick="if(event.target===this)annullaOmonimi()">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title">Pi&ugrave; fascicoli con questo nome</span>
+      <button class="modal-close" onclick="annullaOmonimi()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.5">Esistono pi&ugrave; fascicoli omonimi. Scegli quello giusto: la visita verr&agrave; registrata l&igrave;.</p>
+      <div id="omonimi-lista"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="annullaOmonimi()">Annulla</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════ SCRIPT ══════════════ -->
@@ -4259,6 +4281,47 @@ function showPage(id){
 
 // ── MODALS ──
 let _confermaResolve = null;
+let _omonimoResolve = null;
+function _pazientiOmonimi(nome,cognome){
+  const n=(nome||'').toLowerCase(), c=(cognome||'').toLowerCase();
+  return S.pazienti.filter(p=>(p.nome||'').toLowerCase()===n&&(p.cognome||'').toLowerCase()===c);
+}
+function annullaOmonimi(){
+  closeModal('modal-omonimi');
+  const r=_omonimoResolve; _omonimoResolve=null; if(r)r(null);
+}
+function scegliPazienteOmonimo(cands, hint){
+  if(!cands||!cands.length) return Promise.resolve(null);
+  if(cands.length===1) return Promise.resolve(cands[0]);
+  hint=hint||{};
+  const he=(hint.email||'').toLowerCase().trim();
+  const ht=String(hint.tel||'').replace(/\D/g,'');
+  const coincide=function(p){
+    const pe=(p.email||'').toLowerCase().trim();
+    const pt=String(p.tel||'').replace(/\D/g,'');
+    return (he&&pe&&pe===he)||(ht&&pt&&pt===ht);
+  };
+  const byContact=cands.filter(coincide);
+  if(byContact.length===1) return Promise.resolve(byContact[0]);
+  return new Promise(function(res){
+    _omonimoResolve=res;
+    const box=document.getElementById('omonimi-lista');
+    box.innerHTML=cands.map(function(p,i){
+      const nv=(p.visite&&p.visite.length)||0;
+      const det=[p.nascita?('nato/a '+p.nascita):null,p.email||null,p.tel||null,nv+(nv===1?' visita':' visite')].filter(Boolean).join(' \u00b7 ');
+      const isHint=coincide(p);
+      return '<button class="omonimo-row'+(isHint?' omonimo-hint':'')+'" data-i="'+i+'"><strong>'+escapeHtml((p.cognome||'')+' '+(p.nome||''))+'</strong><span>'+escapeHtml(det||'nessun dettaglio')+'</span>'+(isHint?'<span class="omonimo-badge">contatti coincidenti con la prenotazione</span>':'')+'</button>';
+    }).join('');
+    box.querySelectorAll('.omonimo-row').forEach(function(b){
+      b.onclick=function(){
+        const p=cands[parseInt(b.getAttribute('data-i'),10)];
+        closeModal('modal-omonimi');
+        const r=_omonimoResolve; _omonimoResolve=null; if(r)r(p);
+      };
+    });
+    openModal('modal-omonimi');
+  });
+}
 function _chiudiConferma(val){
   closeModal('modal-conferma');
   const r = _confermaResolve; _confermaResolve = null;
@@ -7983,10 +8046,13 @@ function renderVisitaSearchResults(){
 async function visitaSelectFromAppt(apptId){
   const a = S.appuntamenti.find(x=>String(x.id)===String(apptId));
   if(!a) return;
-  let paz = S.pazienti.find(p=>
-    p.nome.toLowerCase()===a.nome.toLowerCase() &&
-    p.cognome.toLowerCase()===a.cognome.toLowerCase()
-  );
+  let paz = null;
+  const _cands = _pazientiOmonimi(a.nome, a.cognome);
+  if(_cands.length===1){ paz=_cands[0]; }
+  else if(_cands.length>1){
+    paz = await scegliPazienteOmonimo(_cands, {email:a.email, tel:a.tel});
+    if(!paz){ showToast('Scelta fascicolo annullata'); closeModal('modal-nuova-visita'); return; }
+  }
   if(!paz){
     if(isOnline()){
       try {
@@ -8160,7 +8226,13 @@ async function saveVisita(){
       const nascita = expandCompactDate(document.getElementById('ex-nascita').value.trim());
       const nascitaIso = itToIso(nascita);
       if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return null; }
-      paz = S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
+      const _cands = _pazientiOmonimi(nome, cognome);
+      if(_cands.length>1){
+        paz = await scegliPazienteOmonimo(_cands, {});
+        if(!paz){ showToast('Salvataggio annullato: fascicolo non scelto'); return null; }
+      } else {
+        paz = _cands[0] || null;
+      }
       if(!paz){
         if(isOnline() && S.medicoId){
           const { data: newPaz, error } = await supabaseClient.from('pazienti').insert({
@@ -10252,7 +10324,13 @@ async function _riversaContatti(paz, a){
 
 async function _ensurePazienteDaAppt(a){
   if(!a||!(a.nome||a.cognome)) return;
-  let paz=S.pazienti.find(p=>p.nome.toLowerCase()===(a.nome||'').toLowerCase()&&p.cognome.toLowerCase()===(a.cognome||'').toLowerCase());
+  const _cands=_pazientiOmonimi(a.nome, a.cognome);
+  let paz=null;
+  if(_cands.length===1){ paz=_cands[0]; }
+  else if(_cands.length>1){
+    paz=await scegliPazienteOmonimo(_cands, {email:a.email, tel:a.tel});
+    if(!paz){ showToast('Fascicolo non assegnato: omonimia non risolta'); return; }
+  }
   if(paz){ await _riversaContatti(paz, a); return; }
   if(isOnline() && S.medicoId){
     try{
