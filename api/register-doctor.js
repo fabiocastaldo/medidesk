@@ -3,6 +3,16 @@ import { Resend } from 'resend';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Testi legali canonici: versione + SHA-256 del file pubblicato.
+// INVARIANTE: ogni modifica a dpa.html o termini-di-servizio.html richiede
+// l'aggiornamento di versione e hash qui (sha256sum <file>).
+// ─────────────────────────────────────────────────────────────────────────────
+const LEGAL_DOCS = {
+  tos: { versione: 'tos-0.2', hash: '3a26b7320f3f8d5ef170b756743711458cd023487ee7e3b64461ba53e5c0a8c2' },
+  dpa: { versione: 'dpa-0.2', hash: '036b2632e9a7d091b48066dd49799b4473efdb268f0be9946af9c55e0444bffb' }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Rate limit in-memory: 5 registrazioni/ora per IP (anti-spam abuse)
 // ─────────────────────────────────────────────────────────────────────────────
 const regRateMap = new Map();
@@ -99,7 +109,12 @@ export default async function handler(req, res) {
   const ordineNumero = String(body.ordineNumero || '').trim();
   const ordineProvincia = String(body.ordineProvincia || '').trim();
   const specializzazione = String(body.specializzazione || '').trim();
+  const accettaTos = body.accettaTos === true;
+  const accettaDpa = body.accettaDpa === true;
 
+  if (!accettaTos || !accettaDpa) {
+    return res.status(400).json({ error: 'Per creare l\'account devi accettare i Termini di servizio e l\'Accordo sul trattamento dei dati (DPA)' });
+  }
   if (!isValidEmail(email)) {
     return res.status(400).json({ error: 'Email non valida' });
   }
@@ -187,6 +202,39 @@ export default async function handler(req, res) {
     medicoId = Array.isArray(rows) ? rows[0]?.id : rows?.id;
   } catch (e) {
     console.error('[register-doctor] insert medici exception:', e.message);
+    return res.status(500).json({ error: 'Errore di rete' });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // STEP 2-bis: evidenza delle accettazioni legali (bloccante, con rollback).
+  // Una riga per documento: id medico, email, versione, hash del testo, timestamp.
+  // ───────────────────────────────────────────────────────────────────────────
+  try {
+    const accRes = await fetch(`${base}/accettazioni_legali`, {
+      method: 'POST',
+      headers: { ...headers, 'Prefer': 'return=representation' },
+      body: JSON.stringify([
+        { medico_id: medicoId, email, documento: 'tos', versione: LEGAL_DOCS.tos.versione, hash_testo: LEGAL_DOCS.tos.hash },
+        { medico_id: medicoId, email, documento: 'dpa', versione: LEGAL_DOCS.dpa.versione, hash_testo: LEGAL_DOCS.dpa.hash }
+      ])
+    });
+    const accRows = accRes.ok ? await accRes.json().catch(() => []) : [];
+    if (!accRes.ok || !Array.isArray(accRows) || accRows.length !== 2) {
+      const errText = !accRes.ok ? await accRes.text().catch(() => '') : `rows=${accRows.length}`;
+      console.error('[register-doctor] insert accettazioni_legali failed:', accRes.status, errText);
+      // Rollback: senza evidenza dell'accettazione l'account non nasce
+      await fetch(`${base}/medici?id=eq.${medicoId}`, { method: 'DELETE', headers })
+        .catch(e => console.error('[register-doctor] rollback delete medico failed:', e.message));
+      await fetch(`${authBase}/admin/users/${userId}`, { method: 'DELETE', headers })
+        .catch(e => console.error('[register-doctor] rollback delete user failed:', e.message));
+      return res.status(500).json({ error: 'Errore durante la registrazione dell\'accettazione. Riprova.' });
+    }
+  } catch (e) {
+    console.error('[register-doctor] insert accettazioni_legali exception:', e.message);
+    await fetch(`${base}/medici?id=eq.${medicoId}`, { method: 'DELETE', headers })
+      .catch(err => console.error('[register-doctor] rollback delete medico failed:', err.message));
+    await fetch(`${authBase}/admin/users/${userId}`, { method: 'DELETE', headers })
+      .catch(err => console.error('[register-doctor] rollback delete user failed:', err.message));
     return res.status(500).json({ error: 'Errore di rete' });
   }
 
