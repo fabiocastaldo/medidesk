@@ -3697,12 +3697,12 @@ async function loadPazientiFromDB(user){
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient.from('pazienti')
-      .select('id, nome, cognome, data_nascita, telefono, email, sintesi_clinica, sintesi_generata_il, sintesi_meta')
+      .select('id, nome, cognome, data_nascita, telefono, email, created_at, sintesi_clinica, sintesi_generata_il, sintesi_meta')
       .eq('medico_id', medico.id).order('cognome').order('nome');
     if(error) throw error;
     S.pazienti = (data || []).map(p => ({
       id: p.id, nome: p.nome||'', cognome: p.cognome||'',
-      nascita: isoToIt(p.data_nascita||''), tel: p.telefono||'', email: p.email||'', visite: [],
+      nascita: isoToIt(p.data_nascita||''), tel: p.telefono||'', email: p.email||'', creato: (p.created_at||'').slice(0,10), visite: [],
       sintesiEnc: p.sintesi_clinica||null, sintesiGenerataIl: p.sintesi_generata_il||null, sintesiMeta: p.sintesi_meta||null
     }));
     save();
@@ -4307,8 +4307,19 @@ function scegliPazienteOmonimo(cands, hint){
     _omonimoResolve=res;
     const box=document.getElementById('omonimi-lista');
     box.innerHTML=cands.map(function(p,i){
-      const nv=(p.visite&&p.visite.length)||0;
-      const det=[p.nascita?('nato/a '+p.nascita):null,p.email||null,p.tel||null,nv+(nv===1?' visita':' visite')].filter(Boolean).join(' \u00b7 ');
+      const vs=p.visite||[];
+      const nv=vs.length;
+      let ult=null;
+      for(const v of vs){ const k=itToIso(v.data||'')||''; if(k&&(!ult||k>ult.k)) ult={k:k,v:v}; }
+      const parti=[
+        p.nascita?('nato/a '+p.nascita):null,
+        p.email||null,
+        p.tel||null,
+        p.creato?('fascicolo creato il '+isoToIt(p.creato)):null,
+        nv?(nv+(nv===1?' visita':' visite')+(ult?(' \u00b7 ultima: '+ult.v.data+(ult.v.tipo?(' \u2014 '+ult.v.tipo):'')):'')):'nessuna visita',
+        p.sintesiEnc?'sintesi clinica presente':null
+      ];
+      const det=parti.filter(Boolean).join(' \u00b7 ');
       const isHint=coincide(p);
       return '<button class="omonimo-row'+(isHint?' omonimo-hint':'')+'" data-i="'+i+'"><strong>'+escapeHtml((p.cognome||'')+' '+(p.nome||''))+'</strong><span>'+escapeHtml(det||'nessun dettaglio')+'</span>'+(isHint?'<span class="omonimo-badge">contatti coincidenti con la prenotazione</span>':'')+'</button>';
     }).join('');
