@@ -790,6 +790,12 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-menu-dd.open{display:flex}
 .home-menu-dd button,.home-menu-dd a{display:block;width:100%;text-align:left;background:none;border:none;color:#fff;font-size:14.5px;font-weight:600;font-family:'DM Sans',sans-serif;text-decoration:none;padding:12px 14px;border-radius:10px;cursor:pointer;transition:background .15s}
 .home-menu-dd button:hover,.home-menu-dd a:hover{background:rgba(255,255,255,.1)}
+.home-aud{display:flex;align-items:center;gap:20px;margin-right:12px}
+.home-aud button{background:none;border:none;padding:0;color:rgba(255,255,255,.6);font-size:13.5px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.2px;cursor:pointer;transition:color .15s}
+.home-aud button:hover{color:#fff}
+.home-menu-sep{height:1px;background:rgba(255,255,255,.14);margin:6px 4px;display:none}
+.home-menu-dd .home-aud-dd{display:none}
+@media(max-width:760px){.home-aud{display:none}.home-menu-dd .home-aud-dd{display:block}.home-menu-dd .home-menu-sep{display:block}}
 .omonimo-row{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;background:var(--surface2,#f6f7f9);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:border-color .15s,background .15s}
 .omonimo-row:hover{border-color:var(--accent);background:var(--surface,#fff)}
 .omonimo-row strong{font-size:14.5px;color:var(--ink)}
@@ -1020,8 +1026,15 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <span class="home-logo-payoff">Il tuo medico, al tuo fianco</span>
     </div>
     <nav class="home-header-nav">
+      <div class="home-aud">
+        <button onclick="document.getElementById('sez-medici').scrollIntoView({behavior:'smooth'})">Per i medici</button>
+        <button onclick="document.getElementById('sez-org').scrollIntoView({behavior:'smooth'})">Per le organizzazioni</button>
+      </div>
       <button class="home-menu-btn" aria-label="Menu" aria-expanded="false" onclick="toggleHomeMenu(event)"><svg class="ic"><use href="#ic-menu"/></svg></button>
       <div class="home-menu-dd" id="home-menu-dd">
+        <button class="home-aud-dd" onclick="closeHomeMenu();document.getElementById('sez-medici').scrollIntoView({behavior:'smooth'})">Per i medici</button>
+        <button class="home-aud-dd" onclick="closeHomeMenu();document.getElementById('sez-org').scrollIntoView({behavior:'smooth'})">Per le organizzazioni</button>
+        <div class="home-menu-sep"></div>
         <button onclick="closeHomeMenu();showLoginView('login')">Accesso medici</button>
         <a href="/cooperative">Accesso organizzazioni</a>
       </div>
