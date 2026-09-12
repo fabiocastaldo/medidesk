@@ -790,6 +790,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-menu-dd.open{display:flex}
 .home-menu-dd button,.home-menu-dd a{display:block;width:100%;text-align:left;background:none;border:none;color:#fff;font-size:14.5px;font-weight:600;font-family:'DM Sans',sans-serif;text-decoration:none;padding:12px 14px;border-radius:10px;cursor:pointer;transition:background .15s}
 .home-menu-dd button:hover,.home-menu-dd a:hover{background:rgba(255,255,255,.1)}
+.home-aud{background:none;border:none;padding:0;margin-right:14px;color:rgba(255,255,255,.6);font-size:13.5px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.2px;cursor:pointer;transition:color .15s}
+.home-aud:hover{color:#fff}
+.home-aud-hero{display:none;background:none;border:none;padding:0;margin:0 auto 14px;position:relative;z-index:1;flex-shrink:0;color:rgba(255,255,255,.6);font-size:13.5px;font-weight:600;font-family:'DM Sans',sans-serif;letter-spacing:.2px;cursor:pointer;transition:color .15s}
+.home-aud-hero:hover{color:#fff}
+@media(max-width:640px){.home-aud{display:none}.home-aud-hero{display:block}}
 .omonimo-row{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;background:var(--surface2,#f6f7f9);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:border-color .15s,background .15s}
 .omonimo-row:hover{border-color:var(--accent);background:var(--surface,#fff)}
 .omonimo-row strong{font-size:14.5px;color:var(--ink)}
@@ -1020,6 +1025,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <span class="home-logo-payoff">Il tuo medico, al tuo fianco</span>
     </div>
     <nav class="home-header-nav">
+      <button class="home-aud" onclick="document.getElementById('sez-medici').scrollIntoView({behavior:'smooth'})">Per i medici e le organizzazioni</button>
       <button class="home-menu-btn" aria-label="Menu" aria-expanded="false" onclick="toggleHomeMenu(event)"><svg class="ic"><use href="#ic-menu"/></svg></button>
       <div class="home-menu-dd" id="home-menu-dd">
         <button onclick="closeHomeMenu();showLoginView('login')">Accesso medici</button>
@@ -1039,6 +1045,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="home-search-results" id="home-search-results"></div>
     <div id="home-search-msg" class="home-search-msg"></div>
   </section>
+  <button class="home-aud-hero" onclick="document.getElementById('sez-medici').scrollIntoView({behavior:'smooth'})">Per i medici e le organizzazioni</button>
   <button class="home-scroll-cue" aria-label="Scopri di più" onclick="document.getElementById('sez-pazienti').scrollIntoView({behavior:'smooth'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
   </div>
 
