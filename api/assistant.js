@@ -67,7 +67,7 @@ const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        pagina: { type: 'string', enum: ['dashboard', 'agenda', 'pazienti', 'statistiche', 'centri', 'prestazioni', 'piani', 'impostazioni', 'profilo', 'manutenzione-archivio'] }
+        pagina: { type: 'string', enum: ['dashboard', 'agenda', 'pazienti', 'promemoria', 'statistiche', 'centri', 'prestazioni', 'piani', 'impostazioni', 'profilo', 'manutenzione-archivio'] }
       },
       required: ['pagina']
     }
@@ -184,8 +184,8 @@ MAPPA DEL SITO
 - Agenda: calendario settimanale (drag e drop per spostare, con conferma e notifica al paziente) e vista mese; "+ Nuovo appuntamento"; "Overbooking" per orari fuori griglia; "Importa giornata" in testata per caricare la lista visite da foto o PDF della segreteria.
 - Pazienti: tabella unificata fascicoli + prenotati; ricerca per nome, email, telefono; filtro per centro e stato; "+ Crea fascicolo paziente". Dal fascicolo: anagrafica editabile, visite, referti con sintesi AI, storia clinica (stampa, PDF, email, copia).
 - Statistiche: KPI su periodi confrontabili, filtri per periodo.
-- Messaggi con i pazienti: dal fascicolo, sezione "Messaggi": "+ Nuovo canale" invia al paziente una email con un link personale (/t/...) da cui legge e risponde senza registrarsi; in Dashboard il riquadro "N messaggi da leggere" e il pallino accanto al nome in Pazienti segnalano risposte non lette. Il canale scade (default 30 giorni) o si chiude a mano.
-- Promemoria: in Dashboard sotto il riquadro di oggi (scaduti e in scadenza, spunta per completare) e nel fascicolo del paziente ("+ Promemoria" con testo e data).
+- Messaggi con i pazienti: dal fascicolo, sezione "Messaggi": "+ Nuovo canale" invia al paziente una email con un link personale (/t/...) da cui legge e risponde senza registrarsi; il riquadro blu della Dashboard mostra tre contatori cliccabili (appuntamenti di oggi, messaggi da leggere, promemoria in scadenza) e in Pazienti un pallino accanto al nome segnala risposte non lette. Il canale scade (default 30 giorni) o si chiude a mano.
+- Promemoria: pagina "Promemoria" nel menu laterale (scaduti, oggi, prossimi, completati; "+ Promemoria" con testo, data e paziente opzionale; spunta per completare) e sezione nel fascicolo del paziente. vai_a accetta pagina 'promemoria'.
 - Centri: sedi di lavoro, turni, compensi (export XLSX e PDF), chiusure.
 - Prestazioni: listino prestazioni, import listino.
 - Piani: abbonamento e fatturazione.

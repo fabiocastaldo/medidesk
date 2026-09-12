@@ -118,7 +118,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .hero-main{display:flex;align-items:baseline;gap:10px}
 .hero-big{font-weight:300;font-size:54px;line-height:1}
 .hero-unit{font-size:16px;color:rgba(255,255,255,.92)}
-.hero-msg{margin-top:8px;font-size:13px;color:#fff;background:rgba(255,255,255,.18);display:inline-block;padding:4px 10px;border-radius:999px;cursor:pointer}.hero-msg:hover{background:rgba(255,255,255,.3)}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}
+.hero-row{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap}.hero-kpi{display:flex;align-items:baseline;gap:8px;cursor:pointer;border-radius:10px;padding:2px 6px;margin:-2px -6px;transition:background .15s}.hero-kpi:hover{background:rgba(255,255,255,.14)}.hero-kpi .hero-unit{line-height:1.15;font-size:13.5px}.hero-kpi.is-zero .hero-big,.hero-kpi.is-zero .hero-unit{opacity:.55}.hero-kpi.has-alert .hero-big{color:#FFD9A8}@media (max-width:640px){.hero-row{gap:16px}.hero-kpi .hero-big{font-size:38px}}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}
 .hero-next{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-height:18px;flex-shrink:0;text-align:right}
 .hero-next-label{color:var(--brand-soft);font-size:12px}
 .hero-next-val{font-weight:700;font-size:16px}
@@ -1458,6 +1458,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item active" onclick="showPage('dashboard')"><span class="icon"><svg class="ic"><use href="#ic-home"/></svg></span><span>Dashboard</span></div>
       <div class="nav-item" onclick="showPage('agenda')"><span class="icon"><svg class="ic"><use href="#ic-calendar"/></svg></span><span>Agenda</span></div>
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon"><svg class="ic"><use href="#ic-users"/></svg></span><span>Pazienti</span></div>
+      <div class="nav-item" onclick="showPage('promemoria')"><span class="icon"><svg class="ic"><use href="#ic-clock"/></svg></span><span>Promemoria</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon"><svg class="ic"><use href="#ic-center"/></svg></span><span>Centri</span></div>
       <div class="nav-item" onclick="showPage('prestazioni')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Prestazioni</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon"><svg class="ic"><use href="#ic-user"/></svg></span><span>Profilo</span></div>
@@ -1499,12 +1500,14 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="hero" id="hero-oggi" onclick="showPage('agenda')">
         <div class="hero-today">
           <div class="hero-label">Oggi</div>
-          <div class="hero-main"><span class="hero-big" id="hero-count">0</span><span class="hero-unit">appuntamenti</span></div>
-          <div class="hero-msg" id="hero-msg" style="display:none" onclick="event.stopPropagation();msgVaiANonLetti()"></div>
+          <div class="hero-row">
+            <div class="hero-kpi" onclick="event.stopPropagation();showPage('agenda')"><span class="hero-big" id="hero-count">0</span><span class="hero-unit">appuntamenti</span></div>
+            <div class="hero-kpi" id="hero-msg" onclick="event.stopPropagation();msgVaiANonLetti()"><span class="hero-big" id="hero-msg-n">0</span><span class="hero-unit">messaggi<br>da leggere</span></div>
+            <div class="hero-kpi" id="hero-prom" onclick="event.stopPropagation();showPage('promemoria')"><span class="hero-big" id="hero-prom-n">0</span><span class="hero-unit">promemoria<br>in scadenza</span></div>
+          </div>
         </div>
         <div class="hero-next" id="hero-next"></div>
       </div>
-      <div id="promemoria-box" class="card" style="display:none;margin-top:14px;padding:14px 18px"></div>
 
       <div class="tile-grid">
         <div class="tile" onclick="showPage('pazienti')">
@@ -1788,6 +1791,27 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
 
     <!-- STATISTICHE -->
+    <div id="page-promemoria" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Promemoria</div>
+          <div class="page-subtitle">Cose da fare, con o senza paziente</div>
+        </div>
+        <button class="btn btn-primary" onclick="promToggleFormPagina()">+ Promemoria</button>
+      </div>
+      <div class="card" id="prom-form-pagina" style="display:none;padding:16px 18px;margin-bottom:16px">
+        <input id="prom-pg-txt" class="form-input" maxlength="500" placeholder="Es. richiamare per esito esami" style="width:100%;box-sizing:border-box">
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+          <input type="date" id="prom-pg-data" class="form-input">
+          <select id="prom-pg-paz" class="form-input" style="max-width:260px"><option value="">Nessun paziente</option></select>
+          <button class="btn btn-primary" onclick="promSalvaDaPagina()">Salva</button>
+          <button class="btn btn-secondary" onclick="promToggleFormPagina()">Annulla</button>
+        </div>
+      </div>
+      <div id="prom-pg-aperti"></div>
+      <div id="prom-pg-fatti" style="margin-top:22px"></div>
+    </div>
+
     <div id="page-statistiche" class="page">
       <div class="page-header">
         <div>
@@ -2132,6 +2156,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="mnu-sec">
         <div class="mnu-sec-title">Gestione</div>
         <div class="mnu-grid">
+          <button class="mnu-item" onclick="showPage('promemoria')"><span class="mnu-ico"><svg class="ic"><use href="#ic-clock"/></svg></span><span class="mnu-lbl">Promemoria</span></button>
           <button class="mnu-item" onclick="showPage('prestazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Prestazioni</span></button>
           <button class="mnu-item" onclick="showPage('statistiche')"><span class="mnu-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="mnu-lbl">Statistiche</span></button>
           <button class="mnu-item" onclick="showPage('manutenzione-archivio')"><span class="mnu-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="mnu-lbl">Archivio</span></button>
@@ -4354,13 +4379,13 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','centri','prestazioni','profilo','piani','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','promemoria','centri','prestazioni','profilo','piani','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
   });
   // Sync bottom nav
-  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio'];
+  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio','promemoria'];
   const bnKey = _menuPages.includes(id) ? 'menu' : id;
   const bnItem = document.querySelector(`.bottom-nav-item[data-page="${bnKey}"]`);
   if(bnItem) bnItem.classList.add('active');
@@ -4376,6 +4401,7 @@ function showPage(id){
   if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
   if(id==='manutenzione-archivio') renderArchivioPage();
+  if(id==='promemoria') promRenderPagina();
 }
 
 // ── MODALS ──
@@ -7418,8 +7444,8 @@ async function msgRefreshNonLetti(){
     const { data } = await supabaseClient.from('messaggi').select('id,corpo,created_at,thread_messaggi!inner(paziente_id)').eq('direzione','paziente').is('letto_at',null);
     S.msgNonLetti=(data||[]).map(m=>({ id:m.id, corpo:m.corpo, created_at:m.created_at, paziente_id:m.thread_messaggi&&m.thread_messaggi.paziente_id }));
   }catch(_){ S.msgNonLetti=S.msgNonLetti||[]; }
-  const el=document.getElementById('hero-msg');
-  if(el){ const n=(S.msgNonLetti||[]).length; el.style.display=n?'inline-block':'none'; el.textContent=n===1?'1 messaggio da leggere':n+' messaggi da leggere'; }
+  const el=document.getElementById('hero-msg-n'), k=document.getElementById('hero-msg');
+  const n=(S.msgNonLetti||[]).length; if(el) el.textContent=n; if(k){ k.classList.toggle('is-zero', n===0); k.classList.toggle('has-alert', n>0); }
   const pg=document.getElementById('page-pazienti'); if(pg && pg.classList.contains('active')){ try{ renderPazienti(); }catch(_){ } }
 }
 function msgVaiANonLetti(){
@@ -7438,20 +7464,53 @@ async function promLoad(){
 }
 function _promNome(pr){ const p=(S.pazienti||[]).find(x=>String(x.id)===String(pr.paziente_id)); return p?(p.cognome+' '+p.nome):''; }
 function promRenderDashboard(){
-  const box=document.getElementById('promemoria-box'); if(!box) return;
   const today=fmt(new Date());
-  const list=(S.promemoria||[]).filter(pr=>pr.scadenza<=today);
-  const soon=(S.promemoria||[]).filter(pr=>pr.scadenza>today).slice(0,3);
-  if(!list.length && !soon.length){ box.style.display='none'; return; }
-  box.style.display='block';
-  let h='<div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Promemoria<button class="btn btn-sm btn-secondary" onclick="promNuovoRapido()">+ Promemoria</button></div>';
-  const row=pr=>{ const nome=_promNome(pr); const late=pr.scadenza<today;
-    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid var(--border)"><input type="checkbox" onchange="promFatto(\''+pr.id+'\')" style="margin-top:3px" title="Segna come fatto">'
-      +'<div style="flex:1"><div style="font-size:14px">'+escapeHtml(pr.testo)+(nome?' · <a href="#" onclick="event.preventDefault();showPage(\'pazienti\');showPazienteDetail(\''+escapeAttr(String(pr.paziente_id))+'\')" style="color:var(--accent)">'+escapeHtml(nome)+'</a>':'')+'</div>'
-      +'<div style="font-size:12px;color:'+(late?'var(--warm)':'var(--ink3)')+'">'+(late?'scaduto il ':'')+thFmt(pr.scadenza+'T12:00:00').slice(0,10)+'</div></div></div>'; };
-  h+=list.map(row).join('');
-  if(soon.length) h+='<div style="font-size:12px;color:var(--ink3);margin-top:8px">Prossimi</div>'+soon.map(row).join('');
-  box.innerHTML=h;
+  const n=(S.promemoria||[]).filter(pr=>pr.scadenza<=today).length;
+  const el=document.getElementById('hero-prom-n'), k=document.getElementById('hero-prom');
+  if(el) el.textContent=n;
+  if(k){ k.classList.toggle('is-zero', n===0); k.classList.toggle('has-alert', (S.promemoria||[]).some(pr=>pr.scadenza<today)); }
+  const pg=document.getElementById('page-promemoria'); if(pg && pg.classList.contains('active')) promRenderPagina();
+}
+function promToggleFormPagina(){
+  const f=document.getElementById('prom-form-pagina'); if(!f) return;
+  const open=f.style.display!=='block'; f.style.display=open?'block':'none';
+  if(open){
+    const d=document.getElementById('prom-pg-data'); if(d && !d.value) d.value=fmt(new Date(Date.now()+7*86400000));
+    const sel=document.getElementById('prom-pg-paz');
+    if(sel){ sel.innerHTML='<option value="">Nessun paziente</option>'+(S.pazienti||[]).slice().sort((a,b)=>(a.cognome+a.nome).localeCompare(b.cognome+b.nome,'it')).map(p=>'<option value="'+escapeAttr(String(p.id))+'">'+escapeHtml(p.cognome+' '+p.nome)+'</option>').join(''); }
+    const t=document.getElementById('prom-pg-txt'); if(t) t.focus();
+  }
+}
+async function promSalvaDaPagina(){
+  const t=document.getElementById('prom-pg-txt'), d=document.getElementById('prom-pg-data'), sel=document.getElementById('prom-pg-paz');
+  const r=await promAdd({ testo:t&&t.value, scadenza:d&&d.value, paziente_id:sel&&sel.value||null });
+  if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
+  if(t) t.value=''; document.getElementById('prom-form-pagina').style.display='none';
+  showToast('Promemoria salvato.'); promRenderPagina();
+}
+async function promRenderPagina(){
+  const ap=document.getElementById('prom-pg-aperti'), ft=document.getElementById('prom-pg-fatti'); if(!ap||!ft) return;
+  const today=fmt(new Date());
+  const all=(S.promemoria||[]).slice().sort((a,b)=>a.scadenza.localeCompare(b.scadenza));
+  const row=(pr,done)=>{ const nome=_promNome(pr); const late=!done && pr.scadenza<today, oggi=pr.scadenza===today;
+    return '<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--border)">'
+      +'<input type="checkbox" '+(done?'checked disabled':'onchange="promFatto(\''+pr.id+'\')"')+' style="margin-top:4px" title="Segna come fatto">'
+      +'<div style="flex:1;min-width:0"><div style="font-size:14.5px;'+(done?'color:var(--ink3);text-decoration:line-through':'')+'">'+escapeHtml(pr.testo)+'</div>'
+      +'<div style="font-size:12.5px;color:'+(late?'var(--warm)':oggi?'var(--accent)':'var(--ink3)')+';margin-top:2px">'+(late?'Scaduto · ':oggi?'Oggi · ':'')+thFmt(pr.scadenza+'T12:00:00').slice(0,10)
+      +(nome?' · <a href="#" onclick="event.preventDefault();showPage(\'pazienti\');showPazienteDetail(\''+escapeAttr(String(pr.paziente_id))+'\')" style="color:var(--accent)">'+escapeHtml(nome)+'</a>':'')+'</div></div>'
+      +(done?'':'<button class="btn btn-sm btn-secondary" onclick="promElimina(\''+pr.id+'\')" title="Elimina">✕</button>')+'</div>'; };
+  const gruppo=(titolo,list)=> list.length ? '<div class="section-title" style="margin-top:14px">'+titolo+' <span style="color:var(--ink3);font-weight:400">('+list.length+')</span></div>'+list.map(pr=>row(pr,false)).join('') : '';
+  const scaduti=all.filter(pr=>pr.scadenza<today), oggi=all.filter(pr=>pr.scadenza===today), prossimi=all.filter(pr=>pr.scadenza>today);
+  ap.innerHTML='<div class="card" style="padding:6px 18px 12px">'+(all.length?gruppo('Scaduti',scaduti)+gruppo('Oggi',oggi)+gruppo('Prossimi',prossimi):'<div style="padding:24px 0;text-align:center;color:var(--ink3)">Nessun promemoria aperto.</div>')+'</div>';
+  let fatti=[];
+  if(isOnline()){ try{ const { data } = await supabaseClient.from('promemoria').select('id,paziente_id,testo,scadenza,fatto_at').not('fatto_at','is',null).order('fatto_at',{ascending:false}).limit(30); fatti=data||[]; }catch(_){ } }
+  ft.innerHTML= fatti.length ? '<div class="section-title">Completati di recente</div><div class="card" style="padding:6px 18px 12px">'+fatti.map(pr=>row(pr,true)).join('')+'</div>' : '';
+}
+async function promElimina(id){
+  if(!confirm('Eliminare il promemoria?')) return;
+  const { error } = await supabaseClient.from('promemoria').delete().eq('id', id);
+  if(error){ showToast('Eliminazione non riuscita.'); return; }
+  await promLoad(); promRenderPagina();
 }
 function promRenderPaziente(pazId){
   const box=document.getElementById('prom-box-'+pazId); if(!box) return;
@@ -7480,15 +7539,10 @@ async function promSalvaDaScheda(pazId){
   if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
   showToast('Promemoria salvato.'); promRenderPaziente(pazId);
 }
-async function promNuovoRapido(){
-  const testo=prompt('Testo del promemoria'); if(!testo) return;
-  const scad=prompt('Scadenza (AAAA-MM-GG)', fmt(new Date(Date.now()+7*86400000))); if(!scad) return;
-  const r=await promAdd({ testo, scadenza:scad }); showToast(r.errore?'Salvataggio non riuscito.':'Promemoria salvato.');
-}
 async function promFatto(id, pazId){
   const { error } = await supabaseClient.from('promemoria').update({ fatto_at:new Date().toISOString() }).eq('id', id);
   if(error){ showToast('Aggiornamento non riuscito.'); return; }
-  await promLoad(); if(pazId) promRenderPaziente(pazId);
+  await promLoad(); if(pazId) promRenderPaziente(pazId); promRenderPagina();
   return { ok:true };
 }
 
