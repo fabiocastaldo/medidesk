@@ -479,7 +479,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paziente-pick .ora{font-size:12px;color:var(--accent);font-weight:600}
 
 /* ── PRENOTAZIONE PUBBLICA ── */
-html.th-page, html.th-page body{background:var(--brand-deep)}
+html.th-page, html.th-page body{background:var(--brand-deep);overscroll-behavior-y:none}
 #view-booking, #view-portfolio, #view-thread{display:none;min-height:100vh;min-height:100dvh;background:radial-gradient(100% 80% at 88% -2%,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 58%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
 .booking-wrap{max-width:680px;margin:0 auto;padding:48px 28px 40px}
 .booking-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.35)}
@@ -9220,6 +9220,11 @@ function showThreadView(){
   ['view-home','view-app','view-booking','view-portfolio'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
   const tv=document.getElementById('view-thread'); if(tv) tv.style.display='block';
   document.documentElement.classList.add('th-page');
+  if(!window._thVvBound){ window._thVvBound=true;
+    const fix=()=>setTimeout(()=>{ const max=Math.max(0, document.documentElement.scrollHeight - window.innerHeight); if(window.scrollY>max) window.scrollTo(0, max); }, 80);
+    const ta=document.getElementById('th-text'); if(ta) ta.addEventListener('blur', fix);
+    if(window.visualViewport) window.visualViewport.addEventListener('resize', fix);
+  }
   if(!document.head.querySelector('meta[name="robots"]')){
     document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
   }
