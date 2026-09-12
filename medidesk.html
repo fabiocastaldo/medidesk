@@ -118,7 +118,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .hero-main{display:flex;align-items:baseline;gap:10px}
 .hero-big{font-weight:300;font-size:54px;line-height:1}
 .hero-unit{font-size:16px;color:rgba(255,255,255,.92)}
-.hero-msg{margin-top:8px;font-size:13px;color:#fff;background:rgba(255,255,255,.18);display:inline-block;padding:4px 10px;border-radius:999px;cursor:pointer}.hero-msg:hover{background:rgba(255,255,255,.3)}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}
+.paz-suggest{position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:220px;overflow:auto;display:none}.paz-suggest div{padding:8px 12px;cursor:pointer;font-size:13.5px}.paz-suggest div:hover{background:var(--bg)}.prom-collapsed{display:none}
+.hero-row{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap}.hero-kpi{display:flex;align-items:baseline;gap:8px;cursor:pointer;border-radius:10px;padding:2px 6px;margin:-2px -6px;transition:background .15s}.hero-kpi:hover{background:rgba(255,255,255,.14)}.hero-kpi .hero-unit{white-space:nowrap}.hero-kpi.has-alert .hero-big{color:#FFD9A8}@media (max-width:640px){.hero-row{gap:16px}.hero-kpi .hero-big{font-size:38px}}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}
 .hero-next{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-height:18px;flex-shrink:0;text-align:right}
 .hero-next-label{color:var(--brand-soft);font-size:12px}
 .hero-next-val{font-weight:700;font-size:16px}
@@ -1458,6 +1459,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item active" onclick="showPage('dashboard')"><span class="icon"><svg class="ic"><use href="#ic-home"/></svg></span><span>Dashboard</span></div>
       <div class="nav-item" onclick="showPage('agenda')"><span class="icon"><svg class="ic"><use href="#ic-calendar"/></svg></span><span>Agenda</span></div>
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon"><svg class="ic"><use href="#ic-users"/></svg></span><span>Pazienti</span></div>
+      <div class="nav-item" onclick="showPage('promemoria')"><span class="icon"><svg class="ic"><use href="#ic-clock"/></svg></span><span>Promemoria</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon"><svg class="ic"><use href="#ic-center"/></svg></span><span>Centri</span></div>
       <div class="nav-item" onclick="showPage('prestazioni')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Prestazioni</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon"><svg class="ic"><use href="#ic-user"/></svg></span><span>Profilo</span></div>
@@ -1499,12 +1501,14 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="hero" id="hero-oggi" onclick="showPage('agenda')">
         <div class="hero-today">
           <div class="hero-label">Oggi</div>
-          <div class="hero-main"><span class="hero-big" id="hero-count">0</span><span class="hero-unit">appuntamenti</span></div>
-          <div class="hero-msg" id="hero-msg" style="display:none" onclick="event.stopPropagation();msgVaiANonLetti()"></div>
+          <div class="hero-row">
+            <div class="hero-kpi" onclick="event.stopPropagation();showPage('agenda')"><span class="hero-big" id="hero-count">0</span><span class="hero-unit">appuntamenti</span></div>
+            <div class="hero-kpi" id="hero-msg" onclick="event.stopPropagation();msgVaiANonLetti()"><span class="hero-big" id="hero-msg-n">0</span><span class="hero-unit">nuovi messaggi</span></div>
+            <div class="hero-kpi" id="hero-prom" onclick="event.stopPropagation();showPage('promemoria')"><span class="hero-big" id="hero-prom-n">0</span><span class="hero-unit">promemoria in scadenza</span></div>
+          </div>
         </div>
         <div class="hero-next" id="hero-next"></div>
       </div>
-      <div id="promemoria-box" class="card" style="display:none;margin-top:14px;padding:14px 18px"></div>
 
       <div class="tile-grid">
         <div class="tile" onclick="showPage('pazienti')">
@@ -1788,6 +1792,27 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
 
     <!-- STATISTICHE -->
+    <div id="page-promemoria" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Promemoria</div>
+          <div class="page-subtitle">Cose da fare, con o senza paziente</div>
+        </div>
+        <button class="btn btn-primary" onclick="promToggleFormPagina()">+ Promemoria</button>
+      </div>
+      <div class="card" id="prom-form-pagina" style="display:none;padding:16px 18px;margin-bottom:16px">
+        <input id="prom-pg-txt" class="form-input" maxlength="500" placeholder="Es. richiamare per esito esami" style="width:100%;box-sizing:border-box">
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+          <input type="date" id="prom-pg-data" class="form-input">
+          <div style="position:relative;flex:1;min-width:220px;max-width:340px"><input id="prom-pg-paz-q" class="form-input" placeholder="Paziente (cerca per nome)…" autocomplete="off" oninput="pazSuggest(this,'prom-pg-paz')" style="width:100%;box-sizing:border-box"><input type="hidden" id="prom-pg-paz"><div class="paz-suggest" id="prom-pg-paz-list"></div></div>
+          <button class="btn btn-primary" onclick="promSalvaDaPagina()">Salva</button>
+          <button class="btn btn-secondary" onclick="promToggleFormPagina()">Annulla</button>
+        </div>
+      </div>
+      <div id="prom-pg-aperti"></div>
+      <div id="prom-pg-fatti" style="margin-top:22px"></div>
+    </div>
+
     <div id="page-statistiche" class="page">
       <div class="page-header">
         <div>
@@ -2132,6 +2157,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="mnu-sec">
         <div class="mnu-sec-title">Gestione</div>
         <div class="mnu-grid">
+          <button class="mnu-item" onclick="showPage('promemoria')"><span class="mnu-ico"><svg class="ic"><use href="#ic-clock"/></svg></span><span class="mnu-lbl">Promemoria</span></button>
           <button class="mnu-item" onclick="showPage('prestazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Prestazioni</span></button>
           <button class="mnu-item" onclick="showPage('statistiche')"><span class="mnu-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="mnu-lbl">Statistiche</span></button>
           <button class="mnu-item" onclick="showPage('manutenzione-archivio')"><span class="mnu-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="mnu-lbl">Archivio</span></button>
@@ -2726,6 +2752,31 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
+<!-- MODAL CONTATTA PAZIENTE (s12) -->
+<div class="modal-overlay" id="modal-contatta">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title" id="modal-contatta-title">Contatta</span><button class="modal-close" onclick="closeModal('modal-contatta')">✕</button></div>
+    <div class="modal-body">
+      <div id="contatta-info" style="font-size:13px;color:var(--ink3);margin-bottom:10px"></div>
+      <textarea id="contatta-txt" rows="5" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box" placeholder="Scrivi al paziente…"></textarea>
+      <div style="font-size:12px;color:var(--ink3);margin-top:8px">Il paziente riceve una email neutra con un link personale per leggere e rispondere. Niente urgenze, niente referti.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-contatta')">Annulla</button><button class="btn btn-primary" id="contatta-send" onclick="contattaInvia()">Invia</button></div>
+  </div>
+</div>
+<!-- MODAL PROMEMORIA PAZIENTE (s12) -->
+<div class="modal-overlay" id="modal-promemoria">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title" id="modal-promemoria-title">Promemoria</span><button class="modal-close" onclick="closeModal('modal-promemoria')">✕</button></div>
+    <div class="modal-body">
+      <input id="prom-md-txt" class="form-input" maxlength="500" placeholder="Es. richiamare per esito esami" style="width:100%;box-sizing:border-box">
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><span style="font-size:13px;color:var(--ink3)">Scadenza</span><input type="date" id="prom-md-data" class="form-input"></div>
+      <input type="hidden" id="prom-md-paz">
+      <div id="prom-md-list" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-promemoria')">Chiudi</button><button class="btn btn-primary" onclick="promSalvaDaModale()">Salva</button></div>
+  </div>
+</div>
 <!-- MODAL DETTAGLIO PAZIENTE -->
 <div class="modal-overlay" id="modal-paziente">
   <div class="modal" style="max-width:620px">
@@ -4354,13 +4405,13 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','centri','prestazioni','profilo','piani','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','promemoria','centri','prestazioni','profilo','piani','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
   });
   // Sync bottom nav
-  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio'];
+  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio','promemoria'];
   const bnKey = _menuPages.includes(id) ? 'menu' : id;
   const bnItem = document.querySelector(`.bottom-nav-item[data-page="${bnKey}"]`);
   if(bnItem) bnItem.classList.add('active');
@@ -4376,6 +4427,7 @@ function showPage(id){
   if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
   if(id==='manutenzione-archivio') renderArchivioPage();
+  if(id==='promemoria') promRenderPagina();
 }
 
 // ── MODALS ──
@@ -7405,7 +7457,7 @@ async function msgScrivi(threadId, pazId){
   if(j){ showToast('Messaggio inviato.'); msgLoadPaziente(pazId); }
 }
 async function msgChiudi(threadId, pazId){
-  if(!confirm('Chiudere il canale? Il paziente non potrà più rispondere da questo link.')) return;
+  if(!(await confermaModale('Il paziente non potrà più leggere né rispondere dal link ricevuto.', { titolo:'Chiudere il canale?', ok:'Chiudi canale' }))) return;
   const j=await msgApi({action:'chiudi', thread_id:threadId});
   if(j){ showToast('Canale chiuso.'); msgLoadPaziente(pazId); }
 }
@@ -7418,8 +7470,8 @@ async function msgRefreshNonLetti(){
     const { data } = await supabaseClient.from('messaggi').select('id,corpo,created_at,thread_messaggi!inner(paziente_id)').eq('direzione','paziente').is('letto_at',null);
     S.msgNonLetti=(data||[]).map(m=>({ id:m.id, corpo:m.corpo, created_at:m.created_at, paziente_id:m.thread_messaggi&&m.thread_messaggi.paziente_id }));
   }catch(_){ S.msgNonLetti=S.msgNonLetti||[]; }
-  const el=document.getElementById('hero-msg');
-  if(el){ const n=(S.msgNonLetti||[]).length; el.style.display=n?'inline-block':'none'; el.textContent=n===1?'1 messaggio da leggere':n+' messaggi da leggere'; }
+  const el=document.getElementById('hero-msg-n'), k=document.getElementById('hero-msg');
+  const n=(S.msgNonLetti||[]).length; if(el) el.textContent=n; if(k){ k.classList.toggle('is-zero', n===0); k.classList.toggle('has-alert', n>0); }
   const pg=document.getElementById('page-pazienti'); if(pg && pg.classList.contains('active')){ try{ renderPazienti(); }catch(_){ } }
 }
 function msgVaiANonLetti(){
@@ -7438,20 +7490,117 @@ async function promLoad(){
 }
 function _promNome(pr){ const p=(S.pazienti||[]).find(x=>String(x.id)===String(pr.paziente_id)); return p?(p.cognome+' '+p.nome):''; }
 function promRenderDashboard(){
-  const box=document.getElementById('promemoria-box'); if(!box) return;
   const today=fmt(new Date());
-  const list=(S.promemoria||[]).filter(pr=>pr.scadenza<=today);
-  const soon=(S.promemoria||[]).filter(pr=>pr.scadenza>today).slice(0,3);
-  if(!list.length && !soon.length){ box.style.display='none'; return; }
-  box.style.display='block';
-  let h='<div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Promemoria<button class="btn btn-sm btn-secondary" onclick="promNuovoRapido()">+ Promemoria</button></div>';
-  const row=pr=>{ const nome=_promNome(pr); const late=pr.scadenza<today;
-    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid var(--border)"><input type="checkbox" onchange="promFatto(\''+pr.id+'\')" style="margin-top:3px" title="Segna come fatto">'
-      +'<div style="flex:1"><div style="font-size:14px">'+escapeHtml(pr.testo)+(nome?' · <a href="#" onclick="event.preventDefault();showPage(\'pazienti\');showPazienteDetail(\''+escapeAttr(String(pr.paziente_id))+'\')" style="color:var(--accent)">'+escapeHtml(nome)+'</a>':'')+'</div>'
-      +'<div style="font-size:12px;color:'+(late?'var(--warm)':'var(--ink3)')+'">'+(late?'scaduto il ':'')+thFmt(pr.scadenza+'T12:00:00').slice(0,10)+'</div></div></div>'; };
-  h+=list.map(row).join('');
-  if(soon.length) h+='<div style="font-size:12px;color:var(--ink3);margin-top:8px">Prossimi</div>'+soon.map(row).join('');
-  box.innerHTML=h;
+  const n=(S.promemoria||[]).filter(pr=>pr.scadenza<=today).length;
+  const el=document.getElementById('hero-prom-n'), k=document.getElementById('hero-prom');
+  if(el) el.textContent=n;
+  if(k){ k.classList.toggle('is-zero', n===0); k.classList.toggle('has-alert', (S.promemoria||[]).some(pr=>pr.scadenza<today)); }
+  const pg=document.getElementById('page-promemoria'); if(pg && pg.classList.contains('active')) promRenderPagina();
+}
+function pazSuggest(inp, hiddenId){
+  const list=document.getElementById(hiddenId+'-list'), hid=document.getElementById(hiddenId);
+  const q=(inp.value||'').toLowerCase().trim(); if(hid) hid.value='';
+  if(!q){ list.style.display='none'; list.innerHTML=''; return; }
+  const hit=(S.pazienti||[]).filter(p=>(p.cognome+' '+p.nome+' '+p.nome+' '+p.cognome).toLowerCase().includes(q)).slice(0,8);
+  if(!hit.length){ list.innerHTML='<div style="color:var(--ink3)">Nessun paziente</div>'; list.style.display='block'; return; }
+  list.innerHTML=hit.map(p=>'<div onclick="pazSuggestPick(\''+escapeAttr(String(p.id))+'\',\''+hiddenId+'\')">'+escapeHtml(p.cognome+' '+p.nome)+(p.data_nascita||p.nascita?' <span style="color:var(--ink3)">· '+escapeHtml(p.nascita||p.data_nascita)+'</span>':'')+'</div>').join('');
+  list.style.display='block';
+}
+function pazSuggestPick(id, hiddenId){
+  const p=(S.pazienti||[]).find(x=>String(x.id)===String(id)); if(!p) return;
+  document.getElementById(hiddenId).value=String(p.id);
+  document.getElementById(hiddenId+'-q').value=p.cognome+' '+p.nome;
+  const list=document.getElementById(hiddenId+'-list'); list.style.display='none';
+}
+document.addEventListener('click', e=>{ if(!e.target.closest('.paz-suggest') && !e.target.matches('input[id$="-q"]')) document.querySelectorAll('.paz-suggest').forEach(l=>l.style.display='none'); });
+let _promScadutiOpen=false, _promFattiOpen=false;
+function promToggleScaduti(){ _promScadutiOpen=!_promScadutiOpen; promRenderPagina(); }
+function promToggleFatti(){ _promFattiOpen=!_promFattiOpen; promRenderPagina(); }
+// ── Modali indipendenti dalla lista pazienti: Contatta / Promemoria ──
+let _contattaPazId=null;
+async function openContattaPaziente(pazId){
+  const p=(S.pazienti||[]).find(x=>String(x.id)===String(pazId)); if(!p) return;
+  _contattaPazId=String(p.id);
+  document.getElementById('modal-contatta-title').textContent='Contatta '+p.cognome+' '+p.nome;
+  document.getElementById('contatta-txt').value='';
+  const info=document.getElementById('contatta-info'), btn=document.getElementById('contatta-send');
+  const _fb=(!p.email)?_contattiDaPrenotazioni(p):{email:''}; const email=p.email||_fb.email;
+  if(!email){ info.textContent='Nessuna email in scheda: aggiungila dal fascicolo per usare il canale.'; btn.disabled=true; openModal('modal-contatta'); return; }
+  btn.disabled=false; info.textContent='Verifico il canale…';
+  openModal('modal-contatta');
+  const { data: th } = await supabaseClient.from('thread_messaggi').select('id,scade_il').eq('paziente_id', p.id).is('chiuso_at',null).order('created_at',{ascending:false}).limit(1);
+  const attivo=(th||[]).find(t=>!t.scade_il || new Date(t.scade_il)>new Date());
+  info.textContent = attivo ? 'Canale attivo'+(attivo.scade_il?' fino al '+thFmt(attivo.scade_il).slice(0,10):'')+' · il messaggio arriva sul canale esistente ('+email+').' : 'Nessun canale attivo: verrà aperto ora e il paziente riceverà il link su '+email+'.';
+}
+async function contattaInvia(){
+  const corpo=(document.getElementById('contatta-txt').value||'').trim(); if(!corpo){ showToast('Scrivi il messaggio.'); return; }
+  const btn=document.getElementById('contatta-send'); btn.disabled=true;
+  const { data: th } = await supabaseClient.from('thread_messaggi').select('id,scade_il').eq('paziente_id', _contattaPazId).is('chiuso_at',null).order('created_at',{ascending:false}).limit(1);
+  const attivo=(th||[]).find(t=>!t.scade_il || new Date(t.scade_il)>new Date());
+  const j = attivo ? await msgApi({action:'scrivi', thread_id:attivo.id, corpo}) : await msgApi({action:'apri', paziente_id:_contattaPazId, corpo});
+  btn.disabled=false;
+  if(j){ showToast(attivo?'Messaggio inviato.':'Canale aperto: email inviata al paziente.'); closeModal('modal-contatta'); }
+}
+function openPromemoriaPaziente(pazId){
+  const p=(S.pazienti||[]).find(x=>String(x.id)===String(pazId)); if(!p) return;
+  document.getElementById('modal-promemoria-title').textContent='Promemoria · '+p.cognome+' '+p.nome;
+  document.getElementById('prom-md-paz').value=String(p.id);
+  document.getElementById('prom-md-txt').value='';
+  document.getElementById('prom-md-data').value=fmt(new Date(Date.now()+7*86400000));
+  promRenderModale(); openModal('modal-promemoria');
+}
+function promRenderModale(){
+  const pazId=document.getElementById('prom-md-paz').value, box=document.getElementById('prom-md-list');
+  const mine=(S.promemoria||[]).filter(pr=>String(pr.paziente_id)===String(pazId));
+  box.innerHTML = mine.length ? '<div class="section-title">Aperti ('+mine.length+')</div>'+mine.map(pr=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)"><input type="checkbox" onchange="promFatto(\''+pr.id+'\').then(promRenderModale)" style="margin-top:3px"><div><div style="font-size:14px">'+escapeHtml(pr.testo)+'</div><div style="font-size:12px;color:var(--ink3)">'+thFmt(pr.scadenza+'T12:00:00').slice(0,10)+'</div></div></div>').join('') : '<div style="font-size:13px;color:var(--ink3)">Nessun promemoria aperto per questo paziente.</div>';
+}
+async function promSalvaDaModale(){
+  const t=document.getElementById('prom-md-txt'), d=document.getElementById('prom-md-data'), pz=document.getElementById('prom-md-paz');
+  const r=await promAdd({ testo:t.value, scadenza:d.value, paziente_id:pz.value||null });
+  if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
+  t.value=''; showToast('Promemoria salvato.'); promRenderModale();
+}
+function promToggleFormPagina(){
+  const f=document.getElementById('prom-form-pagina'); if(!f) return;
+  const open=f.style.display!=='block'; f.style.display=open?'block':'none';
+  if(open){
+    const d=document.getElementById('prom-pg-data'); if(d && !d.value) d.value=fmt(new Date(Date.now()+7*86400000));
+    const q=document.getElementById('prom-pg-paz-q'), h=document.getElementById('prom-pg-paz'); if(q) q.value=''; if(h) h.value='';
+    const t=document.getElementById('prom-pg-txt'); if(t) t.focus();
+  }
+}
+async function promSalvaDaPagina(){
+  const t=document.getElementById('prom-pg-txt'), d=document.getElementById('prom-pg-data'), sel=document.getElementById('prom-pg-paz');
+  const r=await promAdd({ testo:t&&t.value, scadenza:d&&d.value, paziente_id:sel&&sel.value||null });
+  if(!r.errore){ const q=document.getElementById('prom-pg-paz-q'); if(q) q.value=''; if(sel) sel.value=''; }
+  if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
+  if(t) t.value=''; document.getElementById('prom-form-pagina').style.display='none';
+  showToast('Promemoria salvato.'); promRenderPagina();
+}
+async function promRenderPagina(){
+  const ap=document.getElementById('prom-pg-aperti'), ft=document.getElementById('prom-pg-fatti'); if(!ap||!ft) return;
+  const today=fmt(new Date());
+  const all=(S.promemoria||[]).slice().sort((a,b)=>a.scadenza.localeCompare(b.scadenza));
+  const row=(pr,done)=>{ const nome=_promNome(pr); const late=!done && pr.scadenza<today, oggi=pr.scadenza===today;
+    return '<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--border)">'
+      +'<input type="checkbox" '+(done?'checked disabled':'onchange="promFatto(\''+pr.id+'\')"')+' style="margin-top:4px" title="Segna come fatto">'
+      +'<div style="flex:1;min-width:0"><div style="font-size:14.5px;'+(done?'color:var(--ink3);text-decoration:line-through':'')+'">'+escapeHtml(pr.testo)+'</div>'
+      +'<div style="font-size:12.5px;color:'+(late?'var(--warm)':oggi?'var(--accent)':'var(--ink3)')+';margin-top:2px">'+(late?'Scaduto · ':oggi?'Oggi · ':'')+thFmt(pr.scadenza+'T12:00:00').slice(0,10)
+      +(nome?' · <a href="#" onclick="event.preventDefault();showPage(\'pazienti\');showPazienteDetail(\''+escapeAttr(String(pr.paziente_id))+'\')" style="color:var(--accent)">'+escapeHtml(nome)+'</a>':'')+'</div></div>'
+      +(done?'':'<button class="btn btn-sm btn-secondary" onclick="promElimina(\''+pr.id+'\')" title="Elimina">✕</button>')+'</div>'; };
+  const gruppo=(titolo,list)=> list.length ? '<div class="section-title" style="margin-top:14px">'+titolo+' <span style="color:var(--ink3);font-weight:400">('+list.length+')</span></div>'+list.map(pr=>row(pr,false)).join('') : '';
+  const scaduti=all.filter(pr=>pr.scadenza<today), oggi=all.filter(pr=>pr.scadenza===today), prossimi=all.filter(pr=>pr.scadenza>today);
+  const gScad= scaduti.length ? '<div class="section-title" style="margin-top:14px;cursor:pointer" onclick="promToggleScaduti()">Scaduti <span style="color:var(--warm);font-weight:400">('+scaduti.length+')</span> <span style="color:var(--ink3);font-weight:400;font-size:12px">'+(_promScadutiOpen?'▾ nascondi':'▸ mostra')+'</span></div><div class="'+(_promScadutiOpen?'':'prom-collapsed')+'">'+scaduti.map(pr=>row(pr,false)).join('')+'</div>' : '';
+  ap.innerHTML='<div class="card" style="padding:6px 18px 12px">'+(all.length?gScad+gruppo('Oggi',oggi)+gruppo('Prossimi',prossimi):'<div style="padding:24px 0;text-align:center;color:var(--ink3)">Nessun promemoria aperto.</div>')+'</div>';
+  let fatti=[];
+  if(isOnline()){ try{ const { data } = await supabaseClient.from('promemoria').select('id,paziente_id,testo,scadenza,fatto_at').not('fatto_at','is',null).order('fatto_at',{ascending:false}).limit(30); fatti=data||[]; }catch(_){ } }
+  ft.innerHTML= fatti.length ? '<div class="section-title" style="cursor:pointer" onclick="promToggleFatti()">Completati di recente <span style="color:var(--ink3);font-weight:400">('+fatti.length+')</span> <span style="color:var(--ink3);font-weight:400;font-size:12px">'+(_promFattiOpen?'▾ nascondi':'▸ mostra')+'</span></div><div class="card '+(_promFattiOpen?'':'prom-collapsed')+'" style="padding:6px 18px 12px">'+fatti.map(pr=>row(pr,true)).join('')+'</div>' : '';
+}
+async function promElimina(id){
+  if(!(await confermaModale('Il promemoria verrà eliminato definitivamente.', { titolo:'Eliminare il promemoria?', ok:'Elimina' }))) return;
+  const { error } = await supabaseClient.from('promemoria').delete().eq('id', id);
+  if(error){ showToast('Eliminazione non riuscita.'); return; }
+  await promLoad(); promRenderPagina();
 }
 function promRenderPaziente(pazId){
   const box=document.getElementById('prom-box-'+pazId); if(!box) return;
@@ -7480,15 +7629,10 @@ async function promSalvaDaScheda(pazId){
   if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
   showToast('Promemoria salvato.'); promRenderPaziente(pazId);
 }
-async function promNuovoRapido(){
-  const testo=prompt('Testo del promemoria'); if(!testo) return;
-  const scad=prompt('Scadenza (AAAA-MM-GG)', fmt(new Date(Date.now()+7*86400000))); if(!scad) return;
-  const r=await promAdd({ testo, scadenza:scad }); showToast(r.errore?'Salvataggio non riuscito.':'Promemoria salvato.');
-}
 async function promFatto(id, pazId){
   const { error } = await supabaseClient.from('promemoria').update({ fatto_at:new Date().toISOString() }).eq('id', id);
   if(error){ showToast('Aggiornamento non riuscito.'); return; }
-  await promLoad(); if(pazId) promRenderPaziente(pazId);
+  await promLoad(); if(pazId) promRenderPaziente(pazId); promRenderPagina();
   return { ok:true };
 }
 
@@ -10621,7 +10765,7 @@ function _pazRowHTML(r){
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const azioni=btnVis;
+  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> `:'')+btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
@@ -10634,7 +10778,7 @@ function _pazCardHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
   const meta=[r.nascita,r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
   const cVis=r.tipo==='paziente'
-    ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
+    ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-info">

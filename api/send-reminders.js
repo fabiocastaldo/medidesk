@@ -214,7 +214,18 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow });
+  // Pulizia promemoria completati da oltre 90 giorni (s12; gli aperti non si toccano)
+  let promemoriaPuliti = 0;
+  try {
+    const soglia = new Date(Date.now() - 90 * 86400000).toISOString();
+    const pr = await fetch(`${supabaseUrl}/rest/v1/promemoria?fatto_at=lt.${encodeURIComponent(soglia)}&select=id`, {
+      method: 'DELETE', headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Prefer': 'return=representation' }
+    });
+    if (pr.ok) promemoriaPuliti = (await pr.json().catch(() => [])).length;
+    else console.error('[send-reminders] pulizia promemoria:', pr.status);
+  } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
+
+  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
