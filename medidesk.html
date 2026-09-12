@@ -478,7 +478,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paziente-pick .ora{font-size:12px;color:var(--accent);font-weight:600}
 
 /* ── PRENOTAZIONE PUBBLICA ── */
-#view-booking, #view-portfolio{display:none;min-height:100vh;background:radial-gradient(100% 80% at 88% -2%,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 58%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
+#view-booking, #view-portfolio, #view-thread{display:none;min-height:100vh;background:radial-gradient(100% 80% at 88% -2%,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 58%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
 .booking-wrap{max-width:680px;margin:0 auto;padding:48px 28px 40px}
 .booking-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.35)}
 /* hero */
@@ -2345,7 +2345,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div id="th-nascita" style="display:none;max-width:520px;margin:18px auto 0;text-align:center">
           <div style="color:#fff;font-size:14px;margin-bottom:10px">Per aprire i messaggi inserisca la sua data di nascita.</div>
           <input type="date" id="th-nascita-input" class="home-search-input" style="max-width:220px;display:inline-block;text-align:center">
-          <div style="margin-top:10px"><button class="btn-primary" type="button" onclick="thInit()">Apri</button></div>
+          <div style="margin-top:10px"><button class="btn btn-primary" type="button" onclick="thInit()">Apri</button></div>
           <div id="th-nascita-err" style="display:none;color:#ffb4b4;font-size:13px;margin-top:8px"></div>
         </div>
         <div id="th-list" style="max-width:520px;margin:16px auto 0"></div>
@@ -2353,7 +2353,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <textarea id="th-text" rows="4" maxlength="4000" placeholder="Scriva qui il suo messaggio…" style="width:100%;box-sizing:border-box;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;padding:10px 12px;font:inherit;font-size:14px;resize:vertical"></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:10px">
             <div id="th-tempi" style="font-size:12px;color:rgba(255,255,255,.65)"></div>
-            <button class="btn-primary" type="button" id="th-send" onclick="thRispondi()">Invia</button>
+            <button class="btn btn-primary" type="button" id="th-send" onclick="thRispondi()">Invia</button>
           </div>
         </div>
         <div id="th-empty" style="display:none;text-align:center;color:rgba(255,255,255,.75);font-size:14px;margin:22px auto 0;max-width:420px"></div>
@@ -7350,6 +7350,8 @@ async function msgLoadPaziente(id){
   const hasEmail=!!(p.email||_fb.email);
   let h='<div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Messaggi';
   h+='<button class="btn btn-sm btn-secondary" '+(hasEmail?'':'disabled title="Serve un\'email del paziente"')+' onclick="msgApri(\''+escapeAttr(id)+'\')">+ Nuovo canale</button></div>';
+  h+='<div id="msg-new-'+escapeAttr(id)+'" style="display:none;margin:8px 0 12px"><textarea id="msg-new-txt-'+escapeAttr(id)+'" rows="3" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box" placeholder="Primo messaggio al paziente (facoltativo). Riceverà un link per leggere e rispondere, senza registrarsi."></textarea>';
+  h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm btn-secondary" onclick="msgApri(\''+escapeAttr(id)+'\')">Annulla</button><button class="btn btn-sm btn-primary" onclick="msgApriConferma(\''+escapeAttr(id)+'\')">Apri canale e invia</button></div></div>';
   if(!threads||!threads.length){ h+='<div style="font-size:13px;color:var(--ink3)">Nessun canale aperto. Apra un canale per scrivere al paziente: riceverà un link per leggere e rispondere, senza registrarsi.</div>'; box.innerHTML=h; return; }
   threads.forEach(t=>{
     const msgs=(t.messaggi||[]).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
@@ -7381,10 +7383,15 @@ async function msgApi(payload){
   if(!res.ok){ showToast(j.error==='email_mancante'?'Il paziente non ha un\'email.':j.error==='email_fallita'?'Invio email non riuscito.':j.error==='thread_chiuso'?'Canale già chiuso.':'Operazione non riuscita.'); return null; }
   return j;
 }
-async function msgApri(id){
-  const corpo=prompt('Primo messaggio al paziente (facoltativo). Riceverà un link per leggere e rispondere.','');
-  if(corpo===null) return;
-  const j=await msgApi({action:'apri', paziente_id:id, corpo:corpo.trim()});
+function msgApri(id){
+  const box=document.getElementById('msg-new-'+id); if(!box) return;
+  if(box.style.display==='block'){ box.style.display='none'; return; }
+  box.style.display='block';
+  const ta=document.getElementById('msg-new-txt-'+id); if(ta) ta.focus();
+}
+async function msgApriConferma(id){
+  const ta=document.getElementById('msg-new-txt-'+id); const corpo=(ta&&ta.value||'').trim();
+  const j=await msgApi({action:'apri', paziente_id:id, corpo});
   if(j){ showToast('Canale aperto: email inviata al paziente.'); msgLoadPaziente(id); }
 }
 async function msgScrivi(threadId, pazId){
