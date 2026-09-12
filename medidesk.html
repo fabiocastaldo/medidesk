@@ -118,6 +118,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .hero-main{display:flex;align-items:baseline;gap:10px}
 .hero-big{font-weight:300;font-size:54px;line-height:1}
 .hero-unit{font-size:16px;color:rgba(255,255,255,.92)}
+.paz-suggest{position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:220px;overflow:auto;display:none}.paz-suggest div{padding:8px 12px;cursor:pointer;font-size:13.5px}.paz-suggest div:hover{background:var(--bg)}.prom-collapsed{display:none}
 .hero-row{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap}.hero-kpi{display:flex;align-items:baseline;gap:8px;cursor:pointer;border-radius:10px;padding:2px 6px;margin:-2px -6px;transition:background .15s}.hero-kpi:hover{background:rgba(255,255,255,.14)}.hero-kpi .hero-unit{white-space:nowrap}.hero-kpi.has-alert .hero-big{color:#FFD9A8}@media (max-width:640px){.hero-row{gap:16px}.hero-kpi .hero-big{font-size:38px}}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}
 .hero-next{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-height:18px;flex-shrink:0;text-align:right}
 .hero-next-label{color:var(--brand-soft);font-size:12px}
@@ -1803,7 +1804,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <input id="prom-pg-txt" class="form-input" maxlength="500" placeholder="Es. richiamare per esito esami" style="width:100%;box-sizing:border-box">
         <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
           <input type="date" id="prom-pg-data" class="form-input">
-          <select id="prom-pg-paz" class="form-input" style="max-width:260px"><option value="">Nessun paziente</option></select>
+          <div style="position:relative;flex:1;min-width:220px;max-width:340px"><input id="prom-pg-paz-q" class="form-input" placeholder="Paziente (cerca per nome)…" autocomplete="off" oninput="pazSuggest(this,'prom-pg-paz')" style="width:100%;box-sizing:border-box"><input type="hidden" id="prom-pg-paz"><div class="paz-suggest" id="prom-pg-paz-list"></div></div>
           <button class="btn btn-primary" onclick="promSalvaDaPagina()">Salva</button>
           <button class="btn btn-secondary" onclick="promToggleFormPagina()">Annulla</button>
         </div>
@@ -2751,6 +2752,31 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
+<!-- MODAL CONTATTA PAZIENTE (s12) -->
+<div class="modal-overlay" id="modal-contatta">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title" id="modal-contatta-title">Contatta</span><button class="modal-close" onclick="closeModal('modal-contatta')">✕</button></div>
+    <div class="modal-body">
+      <div id="contatta-info" style="font-size:13px;color:var(--ink3);margin-bottom:10px"></div>
+      <textarea id="contatta-txt" rows="5" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box" placeholder="Scrivi al paziente…"></textarea>
+      <div style="font-size:12px;color:var(--ink3);margin-top:8px">Il paziente riceve una email neutra con un link personale per leggere e rispondere. Niente urgenze, niente referti.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-contatta')">Annulla</button><button class="btn btn-primary" id="contatta-send" onclick="contattaInvia()">Invia</button></div>
+  </div>
+</div>
+<!-- MODAL PROMEMORIA PAZIENTE (s12) -->
+<div class="modal-overlay" id="modal-promemoria">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title" id="modal-promemoria-title">Promemoria</span><button class="modal-close" onclick="closeModal('modal-promemoria')">✕</button></div>
+    <div class="modal-body">
+      <input id="prom-md-txt" class="form-input" maxlength="500" placeholder="Es. richiamare per esito esami" style="width:100%;box-sizing:border-box">
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><span style="font-size:13px;color:var(--ink3)">Scadenza</span><input type="date" id="prom-md-data" class="form-input"></div>
+      <input type="hidden" id="prom-md-paz">
+      <div id="prom-md-list" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-promemoria')">Chiudi</button><button class="btn btn-primary" onclick="promSalvaDaModale()">Salva</button></div>
+  </div>
+</div>
 <!-- MODAL DETTAGLIO PAZIENTE -->
 <div class="modal-overlay" id="modal-paziente">
   <div class="modal" style="max-width:620px">
@@ -7471,19 +7497,81 @@ function promRenderDashboard(){
   if(k){ k.classList.toggle('is-zero', n===0); k.classList.toggle('has-alert', (S.promemoria||[]).some(pr=>pr.scadenza<today)); }
   const pg=document.getElementById('page-promemoria'); if(pg && pg.classList.contains('active')) promRenderPagina();
 }
+function pazSuggest(inp, hiddenId){
+  const list=document.getElementById(hiddenId+'-list'), hid=document.getElementById(hiddenId);
+  const q=(inp.value||'').toLowerCase().trim(); if(hid) hid.value='';
+  if(!q){ list.style.display='none'; list.innerHTML=''; return; }
+  const hit=(S.pazienti||[]).filter(p=>(p.cognome+' '+p.nome+' '+p.nome+' '+p.cognome).toLowerCase().includes(q)).slice(0,8);
+  if(!hit.length){ list.innerHTML='<div style="color:var(--ink3)">Nessun paziente</div>'; list.style.display='block'; return; }
+  list.innerHTML=hit.map(p=>'<div onclick="pazSuggestPick(\''+escapeAttr(String(p.id))+'\',\''+hiddenId+'\')">'+escapeHtml(p.cognome+' '+p.nome)+(p.data_nascita||p.nascita?' <span style="color:var(--ink3)">· '+escapeHtml(p.nascita||p.data_nascita)+'</span>':'')+'</div>').join('');
+  list.style.display='block';
+}
+function pazSuggestPick(id, hiddenId){
+  const p=(S.pazienti||[]).find(x=>String(x.id)===String(id)); if(!p) return;
+  document.getElementById(hiddenId).value=String(p.id);
+  document.getElementById(hiddenId+'-q').value=p.cognome+' '+p.nome;
+  const list=document.getElementById(hiddenId+'-list'); list.style.display='none';
+}
+document.addEventListener('click', e=>{ if(!e.target.closest('.paz-suggest') && !e.target.matches('input[id$="-q"]')) document.querySelectorAll('.paz-suggest').forEach(l=>l.style.display='none'); });
+let _promScadutiOpen=false;
+function promToggleScaduti(){ _promScadutiOpen=!_promScadutiOpen; promRenderPagina(); }
+// ── Modali indipendenti dalla lista pazienti: Contatta / Promemoria ──
+let _contattaPazId=null;
+async function openContattaPaziente(pazId){
+  const p=(S.pazienti||[]).find(x=>String(x.id)===String(pazId)); if(!p) return;
+  _contattaPazId=String(p.id);
+  document.getElementById('modal-contatta-title').textContent='Contatta '+p.cognome+' '+p.nome;
+  document.getElementById('contatta-txt').value='';
+  const info=document.getElementById('contatta-info'), btn=document.getElementById('contatta-send');
+  const _fb=(!p.email)?_contattiDaPrenotazioni(p):{email:''}; const email=p.email||_fb.email;
+  if(!email){ info.textContent='Nessuna email in scheda: aggiungila dal fascicolo per usare il canale.'; btn.disabled=true; openModal('modal-contatta'); return; }
+  btn.disabled=false; info.textContent='Verifico il canale…';
+  openModal('modal-contatta');
+  const { data: th } = await supabaseClient.from('thread_messaggi').select('id,scade_il').eq('paziente_id', p.id).is('chiuso_at',null).order('created_at',{ascending:false}).limit(1);
+  const attivo=(th||[]).find(t=>!t.scade_il || new Date(t.scade_il)>new Date());
+  info.textContent = attivo ? 'Canale attivo'+(attivo.scade_il?' fino al '+thFmt(attivo.scade_il).slice(0,10):'')+' · il messaggio arriva sul canale esistente ('+email+').' : 'Nessun canale attivo: verrà aperto ora e il paziente riceverà il link su '+email+'.';
+}
+async function contattaInvia(){
+  const corpo=(document.getElementById('contatta-txt').value||'').trim(); if(!corpo){ showToast('Scrivi il messaggio.'); return; }
+  const btn=document.getElementById('contatta-send'); btn.disabled=true;
+  const { data: th } = await supabaseClient.from('thread_messaggi').select('id,scade_il').eq('paziente_id', _contattaPazId).is('chiuso_at',null).order('created_at',{ascending:false}).limit(1);
+  const attivo=(th||[]).find(t=>!t.scade_il || new Date(t.scade_il)>new Date());
+  const j = attivo ? await msgApi({action:'scrivi', thread_id:attivo.id, corpo}) : await msgApi({action:'apri', paziente_id:_contattaPazId, corpo});
+  btn.disabled=false;
+  if(j){ showToast(attivo?'Messaggio inviato.':'Canale aperto: email inviata al paziente.'); closeModal('modal-contatta'); }
+}
+function openPromemoriaPaziente(pazId){
+  const p=(S.pazienti||[]).find(x=>String(x.id)===String(pazId)); if(!p) return;
+  document.getElementById('modal-promemoria-title').textContent='Promemoria · '+p.cognome+' '+p.nome;
+  document.getElementById('prom-md-paz').value=String(p.id);
+  document.getElementById('prom-md-txt').value='';
+  document.getElementById('prom-md-data').value=fmt(new Date(Date.now()+7*86400000));
+  promRenderModale(); openModal('modal-promemoria');
+}
+function promRenderModale(){
+  const pazId=document.getElementById('prom-md-paz').value, box=document.getElementById('prom-md-list');
+  const mine=(S.promemoria||[]).filter(pr=>String(pr.paziente_id)===String(pazId));
+  box.innerHTML = mine.length ? '<div class="section-title">Aperti ('+mine.length+')</div>'+mine.map(pr=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)"><input type="checkbox" onchange="promFatto(\''+pr.id+'\').then(promRenderModale)" style="margin-top:3px"><div><div style="font-size:14px">'+escapeHtml(pr.testo)+'</div><div style="font-size:12px;color:var(--ink3)">'+thFmt(pr.scadenza+'T12:00:00').slice(0,10)+'</div></div></div>').join('') : '<div style="font-size:13px;color:var(--ink3)">Nessun promemoria aperto per questo paziente.</div>';
+}
+async function promSalvaDaModale(){
+  const t=document.getElementById('prom-md-txt'), d=document.getElementById('prom-md-data'), pz=document.getElementById('prom-md-paz');
+  const r=await promAdd({ testo:t.value, scadenza:d.value, paziente_id:pz.value||null });
+  if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
+  t.value=''; showToast('Promemoria salvato.'); promRenderModale();
+}
 function promToggleFormPagina(){
   const f=document.getElementById('prom-form-pagina'); if(!f) return;
   const open=f.style.display!=='block'; f.style.display=open?'block':'none';
   if(open){
     const d=document.getElementById('prom-pg-data'); if(d && !d.value) d.value=fmt(new Date(Date.now()+7*86400000));
-    const sel=document.getElementById('prom-pg-paz');
-    if(sel){ sel.innerHTML='<option value="">Nessun paziente</option>'+(S.pazienti||[]).slice().sort((a,b)=>(a.cognome+a.nome).localeCompare(b.cognome+b.nome,'it')).map(p=>'<option value="'+escapeAttr(String(p.id))+'">'+escapeHtml(p.cognome+' '+p.nome)+'</option>').join(''); }
+    const q=document.getElementById('prom-pg-paz-q'), h=document.getElementById('prom-pg-paz'); if(q) q.value=''; if(h) h.value='';
     const t=document.getElementById('prom-pg-txt'); if(t) t.focus();
   }
 }
 async function promSalvaDaPagina(){
   const t=document.getElementById('prom-pg-txt'), d=document.getElementById('prom-pg-data'), sel=document.getElementById('prom-pg-paz');
   const r=await promAdd({ testo:t&&t.value, scadenza:d&&d.value, paziente_id:sel&&sel.value||null });
+  if(!r.errore){ const q=document.getElementById('prom-pg-paz-q'); if(q) q.value=''; if(sel) sel.value=''; }
   if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
   if(t) t.value=''; document.getElementById('prom-form-pagina').style.display='none';
   showToast('Promemoria salvato.'); promRenderPagina();
@@ -7501,7 +7589,8 @@ async function promRenderPagina(){
       +(done?'':'<button class="btn btn-sm btn-secondary" onclick="promElimina(\''+pr.id+'\')" title="Elimina">✕</button>')+'</div>'; };
   const gruppo=(titolo,list)=> list.length ? '<div class="section-title" style="margin-top:14px">'+titolo+' <span style="color:var(--ink3);font-weight:400">('+list.length+')</span></div>'+list.map(pr=>row(pr,false)).join('') : '';
   const scaduti=all.filter(pr=>pr.scadenza<today), oggi=all.filter(pr=>pr.scadenza===today), prossimi=all.filter(pr=>pr.scadenza>today);
-  ap.innerHTML='<div class="card" style="padding:6px 18px 12px">'+(all.length?gruppo('Scaduti',scaduti)+gruppo('Oggi',oggi)+gruppo('Prossimi',prossimi):'<div style="padding:24px 0;text-align:center;color:var(--ink3)">Nessun promemoria aperto.</div>')+'</div>';
+  const gScad= scaduti.length ? '<div class="section-title" style="margin-top:14px;cursor:pointer" onclick="promToggleScaduti()">Scaduti <span style="color:var(--warm);font-weight:400">('+scaduti.length+')</span> <span style="color:var(--ink3);font-weight:400;font-size:12px">'+(_promScadutiOpen?'▾ nascondi':'▸ mostra')+'</span></div><div class="'+(_promScadutiOpen?'':'prom-collapsed')+'">'+scaduti.map(pr=>row(pr,false)).join('')+'</div>' : '';
+  ap.innerHTML='<div class="card" style="padding:6px 18px 12px">'+(all.length?gScad+gruppo('Oggi',oggi)+gruppo('Prossimi',prossimi):'<div style="padding:24px 0;text-align:center;color:var(--ink3)">Nessun promemoria aperto.</div>')+'</div>';
   let fatti=[];
   if(isOnline()){ try{ const { data } = await supabaseClient.from('promemoria').select('id,paziente_id,testo,scadenza,fatto_at').not('fatto_at','is',null).order('fatto_at',{ascending:false}).limit(30); fatti=data||[]; }catch(_){ } }
   ft.innerHTML= fatti.length ? '<div class="section-title">Completati di recente</div><div class="card" style="padding:6px 18px 12px">'+fatti.map(pr=>row(pr,true)).join('')+'</div>' : '';
@@ -10675,7 +10764,7 @@ function _pazRowHTML(r){
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const azioni=btnVis;
+  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> `:'')+btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
@@ -10688,7 +10777,7 @@ function _pazCardHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
   const meta=[r.nascita,r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
   const cVis=r.tipo==='paziente'
-    ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
+    ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-info">
