@@ -37,6 +37,31 @@ async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
 // ── Registry tool v1: ogni tool qui dichiarato ha un esecutore client in medidesk.html (assert nel gate) ──
 const TOOLS = [
   {
+    name: 'leggi_messaggi',
+    description: "Legge la messaggistica con i pazienti (canali senza login). filtro: 'non_letti' (messaggi dei pazienti ancora da leggere, con nome paziente), 'oggi' | 'settimana' (riepilogo: quanti messaggi ho inviato, quanti ricevuti, a quali pazienti ho risposto, chi mi ha scritto), 'paziente' (con paziente_id: tutta la conversazione). Usalo per 'ho messaggi?', 'a quanti pazienti ho risposto', 'cosa mi ha scritto X'.",
+    input_schema: { type: 'object', properties: { filtro: { type: 'string', enum: ['non_letti', 'oggi', 'settimana', 'paziente'] }, paziente_id: { type: 'string' } }, required: [] }
+  },
+  {
+    name: 'scrivi_paziente',
+    description: "Invia un messaggio a un paziente sul suo canale (se non c'e' un canale attivo lo apre e il paziente riceve l'email con il link). AZIONE CON EFFETTI: riassumi paziente e testo e attendi l'ok del medico prima di chiamarla. Serve paziente_id da cerca_paziente.",
+    input_schema: { type: 'object', properties: { paziente_id: { type: 'string' }, testo: { type: 'string' } }, required: ['paziente_id', 'testo'] }
+  },
+  {
+    name: 'leggi_promemoria',
+    description: "Elenca i promemoria aperti del medico. periodo: 'oggi' (in scadenza oggi), 'scaduti', 'settimana' (entro 7 giorni), 'tutti'. Usalo per 'quali promemoria ho oggi', 'cosa devo fare'.",
+    input_schema: { type: 'object', properties: { periodo: { type: 'string', enum: ['oggi', 'scaduti', 'settimana', 'tutti'] } }, required: [] }
+  },
+  {
+    name: 'crea_promemoria',
+    description: "Crea un promemoria per il medico (es. 'aprire il canale con Rossi tra una settimana'). scadenza YYYY-MM-DD; paziente_id opzionale (da cerca_paziente) per agganciarlo al fascicolo. AZIONE CON EFFETTI: riassumi testo e data e attendi l'ok prima di chiamarla.",
+    input_schema: { type: 'object', properties: { testo: { type: 'string' }, scadenza: { type: 'string', description: 'YYYY-MM-DD' }, paziente_id: { type: 'string' } }, required: ['testo', 'scadenza'] }
+  },
+  {
+    name: 'completa_promemoria',
+    description: "Segna un promemoria come fatto. promemoria_id da leggi_promemoria. AZIONE CON EFFETTI: conferma con il medico prima.",
+    input_schema: { type: 'object', properties: { promemoria_id: { type: 'string' } }, required: ['promemoria_id'] }
+  },
+  {
     name: 'vai_a',
     description: 'Porta il medico a una pagina del gestionale. Nessuna conferma necessaria.',
     input_schema: {
@@ -146,7 +171,7 @@ const TOOLS = [
 const SYSTEM_STATIC = `Sei l'assistente integrato di Delphi~Med, il gestionale del medico specialista con cui stai parlando. Lo aiuti a usare il sito: navighi, spieghi come si fa, prepari azioni, rispondi su numeri e statistiche.
 
 REGOLE TASSATIVE
-1. Mai azioni con effetti senza ok esplicito in chat. Prima di chiamare prepara_appuntamento, carica_visita o segna_erogata: riassumi cosa stai per fare (paziente, data, ora) e attendi che il medico confermi nel messaggio successivo. Navigazione, ricerche e statistiche non richiedono conferma.
+1. Mai azioni con effetti senza ok esplicito in chat. Prima di chiamare prepara_appuntamento, carica_visita, segna_erogata, scrivi_paziente, crea_promemoria o completa_promemoria: riassumi cosa stai per fare (paziente, data, ora) e attendi che il medico confermi nel messaggio successivo. Navigazione, ricerche e statistiche non richiedono conferma.
 2. Non inventare. Se un paziente non risulta, un dato manca o una funzione non esiste, dillo. Fuori dal tuo perimetro: spiega come farlo a mano indicando la pagina giusta.
 3. Rispondi breve, in italiano, come un collega pratico. Un'azione o una risposta per volta. Niente markdown: testo semplice.
 4. Le domande cliniche non sono compito tuo: rimanda alle sezioni referti e fascicolo, non interpretare contenuti sanitari.
@@ -159,6 +184,8 @@ MAPPA DEL SITO
 - Agenda: calendario settimanale (drag e drop per spostare, con conferma e notifica al paziente) e vista mese; "+ Nuovo appuntamento"; "Overbooking" per orari fuori griglia; "Importa giornata" in testata per caricare la lista visite da foto o PDF della segreteria.
 - Pazienti: tabella unificata fascicoli + prenotati; ricerca per nome, email, telefono; filtro per centro e stato; "+ Crea fascicolo paziente". Dal fascicolo: anagrafica editabile, visite, referti con sintesi AI, storia clinica (stampa, PDF, email, copia).
 - Statistiche: KPI su periodi confrontabili, filtri per periodo.
+- Messaggi con i pazienti: dal fascicolo, sezione "Messaggi": "+ Nuovo canale" invia al paziente una email con un link personale (/t/...) da cui legge e risponde senza registrarsi; in Dashboard il riquadro "N messaggi da leggere" e il pallino accanto al nome in Pazienti segnalano risposte non lette. Il canale scade (default 30 giorni) o si chiude a mano.
+- Promemoria: in Dashboard sotto il riquadro di oggi (scaduti e in scadenza, spunta per completare) e nel fascicolo del paziente ("+ Promemoria" con testo e data).
 - Centri: sedi di lavoro, turni, compensi (export XLSX e PDF), chiusure.
 - Prestazioni: listino prestazioni, import listino.
 - Piani: abbonamento e fatturazione.
@@ -170,7 +197,9 @@ COME SI FA
 - Caricare una visita o referto: dalla Dashboard sull'appuntamento di oggi ("Carica visita"), oppure dal fascicolo del paziente. Il caricamento aggancia ed eroga l'appuntamento corrispondente.
 - Segnare erogata: Dashboard o pagina Pazienti. Annullare l'erogazione NON cancella il fascicolo.
 - Importare la giornata: Agenda, "Importa giornata", carica foto o PDF, controlla e conferma le righe estratte.
-- Spostare un appuntamento: trascinalo in Agenda; il sistema chiede conferma e propone la notifica al paziente.`;
+- Spostare un appuntamento: trascinalo in Agenda; il sistema chiede conferma e propone la notifica al paziente.
+- Scrivere a un paziente: fascicolo > Messaggi > "+ Nuovo canale" (o "Invia" nel canale attivo); oppure chiedimelo: uso scrivi_paziente dopo il tuo ok. Il canale non e' per le urgenze e non serve per consegnare referti.
+- Riepiloghi: 'a quanti pazienti ho risposto questa settimana' -> leggi_messaggi settimana; 'promemoria di oggi' -> leggi_promemoria oggi.`;
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 
