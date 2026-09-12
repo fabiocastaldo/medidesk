@@ -7457,7 +7457,7 @@ async function msgScrivi(threadId, pazId){
   if(j){ showToast('Messaggio inviato.'); msgLoadPaziente(pazId); }
 }
 async function msgChiudi(threadId, pazId){
-  if(!confirm('Chiudere il canale? Il paziente non potrà più rispondere da questo link.')) return;
+  if(!(await confermaModale('Il paziente non potrà più leggere né rispondere dal link ricevuto.', { titolo:'Chiudere il canale?', ok:'Chiudi canale' }))) return;
   const j=await msgApi({action:'chiudi', thread_id:threadId});
   if(j){ showToast('Canale chiuso.'); msgLoadPaziente(pazId); }
 }
@@ -7513,8 +7513,9 @@ function pazSuggestPick(id, hiddenId){
   const list=document.getElementById(hiddenId+'-list'); list.style.display='none';
 }
 document.addEventListener('click', e=>{ if(!e.target.closest('.paz-suggest') && !e.target.matches('input[id$="-q"]')) document.querySelectorAll('.paz-suggest').forEach(l=>l.style.display='none'); });
-let _promScadutiOpen=false;
+let _promScadutiOpen=false, _promFattiOpen=false;
 function promToggleScaduti(){ _promScadutiOpen=!_promScadutiOpen; promRenderPagina(); }
+function promToggleFatti(){ _promFattiOpen=!_promFattiOpen; promRenderPagina(); }
 // ── Modali indipendenti dalla lista pazienti: Contatta / Promemoria ──
 let _contattaPazId=null;
 async function openContattaPaziente(pazId){
@@ -7593,10 +7594,10 @@ async function promRenderPagina(){
   ap.innerHTML='<div class="card" style="padding:6px 18px 12px">'+(all.length?gScad+gruppo('Oggi',oggi)+gruppo('Prossimi',prossimi):'<div style="padding:24px 0;text-align:center;color:var(--ink3)">Nessun promemoria aperto.</div>')+'</div>';
   let fatti=[];
   if(isOnline()){ try{ const { data } = await supabaseClient.from('promemoria').select('id,paziente_id,testo,scadenza,fatto_at').not('fatto_at','is',null).order('fatto_at',{ascending:false}).limit(30); fatti=data||[]; }catch(_){ } }
-  ft.innerHTML= fatti.length ? '<div class="section-title">Completati di recente</div><div class="card" style="padding:6px 18px 12px">'+fatti.map(pr=>row(pr,true)).join('')+'</div>' : '';
+  ft.innerHTML= fatti.length ? '<div class="section-title" style="cursor:pointer" onclick="promToggleFatti()">Completati di recente <span style="color:var(--ink3);font-weight:400">('+fatti.length+')</span> <span style="color:var(--ink3);font-weight:400;font-size:12px">'+(_promFattiOpen?'▾ nascondi':'▸ mostra')+'</span></div><div class="card '+(_promFattiOpen?'':'prom-collapsed')+'" style="padding:6px 18px 12px">'+fatti.map(pr=>row(pr,true)).join('')+'</div>' : '';
 }
 async function promElimina(id){
-  if(!confirm('Eliminare il promemoria?')) return;
+  if(!(await confermaModale('Il promemoria verrà eliminato definitivamente.', { titolo:'Eliminare il promemoria?', ok:'Elimina' }))) return;
   const { error } = await supabaseClient.from('promemoria').delete().eq('id', id);
   if(error){ showToast('Eliminazione non riuscita.'); return; }
   await promLoad(); promRenderPagina();
