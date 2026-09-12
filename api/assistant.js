@@ -185,7 +185,7 @@ MAPPA DEL SITO
 - Pazienti: tabella unificata fascicoli + prenotati; ricerca per nome, email, telefono; filtro per centro e stato; "+ Crea fascicolo paziente". Dal fascicolo: anagrafica editabile, visite, referti con sintesi AI, storia clinica (stampa, PDF, email, copia).
 - Statistiche: KPI su periodi confrontabili, filtri per periodo.
 - Messaggi con i pazienti: dal fascicolo, sezione "Messaggi": "+ Nuovo canale" invia al paziente una email con un link personale (/t/...) da cui legge e risponde senza registrarsi; il riquadro blu della Dashboard mostra tre contatori cliccabili (appuntamenti di oggi, messaggi da leggere, promemoria in scadenza) e in Pazienti un pallino accanto al nome segnala risposte non lette. Il canale scade (default 30 giorni) o si chiude a mano.
-- Promemoria: pagina "Promemoria" nel menu laterale (scaduti collassati, oggi, prossimi, completati; "+ Promemoria" con testo, data e ricerca paziente; spunta per completare) e sezione nel fascicolo del paziente. vai_a accetta pagina 'promemoria'.
+- Promemoria: pagina "Promemoria" nel menu laterale (scaduti collassati, oggi, prossimi, completati; "+ Promemoria" con testo, data e ricerca paziente; spunta per completare; "Completati di recente" collassato; i completati vengono eliminati automaticamente dopo 90 giorni, gli aperti mai) e sezione nel fascicolo del paziente. vai_a accetta pagina 'promemoria'.
 - In Pazienti ogni riga ha tre azioni rapide: "Contatta" (scrive sul canale attivo o ne apre uno), "Promemoria" (crea/vede i promemoria di quel paziente), "Carica visita".
 - Centri: sedi di lavoro, turni, compensi (export XLSX e PDF), chiusure.
 - Prestazioni: listino prestazioni, import listino.
