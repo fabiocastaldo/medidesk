@@ -2329,6 +2329,37 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
     </div>
 
+<!-- ══════════════ PAGINA THREAD PAZIENTE (/t/<token>, senza login — s11) ══════════════ -->
+    <div id="view-thread" style="display:none">
+      <div class="booking-wrap">
+        <div class="home-logo-wrap" style="align-items:center;text-align:center;margin-bottom:20px">
+          <span class="home-logo">Delphi~Med</span>
+        </div>
+        <div style="text-align:center;margin-bottom:6px">
+          <div id="th-medico" style="font-size:22px;font-weight:700;color:#fff">Messaggi</div>
+          <div id="th-sub" style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px"></div>
+        </div>
+        <div style="max-width:520px;margin:14px auto 0;padding:10px 14px;border-radius:10px;background:rgba(255,80,80,.14);border:1px solid rgba(255,120,120,.35);color:#fff;font-size:13px;line-height:1.45">
+          Questo canale non è per le urgenze. In caso di emergenza chiami il <b>112</b> o si rechi al pronto soccorso.
+        </div>
+        <div id="th-nascita" style="display:none;max-width:520px;margin:18px auto 0;text-align:center">
+          <div style="color:#fff;font-size:14px;margin-bottom:10px">Per aprire i messaggi inserisca la sua data di nascita.</div>
+          <input type="date" id="th-nascita-input" class="home-search-input" style="max-width:220px;display:inline-block;text-align:center">
+          <div style="margin-top:10px"><button class="btn-primary" type="button" onclick="thInit()">Apri</button></div>
+          <div id="th-nascita-err" style="display:none;color:#ffb4b4;font-size:13px;margin-top:8px"></div>
+        </div>
+        <div id="th-list" style="max-width:520px;margin:16px auto 0"></div>
+        <div id="th-reply" style="display:none;max-width:520px;margin:14px auto 0">
+          <textarea id="th-text" rows="4" maxlength="4000" placeholder="Scriva qui il suo messaggio…" style="width:100%;box-sizing:border-box;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;padding:10px 12px;font:inherit;font-size:14px;resize:vertical"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:10px">
+            <div id="th-tempi" style="font-size:12px;color:rgba(255,255,255,.65)"></div>
+            <button class="btn-primary" type="button" id="th-send" onclick="thRispondi()">Invia</button>
+          </div>
+        </div>
+        <div id="th-empty" style="display:none;text-align:center;color:rgba(255,255,255,.75);font-size:14px;margin:22px auto 0;max-width:420px"></div>
+      </div>
+    </div>
+
 <!-- ══════════════ PAGINA CANCELLAZIONE ══════════════ -->
 <div id="view-cancel">
   <div class="cancel-card">
@@ -4245,6 +4276,8 @@ function checkView(){
     showAnticipaView();
   } else if(location.search.includes('booking') || location.pathname.startsWith('/m/') || location.pathname.startsWith('/c/')){
     showBookingView();
+  } else if(location.pathname.startsWith('/t/')){
+    showThreadView();
   } else if(location.pathname.startsWith('/p/')){
     showPortfolioView();
   } else {
@@ -9021,6 +9054,71 @@ function showBookingView(){
   document.getElementById('view-booking').style.display='block';
   setupCapitalizeListeners();
   bkInit();
+}
+
+// ── Thread paziente senza login (/t/<token>) — s11 ──────────────────────────
+function showThreadView(){
+  ['view-home','view-app','view-booking','view-portfolio'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const tv=document.getElementById('view-thread'); if(tv) tv.style.display='block';
+  if(!document.head.querySelector('meta[name="robots"]')){
+    document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
+  }
+  thInit();
+}
+let _thToken=null, _thNascita=null;
+function thErr(msg){ const e=document.getElementById('th-empty'); e.textContent=msg; e.style.display='block'; document.getElementById('th-list').innerHTML=''; document.getElementById('th-reply').style.display='none'; }
+function thFmt(iso){ try{ return new Date(iso).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+async function thInit(){
+  const m=location.pathname.match(/^\/t\/([^\/?#]+)/);
+  if(!m){ thErr('Link non valido.'); return; }
+  _thToken=decodeURIComponent(m[1]);
+  const nIn=document.getElementById('th-nascita-input');
+  if(nIn && nIn.value) _thNascita=nIn.value;
+  if(!isOnline() || !supabaseClient){ thErr('Serve la connessione per aprire i messaggi.'); return; }
+  const { data, error } = await supabaseClient.rpc('msg_leggi_thread', { p_token:_thToken, p_nascita:_thNascita||null });
+  if(error){ thErr('Impossibile aprire i messaggi. Riprovi più tardi.'); return; }
+  const nBox=document.getElementById('th-nascita'), nErr=document.getElementById('th-nascita-err');
+  if(data && data.errore){
+    if(data.errore==='NASCITA_RICHIESTA'){ nBox.style.display='block'; nErr.style.display='none'; return; }
+    if(data.errore==='NASCITA_ERRATA'){ nBox.style.display='block'; nErr.textContent='Data di nascita non corrispondente.'; nErr.style.display='block'; return; }
+    if(data.errore==='RATE_LIMIT'){ thErr('Troppi tentativi. Riprovi tra qualche minuto.'); return; }
+    thErr('Questo link non è più valido. Se ha bisogno di contattare il medico, usi il link dell\'ultima email ricevuta.'); return;
+  }
+  nBox.style.display='none';
+  document.getElementById('th-medico').textContent=data.medico||'Messaggi';
+  document.getElementById('th-sub').textContent=data.chiuso ? 'Conversazione chiusa dal medico' : (data.scade_il ? 'Canale attivo fino al '+thFmt(data.scade_il).slice(0,10) : 'Canale attivo');
+  thRender(data.messaggi||[]);
+  document.getElementById('th-reply').style.display = data.puo_rispondere ? 'block' : 'none';
+  document.getElementById('th-tempi').textContent = data.tempi_risposta ? 'Tempi di risposta: '+data.tempi_risposta : '';
+  document.getElementById('th-empty').style.display='none';
+}
+function thRender(list){
+  const box=document.getElementById('th-list');
+  if(!list.length){ box.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.7);font-size:14px">Nessun messaggio ancora. Può scrivere al medico qui sotto.</div>'; return; }
+  box.innerHTML=list.map(x=>{
+    const mine = x.direzione==='paziente';
+    return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin-bottom:10px">'
+      +'<div style="max-width:85%;padding:10px 13px;border-radius:12px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word;color:#fff;background:'+(mine?'rgba(13,148,201,.35)':'rgba(255,255,255,.12)')+'">'
+      +escapeHtml(x.corpo)
+      +'<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:5px;text-align:right">'+(mine?'Lei':'Medico')+' · '+thFmt(x.created_at)+'</div>'
+      +'</div></div>';
+  }).join('');
+}
+async function thRispondi(){
+  const ta=document.getElementById('th-text'), btn=document.getElementById('th-send');
+  const testo=(ta.value||'').trim();
+  if(!testo) return;
+  btn.disabled=true;
+  const { data, error } = await supabaseClient.rpc('msg_rispondi', { p_token:_thToken, p_testo:testo, p_nascita:_thNascita||null });
+  btn.disabled=false;
+  if(error || !data || data.errore){
+    const code=(data&&data.errore)||'';
+    showToast(code==='RATE_LIMIT' ? 'Troppi messaggi, riprovi tra poco.' : code==='THREAD_CHIUSO' ? 'La conversazione è stata chiusa.' : 'Invio non riuscito. Riprovi.');
+    return;
+  }
+  ta.value='';
+  showToast('Messaggio inviato al medico.');
+  thInit();
 }
 
 function showPortfolioView(){
