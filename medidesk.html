@@ -859,6 +859,16 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .home-contact-card{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:24px 30px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .home-contact-card h3{font-family:'Montserrat',sans-serif;font-size:19px;font-weight:700;color:#fff;margin:0 0 4px;letter-spacing:-.2px}
 .home-contact-card p{margin:0;font-size:14px;color:rgba(255,255,255,.72);line-height:1.5;max-width:560px}
+.hc-ov{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(8,15,35,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:24px}
+.hc-ov.on{display:flex}
+.hc-modal{position:relative;background:rgba(18,30,62,.94);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:30px 30px 26px;max-width:420px;width:100%;text-align:center;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.45)}
+.hc-modal h3{font-family:'Montserrat',sans-serif;font-size:19px;font-weight:700;margin:0 0 8px}
+.hc-modal p{font-size:14px;color:rgba(255,255,255,.75);margin:0 0 18px;line-height:1.5}
+.hc-mail{font-family:'Montserrat',sans-serif;font-size:17px;font-weight:700;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:12px 16px;margin:0 0 16px;user-select:all;word-break:break-all}
+.hc-mailto{display:block;margin-top:14px;font-size:13px;color:rgba(255,255,255,.65);text-decoration:underline}
+.hc-mailto:hover{color:#fff}
+.hc-x{position:absolute;top:8px;right:12px;background:none;border:none;color:rgba(255,255,255,.6);font-size:26px;line-height:1;cursor:pointer;padding:4px}
+.hc-x:hover{color:#fff}
 @media(max-width:960px){.hs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.hs{padding:72px 18px}.hs-grid{grid-template-columns:1fr;gap:12px}.hs-card{padding:18px}.hs-sub{margin-bottom:30px}}
 @media (prefers-reduced-motion:reduce){.hs-aur,.hs-stars,.hs-stars2{animation:none}.rv{opacity:1;transform:none;transition:none}}
@@ -1097,7 +1107,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
         <div class="hs-cta rv">
           <a class="hs-btn" href="/cooperative">Accedi</a>
-          <a class="hs-btn hs-btn-ghost" href="mailto:info@delphi-med.com?subject=Richiesta%20demo%20Delphi~Med">Richiedi una demo</a>
+          <button class="hs-btn hs-btn-ghost" onclick="openHomeContact('Richiesta demo Delphi~Med')">Richiedi una demo</button>
         </div>
       </div>
       <button class="home-scroll-cue hs-cue" aria-label="Continua" onclick="document.querySelector('.home-contact').scrollIntoView({behavior:'smooth',block:'start'})"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -1108,8 +1118,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <h3>Vuoi saperne di pi&ugrave;?</h3>
           <p>Per una demo, un preventivo o qualsiasi domanda, scrivici: ti rispondiamo personalmente.</p>
         </div>
-        <a class="hs-btn" href="mailto:info@delphi-med.com?subject=Richiesta%20informazioni%20Delphi~Med">Richiedi informazioni</a>
+        <button class="hs-btn" onclick="openHomeContact('Richiesta informazioni Delphi~Med')">Richiedi informazioni</button>
       </div>
+    </div>
+  </div>
+
+  <div class="hc-ov" id="hc-ov" onclick="if(event.target===this)closeHomeContact()">
+    <div class="hc-modal">
+      <button class="hc-x" aria-label="Chiudi" onclick="closeHomeContact()">&times;</button>
+      <h3>Scrivici</h3>
+      <p>Ti rispondiamo personalmente. Copia l&rsquo;indirizzo e scrivici dalla tua casella di posta.</p>
+      <div class="hc-mail" id="hc-mail">info@delphi-med.com</div>
+      <button class="hs-btn" id="hc-copy" onclick="copyHomeContact()">Copia indirizzo</button>
+      <a class="hc-mailto" id="hc-mailto" href="mailto:info@delphi-med.com">Oppure apri nel tuo client di posta</a>
     </div>
   </div>
 
@@ -3416,6 +3437,24 @@ function startHomeWaves(){
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+}
+
+function openHomeContact(subject){
+  document.getElementById('hc-mailto').href='mailto:info@delphi-med.com?subject='+encodeURIComponent(subject);
+  document.getElementById('hc-copy').textContent='Copia indirizzo';
+  document.getElementById('hc-ov').classList.add('on');
+}
+function closeHomeContact(){document.getElementById('hc-ov').classList.remove('on');}
+function copyHomeContact(){
+  const b=document.getElementById('hc-copy');
+  const done=function(){b.textContent='Copiato \u2713';setTimeout(function(){b.textContent='Copia indirizzo';},1800);};
+  const fallback=function(){
+    const r=document.createRange();r.selectNodeContents(document.getElementById('hc-mail'));
+    const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
+    try{document.execCommand('copy');done();}catch(e){}
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText('info@delphi-med.com').then(done,fallback);}
+  else fallback();
 }
 
 function showAuthView(){
