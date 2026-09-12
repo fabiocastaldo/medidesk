@@ -3387,7 +3387,7 @@ function startHomeWaves(){
       ctx.beginPath();ctx.arc(a.x*w,a.y*h,1,0,6.2832);ctx.fill();
     }
     const cx=w/2,cy=h*.70,S=Math.min(w,1100)*.26,f=3.1;
-    const th=T*.45,ct=Math.cos(th),st=Math.sin(th);
+    const th=tt*6.2832/A2,ct=Math.cos(th),st=Math.sin(th);
     const ph=.22,cp=Math.cos(ph),sp2=Math.sin(ph);
     const head=(T*.28)%2-1;
     for(const p of PTS){
