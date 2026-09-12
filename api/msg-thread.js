@@ -108,9 +108,10 @@ export default async function handler(req, res) {
 
   async function sendMail(to, tipo, token) {
     const link = `https://${host}/t/${token}`;
+    const ora = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' });
     const subject = tipo === 'apertura'
       ? `${medicoNome} ha aperto un canale con lei — Delphi~Med`
-      : `Nuovo messaggio da ${medicoNome} — Delphi~Med`;
+      : `Nuovo messaggio da ${medicoNome} (${ora}) — Delphi~Med`;
     const { error } = await resend.emails.send({
       from: 'noreply@delphi-med.com', to: [to], subject,
       html: emailHtml({ medicoNome, link, tipo, tempiRisposta: medico.msg_tempi_risposta })
@@ -186,8 +187,7 @@ export default async function handler(req, res) {
     const msg = (await mr.json())[0];
 
     try {
-      // i token precedenti restano validi per leggere, non per rispondere
-      await sb(`token_thread?thread_id=eq.${t.id}&puo_rispondere=eq.true`, { method: 'PATCH', body: JSON.stringify({ puo_rispondere: false }) });
+      // tutti i link del canale restano validi (lettura e risposta) fino a scadenza o chiusura
       const tokenExp = t.scade_il || new Date(Date.now() + 365 * 86400000).toISOString();
       const token = await emitToken(t.id, tokenExp);
       await sendMail(t.recapito_email, 'nuovo', token);

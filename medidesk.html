@@ -479,7 +479,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paziente-pick .ora{font-size:12px;color:var(--accent);font-weight:600}
 
 /* ── PRENOTAZIONE PUBBLICA ── */
-#view-booking, #view-portfolio, #view-thread{display:none;min-height:100vh;background:radial-gradient(100% 80% at 88% -2%,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 58%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
+html.th-page, html.th-page body{background:var(--brand-deep)}
+#view-booking, #view-portfolio, #view-thread{display:none;min-height:100vh;min-height:100dvh;background:radial-gradient(100% 80% at 88% -2%,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 58%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
 .booking-wrap{max-width:680px;margin:0 auto;padding:48px 28px 40px}
 .booking-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.35)}
 /* hero */
@@ -9218,6 +9219,7 @@ function showBookingView(){
 function showThreadView(){
   ['view-home','view-app','view-booking','view-portfolio'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
   const tv=document.getElementById('view-thread'); if(tv) tv.style.display='block';
+  document.documentElement.classList.add('th-page');
   if(!document.head.querySelector('meta[name="robots"]')){
     document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
   }
@@ -9247,6 +9249,7 @@ async function thInit(){
   document.getElementById('th-sub').textContent=data.chiuso ? 'Conversazione chiusa dal medico' : (data.scade_il ? 'Canale attivo fino al '+thFmt(data.scade_il).slice(0,10) : 'Canale attivo');
   thRender(data.messaggi||[]);
   document.getElementById('th-reply').style.display = data.puo_rispondere ? 'block' : 'none';
+  if(!data.puo_rispondere && !data.chiuso){ const e=document.getElementById('th-empty'); e.textContent='Per rispondere apra il link dell\'ultima email ricevuta dal medico.'; e.style.display='block'; return; }
   document.getElementById('th-tempi').textContent = data.tempi_risposta ? 'Tempi di risposta: '+data.tempi_risposta : '';
   document.getElementById('th-empty').style.display='none';
 }
