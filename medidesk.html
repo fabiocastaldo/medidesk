@@ -7322,6 +7322,7 @@ function showPazienteDetail(id){
       <button class="btn btn-secondary" onclick="sintetizzaReferti('${escapeAttr(id)}')" id="btn-storia-${escapeAttr(id)}">✦ ${sintLabel}</button>
     </div>
     <div id="storia-container-${escapeAttr(id)}"></div>`:''}
+    <div id="msg-box-${escapeAttr(id)}" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"></div>
     <div style="margin-top:16px">
       <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${escapeAttr(id)}')">+ Carica visita</button>
     </div>
@@ -7331,8 +7332,71 @@ function showPazienteDetail(id){
   _initPazienteModal(p);
   openModal('modal-paziente');
   if(canSint) _renderSintesiSalvata(id);
+  msgLoadPaziente(id);
 }
 function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
+
+// ── Messaggi paziente (lato medico, RLS diretta + api/msg-thread) — s11 ──────
+async function msgLoadPaziente(id){
+  const box=document.getElementById('msg-box-'+id); if(!box) return;
+  box.innerHTML='<div class="section-title">Messaggi</div><div style="font-size:13px;color:var(--ink3)">Caricamento…</div>';
+  if(!isOnline()){ box.innerHTML='<div class="section-title">Messaggi</div><div style="font-size:13px;color:var(--ink3)">Disponibili solo online.</div>'; return; }
+  const { data: threads, error } = await supabaseClient.from('thread_messaggi')
+    .select('id,origine,scade_il,chiuso_at,created_at,recapito_email,messaggi(id,direzione,corpo,created_at,letto_at)')
+    .eq('paziente_id', id).order('created_at',{ascending:false});
+  if(error){ box.innerHTML='<div class="section-title">Messaggi</div><div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
+  const p=S.pazienti.find(x=>String(x.id)===String(id))||{};
+  const _fb=(!p.email)?_contattiDaPrenotazioni(p):{email:''};
+  const hasEmail=!!(p.email||_fb.email);
+  let h='<div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Messaggi';
+  h+='<button class="btn btn-sm btn-secondary" '+(hasEmail?'':'disabled title="Serve un\'email del paziente"')+' onclick="msgApri(\''+escapeAttr(id)+'\')">+ Nuovo canale</button></div>';
+  if(!threads||!threads.length){ h+='<div style="font-size:13px;color:var(--ink3)">Nessun canale aperto. Apra un canale per scrivere al paziente: riceverà un link per leggere e rispondere, senza registrarsi.</div>'; box.innerHTML=h; return; }
+  threads.forEach(t=>{
+    const msgs=(t.messaggi||[]).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
+    const nonLetti=msgs.filter(m=>m.direzione==='paziente'&&!m.letto_at).length;
+    const stato=t.chiuso_at?'chiuso':(t.scade_il&&new Date(t.scade_il)<new Date()?'scaduto':'attivo');
+    h+='<div class="visita-item" style="margin-top:10px"><div class="visita-header" onclick="toggleV(\'msg-t-'+t.id+'\')"><div>';
+    h+='<div class="visita-date">Canale '+escapeHtml(t.origine)+' · '+escapeHtml(stato)+(nonLetti?' · <b style="color:var(--warm)">'+nonLetti+' da leggere</b>':'')+'</div>';
+    h+='<div style="font-size:12px;color:var(--ink3)">'+msgs.length+' messaggi · aperto il '+thFmt(t.created_at).slice(0,10)+(t.scade_il?' · fino al '+thFmt(t.scade_il).slice(0,10):'')+'</div>';
+    h+='</div><span style="color:var(--ink3)">▾</span></div>';
+    h+='<div class="visita-body" id="msg-t-'+t.id+'" style="display:none;white-space:normal">';
+    h+=msgs.map(m=>'<div style="margin-bottom:8px;padding:8px 10px;border-radius:10px;background:'+(m.direzione==='medico'?'var(--bg2, rgba(0,0,0,.04))':'rgba(13,148,201,.12)')+'"><div style="font-size:11px;color:var(--ink3)">'+(m.direzione==='medico'?'Lei':'Paziente')+' · '+thFmt(m.created_at)+'</div><div style="white-space:pre-wrap;font-size:14px">'+escapeHtml(m.corpo)+'</div></div>').join('')||'<div style="font-size:13px;color:var(--ink3)">Nessun messaggio.</div>';
+    if(stato==='attivo'){
+      h+='<textarea id="msg-txt-'+t.id+'" rows="3" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box;margin-top:8px" placeholder="Scrivi al paziente…"></textarea>';
+      h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm btn-secondary" onclick="msgChiudi(\''+t.id+'\',\''+escapeAttr(id)+'\')">Chiudi canale</button><button class="btn btn-sm btn-primary" onclick="msgScrivi(\''+t.id+'\',\''+escapeAttr(id)+'\')">Invia</button></div>';
+    }
+    h+='</div></div>';
+  });
+  box.innerHTML=h;
+  if(threads.some(t=>(t.messaggi||[]).some(m=>m.direzione==='paziente'&&!m.letto_at))){
+    const ids=[]; threads.forEach(t=>(t.messaggi||[]).forEach(m=>{ if(m.direzione==='paziente'&&!m.letto_at) ids.push(m.id); }));
+    supabaseClient.from('messaggi').update({letto_at:new Date().toISOString()}).in('id',ids).then(()=>{});
+  }
+}
+async function msgApi(payload){
+  const _jwt=await getAuthJwt();
+  const res=await fetch('/api/msg-thread',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify(payload)});
+  if(await trialGuard(res)) return null;
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok){ showToast(j.error==='email_mancante'?'Il paziente non ha un\'email.':j.error==='email_fallita'?'Invio email non riuscito.':j.error==='thread_chiuso'?'Canale già chiuso.':'Operazione non riuscita.'); return null; }
+  return j;
+}
+async function msgApri(id){
+  const corpo=prompt('Primo messaggio al paziente (facoltativo). Riceverà un link per leggere e rispondere.','');
+  if(corpo===null) return;
+  const j=await msgApi({action:'apri', paziente_id:id, corpo:corpo.trim()});
+  if(j){ showToast('Canale aperto: email inviata al paziente.'); msgLoadPaziente(id); }
+}
+async function msgScrivi(threadId, pazId){
+  const ta=document.getElementById('msg-txt-'+threadId); const corpo=(ta&&ta.value||'').trim(); if(!corpo) return;
+  const j=await msgApi({action:'scrivi', thread_id:threadId, corpo});
+  if(j){ showToast('Messaggio inviato.'); msgLoadPaziente(pazId); }
+}
+async function msgChiudi(threadId, pazId){
+  if(!confirm('Chiudere il canale? Il paziente non potrà più rispondere da questo link.')) return;
+  const j=await msgApi({action:'chiudi', thread_id:threadId});
+  if(j){ showToast('Canale chiuso.'); msgLoadPaziente(pazId); }
+}
 
 function getFotoPaths(fotoUrl){
   if(!fotoUrl) return [];
