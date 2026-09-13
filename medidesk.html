@@ -119,7 +119,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .hero-big{font-weight:300;font-size:54px;line-height:1}
 .hero-unit{font-size:16px;color:rgba(255,255,255,.92)}
 .paz-suggest{position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:220px;overflow:auto;display:none}.paz-suggest div{padding:8px 12px;cursor:pointer;font-size:13.5px}.paz-suggest div:hover{background:var(--bg)}.prom-collapsed{display:none}
-.hero-row{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap}.hero-kpi{display:flex;align-items:baseline;gap:8px;cursor:pointer;border-radius:10px;padding:2px 6px;margin:-2px -6px;transition:background .15s}.hero-kpi:hover{background:rgba(255,255,255,.14)}.hero-kpi .hero-unit{white-space:nowrap}.hero-kpi.has-alert .hero-big{color:#FFD9A8}@media (max-width:640px){.hero-row{gap:16px}.hero-kpi .hero-big{font-size:38px}}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}
+.hero-row{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap}.hero-kpi{display:flex;align-items:baseline;gap:8px;cursor:pointer;border-radius:10px;padding:2px 6px;margin:-2px -6px;transition:background .15s}.hero-kpi:hover{background:rgba(255,255,255,.14)}.hero-kpi .hero-unit{white-space:nowrap}.hero-kpi.has-alert .hero-big{color:#FFD9A8}.hero-unit-s{display:none}@media (max-width:640px){.hero-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start}.hero-kpi{flex-direction:column;align-items:flex-start;gap:2px;padding:4px 6px}.hero-kpi .hero-big{font-size:30px;line-height:1}.hero-kpi .hero-unit{display:none}.hero-kpi .hero-unit-s{display:block;font-size:11px;white-space:nowrap}}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}
 .hero-next{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-height:18px;flex-shrink:0;text-align:right}
 .hero-next-label{color:var(--brand-soft);font-size:12px}
 .hero-next-val{font-weight:700;font-size:16px}
@@ -448,8 +448,14 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-act.is-erogata{color:#16a34a;border-color:#16a34a}
 .paz-act-erog{min-width:150px;text-align:center}
 .paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
+.pd-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}.pd-lbl{display:inline-flex;align-items:center;gap:7px}.pd-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--bg2, rgba(0,0,0,.06));color:var(--ink2);font-size:11px;font-weight:700;letter-spacing:0}.pd-badge.warn{background:var(--warm);color:#fff}.pd-tri{display:inline-block;transition:transform .15s;font-size:12px}.pd-head.pd-open .pd-tri{transform:rotate(180deg)}.pd-head .btn{min-width:122px;text-align:center;justify-content:center;flex-shrink:0}
+@media(max-width:768px){#modal-paziente .field-row{flex-direction:column;gap:3px}#modal-paziente .field-key{min-width:0;padding-top:0}#modal-paziente .field-val{width:100%}#modal-paziente .paz-edit-input{max-width:none;width:100%;box-sizing:border-box;font-size:15px}}
+.paz-more{display:flex;align-items:center;justify-content:center;gap:14px;padding:16px 0 6px;font-size:12.5px;color:var(--ink3)}
+@media(max-width:768px){#prom-form-pagina>div{gap:8px}#prom-form-pagina #prom-pg-data{flex:0 0 100%;width:100%;box-sizing:border-box}#prom-form-pagina>div>div{flex:0 0 100%!important;max-width:none!important;min-width:0!important}#prom-form-pagina>div>.btn{flex:1 1 0}}
+@media(max-width:768px){#page-pazienti .search-bar{position:sticky;top:63px;z-index:40;background:var(--bg);padding:8px 0 6px;margin-bottom:12px}}
 @media(min-width:961px){#pazienti-list{display:none}}
 @media(max-width:960px){#pazienti-table{display:none}}
+@media(max-width:768px){.paziente-card{flex-wrap:wrap;padding:12px 14px;gap:8px 10px}.paziente-info{flex:1 1 0;min-width:0}.paziente-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.paziente-card>div:last-child{flex:0 0 100%;justify-content:stretch;gap:6px}.paziente-card>div:last-child>span{flex:0 0 100%;text-align:right;margin-bottom:-2px}.paziente-card .paz-act{flex:1 1 0;margin-left:0;padding:8px 4px;min-height:36px;font-size:12px;text-align:center}.paziente-card{position:relative}.paziente-card .pm-contatti{display:none}.paziente-card>div:last-child>span{position:absolute;top:12px;right:14px;flex:none;margin:0}.paziente-card .paziente-name{padding-right:70px}#page-pazienti .search-bar{gap:8px}#page-pazienti .search-input-wrap{flex:0 0 100%;min-width:0!important}#page-pazienti .paz-filter-sel{flex:1 1 0;min-width:0;width:auto}}
 
 @media(max-width:768px){
   .mc-day{min-height:48px;padding:3px}
@@ -1502,9 +1508,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="hero-today">
           <div class="hero-label">Oggi</div>
           <div class="hero-row">
-            <div class="hero-kpi" onclick="event.stopPropagation();showPage('agenda')"><span class="hero-big" id="hero-count">0</span><span class="hero-unit">appuntamenti</span></div>
-            <div class="hero-kpi" id="hero-msg" onclick="event.stopPropagation();msgVaiANonLetti()"><span class="hero-big" id="hero-msg-n">0</span><span class="hero-unit">nuovi messaggi</span></div>
-            <div class="hero-kpi" id="hero-prom" onclick="event.stopPropagation();showPage('promemoria')"><span class="hero-big" id="hero-prom-n">0</span><span class="hero-unit">promemoria in scadenza</span></div>
+            <div class="hero-kpi" onclick="event.stopPropagation();showPage('agenda')"><span class="hero-big" id="hero-count">0</span><span class="hero-unit">appuntamenti</span><span class="hero-unit-s">appuntamenti</span></div>
+            <div class="hero-kpi" id="hero-msg" onclick="event.stopPropagation();msgVaiANonLetti()"><span class="hero-big" id="hero-msg-n">0</span><span class="hero-unit">nuovi messaggi</span><span class="hero-unit-s">messaggi</span></div>
+            <div class="hero-kpi" id="hero-prom" onclick="event.stopPropagation();showPage('promemoria')"><span class="hero-big" id="hero-prom-n">0</span><span class="hero-unit">promemoria in scadenza</span><span class="hero-unit-s">promemoria</span></div>
           </div>
         </div>
         <div class="hero-next" id="hero-next"></div>
@@ -1600,7 +1606,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div id="view-ferie" style="display:none">
         <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div style="font-size:13px;color:var(--ink2)">Periodi di ferie e chiusura studio</div>
-          <button class="btn btn-primary btn-sm" onclick="openModalChiusura()">+ Aggiungi chiusura</button>
+          <button class="btn btn-primary btn-sm" onclick="openModalChiusura()">Aggiungi chiusura</button>
         </div>
         <div id="chiusure-list"></div>
       </div>
@@ -1610,7 +1616,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-pazienti" class="page">
       <div class="page-header">
         <div><div class="page-title">Pazienti <span class="paz-count" id="paz-count"></span></div><div class="page-subtitle">Fascicoli clinici e prenotati</div></div>
-        <button class="btn btn-primary" onclick="openNuovoPaziente()">+ Crea fascicolo paziente</button>
+        <button class="btn btn-primary" onclick="openNuovoPaziente()">Crea fascicolo paziente</button>
       </div>
       <div class="search-bar" style="flex-wrap:wrap">
         <div class="search-input-wrap" style="min-width:200px">
@@ -1650,7 +1656,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div id="tipi-visita-list" class="tag-editor"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <input class="form-input" id="new-tipo-visita" placeholder="es. Pre-chirurgica" style="flex:1" onkeydown="if(event.key==='Enter')addTipoVisita()" onblur="this.value=capitalizeName(this.value)">
-            <button class="btn btn-primary" onclick="addTipoVisita()">+ Aggiungi</button>
+            <button class="btn btn-primary" onclick="addTipoVisita()">Aggiungi</button>
           </div>
         </div></div>
       </div>
@@ -1662,7 +1668,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div id="aree-list" class="tag-editor"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <input class="form-input" id="new-area" placeholder="es. Ginocchio" style="flex:1" onkeydown="if(event.key==='Enter')addArea()" onblur="this.value=capitalizeName(this.value)">
-            <button class="btn btn-primary" onclick="addArea()">+ Aggiungi</button>
+            <button class="btn btn-primary" onclick="addArea()">Aggiungi</button>
           </div>
         </div></div>
       </div>
@@ -1726,7 +1732,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <label class="form-label">Altre specializzazioni <span style="font-size:12px;font-weight:400;color:var(--ink3)">(opzionali)</span></label>
             <div id="spec-altre-list" class="tag-editor" style="margin-bottom:8px"></div>
             <select class="form-input" id="setting-spec-altre-select" onchange="addSpecAltra(this.value)">
-              <option value="">+ Aggiungi specializzazione…</option>
+              <option value="">Aggiungi specializzazione…</option>
             </select>
           </div>
           <!-- Slug -->
@@ -1779,7 +1785,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div id="lingue-list" class="tag-editor" style="margin-bottom:8px"></div>
           <div style="display:flex;gap:8px">
             <input class="form-input" id="new-lingua" placeholder="es. Inglese" style="flex:1" onkeydown="if(event.key==='Enter')addLingua()" onblur="this.value=capitalizeWords(this.value.trim())">
-            <button class="btn btn-secondary" onclick="addLingua()">+ Aggiungi</button>
+            <button class="btn btn-secondary" onclick="addLingua()">Aggiungi</button>
           </div>
         </div></div>
       </div>
@@ -2157,7 +2163,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="mnu-sec">
         <div class="mnu-sec-title">Gestione</div>
         <div class="mnu-grid">
-          <button class="mnu-item" onclick="showPage('promemoria')"><span class="mnu-ico"><svg class="ic"><use href="#ic-clock"/></svg></span><span class="mnu-lbl">Promemoria</span></button>
+          <button class="mnu-item" onclick="showPage('centri')"><span class="mnu-ico"><svg class="ic"><use href="#ic-center"/></svg></span><span class="mnu-lbl">Centri</span></button>
           <button class="mnu-item" onclick="showPage('prestazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Prestazioni</span></button>
           <button class="mnu-item" onclick="showPage('statistiche')"><span class="mnu-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="mnu-lbl">Statistiche</span></button>
           <button class="mnu-item" onclick="showPage('manutenzione-archivio')"><span class="mnu-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="mnu-lbl">Archivio</span></button>
@@ -2189,9 +2195,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <span class="bn-icon"><svg class="ic"><use href="#ic-users"/></svg></span>
       <span class="bn-label">Pazienti</span>
     </button>
-    <button class="bottom-nav-item" data-page="centri" onclick="showPage('centri')">
-      <span class="bn-icon"><svg class="ic"><use href="#ic-center"/></svg></span>
-      <span class="bn-label">Centri</span>
+    <button class="bottom-nav-item" data-page="promemoria" onclick="showPage('promemoria')">
+      <span class="bn-icon"><svg class="ic"><use href="#ic-clock"/></svg></span>
+      <span class="bn-label">Promemoria</span>
     </button>
     <button class="bottom-nav-item" data-page="menu" onclick="showPage('menu')">
       <span class="bn-icon"><svg class="ic"><use href="#ic-menu"/></svg></span>
@@ -2215,7 +2221,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="bk-hero-tags" id="bk-hero-tags"></div>
         <div class="bk-social" id="bk-social-row"></div>
         <div id="bk-centro-locked" style="display:none;align-items:center;gap:8px;margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);font-size:13px;color:rgba(255,255,255,.88)"></div>
-        <button id="bk-add-portfolio" onclick="pfAddCurrent()" style="display:none;align-items:center;gap:6px;margin:0 0 20px;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.14);color:#fff;font-size:13px;font-weight:600;cursor:pointer">+ Aggiungi al portafoglio</button>
+        <button id="bk-add-portfolio" onclick="pfAddCurrent()" style="display:none;align-items:center;gap:6px;margin:0 0 20px;padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.14);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Aggiungi al portafoglio</button>
       </div>
     </div>
     <div class="bk-about" id="bk-about" style="display:none"></div>
@@ -4411,7 +4417,7 @@ function showPage(id){
     }
   });
   // Sync bottom nav
-  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio','promemoria'];
+  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio','centri'];
   const bnKey = _menuPages.includes(id) ? 'menu' : id;
   const bnItem = document.querySelector(`.bottom-nav-item[data-page="${bnKey}"]`);
   if(bnItem) bnItem.classList.add('active');
@@ -7371,18 +7377,15 @@ function showPazienteDetail(id){
       <div style="text-align:right;margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="savePazienteAnagrafica('${escapeAttr(id)}')">Salva anagrafica</button></div>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-    <div class="section-title">${visite.length} ${visite.length===1?'visita':'visite'}</div>
+    <div class="section-title pd-head" style="cursor:default"><span class="pd-lbl">Visite<span class="pd-badge">${visite.length}</span></span><button class="btn btn-sm btn-secondary" onclick="openVisitaForPaziente('${escapeAttr(id)}')">Carica visita</button></div>
     ${visite.map((v,i)=>_buildVisitaHTML(p,v,i)).join('')}
     ${canSint?`
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
       <button class="btn btn-secondary" onclick="sintetizzaReferti('${escapeAttr(id)}')" id="btn-storia-${escapeAttr(id)}">✦ ${sintLabel}</button>
     </div>
     <div id="storia-container-${escapeAttr(id)}"></div>`:''}
-    <div id="msg-box-${escapeAttr(id)}" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"></div>
-    <div id="prom-box-${escapeAttr(id)}" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
-    <div style="margin-top:16px">
-      <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${escapeAttr(id)}')">+ Carica visita</button>
-    </div>
+    <div id="prom-box-${escapeAttr(id)}" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"></div>
+    <div id="msg-box-${escapeAttr(id)}" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
       <button type="button" class="btn-del-paz" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:none;color:var(--warm);font-size:14px;cursor:pointer;padding:10px 4px;min-height:44px" data-pazid="${escapeAttr(id)}" data-action="delete-paziente"><svg class="ic"><use href="#ic-trash"/></svg> Elimina paziente</button>
     </div>`;
@@ -7392,6 +7395,9 @@ function showPazienteDetail(id){
   msgLoadPaziente(id); promRenderPaziente(id);
 }
 function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
+const _pdOpen={}; const _msgUnreadIds={};
+function pdToggle(key, force){ const el=document.getElementById(key); if(!el) return; const open=(force===undefined)?el.style.display==='none':!!force; _pdOpen[key]=open; el.style.display=open?'block':'none'; const h=document.getElementById(key+'-head'); if(h) h.classList.toggle('pd-open',open); if(open&&key.startsWith('msg-body-')){ const ids=_msgUnreadIds[key]||[]; if(ids.length){ _msgUnreadIds[key]=[]; supabaseClient.from('messaggi').update({letto_at:new Date().toISOString()}).in('id',ids).then(()=>msgRefreshNonLetti()); } } }
+function pdHead(key,label,n,warn,btn){ return '<div class="section-title pd-head'+(_pdOpen[key]?' pd-open':'')+'" id="'+key+'-head" onclick="pdToggle(\''+key+'\')"><span class="pd-lbl">'+label+'<span class="pd-badge'+(warn?' warn':'')+'">'+n+'</span><span class="pd-tri">&#9662;</span></span>'+(btn||'')+'</div>'; }
 
 // ── Messaggi paziente (lato medico, RLS diretta + api/msg-thread) — s11 ──────
 async function msgLoadPaziente(id){
@@ -7405,11 +7411,12 @@ async function msgLoadPaziente(id){
   const p=S.pazienti.find(x=>String(x.id)===String(id))||{};
   const _fb=(!p.email)?_contattiDaPrenotazioni(p):{email:''};
   const hasEmail=!!(p.email||_fb.email);
-  let h='<div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Messaggi';
-  h+='<button class="btn btn-sm btn-secondary" '+(hasEmail?'':'disabled title="Serve un\'email del paziente"')+' onclick="msgApri(\''+escapeAttr(id)+'\')">+ Nuovo canale</button></div>';
+  const _k='msg-body-'+escapeAttr(id); const _nl=(threads||[]).reduce((a,t)=>a+(t.messaggi||[]).filter(m=>m.direzione==='paziente'&&!m.letto_at).length,0);
+  let h=pdHead(_k,'Messaggi',(threads||[]).length,_nl>0,'<button class="btn btn-sm btn-secondary" '+(hasEmail?'':'disabled title="Serve un\'email del paziente"')+' onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);msgApri(\''+escapeAttr(id)+'\')">Contatta</button>');
+  h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="msg-new-'+escapeAttr(id)+'" style="display:none;margin:8px 0 12px"><textarea id="msg-new-txt-'+escapeAttr(id)+'" rows="3" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box" placeholder="Primo messaggio al paziente (facoltativo). Riceverà un link per leggere e rispondere, senza registrarsi."></textarea>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm btn-secondary" onclick="msgApri(\''+escapeAttr(id)+'\')">Annulla</button><button class="btn btn-sm btn-primary" onclick="msgApriConferma(\''+escapeAttr(id)+'\')">Apri canale e invia</button></div></div>';
-  if(!threads||!threads.length){ h+='<div style="font-size:13px;color:var(--ink3)">Nessun canale aperto. Apra un canale per scrivere al paziente: riceverà un link per leggere e rispondere, senza registrarsi.</div>'; box.innerHTML=h; return; }
+  if(!threads||!threads.length){ h+='<div style="font-size:13px;color:var(--ink3)">Nessun canale aperto. Apra un canale per scrivere al paziente: riceverà un link per leggere e rispondere, senza registrarsi.</div></div>'; box.innerHTML=h; return; }
   threads.forEach(t=>{
     const msgs=(t.messaggi||[]).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
     const nonLetti=msgs.filter(m=>m.direzione==='paziente'&&!m.letto_at).length;
@@ -7426,11 +7433,9 @@ async function msgLoadPaziente(id){
     }
     h+='</div></div>';
   });
-  box.innerHTML=h;
-  if(threads.some(t=>(t.messaggi||[]).some(m=>m.direzione==='paziente'&&!m.letto_at))){
-    const ids=[]; threads.forEach(t=>(t.messaggi||[]).forEach(m=>{ if(m.direzione==='paziente'&&!m.letto_at) ids.push(m.id); }));
-    supabaseClient.from('messaggi').update({letto_at:new Date().toISOString()}).in('id',ids).then(()=>msgRefreshNonLetti());
-  }
+  h+='</div>'; box.innerHTML=h;
+  const ids=[]; threads.forEach(t=>(t.messaggi||[]).forEach(m=>{ if(m.direzione==='paziente'&&!m.letto_at) ids.push(m.id); }));
+  _msgUnreadIds[_k]=ids; if(_pdOpen[_k]&&ids.length) pdToggle(_k,true);
 }
 async function msgApi(payload){
   const _jwt=await getAuthJwt();
@@ -7605,12 +7610,14 @@ async function promElimina(id){
 function promRenderPaziente(pazId){
   const box=document.getElementById('prom-box-'+pazId); if(!box) return;
   const mine=(S.promemoria||[]).filter(pr=>String(pr.paziente_id)===String(pazId));
-  let h='<div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Promemoria<button class="btn btn-sm btn-secondary" onclick="promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button></div>';
+  const _k='prom-body-'+escapeAttr(String(pazId));
+  let h=pdHead(_k,'Promemoria',mine.length,false,'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button>');
+  h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="prom-form-'+escapeAttr(String(pazId))+'" style="display:none;margin:8px 0 10px"><input id="prom-txt-'+escapeAttr(String(pazId))+'" class="form-input" maxlength="500" placeholder="Es. aprire il canale tra una settimana" style="width:100%;box-sizing:border-box">';
   h+='<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><input type="date" id="prom-data-'+escapeAttr(String(pazId))+'" class="form-input" value="'+fmt(new Date(Date.now()+7*86400000))+'"><button class="btn btn-sm btn-primary" onclick="promSalvaDaScheda(\''+escapeAttr(String(pazId))+'\')">Salva</button></div></div>';
   if(!mine.length) h+='<div style="font-size:13px;color:var(--ink3)">Nessun promemoria aperto.</div>';
   else h+=mine.map(pr=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)"><input type="checkbox" onchange="promFatto(\''+pr.id+'\',\''+escapeAttr(String(pazId))+'\')" style="margin-top:3px"><div><div style="font-size:14px">'+escapeHtml(pr.testo)+'</div><div style="font-size:12px;color:var(--ink3)">'+thFmt(pr.scadenza+'T12:00:00').slice(0,10)+'</div></div></div>').join('');
-  box.innerHTML=h;
+  h+='</div>'; box.innerHTML=h;
 }
 function promToggleForm(pazId){ const f=document.getElementById('prom-form-'+pazId); if(!f) return; f.style.display=f.style.display==='block'?'none':'block'; if(f.style.display==='block'){ const t=document.getElementById('prom-txt-'+pazId); if(t) t.focus(); } }
 async function promAdd({testo, scadenza, paziente_id, thread_id}){
@@ -9259,7 +9266,7 @@ function renderSpecAltre(){
     `<span class="tag-chip">${s}<button class="tag-chip-x chip-remove-spec" data-spec="${escapeAttr(s)}" title="Rimuovi">✕</button></span>`
   ).join('');
   const used = new Set([...(S.settings.specAltre||[]), specPrinc].filter(Boolean));
-  sel.innerHTML = '<option value="">+ Aggiungi specializzazione…</option>' +
+  sel.innerHTML = '<option value="">Aggiungi specializzazione…</option>' +
     SPECIALIZZAZIONI_UFFICIALI.filter(s => !used.has(s))
       .map(s => `<option value="${s}">${s}</option>`).join('');
 }
@@ -10708,7 +10715,9 @@ function _contattiDaPrenotazioni(p){
   });
   return { email, tel };
 }
-function renderPazienti(){
+const _PAZ_PAGE=30; let _pazShown=_PAZ_PAGE;
+function renderPazienti(more){
+  _pazShown = more===true ? _pazShown+_PAZ_PAGE : _PAZ_PAGE;
   const tEl=document.getElementById('pazienti-table');
   const cEl=document.getElementById('pazienti-list');
   if(!tEl||!cEl) return;
@@ -10755,8 +10764,10 @@ function renderPazienti(){
     tEl.insertAdjacentHTML('beforeend','<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>');
     return;
   }
-  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
-  cEl.innerHTML=list.map(_pazCardHTML).join('');
+  const shown=list.slice(0,_pazShown);
+  const moreBtn=list.length>shown.length?`<div class="paz-more"><button class="btn btn-secondary btn-sm" onclick="renderPazienti(true)">Mostra altri ${Math.min(_PAZ_PAGE,list.length-shown.length)}</button><span>${shown.length} di ${list.length}</span></div>`:'';
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+moreBtn;
+  cEl.innerHTML=shown.map(_pazCardHTML).join('')+moreBtn;
 }
 
 function _pazRowHTML(r){
@@ -10765,7 +10776,7 @@ function _pazRowHTML(r){
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> `:'')+btnVis;
+  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> `:'')+btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
@@ -10776,9 +10787,10 @@ function _pazRowHTML(r){
 }
 function _pazCardHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
-  const meta=[r.nascita,r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
+  const _cont=[r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
+  const meta=(r.nascita?`<span class="pm-nascita">${escapeHtml(r.nascita)}</span>`:'')+(_cont?`<span class="pm-contatti">${r.nascita?' \u00b7 ':''}${_cont}</span>`:'');
   const cVis=r.tipo==='paziente'
-    ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
+    ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-info">
@@ -12923,7 +12935,11 @@ _populateSpecSelect('setting-spec', '— seleziona —');
 @media (max-width:960px){#ast-fab{top:10px;right:12px}#ast-panel{top:60px;right:12px;height:min(540px,calc(100vh - 160px))}}
 body:has(.modal-overlay.open) #ast-fab.ast-visible{display:none}
 @media (max-width:768px){
-#ast-panel{top:0;left:0;right:0;bottom:0;width:100%;height:100dvh;max-height:100dvh;border-radius:0;border:none}
+#ast-panel{top:62px;right:12px;left:12px;bottom:auto;width:auto;height:auto;max-height:min(70dvh,calc(100dvh - 150px));background:transparent;border:none;box-shadow:none;border-radius:0}
+.ast-head{background:transparent;padding:0 0 6px;justify-content:flex-end}.ast-head span{display:none}.ast-head button{width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--ink2);font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center}
+#ast-panel.ast-open::before{content:"";position:fixed;inset:0;background:color-mix(in srgb,var(--paper) 58%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:-1}
+#ast-msgs{background:transparent;padding:4px 0;min-height:0}.ast-b.a,.ast-b.u{box-shadow:0 3px 12px rgba(0,0,0,.14)}.ast-b.a{align-self:flex-end;border-bottom-left-radius:12px;border-bottom-right-radius:4px}.ast-b.u{align-self:flex-start;border-bottom-right-radius:12px;border-bottom-left-radius:4px}.ast-b.s{background:color-mix(in srgb,var(--surface) 80%,transparent);border-radius:8px;padding:3px 8px}
+.ast-inrow{background:transparent;border-top:none;padding:8px 0 0;gap:0}#ast-in{box-shadow:0 3px 12px rgba(0,0,0,.14);padding-right:72px;border-radius:22px;min-height:44px}#ast-send{position:absolute;right:5px;top:calc(50% + 4px);transform:translateY(-50%);height:34px;padding:0 14px;border-radius:17px;font-size:13px}#ast-ph{left:14px;top:calc(50% + 4px);max-width:calc(100% - 100px)}
 .modal-close{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .booking-back{min-height:44px;display:inline-flex;align-items:center}
 .agenda-actions{display:grid !important;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
