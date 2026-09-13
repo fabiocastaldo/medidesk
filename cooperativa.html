@@ -7,7 +7,7 @@
 <title>Delphi~Med — Plancia cooperative</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Montserrat:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
@@ -28,7 +28,7 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .brandpane{flex:1.1;display:flex;flex-direction:column;justify-content:center;padding:56px;color:#fff;
   background:radial-gradient(130% 100% at 80% -10%,color-mix(in srgb,var(--brand-bright) 70%,transparent),transparent 62%),
              linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
-.brandpane .mark{font-family:'DM Serif Display',serif;font-size:34px;letter-spacing:.2px}
+.brandpane .mark{font-family:'Montserrat',sans-serif;font-weight:700;letter-spacing:-.2px;font-size:30px}
 .brandpane .payoff{margin-top:6px;font-size:15px;color:var(--brand-soft)}
 .brandpane ul{list-style:none;margin-top:34px;display:flex;flex-direction:column;gap:14px}
 .brandpane li{display:flex;gap:10px;font-size:14.5px;line-height:1.5;color:rgba(255,255,255,.92)}
@@ -233,11 +233,24 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .cov-zero{background:var(--paper);color:var(--ink3);font-weight:400}
 footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
+.card-logo{display:none}
 @media (max-width:840px){
   .shell{flex-direction:column}
-  .brandpane{padding:36px 24px}
+  .brandpane{display:none}
   .cardpane{padding:24px 16px 40px}
+  .card-logo{display:block;text-align:center;margin-bottom:18px}
+  .card-logo .mark{font-family:'Montserrat',sans-serif;font-weight:700;letter-spacing:-.2px;font-size:28px;color:var(--brand-deep);line-height:1}
+  .card-logo .payoff{margin-top:6px;font-size:14px;color:var(--ink3)}
 }
+/* ── login come auth della SPA: blocco centrato, brand 340px con punti a rotazione ── */
+#view-login.shell{min-height:100vh;align-items:center;justify-content:center;padding:24px 24px 72px;position:relative;background:linear-gradient(135deg,var(--brand-bright) 0%,var(--brand-mid) 60%,var(--brand-deep) 100%)}
+#view-login .brandpane{flex:none;width:340px;padding:48px 40px;justify-content:center;background:radial-gradient(120% 80% at 85% -10%,rgba(255,255,255,.18),transparent 60%),linear-gradient(160deg,var(--brand-mid),var(--brand-deep))}
+#view-login .brandpane ul{margin-top:32px;gap:18px}#view-login .brandpane li{transition:opacity .45s ease;opacity:.92}#view-login .brandpane .payoff{opacity:.85;font-size:14px;color:#fff}
+#view-login .cardpane{flex:1;padding:40px 36px;background:#fff}#view-login .card{max-width:none;border:none;box-shadow:none;padding:0;border-radius:0}
+#view-login .login-foot{position:absolute;bottom:20px;left:0;right:0;text-align:center;font-size:12px}#view-login .login-foot a{color:rgba(255,255,255,.85);text-decoration:underline}
+@media (min-width:841px){#view-login .login-shell{display:flex;width:100%;max-width:860px;border-radius:20px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25)}}
+@media (max-width:840px){#view-login .login-shell{width:100%;max-width:400px}#view-login .cardpane{border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.25);padding:28px 20px}#view-login .card-logo .mark{color:var(--ink)}}
+
 @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
 .paz-row{display:block;width:100%;text-align:left;padding:9px 12px;margin:4px 0;border:1px solid #dfe5e4;border-radius:8px;background:#fff;cursor:pointer;font-size:13.5px}
 .paz-row:hover{border-color:var(--brand-deep);background:#f6faf9}
@@ -256,6 +269,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
 <!-- ══ ACCESSO ══ -->
 <div id="view-login" class="shell hidden">
+ <div class="login-shell">
   <div class="brandpane">
     <div class="mark">Delphi~Med</div>
     <div class="payoff">La regia dell'organizzazione</div>
@@ -267,7 +281,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   </div>
   <div class="cardpane">
     <div class="card">
-      <h1>Plancia organizzazioni</h1>
+      <div class="card-logo"><div class="mark">Delphi~Med</div><div class="payoff">La regia dell'organizzazione</div></div>
       <div style="display:flex;gap:6px;margin:14px 0 16px;background:#eef2f1;border-radius:10px;padding:4px">
         <button type="button" class="login-mode active" id="mode-admin" onclick="setLoginMode('admin')">Amministratore</button>
         <button type="button" class="login-mode" id="mode-seg" onclick="setLoginMode('seg')">Segreteria</button>
@@ -319,13 +333,15 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </span>
     </div>
   </div>
+ </div>
+ <div class="login-foot"><a href="https://delphi-med.com">&larr; Torna alla home</a></div>
 </div>
 
 <!-- ══ PLANCIA ══ -->
 <div id="view-plancia" class="plancia hidden">
   <aside class="side">
     <div class="mark">Delphi~Med</div>
-    <div class="payoff">Plancia organizzazione</div>
+    <div class="payoff">La regia dell'organizzazione</div>
     <nav>
       <button class="sitem active" id="tabbtn-medici" onclick="switchTab('medici')">Medici</button>
       <button class="sitem" id="tabbtn-segreteria" onclick="switchTab('segreteria')">Segreteria</button>
@@ -840,6 +856,19 @@ function applyRuolo(){
   if(!admin) switchTab('giornata');
 }
 
+const COOP_POINTS=['Gestisci le sedi e i medici della tua organizzazione da un\'unica plancia','Assegna i turni: l\'agenda di ogni medico si aggiorna da sola','Tieni sotto controllo l\'occupazione di ogni sede','La segreteria prenota per conto dei medici, con accessi dedicati e protetti','Statistiche e compensi per medico e per sede, in tempo reale','Nessuna migrazione: i medici restano sulla loro agenda'];
+function initCoopPoints(){
+  if(window._cpInt) return;
+  const lis=document.querySelectorAll('#view-login .brandpane li'); if(!lis.length) return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let base=0;
+  window._cpInt=setInterval(function(){
+    const v=document.getElementById('view-login'); if(!v||v.classList.contains('hidden')) return;
+    base=(base+1)%COOP_POINTS.length;
+    lis.forEach(function(li,i){ setTimeout(function(){ li.style.opacity='0'; setTimeout(function(){ li.textContent=COOP_POINTS[(base+i*2)%COOP_POINTS.length]; li.style.opacity=''; },450); }, i*140); });
+  },4200);
+}
+document.addEventListener('DOMContentLoaded', initCoopPoints);
 function renderPlancia(){
   applyRuolo();
   const d = _plancia;
