@@ -295,12 +295,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .turno-row{display:flex;align-items:center;gap:8px;font-size:13px;background:none;border-radius:0;padding:5px 2px}
 .giornata-row{display:flex;align-items:center;gap:8px;font-size:13px;background:none;border-radius:0;padding:5px 2px}
 .turno-row span{flex:1;color:var(--ink2)}
-.centro-actions{display:flex;align-items:center;gap:2px}
+.centro-actions{display:flex;align-items:center;gap:6px}.centro-actions .centro-act-danger{color:var(--warm)}
 .centro-act{background:none;border:none;color:var(--ink3);padding:4px 5px;font-size:14px;line-height:1;cursor:pointer;border-radius:var(--r-sm);transition:color .15s,background .15s}
 .centro-act:hover{color:var(--ink);background:var(--surface2)}
 .centro-act-danger{margin-left:10px}
 .centro-act-danger:hover{color:var(--warm)}
-@media(max-width:768px){.centro-act{padding:8px 10px}}
+@media(max-width:768px){.centro-header>.centro-actions{flex:0 0 100%;justify-content:flex-end;margin-top:4px}.centro-header>.centro-actions .btn{flex:1 1 0;text-align:center}}
 .section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:600;margin-bottom:12px}
 
 /* ── TAG EDITOR ── */
@@ -919,7 +919,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
 .chart-empty{text-align:center;color:var(--ink3);font-size:13px;padding:20px}
 
+.stats-range{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.stats-range-lbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px}
 @media(max-width:768px){
+  .stats-period-bar{gap:8px}.stats-period-bar>.stats-period-btn{flex:1 1 0;padding:9px 4px;font-size:12.5px;text-align:center}.stats-range{flex:0 0 100%;margin-top:2px}.stats-range-lbl{flex:1 1 0;min-width:0}.stats-range-lbl input{flex:1;width:auto;min-width:0}.stats-range>.stats-period-btn{flex:0 0 100%}
   .stats-kpi-row{grid-template-columns:repeat(2,1fr)}
   .stats-grid-2{grid-template-columns:1fr}
   .stats-kpi-value{font-size:22px}
@@ -1572,7 +1574,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div id="page-agenda" class="page">
       <div class="page-header">
         <div><div class="page-title">Agenda</div><div class="page-subtitle">Appuntamenti e prenotazioni</div></div>
-        <div class="agenda-actions" style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="importaGiornata()">Importa giornata</button><button class="btn btn-secondary" onclick="openOverbookingFromAgenda()">Overbooking</button><button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button></div>
+        <div class="agenda-actions" style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" onclick="importaGiornata()">Importa giornata</button><button class="btn btn-secondary" onclick="openOverbookingFromAgenda()">+ Overbooking</button><button class="btn btn-primary" onclick="openAppuntamentoFromAgenda()">+ Appuntamento</button></div>
       </div>
       <div style="margin-bottom:16px">
         <div class="view-toggle">
@@ -1833,9 +1835,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <button class="stats-period-btn" data-period="90" onclick="setStatsPeriod(90)">Trimestre</button>
         <button class="stats-period-btn" data-period="365" onclick="setStatsPeriod(365)">Anno</button>
         <button class="stats-period-btn" data-period="0" onclick="setStatsPeriod(0)">Tutto</button>
-        <input type="date" id="stats-dal" class="stats-period-date" aria-label="Dal">
-        <input type="date" id="stats-al" class="stats-period-date" aria-label="Al">
-        <button class="stats-period-btn" id="stats-range-btn" onclick="applyStatsRange()">Intervallo</button>
+        <div class="stats-range">
+          <label class="stats-range-lbl"><span>Dal</span><input type="date" id="stats-dal" class="stats-period-date" aria-label="Dal"></label>
+          <label class="stats-range-lbl"><span>Al</span><input type="date" id="stats-al" class="stats-period-date" aria-label="Al"></label>
+          <button class="stats-period-btn" id="stats-range-btn" onclick="applyStatsRange()">Applica intervallo</button>
+        </div>
       </div>
 
       <!-- Empty state -->
@@ -4803,7 +4807,7 @@ function renderPrestazioni(){
       if(p.tipo==='percentuale'){ comp = (p.prezzo!=null) ? (_eur((Number(p.compenso)/100)*Number(p.prezzo))+' &euro; ('+Number(p.compenso).toFixed(0)+'%)') : (Number(p.compenso).toFixed(0)+'% (prezzo mancante)'); }
       else { comp = _eur(p.compenso)+' &euro;'; }
       const stato = (p.attiva===false) ? ' &middot; sospesa' : '';
-      return `<div style="padding:6px 0;display:flex;align-items:center;justify-content:space-between"><div><strong>${escapeAttr(p.tipo_visita)}</strong><div style="font-size:12px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}${stato}</div></div><div class="centro-actions"><button class="centro-act" onclick="openPrestazioneModal('${p.id}')" title="Modifica"><svg class="ic"><use href="#ic-edit"/></svg></button><button class="centro-act centro-act-danger" onclick="removePrestazione('${p.id}')" title="Elimina"><svg class="ic"><use href="#ic-trash"/></svg></button></div></div>`;
+      return `<div style="padding:6px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div style="min-width:0;flex:1"><strong>${escapeAttr(p.tipo_visita)}</strong><div style="font-size:12px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}${stato}</div></div><div class="centro-actions"><button class="centro-act" onclick="openPrestazioneModal('${p.id}')" title="Modifica"><svg class="ic"><use href="#ic-edit"/></svg></button><button class="centro-act centro-act-danger" onclick="removePrestazione('${p.id}')" title="Elimina"><svg class="ic"><use href="#ic-trash"/></svg></button></div></div>`;
     }).join('');
     html += '</div></div>';
   }
@@ -5153,9 +5157,9 @@ function renderCentroCard(c, isActive){
         ${isActive && c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-secondary" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button> <button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
         
         <div class="centro-actions">
-          ${c.gestione!=='cooperativa'?`<button class="centro-act" onclick="openEditCentro('${c.id}')" title="Modifica centro"><svg class="ic"><use href="#ic-edit"/></svg></button>`:''}
-          <button class="centro-act" onclick="toggleCentro('${c.id}')" title="${isActive?'Disattiva':'Riattiva'}">${isActive?'⏸':'▶'}</button>
-          <button class="centro-act centro-act-danger" onclick="deleteCentro('${c.id}')" title="Elimina centro">✕</button>
+          ${c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-secondary" onclick="openEditCentro('${c.id}')">Modifica</button>`:''}
+          <button class="btn btn-sm btn-secondary" onclick="toggleCentro('${c.id}')">${isActive?'Sospendi':'Riattiva'}</button>
+          <button class="btn btn-sm btn-secondary centro-act-danger" onclick="deleteCentro('${c.id}')">Elimina</button>
         </div>
       </div>
       ${isActive ? `
