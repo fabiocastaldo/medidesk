@@ -450,6 +450,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
 .pd-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}.pd-lbl{display:inline-flex;align-items:center;gap:7px}.pd-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--bg2, rgba(0,0,0,.06));color:var(--ink2);font-size:11px;font-weight:700;letter-spacing:0}.pd-badge.warn{background:var(--warm);color:#fff}.pd-tri{display:inline-block;transition:transform .15s;font-size:12px}.pd-head.pd-open .pd-tri{transform:rotate(180deg)}.pd-head .btn{min-width:122px;text-align:center;justify-content:center;flex-shrink:0}
 @media(max-width:768px){#modal-paziente .field-row{flex-direction:column;gap:3px}#modal-paziente .field-key{min-width:0;padding-top:0}#modal-paziente .field-val{width:100%}#modal-paziente .paz-edit-input{max-width:none;width:100%;box-sizing:border-box;font-size:15px}}
+.paz-more{display:flex;align-items:center;justify-content:center;gap:14px;padding:16px 0 6px;font-size:12.5px;color:var(--ink3)}
+@media(max-width:768px){#page-pazienti .search-bar{position:sticky;top:63px;z-index:40;background:var(--bg);padding:8px 0 6px;margin-bottom:12px}}
 @media(min-width:961px){#pazienti-list{display:none}}
 @media(max-width:960px){#pazienti-table{display:none}}
 @media(max-width:768px){.paziente-card{flex-wrap:wrap;padding:12px 14px;gap:8px 10px}.paziente-info{flex:1 1 0;min-width:0}.paziente-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.paziente-card>div:last-child{flex:0 0 100%;justify-content:stretch;gap:6px}.paziente-card>div:last-child>span{flex:0 0 100%;text-align:right;margin-bottom:-2px}.paziente-card .paz-act{flex:1 1 0;margin-left:0;padding:8px 4px;min-height:36px;font-size:12px;text-align:center}.paziente-card{position:relative}.paziente-card .pm-contatti{display:none}.paziente-card>div:last-child>span{position:absolute;top:12px;right:14px;flex:none;margin:0}.paziente-card .paziente-name{padding-right:70px}#page-pazienti .search-bar{gap:8px}#page-pazienti .search-input-wrap{flex:0 0 100%;min-width:0!important}#page-pazienti .paz-filter-sel{flex:1 1 0;min-width:0;width:auto}}
@@ -10712,7 +10714,9 @@ function _contattiDaPrenotazioni(p){
   });
   return { email, tel };
 }
-function renderPazienti(){
+const _PAZ_PAGE=30; let _pazShown=_PAZ_PAGE;
+function renderPazienti(more){
+  _pazShown = more===true ? _pazShown+_PAZ_PAGE : _PAZ_PAGE;
   const tEl=document.getElementById('pazienti-table');
   const cEl=document.getElementById('pazienti-list');
   if(!tEl||!cEl) return;
@@ -10759,8 +10763,10 @@ function renderPazienti(){
     tEl.insertAdjacentHTML('beforeend','<div style="text-align:center;padding:40px;color:var(--ink3)">Nessun paziente trovato</div>');
     return;
   }
-  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${list.map(_pazRowHTML).join('')}</tbody></table>`;
-  cEl.innerHTML=list.map(_pazCardHTML).join('');
+  const shown=list.slice(0,_pazShown);
+  const more=list.length>shown.length?`<div class="paz-more"><button class="btn btn-secondary btn-sm" onclick="renderPazienti(true)">Mostra altri ${Math.min(_PAZ_PAGE,list.length-shown.length)}</button><span>${shown.length} di ${list.length}</span></div>`:'';
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+more;
+  cEl.innerHTML=shown.map(_pazCardHTML).join('')+more;
 }
 
 function _pazRowHTML(r){
