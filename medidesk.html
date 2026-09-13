@@ -1606,7 +1606,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div id="view-ferie" style="display:none">
         <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div style="font-size:13px;color:var(--ink2)">Periodi di ferie e chiusura studio</div>
-          <button class="btn btn-primary btn-sm" onclick="openModalChiusura()">+ Aggiungi chiusura</button>
+          <button class="btn btn-primary btn-sm" onclick="openModalChiusura()">Aggiungi chiusura</button>
         </div>
         <div id="chiusure-list"></div>
       </div>
@@ -1656,7 +1656,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div id="tipi-visita-list" class="tag-editor"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <input class="form-input" id="new-tipo-visita" placeholder="es. Pre-chirurgica" style="flex:1" onkeydown="if(event.key==='Enter')addTipoVisita()" onblur="this.value=capitalizeName(this.value)">
-            <button class="btn btn-primary" onclick="addTipoVisita()">+ Aggiungi</button>
+            <button class="btn btn-primary" onclick="addTipoVisita()">Aggiungi</button>
           </div>
         </div></div>
       </div>
@@ -1668,7 +1668,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div id="aree-list" class="tag-editor"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <input class="form-input" id="new-area" placeholder="es. Ginocchio" style="flex:1" onkeydown="if(event.key==='Enter')addArea()" onblur="this.value=capitalizeName(this.value)">
-            <button class="btn btn-primary" onclick="addArea()">+ Aggiungi</button>
+            <button class="btn btn-primary" onclick="addArea()">Aggiungi</button>
           </div>
         </div></div>
       </div>
@@ -1732,7 +1732,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <label class="form-label">Altre specializzazioni <span style="font-size:12px;font-weight:400;color:var(--ink3)">(opzionali)</span></label>
             <div id="spec-altre-list" class="tag-editor" style="margin-bottom:8px"></div>
             <select class="form-input" id="setting-spec-altre-select" onchange="addSpecAltra(this.value)">
-              <option value="">+ Aggiungi specializzazione…</option>
+              <option value="">Aggiungi specializzazione…</option>
             </select>
           </div>
           <!-- Slug -->
@@ -1785,7 +1785,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div id="lingue-list" class="tag-editor" style="margin-bottom:8px"></div>
           <div style="display:flex;gap:8px">
             <input class="form-input" id="new-lingua" placeholder="es. Inglese" style="flex:1" onkeydown="if(event.key==='Enter')addLingua()" onblur="this.value=capitalizeWords(this.value.trim())">
-            <button class="btn btn-secondary" onclick="addLingua()">+ Aggiungi</button>
+            <button class="btn btn-secondary" onclick="addLingua()">Aggiungi</button>
           </div>
         </div></div>
       </div>
@@ -9266,7 +9266,7 @@ function renderSpecAltre(){
     `<span class="tag-chip">${s}<button class="tag-chip-x chip-remove-spec" data-spec="${escapeAttr(s)}" title="Rimuovi">✕</button></span>`
   ).join('');
   const used = new Set([...(S.settings.specAltre||[]), specPrinc].filter(Boolean));
-  sel.innerHTML = '<option value="">+ Aggiungi specializzazione…</option>' +
+  sel.innerHTML = '<option value="">Aggiungi specializzazione…</option>' +
     SPECIALIZZAZIONI_UFFICIALI.filter(s => !used.has(s))
       .map(s => `<option value="${s}">${s}</option>`).join('');
 }
