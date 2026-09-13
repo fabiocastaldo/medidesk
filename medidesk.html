@@ -10764,9 +10764,9 @@ function renderPazienti(more){
     return;
   }
   const shown=list.slice(0,_pazShown);
-  const more=list.length>shown.length?`<div class="paz-more"><button class="btn btn-secondary btn-sm" onclick="renderPazienti(true)">Mostra altri ${Math.min(_PAZ_PAGE,list.length-shown.length)}</button><span>${shown.length} di ${list.length}</span></div>`:'';
-  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+more;
-  cEl.innerHTML=shown.map(_pazCardHTML).join('')+more;
+  const moreBtn=list.length>shown.length?`<div class="paz-more"><button class="btn btn-secondary btn-sm" onclick="renderPazienti(true)">Mostra altri ${Math.min(_PAZ_PAGE,list.length-shown.length)}</button><span>${shown.length} di ${list.length}</span></div>`:'';
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+moreBtn;
+  cEl.innerHTML=shown.map(_pazCardHTML).join('')+moreBtn;
 }
 
 function _pazRowHTML(r){
