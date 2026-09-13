@@ -919,7 +919,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
 .chart-empty{text-align:center;color:var(--ink3);font-size:13px;padding:20px}
 
+.stats-range{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.stats-range-lbl{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px}
 @media(max-width:768px){
+  .stats-period-bar{gap:8px}.stats-period-bar>.stats-period-btn{flex:1 1 0;padding:9px 4px;font-size:12.5px;text-align:center}.stats-range{flex:0 0 100%;margin-top:2px}.stats-range-lbl{flex:1 1 0;min-width:0}.stats-range-lbl input{flex:1;width:auto;min-width:0}.stats-range>.stats-period-btn{flex:0 0 100%}
   .stats-kpi-row{grid-template-columns:repeat(2,1fr)}
   .stats-grid-2{grid-template-columns:1fr}
   .stats-kpi-value{font-size:22px}
@@ -1833,9 +1835,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <button class="stats-period-btn" data-period="90" onclick="setStatsPeriod(90)">Trimestre</button>
         <button class="stats-period-btn" data-period="365" onclick="setStatsPeriod(365)">Anno</button>
         <button class="stats-period-btn" data-period="0" onclick="setStatsPeriod(0)">Tutto</button>
-        <input type="date" id="stats-dal" class="stats-period-date" aria-label="Dal">
-        <input type="date" id="stats-al" class="stats-period-date" aria-label="Al">
-        <button class="stats-period-btn" id="stats-range-btn" onclick="applyStatsRange()">Intervallo</button>
+        <div class="stats-range">
+          <label class="stats-range-lbl"><span>Dal</span><input type="date" id="stats-dal" class="stats-period-date" aria-label="Dal"></label>
+          <label class="stats-range-lbl"><span>Al</span><input type="date" id="stats-al" class="stats-period-date" aria-label="Al"></label>
+          <button class="stats-period-btn" id="stats-range-btn" onclick="applyStatsRange()">Applica intervallo</button>
+        </div>
       </div>
 
       <!-- Empty state -->
