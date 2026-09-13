@@ -300,7 +300,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .centro-act:hover{color:var(--ink);background:var(--surface2)}
 .centro-act-danger{margin-left:10px}
 .centro-act-danger:hover{color:var(--warm)}
-@media(max-width:768px){.centro-actions{flex:0 0 100%;justify-content:flex-end;margin-top:4px}.centro-actions .btn{flex:1 1 0;text-align:center}}
+@media(max-width:768px){.centro-header>.centro-actions{flex:0 0 100%;justify-content:flex-end;margin-top:4px}.centro-header>.centro-actions .btn{flex:1 1 0;text-align:center}}
 .section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:600;margin-bottom:12px}
 
 /* ── TAG EDITOR ── */
@@ -4807,7 +4807,7 @@ function renderPrestazioni(){
       if(p.tipo==='percentuale'){ comp = (p.prezzo!=null) ? (_eur((Number(p.compenso)/100)*Number(p.prezzo))+' &euro; ('+Number(p.compenso).toFixed(0)+'%)') : (Number(p.compenso).toFixed(0)+'% (prezzo mancante)'); }
       else { comp = _eur(p.compenso)+' &euro;'; }
       const stato = (p.attiva===false) ? ' &middot; sospesa' : '';
-      return `<div style="padding:6px 0;display:flex;align-items:center;justify-content:space-between"><div><strong>${escapeAttr(p.tipo_visita)}</strong><div style="font-size:12px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}${stato}</div></div><div class="centro-actions"><button class="centro-act" onclick="openPrestazioneModal('${p.id}')" title="Modifica"><svg class="ic"><use href="#ic-edit"/></svg></button><button class="centro-act centro-act-danger" onclick="removePrestazione('${p.id}')" title="Elimina"><svg class="ic"><use href="#ic-trash"/></svg></button></div></div>`;
+      return `<div style="padding:6px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div style="min-width:0;flex:1"><strong>${escapeAttr(p.tipo_visita)}</strong><div style="font-size:12px;color:var(--ink3)">Paziente ${prezzo} &middot; Tu ${comp}${stato}</div></div><div class="centro-actions"><button class="centro-act" onclick="openPrestazioneModal('${p.id}')" title="Modifica"><svg class="ic"><use href="#ic-edit"/></svg></button><button class="centro-act centro-act-danger" onclick="removePrestazione('${p.id}')" title="Elimina"><svg class="ic"><use href="#ic-trash"/></svg></button></div></div>`;
     }).join('');
     html += '</div></div>';
   }
