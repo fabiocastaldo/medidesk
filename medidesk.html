@@ -2157,7 +2157,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="mnu-sec">
         <div class="mnu-sec-title">Gestione</div>
         <div class="mnu-grid">
-          <button class="mnu-item" onclick="showPage('promemoria')"><span class="mnu-ico"><svg class="ic"><use href="#ic-clock"/></svg></span><span class="mnu-lbl">Promemoria</span></button>
+          <button class="mnu-item" onclick="showPage('centri')"><span class="mnu-ico"><svg class="ic"><use href="#ic-center"/></svg></span><span class="mnu-lbl">Centri</span></button>
           <button class="mnu-item" onclick="showPage('prestazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Prestazioni</span></button>
           <button class="mnu-item" onclick="showPage('statistiche')"><span class="mnu-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="mnu-lbl">Statistiche</span></button>
           <button class="mnu-item" onclick="showPage('manutenzione-archivio')"><span class="mnu-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="mnu-lbl">Archivio</span></button>
@@ -2189,9 +2189,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <span class="bn-icon"><svg class="ic"><use href="#ic-users"/></svg></span>
       <span class="bn-label">Pazienti</span>
     </button>
-    <button class="bottom-nav-item" data-page="centri" onclick="showPage('centri')">
-      <span class="bn-icon"><svg class="ic"><use href="#ic-center"/></svg></span>
-      <span class="bn-label">Centri</span>
+    <button class="bottom-nav-item" data-page="promemoria" onclick="showPage('promemoria')">
+      <span class="bn-icon"><svg class="ic"><use href="#ic-clock"/></svg></span>
+      <span class="bn-label">Promemoria</span>
     </button>
     <button class="bottom-nav-item" data-page="menu" onclick="showPage('menu')">
       <span class="bn-icon"><svg class="ic"><use href="#ic-menu"/></svg></span>
@@ -4411,7 +4411,7 @@ function showPage(id){
     }
   });
   // Sync bottom nav
-  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio','promemoria'];
+  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio','centri'];
   const bnKey = _menuPages.includes(id) ? 'menu' : id;
   const bnItem = document.querySelector(`.bottom-nav-item[data-page="${bnKey}"]`);
   if(bnItem) bnItem.classList.add('active');
