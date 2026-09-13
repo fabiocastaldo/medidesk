@@ -7374,7 +7374,7 @@ function showPazienteDetail(id){
       <div style="text-align:right;margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="savePazienteAnagrafica('${escapeAttr(id)}')">Salva anagrafica</button></div>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-    <div class="section-title">${visite.length} ${visite.length===1?'visita':'visite'}</div>
+    <div class="section-title pd-head" style="cursor:default"><span class="pd-lbl">Visite<span class="pd-badge">${visite.length}</span></span><button class="btn btn-sm btn-secondary" onclick="openVisitaForPaziente('${escapeAttr(id)}')">Carica visita</button></div>
     ${visite.map((v,i)=>_buildVisitaHTML(p,v,i)).join('')}
     ${canSint?`
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
@@ -7383,9 +7383,6 @@ function showPazienteDetail(id){
     <div id="storia-container-${escapeAttr(id)}"></div>`:''}
     <div id="prom-box-${escapeAttr(id)}" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"></div>
     <div id="msg-box-${escapeAttr(id)}" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
-    <div style="margin-top:16px">
-      <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${escapeAttr(id)}')">+ Carica visita</button>
-    </div>
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
       <button type="button" class="btn-del-paz" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:none;color:var(--warm);font-size:14px;cursor:pointer;padding:10px 4px;min-height:44px" data-pazid="${escapeAttr(id)}" data-action="delete-paziente"><svg class="ic"><use href="#ic-trash"/></svg> Elimina paziente</button>
     </div>`;
@@ -7611,7 +7608,7 @@ function promRenderPaziente(pazId){
   const box=document.getElementById('prom-box-'+pazId); if(!box) return;
   const mine=(S.promemoria||[]).filter(pr=>String(pr.paziente_id)===String(pazId));
   const _k='prom-body-'+escapeAttr(String(pazId));
-  let h=pdHead(_k,'Promemoria',mine.length,false,'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button>');
+  let h=pdHead(_k,'Promemoria',mine.length,false,'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">Promemoria</button>');
   h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="prom-form-'+escapeAttr(String(pazId))+'" style="display:none;margin:8px 0 10px"><input id="prom-txt-'+escapeAttr(String(pazId))+'" class="form-input" maxlength="500" placeholder="Es. aprire il canale tra una settimana" style="width:100%;box-sizing:border-box">';
   h+='<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><input type="date" id="prom-data-'+escapeAttr(String(pazId))+'" class="form-input" value="'+fmt(new Date(Date.now()+7*86400000))+'"><button class="btn btn-sm btn-primary" onclick="promSalvaDaScheda(\''+escapeAttr(String(pazId))+'\')">Salva</button></div></div>';
