@@ -1804,7 +1804,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div class="page-title">Promemoria</div>
           <div class="page-subtitle">Cose da fare, con o senza paziente</div>
         </div>
-        <button class="btn btn-primary" onclick="promToggleFormPagina()">Promemoria</button>
+        <button class="btn btn-primary" onclick="promToggleFormPagina()">+ Promemoria</button>
       </div>
       <div class="card" id="prom-form-pagina" style="display:none;padding:16px 18px;margin-bottom:16px">
         <input id="prom-pg-txt" class="form-input" maxlength="500" placeholder="Es. richiamare per esito esami" style="width:100%;box-sizing:border-box">
@@ -7611,7 +7611,7 @@ function promRenderPaziente(pazId){
   const box=document.getElementById('prom-box-'+pazId); if(!box) return;
   const mine=(S.promemoria||[]).filter(pr=>String(pr.paziente_id)===String(pazId));
   const _k='prom-body-'+escapeAttr(String(pazId));
-  let h=pdHead(_k,'Promemoria',mine.length,false,'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">Promemoria</button>');
+  let h=pdHead(_k,'Promemoria',mine.length,false,'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button>');
   h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="prom-form-'+escapeAttr(String(pazId))+'" style="display:none;margin:8px 0 10px"><input id="prom-txt-'+escapeAttr(String(pazId))+'" class="form-input" maxlength="500" placeholder="Es. aprire il canale tra una settimana" style="width:100%;box-sizing:border-box">';
   h+='<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><input type="date" id="prom-data-'+escapeAttr(String(pazId))+'" class="form-input" value="'+fmt(new Date(Date.now()+7*86400000))+'"><button class="btn btn-sm btn-primary" onclick="promSalvaDaScheda(\''+escapeAttr(String(pazId))+'\')">Salva</button></div></div>';
@@ -10776,7 +10776,7 @@ function _pazRowHTML(r){
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> `:'')+btnVis;
+  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> `:'')+btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
@@ -10790,7 +10790,7 @@ function _pazCardHTML(r){
   const _cont=[r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
   const meta=(r.nascita?`<span class="pm-nascita">${escapeHtml(r.nascita)}</span>`:'')+(_cont?`<span class="pm-contatti">${r.nascita?' \u00b7 ':''}${_cont}</span>`:'');
   const cVis=r.tipo==='paziente'
-    ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
+    ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-info">
