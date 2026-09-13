@@ -12923,7 +12923,10 @@ _populateSpecSelect('setting-spec', '— seleziona —');
 @media (max-width:960px){#ast-fab{top:10px;right:12px}#ast-panel{top:60px;right:12px;height:min(540px,calc(100vh - 160px))}}
 body:has(.modal-overlay.open) #ast-fab.ast-visible{display:none}
 @media (max-width:768px){
-#ast-panel{top:auto;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom));width:100%;height:60dvh;max-height:60dvh;border-radius:14px 14px 0 0;border:none;border-top:1px solid var(--border);box-shadow:0 -8px 30px rgba(0,0,0,.22)}
+#ast-panel{top:62px;right:12px;left:12px;bottom:auto;width:auto;height:auto;max-height:min(70dvh,calc(100dvh - 150px));background:transparent;border:none;box-shadow:none;border-radius:0}
+.ast-head{background:transparent;padding:0 0 6px;justify-content:flex-end}.ast-head span{display:none}.ast-head button{width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--ink2);font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center}
+#ast-msgs{background:transparent;padding:4px 0;min-height:0}.ast-b.a,.ast-b.u{box-shadow:0 3px 12px rgba(0,0,0,.14)}.ast-b.s{background:color-mix(in srgb,var(--surface) 80%,transparent);border-radius:8px;padding:3px 8px}
+.ast-inrow{background:transparent;border-top:none;padding:8px 0 0}#ast-in{box-shadow:0 3px 12px rgba(0,0,0,.14)}#ast-send{box-shadow:0 3px 12px rgba(0,0,0,.18)}#ast-ph{left:12px}
 .modal-close{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .booking-back{min-height:44px;display:inline-flex;align-items:center}
 .agenda-actions{display:grid !important;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
