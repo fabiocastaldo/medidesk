@@ -233,10 +233,14 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .cov-zero{background:var(--paper);color:var(--ink3);font-weight:400}
 footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
+.card-logo{display:none}
 @media (max-width:840px){
   .shell{flex-direction:column}
-  .brandpane{padding:36px 24px}
+  .brandpane{display:none}
   .cardpane{padding:24px 16px 40px}
+  .card-logo{display:block;text-align:center;margin-bottom:18px}
+  .card-logo .mark{font-family:'DM Serif Display',serif;font-size:30px;color:var(--brand-deep);line-height:1}
+  .card-logo .payoff{margin-top:6px;font-size:14px;color:var(--ink3)}
 }
 @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
 .paz-row{display:block;width:100%;text-align:left;padding:9px 12px;margin:4px 0;border:1px solid #dfe5e4;border-radius:8px;background:#fff;cursor:pointer;font-size:13.5px}
@@ -267,7 +271,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   </div>
   <div class="cardpane">
     <div class="card">
-      <h1>Plancia organizzazioni</h1>
+      <div class="card-logo"><div class="mark">Delphi~Med</div><div class="payoff">La regia dell'organizzazione</div></div>
       <div style="display:flex;gap:6px;margin:14px 0 16px;background:#eef2f1;border-radius:10px;padding:4px">
         <button type="button" class="login-mode active" id="mode-admin" onclick="setLoginMode('admin')">Amministratore</button>
         <button type="button" class="login-mode" id="mode-seg" onclick="setLoginMode('seg')">Segreteria</button>
@@ -325,7 +329,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 <div id="view-plancia" class="plancia hidden">
   <aside class="side">
     <div class="mark">Delphi~Med</div>
-    <div class="payoff">Plancia organizzazione</div>
+    <div class="payoff">La regia dell'organizzazione</div>
     <nav>
       <button class="sitem active" id="tabbtn-medici" onclick="switchTab('medici')">Medici</button>
       <button class="sitem" id="tabbtn-segreteria" onclick="switchTab('segreteria')">Segreteria</button>
