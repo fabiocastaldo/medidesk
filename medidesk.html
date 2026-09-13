@@ -448,6 +448,8 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-act.is-erogata{color:#16a34a;border-color:#16a34a}
 .paz-act-erog{min-width:150px;text-align:center}
 .paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
+.pd-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}.pd-lbl{display:inline-flex;align-items:center;gap:7px}.pd-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--bg2, rgba(0,0,0,.06));color:var(--ink2);font-size:11px;font-weight:700;letter-spacing:0}.pd-badge.warn{background:var(--warm);color:#fff}.pd-tri{display:inline-block;transition:transform .15s;font-size:12px}.pd-head.pd-open .pd-tri{transform:rotate(180deg)}
+@media(max-width:768px){#modal-paziente .field-row{flex-direction:column;gap:3px}#modal-paziente .field-key{min-width:0;padding-top:0}#modal-paziente .field-val{width:100%}#modal-paziente .paz-edit-input{max-width:none;width:100%;box-sizing:border-box;font-size:15px}}
 @media(min-width:961px){#pazienti-list{display:none}}
 @media(max-width:960px){#pazienti-table{display:none}}
 @media(max-width:768px){.paziente-card{flex-wrap:wrap;padding:12px 14px;gap:8px 10px}.paziente-info{flex:1 1 0;min-width:0}.paziente-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.paziente-card>div:last-child{flex:0 0 100%;justify-content:stretch;gap:6px}.paziente-card>div:last-child>span{flex:0 0 100%;text-align:right;margin-bottom:-2px}.paziente-card .paz-act{flex:1 1 0;margin-left:0;padding:8px 4px;min-height:36px;font-size:12px;text-align:center}.paziente-card{position:relative}.paziente-card .pm-contatti{display:none}.paziente-card>div:last-child>span{position:absolute;top:12px;right:14px;flex:none;margin:0}.paziente-card .paziente-name{padding-right:70px}#page-pazienti .search-bar{gap:8px}#page-pazienti .search-input-wrap{flex:0 0 100%;min-width:0!important}#page-pazienti .paz-filter-sel{flex:1 1 0;min-width:0;width:auto}}
@@ -7379,8 +7381,8 @@ function showPazienteDetail(id){
       <button class="btn btn-secondary" onclick="sintetizzaReferti('${escapeAttr(id)}')" id="btn-storia-${escapeAttr(id)}">✦ ${sintLabel}</button>
     </div>
     <div id="storia-container-${escapeAttr(id)}"></div>`:''}
-    <div id="msg-box-${escapeAttr(id)}" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"></div>
-    <div id="prom-box-${escapeAttr(id)}" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
+    <div id="prom-box-${escapeAttr(id)}" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"></div>
+    <div id="msg-box-${escapeAttr(id)}" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
     <div style="margin-top:16px">
       <button class="btn btn-primary btn-sm" onclick="openVisitaForPaziente('${escapeAttr(id)}')">+ Carica visita</button>
     </div>
@@ -7393,6 +7395,9 @@ function showPazienteDetail(id){
   msgLoadPaziente(id); promRenderPaziente(id);
 }
 function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
+const _pdOpen={}; const _msgUnreadIds={};
+function pdToggle(key, force){ const el=document.getElementById(key); if(!el) return; const open=(force===undefined)?el.style.display==='none':!!force; _pdOpen[key]=open; el.style.display=open?'block':'none'; const h=document.getElementById(key+'-head'); if(h) h.classList.toggle('pd-open',open); if(open&&key.startsWith('msg-body-')){ const ids=_msgUnreadIds[key]||[]; if(ids.length){ _msgUnreadIds[key]=[]; supabaseClient.from('messaggi').update({letto_at:new Date().toISOString()}).in('id',ids).then(()=>msgRefreshNonLetti()); } } }
+function pdHead(key,label,n,warn,btn){ return '<div class="section-title pd-head'+(_pdOpen[key]?' pd-open':'')+'" id="'+key+'-head" onclick="pdToggle(\''+key+'\')"><span class="pd-lbl">'+label+'<span class="pd-badge'+(warn?' warn':'')+'">'+n+'</span><span class="pd-tri">&#9662;</span></span>'+(btn||'')+'</div>'; }
 
 // ── Messaggi paziente (lato medico, RLS diretta + api/msg-thread) — s11 ──────
 async function msgLoadPaziente(id){
@@ -7406,11 +7411,12 @@ async function msgLoadPaziente(id){
   const p=S.pazienti.find(x=>String(x.id)===String(id))||{};
   const _fb=(!p.email)?_contattiDaPrenotazioni(p):{email:''};
   const hasEmail=!!(p.email||_fb.email);
-  let h='<div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Messaggi';
-  h+='<button class="btn btn-sm btn-secondary" '+(hasEmail?'':'disabled title="Serve un\'email del paziente"')+' onclick="msgApri(\''+escapeAttr(id)+'\')">+ Nuovo canale</button></div>';
+  const _k='msg-body-'+escapeAttr(id); const _nl=(threads||[]).reduce((a,t)=>a+(t.messaggi||[]).filter(m=>m.direzione==='paziente'&&!m.letto_at).length,0);
+  let h=pdHead(_k,'Messaggi',(threads||[]).length,_nl>0,'<button class="btn btn-sm btn-secondary" '+(hasEmail?'':'disabled title="Serve un\'email del paziente"')+' onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);msgApri(\''+escapeAttr(id)+'\')">Contatta</button>');
+  h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="msg-new-'+escapeAttr(id)+'" style="display:none;margin:8px 0 12px"><textarea id="msg-new-txt-'+escapeAttr(id)+'" rows="3" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box" placeholder="Primo messaggio al paziente (facoltativo). Riceverà un link per leggere e rispondere, senza registrarsi."></textarea>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm btn-secondary" onclick="msgApri(\''+escapeAttr(id)+'\')">Annulla</button><button class="btn btn-sm btn-primary" onclick="msgApriConferma(\''+escapeAttr(id)+'\')">Apri canale e invia</button></div></div>';
-  if(!threads||!threads.length){ h+='<div style="font-size:13px;color:var(--ink3)">Nessun canale aperto. Apra un canale per scrivere al paziente: riceverà un link per leggere e rispondere, senza registrarsi.</div>'; box.innerHTML=h; return; }
+  if(!threads||!threads.length){ h+='<div style="font-size:13px;color:var(--ink3)">Nessun canale aperto. Apra un canale per scrivere al paziente: riceverà un link per leggere e rispondere, senza registrarsi.</div></div>'; box.innerHTML=h; return; }
   threads.forEach(t=>{
     const msgs=(t.messaggi||[]).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
     const nonLetti=msgs.filter(m=>m.direzione==='paziente'&&!m.letto_at).length;
@@ -7427,11 +7433,9 @@ async function msgLoadPaziente(id){
     }
     h+='</div></div>';
   });
-  box.innerHTML=h;
-  if(threads.some(t=>(t.messaggi||[]).some(m=>m.direzione==='paziente'&&!m.letto_at))){
-    const ids=[]; threads.forEach(t=>(t.messaggi||[]).forEach(m=>{ if(m.direzione==='paziente'&&!m.letto_at) ids.push(m.id); }));
-    supabaseClient.from('messaggi').update({letto_at:new Date().toISOString()}).in('id',ids).then(()=>msgRefreshNonLetti());
-  }
+  h+='</div>'; box.innerHTML=h;
+  const ids=[]; threads.forEach(t=>(t.messaggi||[]).forEach(m=>{ if(m.direzione==='paziente'&&!m.letto_at) ids.push(m.id); }));
+  _msgUnreadIds[_k]=ids; if(_pdOpen[_k]&&ids.length) pdToggle(_k,true);
 }
 async function msgApi(payload){
   const _jwt=await getAuthJwt();
@@ -7606,12 +7610,14 @@ async function promElimina(id){
 function promRenderPaziente(pazId){
   const box=document.getElementById('prom-box-'+pazId); if(!box) return;
   const mine=(S.promemoria||[]).filter(pr=>String(pr.paziente_id)===String(pazId));
-  let h='<div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Promemoria<button class="btn btn-sm btn-secondary" onclick="promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button></div>';
+  const _k='prom-body-'+escapeAttr(String(pazId));
+  let h=pdHead(_k,'Promemoria',mine.length,false,'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button>');
+  h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="prom-form-'+escapeAttr(String(pazId))+'" style="display:none;margin:8px 0 10px"><input id="prom-txt-'+escapeAttr(String(pazId))+'" class="form-input" maxlength="500" placeholder="Es. aprire il canale tra una settimana" style="width:100%;box-sizing:border-box">';
   h+='<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><input type="date" id="prom-data-'+escapeAttr(String(pazId))+'" class="form-input" value="'+fmt(new Date(Date.now()+7*86400000))+'"><button class="btn btn-sm btn-primary" onclick="promSalvaDaScheda(\''+escapeAttr(String(pazId))+'\')">Salva</button></div></div>';
   if(!mine.length) h+='<div style="font-size:13px;color:var(--ink3)">Nessun promemoria aperto.</div>';
   else h+=mine.map(pr=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)"><input type="checkbox" onchange="promFatto(\''+pr.id+'\',\''+escapeAttr(String(pazId))+'\')" style="margin-top:3px"><div><div style="font-size:14px">'+escapeHtml(pr.testo)+'</div><div style="font-size:12px;color:var(--ink3)">'+thFmt(pr.scadenza+'T12:00:00').slice(0,10)+'</div></div></div>').join('');
-  box.innerHTML=h;
+  h+='</div>'; box.innerHTML=h;
 }
 function promToggleForm(pazId){ const f=document.getElementById('prom-form-'+pazId); if(!f) return; f.style.display=f.style.display==='block'?'none':'block'; if(f.style.display==='block'){ const t=document.getElementById('prom-txt-'+pazId); if(t) t.focus(); } }
 async function promAdd({testo, scadenza, paziente_id, thread_id}){
