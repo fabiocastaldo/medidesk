@@ -450,7 +450,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
 @media(min-width:961px){#pazienti-list{display:none}}
 @media(max-width:960px){#pazienti-table{display:none}}
-@media(max-width:768px){.paziente-card{flex-wrap:wrap;padding:12px 14px;gap:8px 10px}.paziente-info{flex:1 1 0;min-width:0}.paziente-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.paziente-card>div:last-child{flex:0 0 100%;justify-content:stretch;gap:6px}.paziente-card>div:last-child>span{flex:0 0 100%;text-align:right;margin-bottom:-2px}.paziente-card .paz-act{flex:1 1 0;margin-left:0;padding:8px 4px;min-height:36px;font-size:12px;text-align:center}}
+@media(max-width:768px){.paziente-card{flex-wrap:wrap;padding:12px 14px;gap:8px 10px}.paziente-info{flex:1 1 0;min-width:0}.paziente-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.paziente-card>div:last-child{flex:0 0 100%;justify-content:stretch;gap:6px}.paziente-card>div:last-child>span{flex:0 0 100%;text-align:right;margin-bottom:-2px}.paziente-card .paz-act{flex:1 1 0;margin-left:0;padding:8px 4px;min-height:36px;font-size:12px;text-align:center}.paziente-card{position:relative}.paziente-card .pm-contatti{display:none}.paziente-card>div:last-child>span{position:absolute;top:12px;right:14px;flex:none;margin:0}.paziente-card .paziente-name{padding-right:70px}#page-pazienti .search-bar{gap:8px}#page-pazienti .search-input-wrap{flex:0 0 100%;min-width:0!important}#page-pazienti .paz-filter-sel{flex:1 1 0;min-width:0;width:auto}}
 
 @media(max-width:768px){
   .mc-day{min-height:48px;padding:3px}
@@ -10777,7 +10777,8 @@ function _pazRowHTML(r){
 }
 function _pazCardHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
-  const meta=[r.nascita,r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
+  const _cont=[r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
+  const meta=(r.nascita?`<span class="pm-nascita">${escapeHtml(r.nascita)}</span>`:'')+(_cont?`<span class="pm-contatti">${r.nascita?' \u00b7 ':''}${_cont}</span>`:'');
   const cVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
