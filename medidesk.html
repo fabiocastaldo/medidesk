@@ -13075,7 +13075,7 @@ const AST_REGISTRY = {
     const hit=(S.pazienti||[]).filter(p=>{
       const blob=[p.nome,p.cognome,p.email,p.telefono].filter(Boolean).join(' ').toLowerCase();
       return q.split(/\s+/).every(t=>blob.includes(t));
-    }).slice(0,8).map(p=>({ paziente_id:String(p.id), nome:p.nome||'', cognome:p.cognome||'', email:p.email||'', telefono:p.telefono||'' }));
+    }).slice(0,8).map(p=>({ paziente_id:String(p.id), nome:p.nome||'', cognome:p.cognome||'', email:p.email||'', telefono:p.telefono||'', nascita:p.nascita||'', inserito_il:p.creato||'' }));
     return { match:hit, nota: hit.length? undefined : 'nessun fascicolo trovato; potrebbe essere un prenotato senza fascicolo (pagina Pazienti, filtro Prenotati)' };
   },
 
@@ -13083,15 +13083,18 @@ const AST_REGISTRY = {
     const p=(S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id));
     if(!p) return { errore:'paziente non trovato' };
     showPage('pazienti'); showPazienteDetail(p.id);
-    return { ok:true, paziente:(p.cognome||'')+' '+(p.nome||'') };
+    return { ok:true, paziente:{ cognome:p.cognome||'', nome:p.nome||'', nascita:p.nascita||'', email:p.email||'', telefono:p.telefono||'', inserito_il:p.creato||'', n_visite:(p.visite||[]).length } };
   },
 
   prepara_appuntamento(inp){
+    closeModal('modal-paziente');
     showPage('agenda');
     if(inp.data){ if(typeof A!=='undefined') A.prefillDate=String(inp.data); if(typeof S!=='undefined') S.selectedDay=String(inp.data); }
     openAppuntamentoFromAgenda();
-    setTimeout(()=>{ const n=document.getElementById('appt-nome'), c=document.getElementById('appt-cognome'), t=document.getElementById('appt-tel');
-      if(n&&inp.nome) n.value=inp.nome; if(c&&inp.cognome) c.value=inp.cognome; if(t&&inp.telefono) t.value=inp.telefono; }, 250);
+    setTimeout(()=>{ const n=document.getElementById('appt-nome'), c=document.getElementById('appt-cognome'), t=document.getElementById('appt-tel'), e=document.getElementById('appt-email');
+      if(n&&inp.nome) n.value=inp.nome; if(c&&inp.cognome) c.value=inp.cognome; if(t&&inp.telefono) t.value=inp.telefono; if(e&&inp.email) e.value=inp.email;
+      const ti=document.getElementById('appt-tipo'); if(ti&&inp.tipo){ const w=String(inp.tipo).toLowerCase().trim(); const opt=[...ti.options].find(o=>o.value.toLowerCase().trim()===w||o.textContent.toLowerCase().trim()===w); if(opt) ti.value=opt.value; }
+      const ar=document.getElementById('appt-area'); if(ar&&inp.area){ const wa=String(inp.area).toLowerCase().trim(); const oa=[...ar.options].find(o=>o.value.toLowerCase().trim()===wa||o.textContent.toLowerCase().trim()===wa); if(oa) ar.value=oa.value; } }, 250);
     return { ok:true, nota:'wizard aperto; il medico sceglie centro/slot e salva' };
   },
 
@@ -13116,6 +13119,20 @@ const AST_REGISTRY = {
   leggi_dati(inp){
     const arg=String(inp.argomento||'');
     const oggi=_astToday();
+    if(arg==='visite'){
+      const p=(S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id||''));
+      if(!p) return { errore:'serve un paziente_id valido: usa prima cerca_paziente' };
+      const k=d=>String(d||'').split('/').reverse().join('-');
+      const vs=(p.visite||[]).slice().sort((a,b)=>k(b.data).localeCompare(k(a.data))).slice(0,30)
+        .map(v=>({ data:v.data, luogo:v.luogo||'', tipo:v.tipo||'', ha_referto:!!(v.referto||v.foto_url) }));
+      return { paziente:(p.cognome||'')+' '+(p.nome||''), totale_visite:(p.visite||[]).length, visite:vs, ha_sintesi_clinica:!!p.sintesiEnc, nota:'solo dati amministrativi: i contenuti clinici si leggono nella scheda del paziente' };
+    }
+    if(arg==='pazienti'){
+      const rows=(S.pazienti||[]).slice();
+      if(String(inp.ordina||'')==='recenti') rows.sort((a,b)=>String(b.creato||'').localeCompare(String(a.creato||'')));
+      else rows.sort((a,b)=>((a.cognome||'')+' '+(a.nome||'')).localeCompare((b.cognome||'')+' '+(b.nome||''),'it'));
+      return { totale:rows.length, ordinati_per:String(inp.ordina||'')==='recenti'?'inserimento piu recente':'cognome', pazienti:rows.slice(0,100).map(p=>({ paziente_id:String(p.id), cognome:p.cognome||'', nome:p.nome||'', nascita:p.nascita||'', inserito_il:p.creato||'' })) };
+    }
     if(arg==='centri'){
       return { centri:(S.centri||[]).map(c=>({ nome:c.nome, indirizzo:c.indirizzo||'', attivo:c.attivo!==false, n_turni:(c.turni||[]).length })) };
     }
@@ -13143,7 +13160,7 @@ const AST_REGISTRY = {
     }
     if(arg==='prestazioni'){
       const rows=(S.prestazioniCentro||[]).filter(p=>(p.valido_dal||'')<=oggi);
-      return { prestazioni: rows.slice(0,60).map(p=>{
+      return { tipi_visita:(S.tipiVisita||[]), aree_tematiche:(S.areeTematiche||[]), prestazioni: rows.slice(0,60).map(p=>{
         const c=(S.centri||[]).find(x=>String(x.id)===String(p.centro_id));
         return { centro:c?c.nome:'', tipo:p.tipo_visita||'', importo:(p.importo!=null?p.importo:(p.prezzo!=null?p.prezzo:null)), valido_dal:p.valido_dal||null };
       }) };
