@@ -127,11 +127,11 @@ const TOOLS = [
   },
   {
     name: 'leggi_dati',
-    description: "Legge i dati del medico gia' caricati nel gestionale. Argomenti: 'turni' (orari settimanali per centro CON stato scadenza: e' qui che vedi i turni in scadenza), 'centri' (sedi), 'chiusure' (ferie/chiusure), 'prestazioni' (listino), 'appuntamenti' (di una data o intervallo: passa data oppure da/a), 'giornate_singole'. Usalo per qualunque domanda sui dati del medico prima di dire che non puoi.",
+    description: "Legge i dati del medico gia' caricati nel gestionale. Argomenti: 'turni' (orari settimanali per centro CON stato scadenza: e' qui che vedi i turni in scadenza), 'centri' (sedi), 'chiusure' (ferie/chiusure), 'prestazioni' (listino), 'appuntamenti' (di una data o intervallo: passa data oppure da/a), 'giornate_singole', 'pazienti' (elenco anagrafe: cognome, nome, nascita, id; max 100 righe piu' il totale). Usalo per qualunque domanda sui dati del medico prima di dire che non puoi.",
     input_schema: {
       type: 'object',
       properties: {
-        argomento: { type: 'string', enum: ['turni', 'centri', 'chiusure', 'prestazioni', 'appuntamenti', 'giornate_singole'] },
+        argomento: { type: 'string', enum: ['turni', 'centri', 'chiusure', 'prestazioni', 'appuntamenti', 'giornate_singole', 'pazienti'] },
         data: { type: 'string', description: 'YYYY-MM-DD, per appuntamenti di un giorno' },
         da: { type: 'string' },
         a: { type: 'string' }
@@ -177,7 +177,7 @@ REGOLE TASSATIVE
 4. Le domande cliniche non sono compito tuo: rimanda alle sezioni referti e fascicolo, non interpretare contenuti sanitari.
 5. Se cerca_paziente restituisce piu' match, chiedi quale prima di procedere.
 6. Per richieste di prima disponibilita' o primo slot libero: usa cerca_disponibilita, proponi al medico lo slot trovato (data, ora, centro), e solo dopo il suo ok chiama prepara_appuntamento con quella data. Non chiedere al medico dati che puoi trovare da solo con i tool.
-7. Per domande sui dati del medico (turni e loro scadenze, sedi, chiusure, listino prestazioni, appuntamenti di un giorno) usa leggi_dati con l'argomento giusto. Non rispondere 'non ho una funzione per questo' senza aver provato leggi_dati.
+7. Per domande sui dati del medico (turni e loro scadenze, sedi, chiusure, listino prestazioni, appuntamenti di un giorno, elenco pazienti) usa leggi_dati con l'argomento giusto. Non rispondere 'non ho una funzione per questo' senza aver provato leggi_dati.
 
 PERIMETRO OPERATIVO — cosa puoi fare TU con i tool, e nient'altro:
 - navigare tra le pagine (vai_a), cercare pazienti e aprire fascicoli, preparare appuntamenti, caricare visite, segnare erogata, scrivere a un paziente sul canale, creare e completare promemoria, leggere dati, messaggi e statistiche.
@@ -234,7 +234,7 @@ COME SI FA
 - Importare la giornata: Agenda, «Importa giornata», carica foto o PDF, controlla e conferma le righe estratte.
 - Spostare un appuntamento: trascinalo in Agenda; il sistema chiede conferma e propone la notifica al paziente.
 - Scrivere a un paziente: «Contatta» (dalla riga o dalla scheda), oppure chiedimelo: uso scrivi_paziente dopo il tuo ok. Il canale non e' per le urgenze e non serve per consegnare referti.
-- Riepiloghi: 'a quanti pazienti ho risposto questa settimana' -> leggi_messaggi settimana; 'promemoria di oggi' -> leggi_promemoria oggi. vai_a accetta anche la pagina 'promemoria'.`;
+- Riepiloghi: 'a quanti pazienti ho risposto questa settimana' -> leggi_messaggi settimana; 'promemoria di oggi' -> leggi_promemoria oggi; 'che pazienti ho' -> leggi_dati pazienti. vai_a accetta anche la pagina 'promemoria'.`;
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 

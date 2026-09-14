@@ -13116,6 +13116,10 @@ const AST_REGISTRY = {
   leggi_dati(inp){
     const arg=String(inp.argomento||'');
     const oggi=_astToday();
+    if(arg==='pazienti'){
+      const rows=(S.pazienti||[]).slice().sort((a,b)=>((a.cognome||'')+' '+(a.nome||'')).localeCompare((b.cognome||'')+' '+(b.nome||''),'it'));
+      return { totale:rows.length, pazienti:rows.slice(0,100).map(p=>({ paziente_id:String(p.id), cognome:p.cognome||'', nome:p.nome||'', nascita:p.nascita||'' })) };
+    }
     if(arg==='centri'){
       return { centri:(S.centri||[]).map(c=>({ nome:c.nome, indirizzo:c.indirizzo||'', attivo:c.attivo!==false, n_turni:(c.turni||[]).length })) };
     }
