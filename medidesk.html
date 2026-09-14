@@ -13092,7 +13092,8 @@ const AST_REGISTRY = {
     if(inp.data){ if(typeof A!=='undefined') A.prefillDate=String(inp.data); if(typeof S!=='undefined') S.selectedDay=String(inp.data); }
     openAppuntamentoFromAgenda();
     setTimeout(()=>{ const n=document.getElementById('appt-nome'), c=document.getElementById('appt-cognome'), t=document.getElementById('appt-tel'), e=document.getElementById('appt-email');
-      if(n&&inp.nome) n.value=inp.nome; if(c&&inp.cognome) c.value=inp.cognome; if(t&&inp.telefono) t.value=inp.telefono; if(e&&inp.email) e.value=inp.email; }, 250);
+      if(n&&inp.nome) n.value=inp.nome; if(c&&inp.cognome) c.value=inp.cognome; if(t&&inp.telefono) t.value=inp.telefono; if(e&&inp.email) e.value=inp.email;
+      const ti=document.getElementById('appt-tipo'); if(ti&&inp.tipo){ const w=String(inp.tipo).toLowerCase().trim(); const opt=[...ti.options].find(o=>o.value.toLowerCase().trim()===w||o.textContent.toLowerCase().trim()===w); if(opt) ti.value=opt.value; } }, 250);
     return { ok:true, nota:'wizard aperto; il medico sceglie centro/slot e salva' };
   },
 
@@ -13158,7 +13159,7 @@ const AST_REGISTRY = {
     }
     if(arg==='prestazioni'){
       const rows=(S.prestazioniCentro||[]).filter(p=>(p.valido_dal||'')<=oggi);
-      return { prestazioni: rows.slice(0,60).map(p=>{
+      return { tipi_visita:(S.tipiVisita||[]), prestazioni: rows.slice(0,60).map(p=>{
         const c=(S.centri||[]).find(x=>String(x.id)===String(p.centro_id));
         return { centro:c?c.nome:'', tipo:p.tipo_visita||'', importo:(p.importo!=null?p.importo:(p.prezzo!=null?p.prezzo:null)), valido_dal:p.valido_dal||null };
       }) };
