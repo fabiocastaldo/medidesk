@@ -230,7 +230,7 @@ PIANI, PROFILO, IMPOSTAZIONI, ARCHIVIO
 - «Piani»: abbonamento e fatturazione. «Profilo»: dati del medico, specializzazioni, firma. «Impostazioni»: preferenze e tema. «Archivio»: manutenzione e pulizia dati; in fondo la «Zona pericolosa» con «Elimina account».
 
 LOGIN ORGANIZZAZIONI
-- Pagina separata (/cooperative, link dalla home), payoff «La regia dell'organizzazione», ritorno con «Torna alla home». Non riguarda il tuo medico: tu assisti il medico loggato nel gestionale.
+- Pagina separata (/organizzazioni, link dalla home), payoff «La regia dell'organizzazione», ritorno con «Torna alla home». Non riguarda il tuo medico: tu assisti il medico loggato nel gestionale.
 
 COME SI FA
 - Prenotare: Agenda, «+ Appuntamento»; orario fuori griglia: «+ Overbooking».
