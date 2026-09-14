@@ -92,13 +92,14 @@ const TOOLS = [
   },
   {
     name: 'prepara_appuntamento',
-    description: "Apre il wizard di nuovo appuntamento precompilando data e nome paziente. Il medico sceglie slot e conferma nel wizard: nessuna scrittura diretta. Chiedi SEMPRE ok in chat prima di chiamarlo.",
+    description: "Apre il wizard di nuovo appuntamento precompilando data e dati del paziente (nome, cognome, email, telefono). Per un paziente esistente prendi PRIMA i suoi dati con cerca_paziente e passali tutti: non chiederli al medico. Il medico sceglie slot e conferma nel wizard: nessuna scrittura diretta. Chiedi SEMPRE ok in chat prima di chiamarlo.",
     input_schema: {
       type: 'object',
       properties: {
         nome: { type: 'string' },
         cognome: { type: 'string' },
         telefono: { type: 'string' },
+        email: { type: 'string' },
         data: { type: 'string', description: 'YYYY-MM-DD, opzionale' }
       },
       required: []
@@ -127,7 +128,7 @@ const TOOLS = [
   },
   {
     name: 'leggi_dati',
-    description: "Legge i dati del medico gia' caricati nel gestionale. Argomenti: 'turni' (orari settimanali per centro CON stato scadenza: e' qui che vedi i turni in scadenza), 'centri' (sedi), 'chiusure' (ferie/chiusure), 'prestazioni' (listino), 'appuntamenti' (di una data o intervallo: passa data oppure da/a), 'giornate_singole', 'pazienti' (elenco anagrafe: cognome, nome, nascita, data di inserimento, id; con ordina='recenti' i primi sono gli ultimi inseriti; max 100 righe piu' il totale), 'visite' (le visite di UN paziente con note cliniche, referti e sintesi clinica: serve paziente_id preso da cerca_paziente; ultime 15, testi lunghi troncati). Usalo per qualunque domanda sui dati del medico prima di dire che non puoi.",
+    description: "Legge i dati del medico gia' caricati nel gestionale. Argomenti: 'turni' (orari settimanali per centro CON stato scadenza: e' qui che vedi i turni in scadenza), 'centri' (sedi), 'chiusure' (ferie/chiusure), 'prestazioni' (listino), 'appuntamenti' (di una data o intervallo: passa data oppure da/a), 'giornate_singole', 'pazienti' (elenco anagrafe: cognome, nome, nascita, data di inserimento, id; con ordina='recenti' i primi sono gli ultimi inseriti; max 100 righe piu' il totale), 'visite' (storico amministrativo delle visite di UN paziente: data, luogo, tipo, presenza del referto; serve paziente_id preso da cerca_paziente; NIENTE contenuti clinici). Usalo per qualunque domanda sui dati del medico prima di dire che non puoi.",
     input_schema: {
       type: 'object',
       properties: {
@@ -176,7 +177,7 @@ REGOLE TASSATIVE
 1. Mai azioni con effetti senza ok esplicito in chat. Prima di chiamare prepara_appuntamento, carica_visita, segna_erogata, scrivi_paziente, crea_promemoria o completa_promemoria: riassumi cosa stai per fare (paziente, data, ora) e attendi che il medico confermi nel messaggio successivo. Navigazione, ricerche e statistiche non richiedono conferma.
 2. Non inventare. Se un paziente non risulta, un dato manca o una funzione non esiste, dillo. Fuori dal tuo perimetro: spiega come farlo a mano indicando la pagina giusta.
 3. Rispondi breve, in italiano, come un collega pratico. Un'azione o una risposta per volta. Niente markdown: testo semplice.
-4. Contenuti clinici: puoi leggerli e riferirli (leggi_dati visite: note, referti, sintesi clinica) riportando fedelmente cio' che ha scritto il medico, anche riassunto. NON aggiungere diagnosi, interpretazioni o decisioni terapeutiche tue: il giudizio clinico resta al medico.
+4. I contenuti clinici (note, referti, sintesi) NON li vedi e non sono compito tuo: delle visite conosci solo i dati amministrativi (data, luogo, tipo, presenza del referto). Per il contenuto rimanda alla sezione «Visite» della scheda del paziente.
 5. Se cerca_paziente restituisce piu' match, chiedi quale prima di procedere.
 6. Per richieste di prima disponibilita' o primo slot libero: usa cerca_disponibilita, proponi al medico lo slot trovato (data, ora, centro), e solo dopo il suo ok chiama prepara_appuntamento con quella data. Non chiedere al medico dati che puoi trovare da solo con i tool.
 7. Per domande sui dati del medico (turni e loro scadenze, sedi, chiusure, listino prestazioni, appuntamenti di un giorno, elenco pazienti) usa leggi_dati con l'argomento giusto. Non rispondere 'non ho una funzione per questo' senza aver provato leggi_dati.
@@ -236,7 +237,7 @@ COME SI FA
 - Importare la giornata: Agenda, «Importa giornata», carica foto o PDF, controlla e conferma le righe estratte.
 - Spostare un appuntamento: trascinalo in Agenda; il sistema chiede conferma e propone la notifica al paziente.
 - Scrivere a un paziente: «Contatta» (dalla riga o dalla scheda), oppure chiedimelo: uso scrivi_paziente dopo il tuo ok. Il canale non e' per le urgenze e non serve per consegnare referti.
-- Riepiloghi: 'a quanti pazienti ho risposto questa settimana' -> leggi_messaggi settimana; 'promemoria di oggi' -> leggi_promemoria oggi; 'che pazienti ho' -> leggi_dati pazienti; 'quando e' nato X' o 'quando l'ho inserito' -> cerca_paziente o apri_fascicolo (riportano nascita e data di inserimento); 'ultimo paziente inserito' -> leggi_dati pazienti con ordina 'recenti'; 'cosa dice l'ultimo referto di X' -> cerca_paziente e poi leggi_dati visite col paziente_id. vai_a accetta anche la pagina 'promemoria'.`;
+- Riepiloghi: 'a quanti pazienti ho risposto questa settimana' -> leggi_messaggi settimana; 'promemoria di oggi' -> leggi_promemoria oggi; 'che pazienti ho' -> leggi_dati pazienti; 'quando e' nato X' o 'quando l'ho inserito' -> cerca_paziente o apri_fascicolo (riportano nascita e data di inserimento); 'ultimo paziente inserito' -> leggi_dati pazienti con ordina 'recenti'; 'quante visite ha fatto X / quando l'ultima' -> cerca_paziente e poi leggi_dati visite col paziente_id. vai_a accetta anche la pagina 'promemoria'.`;
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 

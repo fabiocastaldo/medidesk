@@ -13090,8 +13090,8 @@ const AST_REGISTRY = {
     showPage('agenda');
     if(inp.data){ if(typeof A!=='undefined') A.prefillDate=String(inp.data); if(typeof S!=='undefined') S.selectedDay=String(inp.data); }
     openAppuntamentoFromAgenda();
-    setTimeout(()=>{ const n=document.getElementById('appt-nome'), c=document.getElementById('appt-cognome'), t=document.getElementById('appt-tel');
-      if(n&&inp.nome) n.value=inp.nome; if(c&&inp.cognome) c.value=inp.cognome; if(t&&inp.telefono) t.value=inp.telefono; }, 250);
+    setTimeout(()=>{ const n=document.getElementById('appt-nome'), c=document.getElementById('appt-cognome'), t=document.getElementById('appt-tel'), e=document.getElementById('appt-email');
+      if(n&&inp.nome) n.value=inp.nome; if(c&&inp.cognome) c.value=inp.cognome; if(t&&inp.telefono) t.value=inp.telefono; if(e&&inp.email) e.value=inp.email; }, 250);
     return { ok:true, nota:'wizard aperto; il medico sceglie centro/slot e salva' };
   },
 
@@ -13113,19 +13113,16 @@ const AST_REGISTRY = {
     return { ok:true, erogata:a.erogata===true, paziente:_astApptLabel(a), ora:a.ora };
   },
 
-  async leggi_dati(inp){
+  leggi_dati(inp){
     const arg=String(inp.argomento||'');
     const oggi=_astToday();
     if(arg==='visite'){
       const p=(S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id||''));
       if(!p) return { errore:'serve un paziente_id valido: usa prima cerca_paziente' };
-      const cut=(s,n)=>{ s=String(s||'').trim(); return s.length>n? s.slice(0,n)+' [...troncato]' : s; };
       const k=d=>String(d||'').split('/').reverse().join('-');
-      const vs=(p.visite||[]).slice().sort((a,b)=>k(b.data).localeCompare(k(a.data))).slice(0,15)
-        .map(v=>({ data:v.data, luogo:v.luogo||'', tipo:v.tipo||'', note_cliniche:cut(v.clinica,1200), referto:cut(v.referto,2000), foto_referto:!!v.foto_url }));
-      let sintesi=null;
-      if(p.sintesiEnc){ try{ sintesi=cut(await _decryptText(p.sintesiEnc),2000); }catch(e){ sintesi='presente ma non decifrabile su questo dispositivo'; } }
-      return { paziente:(p.cognome||'')+' '+(p.nome||''), totale_visite:(p.visite||[]).length, visite:vs, sintesi_clinica:sintesi, sintesi_generata_il:p.sintesiGenerataIl||null };
+      const vs=(p.visite||[]).slice().sort((a,b)=>k(b.data).localeCompare(k(a.data))).slice(0,30)
+        .map(v=>({ data:v.data, luogo:v.luogo||'', tipo:v.tipo||'', ha_referto:!!(v.referto||v.foto_url) }));
+      return { paziente:(p.cognome||'')+' '+(p.nome||''), totale_visite:(p.visite||[]).length, visite:vs, ha_sintesi_clinica:!!p.sintesiEnc, nota:'solo dati amministrativi: i contenuti clinici si leggono nella scheda del paziente' };
     }
     if(arg==='pazienti'){
       const rows=(S.pazienti||[]).slice();
