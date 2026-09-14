@@ -13087,6 +13087,7 @@ const AST_REGISTRY = {
   },
 
   prepara_appuntamento(inp){
+    closeModal('modal-paziente');
     showPage('agenda');
     if(inp.data){ if(typeof A!=='undefined') A.prefillDate=String(inp.data); if(typeof S!=='undefined') S.selectedDay=String(inp.data); }
     openAppuntamentoFromAgenda();

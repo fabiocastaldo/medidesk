@@ -83,7 +83,7 @@ const TOOLS = [
   },
   {
     name: 'apri_fascicolo',
-    description: 'Apre il fascicolo di un paziente (serve il paziente_id da cerca_paziente). Nessuna conferma necessaria.',
+    description: "Apre la scheda del paziente SULLO SCHERMO del medico (serve il paziente_id da cerca_paziente). Usalo SOLO se il medico chiede di vedere la scheda: per leggere i dati (email, telefono, nascita, visite) bastano cerca_paziente e leggi_dati, che non toccano lo schermo. Nessuna conferma necessaria.",
     input_schema: {
       type: 'object',
       properties: { paziente_id: { type: 'string' } },
