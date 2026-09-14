@@ -23,6 +23,9 @@
       ]
     }
   ],
+  "redirects": [
+    { "source": "/cooperative", "destination": "/organizzazioni", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
@@ -35,7 +38,7 @@
     { "source": "/p/(.*)", "destination": "/medidesk.html" },
     { "source": "/t/(.*)", "destination": "/medidesk.html" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
-    { "source": "/cooperative", "destination": "/cooperativa.html" },
+    { "source": "/organizzazioni", "destination": "/cooperativa.html" },
     { "source": "/((?!api/).*)", "destination": "/medidesk.html" }
   ]
 }

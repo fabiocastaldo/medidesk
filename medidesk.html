@@ -1040,7 +1040,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <button class="home-menu-btn" aria-label="Menu" aria-expanded="false" onclick="toggleHomeMenu(event)"><svg class="ic"><use href="#ic-menu"/></svg></button>
       <div class="home-menu-dd" id="home-menu-dd">
         <button onclick="closeHomeMenu();showLoginView('login')">Accesso medici</button>
-        <a href="/cooperative">Accesso organizzazioni</a>
+        <a href="/organizzazioni">Accesso organizzazioni</a>
       </div>
     </nav>
   </header>
@@ -1124,7 +1124,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <span class="hs-chip">Statistiche e compensi per medico e sede</span>
         </div>
         <div class="hs-cta rv">
-          <a class="hs-btn" href="/cooperative">Accedi</a>
+          <a class="hs-btn" href="/organizzazioni">Accedi</a>
           <button class="hs-btn hs-btn-ghost" onclick="openHomeContact('Richiesta demo Delphi~Med')">Richiedi una demo</button>
         </div>
       </div>
@@ -3406,7 +3406,7 @@ function checkSession(){
       if(_inPasswordRecovery){ return; }
       if(session && _isCoopSession(session)){
         console.log('[Delphi~Med] Sessione cooperativa: redirect alla plancia');
-        window.location.replace('/cooperative');
+        window.location.replace('/organizzazioni');
         return;
       }
       if(session){ showAppView(); } else { showAuthView(); }
@@ -3414,7 +3414,7 @@ function checkSession(){
       if(_inPasswordRecovery){ return; }
       if(_isCoopSession(session)){
         console.log('[Delphi~Med] Sessione cooperativa: redirect alla plancia');
-        window.location.replace('/cooperative');
+        window.location.replace('/organizzazioni');
         return;
       }
       showAppView();
