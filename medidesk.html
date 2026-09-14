@@ -13075,7 +13075,7 @@ const AST_REGISTRY = {
     const hit=(S.pazienti||[]).filter(p=>{
       const blob=[p.nome,p.cognome,p.email,p.telefono].filter(Boolean).join(' ').toLowerCase();
       return q.split(/\s+/).every(t=>blob.includes(t));
-    }).slice(0,8).map(p=>({ paziente_id:String(p.id), nome:p.nome||'', cognome:p.cognome||'', email:p.email||'', telefono:p.telefono||'' }));
+    }).slice(0,8).map(p=>({ paziente_id:String(p.id), nome:p.nome||'', cognome:p.cognome||'', email:p.email||'', telefono:p.telefono||'', nascita:p.nascita||'', inserito_il:p.creato||'' }));
     return { match:hit, nota: hit.length? undefined : 'nessun fascicolo trovato; potrebbe essere un prenotato senza fascicolo (pagina Pazienti, filtro Prenotati)' };
   },
 
@@ -13083,7 +13083,7 @@ const AST_REGISTRY = {
     const p=(S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id));
     if(!p) return { errore:'paziente non trovato' };
     showPage('pazienti'); showPazienteDetail(p.id);
-    return { ok:true, paziente:(p.cognome||'')+' '+(p.nome||'') };
+    return { ok:true, paziente:{ cognome:p.cognome||'', nome:p.nome||'', nascita:p.nascita||'', email:p.email||'', telefono:p.telefono||'', inserito_il:p.creato||'', n_visite:(p.visite||[]).length } };
   },
 
   prepara_appuntamento(inp){
@@ -13117,8 +13117,10 @@ const AST_REGISTRY = {
     const arg=String(inp.argomento||'');
     const oggi=_astToday();
     if(arg==='pazienti'){
-      const rows=(S.pazienti||[]).slice().sort((a,b)=>((a.cognome||'')+' '+(a.nome||'')).localeCompare((b.cognome||'')+' '+(b.nome||''),'it'));
-      return { totale:rows.length, pazienti:rows.slice(0,100).map(p=>({ paziente_id:String(p.id), cognome:p.cognome||'', nome:p.nome||'', nascita:p.nascita||'' })) };
+      const rows=(S.pazienti||[]).slice();
+      if(String(inp.ordina||'')==='recenti') rows.sort((a,b)=>String(b.creato||'').localeCompare(String(a.creato||'')));
+      else rows.sort((a,b)=>((a.cognome||'')+' '+(a.nome||'')).localeCompare((b.cognome||'')+' '+(b.nome||''),'it'));
+      return { totale:rows.length, ordinati_per:String(inp.ordina||'')==='recenti'?'inserimento piu recente':'cognome', pazienti:rows.slice(0,100).map(p=>({ paziente_id:String(p.id), cognome:p.cognome||'', nome:p.nome||'', nascita:p.nascita||'', inserito_il:p.creato||'' })) };
     }
     if(arg==='centri'){
       return { centri:(S.centri||[]).map(c=>({ nome:c.nome, indirizzo:c.indirizzo||'', attivo:c.attivo!==false, n_turni:(c.turni||[]).length })) };

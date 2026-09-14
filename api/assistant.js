@@ -74,7 +74,7 @@ const TOOLS = [
   },
   {
     name: 'cerca_paziente',
-    description: 'Cerca pazienti per nome, cognome, email o telefono tra fascicoli e prenotati. Restituisce i match con id. Usalo prima di aprire fascicoli o preparare azioni su un paziente. Se i match sono più di uno, chiedi al medico quale.',
+    description: 'Cerca pazienti per nome, cognome, email o telefono tra fascicoli e prenotati. Restituisce i match con id, data di nascita e data di inserimento. Usalo prima di aprire fascicoli o preparare azioni su un paziente. Se i match sono più di uno, chiedi al medico quale.',
     input_schema: {
       type: 'object',
       properties: { query: { type: 'string' } },
@@ -127,14 +127,15 @@ const TOOLS = [
   },
   {
     name: 'leggi_dati',
-    description: "Legge i dati del medico gia' caricati nel gestionale. Argomenti: 'turni' (orari settimanali per centro CON stato scadenza: e' qui che vedi i turni in scadenza), 'centri' (sedi), 'chiusure' (ferie/chiusure), 'prestazioni' (listino), 'appuntamenti' (di una data o intervallo: passa data oppure da/a), 'giornate_singole', 'pazienti' (elenco anagrafe: cognome, nome, nascita, id; max 100 righe piu' il totale). Usalo per qualunque domanda sui dati del medico prima di dire che non puoi.",
+    description: "Legge i dati del medico gia' caricati nel gestionale. Argomenti: 'turni' (orari settimanali per centro CON stato scadenza: e' qui che vedi i turni in scadenza), 'centri' (sedi), 'chiusure' (ferie/chiusure), 'prestazioni' (listino), 'appuntamenti' (di una data o intervallo: passa data oppure da/a), 'giornate_singole', 'pazienti' (elenco anagrafe: cognome, nome, nascita, data di inserimento, id; con ordina='recenti' i primi sono gli ultimi inseriti; max 100 righe piu' il totale). Usalo per qualunque domanda sui dati del medico prima di dire che non puoi.",
     input_schema: {
       type: 'object',
       properties: {
         argomento: { type: 'string', enum: ['turni', 'centri', 'chiusure', 'prestazioni', 'appuntamenti', 'giornate_singole', 'pazienti'] },
         data: { type: 'string', description: 'YYYY-MM-DD, per appuntamenti di un giorno' },
         da: { type: 'string' },
-        a: { type: 'string' }
+        a: { type: 'string' },
+        ordina: { type: 'string', enum: ['cognome', 'recenti'], description: "solo per argomento 'pazienti'" }
       },
       required: ['argomento']
     }
@@ -234,7 +235,7 @@ COME SI FA
 - Importare la giornata: Agenda, «Importa giornata», carica foto o PDF, controlla e conferma le righe estratte.
 - Spostare un appuntamento: trascinalo in Agenda; il sistema chiede conferma e propone la notifica al paziente.
 - Scrivere a un paziente: «Contatta» (dalla riga o dalla scheda), oppure chiedimelo: uso scrivi_paziente dopo il tuo ok. Il canale non e' per le urgenze e non serve per consegnare referti.
-- Riepiloghi: 'a quanti pazienti ho risposto questa settimana' -> leggi_messaggi settimana; 'promemoria di oggi' -> leggi_promemoria oggi; 'che pazienti ho' -> leggi_dati pazienti. vai_a accetta anche la pagina 'promemoria'.`;
+- Riepiloghi: 'a quanti pazienti ho risposto questa settimana' -> leggi_messaggi settimana; 'promemoria di oggi' -> leggi_promemoria oggi; 'che pazienti ho' -> leggi_dati pazienti; 'quando e' nato X' o 'quando l'ho inserito' -> cerca_paziente o apri_fascicolo (riportano nascita e data di inserimento); 'ultimo paziente inserito' -> leggi_dati pazienti con ordina 'recenti'. vai_a accetta anche la pagina 'promemoria'.`;
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 
