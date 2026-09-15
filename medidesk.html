@@ -3711,10 +3711,6 @@ async function ensureMedicoRecord(user){
       const { data: newMedico, error: insErr } = await supabaseClient
         .from('medici').insert({ user_id: user.id, email: user.email }).select('id').single();
       if(insErr) throw insErr;
-      await supabaseClient.from('tipi_visita').insert([
-        { medico_id: newMedico.id, nome: 'Prima visita', is_default: true },
-        { medico_id: newMedico.id, nome: 'Controllo',    is_default: true }
-      ]);
     }
   } catch(e){ console.error('[Delphi~Med] ensureMedicoRecord:', e.message); }
 }
@@ -4158,7 +4154,6 @@ var S = {
 const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const DAYS_IT_SHORT=['Lu','Ma','Me','Gi','Ve','Sa','Do'];
 const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-const TIPI_DEFAULT = ['Prima visita', 'Controllo'];
 const SPECIALIZZAZIONI_UFFICIALI = [
   'Allergologia e immunologia clinica','Anatomia patologica',
   'Anestesia, rianimazione, terapia intensiva e del dolore','Cardiologia',
@@ -4312,11 +4307,7 @@ function _isPrimaVisita(a){
 }
 function _resetApptCat(){ const rc = document.querySelector('input[name="appt-cat"][value="prima_visita"]'); if(rc) rc.checked = true; }
 function sortTipiVisita(){
-  S.tipiVisita.sort((a,b)=>{
-    if(a==='Prima visita') return -1; if(b==='Prima visita') return 1;
-    if(a==='Controllo') return -1;    if(b==='Controllo') return 1;
-    return a.localeCompare(b,'it');
-  });
+  S.tipiVisita.sort((a,b)=>a.localeCompare(b,'it'));
 }
 function load(){
   // Carica solo preferenze UI — dati clinici vengono da Supabase al login
@@ -7225,7 +7216,7 @@ si comunica la seguente prenotazione:
 Paziente: ${a.cognome} ${a.nome}${a.tel?'\nTelefono: '+a.tel:''}${a.email?'\nEmail: '+a.email:''}
 Data: ${formatDate(a.data)}
 Ora: ${a.ora}
-Tipo visita: ${a.tipo||'Non specificato'}${a.area?'\nArea: '+a.area:''}
+Tipo visita: ${a.tipo||'Non specificato'}${a.categoria?'\nCategoria: '+(a.categoria==='controllo'?'Controllo':'Prima visita'):''}${a.area?'\nArea: '+a.area:''}
 ${a.note?'Note: '+a.note:''}
 
 Medico: ${medico}
@@ -7290,7 +7281,7 @@ function renderPending(){
     return `<div class="pending-card">
       <div class="pending-info">
         <div class="pending-name">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</div>
-        <div class="pending-detail">${formatDate(a.data)} alle ${escapeHtml(a.ora)} — ${centro?escapeHtml(centro.nome):'?'} — ${escapeHtml(a.tipo||'Visita')}</div>
+        <div class="pending-detail">${formatDate(a.data)} alle ${escapeHtml(a.ora)} — ${centro?escapeHtml(centro.nome):'?'} — ${escapeHtml(a.tipo||'Visita')}${a.categoria ? ' \u00b7 ' + (a.categoria==='controllo' ? 'Controllo' : 'Prima visita') : ''}</div>
       </div>
       <button class="btn btn-sm btn-primary" onclick="markSeen('${escapeAttr(a.id)}')">✓ Visto</button>
     </div>`;
@@ -8456,7 +8447,7 @@ function renderVisitaPazienti(){
       <div class="avatar-sm">${ini.toUpperCase()}</div>
       <div class="info">
         <strong>${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</strong>
-        <span>${escapeHtml(a.tipo||'Visita')}${a.area?' · '+escapeHtml(a.area):''}</span>
+        <span>${escapeHtml(a.tipo||'Visita')}${a.categoria ? ' \u00b7 ' + (a.categoria==='controllo' ? 'Controllo' : 'Prima visita') : ''}${a.area?' · '+escapeHtml(a.area):''}</span>
       </div>
       <span class="ora">${a.ora}</span>
     </div>`;
@@ -10346,10 +10337,9 @@ async function waitlistUnsubscribe(){
 function renderTipiAree(){
   const tEl = document.getElementById('tipi-visita-list');
   if(tEl){
-    tEl.innerHTML = S.tipiVisita.map((t,i)=>{
-      const isDefault = TIPI_DEFAULT.includes(t);
-      return `<span class="tag-chip ${isDefault?'tag-default':''}">${t}${!isDefault?`<button class="tag-chip-x chip-remove-tipo" data-idx="${i}" title="Rimuovi">✕</button>`:''}</span>`;
-    }).join('');
+    tEl.innerHTML = S.tipiVisita.map((t,i)=>
+      `<span class="tag-chip">${t}<button class="tag-chip-x chip-remove-tipo" data-idx="${i}" title="Rimuovi">✕</button></span>`
+    ).join('');
   }
   const aEl = document.getElementById('aree-list');
   if(aEl){
@@ -10381,10 +10371,6 @@ async function addTipoVisita(){
 
 async function removeTipoVisita(idx){
   const t = S.tipiVisita[idx];
-  if(TIPI_DEFAULT.includes(t)){
-    await confermaModale('I tipi visita predefiniti non si possono rimuovere.', { titolo:'Impossibile rimuovere', ok:'Ho capito', soloOk:true });
-    return;
-  }
   if(!isOnline()){ showToast('Connessione necessaria per rimuovere un tipo visita'); return; }
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();

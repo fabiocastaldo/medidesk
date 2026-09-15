@@ -138,7 +138,7 @@ export default async function handler(req, res) {
       // RAMO EMAIL — invariato rispetto a prima (stesso subject/html/reply_to).
       if (hasEmail(appt) && !appt.reminder_sent) {
         const subject = `Promemoria visita di domani — ${medicoNome}`;
-        const html    = buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora: appt.ora, tipoVisita: appt.tipo_visita, centroNome: centro.nome, centroIndirizzo });
+        const html    = buildReminderHtml({ pazienteNome, medicoNome, dataFmt, ora: appt.ora, tipoVisita: _composeTipoR(appt.tipo_visita, appt.categoria), centroNome: centro.nome, centroIndirizzo });
         const er = await sendEmailWithRetry(resend, {
           from:     'noreply@delphi-med.com',
           to:       [appt.email_paziente],
@@ -451,6 +451,13 @@ async function auditLogCron(base, headers, medicoId, action, targetType, targetI
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
 // Calcola "domani" nel fuso Europe/Rome (robusto al cambio ora legale/solare)
+const _CAT_LBL_R = { prima_visita: 'Prima visita', controllo: 'Controllo' };
+function _composeTipoR(tipo, categoria) {
+  const cl = _CAT_LBL_R[categoria] || null;
+  if (!cl) return tipo;
+  if (tipo && cl.toLowerCase() === String(tipo).toLowerCase()) return tipo;
+  return tipo ? (tipo + ' \u00b7 ' + cl) : cl;
+}
 function getTomorrowRome() {
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(tomorrow);
