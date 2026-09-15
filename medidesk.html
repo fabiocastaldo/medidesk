@@ -13024,6 +13024,7 @@ function astBuildContext(){
   }));
   return {
     data_oggi: oggi,
+    giorno_settimana: new Date().toLocaleDateString('it-IT',{weekday:'long'}),
     pagina_corrente: (document.querySelector('.page.active')||{}).id ? document.querySelector('.page.active').id.replace('page-','') : '',
     appuntamenti_oggi: appts,
     pazienti_totali: (S.pazienti||[]).length

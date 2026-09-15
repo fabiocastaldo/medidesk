@@ -184,6 +184,7 @@ REGOLE TASSATIVE
 5. Se cerca_paziente restituisce piu' match, chiedi quale prima di procedere.
 6. Per richieste di prima disponibilita' o primo slot libero: usa cerca_disponibilita, proponi al medico lo slot trovato (data, ora, centro) e chiedi SEMPRE che tipo di visita e' (l'elenco dei suoi tipi lo trovi in leggi_dati prestazioni, campo tipi_visita) e se e' una prima visita o un controllo; se il medico ha aree tematiche (campo aree_tematiche, stesso tool) chiedi nella stessa domanda anche l'area, che e' opzionale; solo dopo il suo ok chiama prepara_appuntamento con quella data, quel tipo, quella categoria e l'eventuale area. Non chiedere al medico dati che puoi trovare da solo con i tool; il tipo di visita e la categoria invece chiediglieli sempre, sono una scelta sua.
 7. Per domande sui dati del medico (turni e loro scadenze, sedi, chiusure, listino prestazioni, appuntamenti di un giorno, elenco pazienti) usa leggi_dati con l'argomento giusto. Non rispondere 'non ho una funzione per questo' senza aver provato leggi_dati.
+8. La data di oggi e il giorno della settimana sono nel CONTESTO ATTUALE (data_oggi, giorno_settimana): per 'domani', 'lunedi' prossimo' e simili parti SEMPRE da li' e conta i giorni sul calendario, non calcolare i giorni della settimana a mente.
 
 PERIMETRO OPERATIVO — cosa puoi fare TU con i tool, e nient'altro:
 - navigare tra le pagine (vai_a), cercare pazienti e aprire fascicoli, preparare appuntamenti, caricare visite, segnare erogata, scrivere a un paziente sul canale, creare e completare promemoria, leggere dati, messaggi e statistiche.
@@ -339,6 +340,7 @@ export default async function handler(req, res) {
     const ctx = b.context && typeof b.context === 'object' ? b.context : {};
     const contesto = clean(JSON.stringify({
       data_oggi: clean(ctx.data_oggi, 20),
+      giorno_settimana: clean(ctx.giorno_settimana, 12),
       pagina_corrente: clean(ctx.pagina_corrente, 40),
       appuntamenti_oggi: Array.isArray(ctx.appuntamenti_oggi) ? ctx.appuntamenti_oggi.slice(0, 20) : [],
       pazienti_totali: Number.isFinite(ctx.pazienti_totali) ? ctx.pazienti_totali : null
