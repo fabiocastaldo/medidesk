@@ -1617,7 +1617,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <!-- PAZIENTI -->
     <div id="page-pazienti" class="page">
       <div class="page-header">
-        <div><div class="page-title">Pazienti <span class="paz-count" id="paz-count"></span></div><div class="page-subtitle">Fascicoli clinici e prenotati</div></div>
+        <div><div class="page-title">Pazienti <span class="paz-count" id="paz-count"></span></div><div class="page-subtitle">Fascicoli clinici e nuovi pazienti</div></div>
         <button class="btn btn-primary" onclick="openNuovoPaziente()">Crea fascicolo paziente</button>
       </div>
       <div class="search-bar" style="flex-wrap:wrap">
@@ -1629,7 +1629,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <select class="paz-filter-sel" id="filtro-paz-stato" onchange="renderPazienti()">
           <option value="tutti">Tutti</option>
           <option value="incura">In cura</option>
-          <option value="prenotati">Prenotati</option>
+          <option value="prenotati">Nuovi pazienti</option>
         </select>
       </div>
       <div id="pazienti-table"></div>
@@ -10782,13 +10782,12 @@ function renderPazienti(more){
   }
   const shown=list.slice(0,_pazShown);
   const moreBtn=list.length>shown.length?`<div class="paz-more"><button class="btn btn-secondary btn-sm" onclick="renderPazienti(true)">Mostra altri ${Math.min(_PAZ_PAGE,list.length-shown.length)}</button><span>${shown.length} di ${list.length}</span></div>`:'';
-  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Contatti</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+moreBtn;
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Email</th><th>Telefono</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+moreBtn;
   cEl.innerHTML=shown.map(_pazCardHTML).join('')+moreBtn;
 }
 
 function _pazRowHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
-  const contatti=[r.email,r.tel].filter(Boolean).map(escapeHtml).join(' &middot; ')||'<span class="paz-dim">&ndash;</span>';
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
@@ -10796,7 +10795,8 @@ function _pazRowHTML(r){
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
-    <td style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px">${contatti}</td>
+    <td style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">${r.email?escapeHtml(r.email):'<span class="paz-dim">&ndash;</span>'}</td>
+    <td style="font-size:12.5px;white-space:nowrap">${r.tel?escapeHtml(r.tel):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="text-align:center">${r.tipo==='paziente'?r.nVisite:'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="text-align:right;white-space:nowrap">${azioni}</td>
   </tr>`;
