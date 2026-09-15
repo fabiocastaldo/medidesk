@@ -3922,13 +3922,15 @@ async function loadPazientiFromDB(user){
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient.from('pazienti')
-      .select('id, nome, cognome, data_nascita, telefono, email, created_at, sintesi_clinica, sintesi_generata_il, sintesi_meta')
+      .select('id, nome, cognome, data_nascita, telefono, email, created_at, sintesi_clinica, sintesi_generata_il, sintesi_meta, consenso_comunicazioni_at, consenso_comunicazioni_versione, consenso_comunicazioni_richiesto_at, consenso_comunicazioni_revocato_at')
       .eq('medico_id', medico.id).order('cognome').order('nome');
     if(error) throw error;
     S.pazienti = (data || []).map(p => ({
       id: p.id, nome: p.nome||'', cognome: p.cognome||'',
       nascita: isoToIt(p.data_nascita||''), tel: p.telefono||'', email: p.email||'', creato: (p.created_at||'').slice(0,10), visite: [],
-      sintesiEnc: p.sintesi_clinica||null, sintesiGenerataIl: p.sintesi_generata_il||null, sintesiMeta: p.sintesi_meta||null
+      sintesiEnc: p.sintesi_clinica||null, sintesiGenerataIl: p.sintesi_generata_il||null, sintesiMeta: p.sintesi_meta||null,
+      consenso_comunicazioni_at: p.consenso_comunicazioni_at||null, consenso_comunicazioni_versione: p.consenso_comunicazioni_versione||null,
+      consenso_comunicazioni_richiesto_at: p.consenso_comunicazioni_richiesto_at||null, consenso_comunicazioni_revocato_at: p.consenso_comunicazioni_revocato_at||null
     }));
     save();
     console.log('[Delphi~Med] Pazienti caricati da DB:', S.pazienti.length);
@@ -7456,6 +7458,7 @@ function showPazienteDetail(id){
       <div class="field-row"><span class="field-key">Nascita</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-nascita" placeholder="GG/MM/AAAA" value="${escapeAttr(p.nascita||'')}"></span></div>
       <div class="field-row"><span class="field-key">Email</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-email" type="email" placeholder="aggiungi" value="${escapeAttr(p.email||_fb.email||'')}"></span></div>
       <div class="field-row"><span class="field-key">Telefono</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-tel" placeholder="aggiungi" value="${escapeAttr(p.tel||_fb.tel||'')}"></span></div>
+      ${(S.moduli&&S.moduli.comunicazioni===true)?`<div class="field-row"><span class="field-key">Comunicazioni</span><span class="field-val" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="pd-cons-stato">${escapeHtml(comStatoConsenso(p).t)}</span><button class="btn btn-sm btn-secondary" ${p.email?'':'disabled title="Serve un&rsquo;email del paziente" '}onclick="comRichiedi('${escapeAttr(id)}','scheda')">Richiedi consenso</button></span></div>`:''}
       <div style="text-align:right;margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="savePazienteAnagrafica('${escapeAttr(id)}')">Salva anagrafica</button></div>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
@@ -13144,9 +13147,15 @@ async function comLoad(){
   }).join('');
   comLoadClusterSel(); comRegistro();
 }
-async function comRichiedi(pazId){
+async function comRichiedi(pazId, ctx){
   const j=await comApi({action:'richiedi_consenso', paziente_id:pazId});
-  if(j){ showToast('Richiesta di consenso inviata.'); comLoad(); }
+  if(!j) return;
+  showToast('Richiesta di consenso inviata.');
+  const sp=(S.pazienti||[]).find(function(x){return String(x.id)===String(pazId);});
+  if(sp) sp.consenso_comunicazioni_richiesto_at=new Date().toISOString();
+  if(ctx==='scheda'){
+    const st=document.getElementById('pd-cons-stato'); if(st&&sp) st.textContent=comStatoConsenso(sp).t;
+  } else { comLoad(); }
 }
 function comCriteri(){
   const c={};
