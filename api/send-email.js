@@ -17,7 +17,7 @@
 
 import { Resend } from 'resend';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
-import { revocaLink } from '../lib/consenso-token.js';
+import { revocaLink, consensoLink } from '../lib/consenso-token.js';
 import { buildICS } from '../lib/ics-builder.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -242,6 +242,9 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     emailPaziente:     appt.email_paziente,
     medicoId:          appt.medico_id,
     consensoComunicazioniAt: appt.consenso_comunicazioni_at || null,
+    source:            appt.source || null,
+    daCentro:          appt.da_centro === true,
+    perConto:          appt.per_conto === true,
     pazienteNome:      [appt.nome_paziente, appt.cognome_paziente].filter(Boolean).join(' '),
     data:              appt.data,
     ora:               (appt.ora || '').substring(0, 5),
@@ -405,6 +408,7 @@ export default async function handler(req, res) {
   // ── Per-tipo: lookup DB + costruzione payload email ───────────────────────────
 
   let to, subject, html, replyTo, medicoIdAudit, targetType, targetId, icsAttachment;
+  let consApptCtx = null; // se valorizzato, dopo l'invio parte la richiesta di consenso comunicazioni (una tantum)
 
   if (tipo === 'conferma_appt_anon') {
     const appt = await lookupAppt(authCtx.apptIdFromToken, null, supabaseUrl, serviceKey);
@@ -416,6 +420,9 @@ export default async function handler(req, res) {
       ? `Ha acconsentito a ricevere comunicazioni proattive dal medico. Non le desidera? <a href="${revocaLink(icsHost, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId })}" style="color:#888;">Revochi qui il consenso</a> &middot; Delphi~Med`
       : undefined;
     html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost, footer_note: consFooter });
+    // Richiesta consenso automatica SOLO fuori dal flusso pubblico: online personale ha la casella,
+    // online per conto terzi resta escluso (la casella puo' essere del terzo).
+    if (appt.daCentro === true || appt.source !== 'paziente') consApptCtx = appt;
     if (appt.apptId && appt.data && appt.ora) {
       const _ics = buildICS({ apptId: appt.apptId, data: appt.data, ora: appt.ora, summary: buildIcsSummary(appt.tipoVisita, appt.medicoNome), description: appt.medicoNome ? `Prenotazione confermata con ${appt.medicoNome}` : 'Prenotazione confermata', location: [appt.centroNome, appt.centroIndirizzo].filter(Boolean).join(', ') });
       icsAttachment = { filename: 'appuntamento.ics', content: Buffer.from(_ics).toString('base64'), contentType: 'text/calendar; charset=utf-8' };
@@ -462,6 +469,7 @@ export default async function handler(req, res) {
     if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
     const appt = await lookupAppt(appt_id, authCtx.medicoId, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    consApptCtx = appt; // prenotazione del medico: il paziente non ha mai visto la casella
     const dataFmt = formatDateIt(appt.data);
     to            = appt.emailPaziente;
     subject       = `Conferma appuntamento con ${appt.medicoNome}`;
@@ -716,8 +724,61 @@ export default async function handler(req, res) {
 
   await auditLog(base, dbHeaders, medicoIdAudit, tipo, targetType, targetId, authCtx.authMode, to, resendId);
 
+  // ── Richiesta consenso comunicazioni (soft-fail, una tantum per medico+email) ──
+  if (consApptCtx) {
+    await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, serviceKey, appt: consApptCtx });
+  }
+
   return res.status(200).json({ ok: true });
 }
+
+// Manda al paziente la email con la richiesta di consenso alle comunicazioni proattive,
+// solo se per la coppia medico+email non esiste ALCUNO stato (ne' attivo, ne' gia'
+// richiesto, ne' revocato: chi ha revocato non va mai risollecitato in automatico).
+// Marca la richiesta sull'appuntamento (sempre) e sul fascicolo (se esiste).
+async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey, appt }) {
+  try {
+    if (!appt?.emailPaziente || !appt.medicoId || !appt.apptId) return;
+    const e = encodeURIComponent(appt.emailPaziente);
+    const m = encodeURIComponent(appt.medicoId);
+    const orPz = encodeURIComponent('(consenso_comunicazioni_at.not.is.null,consenso_comunicazioni_richiesto_at.not.is.null,consenso_comunicazioni_revocato_at.not.is.null)');
+    const pz = await fetch(`${base}/pazienti?medico_id=eq.${m}&email=ilike.${e}&or=${orPz}&select=id&limit=1`, { headers });
+    if (!pz.ok || (await pz.json()).length) return;
+    const orAp = encodeURIComponent('(consenso_comunicazioni_at.not.is.null,consenso_comunicazioni_richiesto_at.not.is.null)');
+    const ap = await fetch(`${base}/appuntamenti?medico_id=eq.${m}&email_paziente=ilike.${e}&or=${orAp}&select=id&limit=1`, { headers });
+    if (!ap.ok || (await ap.json()).length) return;
+
+    const link = consensoLink(host, serviceKey, { apptId: appt.apptId });
+    const linkNega = revocaLink(host, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId });
+    const corpoMail =
+      emailTitle('Richiesta di consenso alle comunicazioni') +
+      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(appt.medicoNome)} le chiede il consenso a ricevere via email <strong>comunicazioni proattive</strong>: promemoria di prevenzione, richiami, avvisi organizzativi.</p>` +
+      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Il consenso &egrave; facoltativo, non incide in alcun modo sulla sua prenotazione e pu&ograve; essere revocato in ogni momento. Apra il link per leggere l'informativa e decidere.</p>` +
+      ctaButton(link, 'Leggi e decidi') +
+      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(link)}</p>` +
+      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Se non desidera acconsentire pu&ograve; semplicemente ignorare questa email: non ricever&agrave; altre richieste. Il link &egrave; personale: non lo inoltri ad altri.</p>`;
+    const { error } = await resend.emails.send({
+      from: 'noreply@delphi-med.com', to: [appt.emailPaziente],
+      subject: `${appt.medicoNome} le chiede un consenso — Delphi~Med`,
+      html: emailShell(corpoMail, { footerNote: `Non desidera ricevere comunicazioni proattive dal suo medico? <a href="${revocaEsc(linkNega)}" style="color:#888;">Lo neghi qui</a> &middot; Delphi~Med` })
+    });
+    if (error) { console.error('[send-email] richiesta consenso resend:', error.message || error); return; }
+
+    const now = new Date().toISOString();
+    await fetch(`${base}/appuntamenti?id=eq.${encodeURIComponent(appt.apptId)}`, {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ consenso_comunicazioni_richiesto_at: now })
+    }).catch(() => {});
+    await fetch(`${base}/pazienti?medico_id=eq.${m}&email=ilike.${e}`, {
+      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ consenso_comunicazioni_richiesto_at: now })
+    }).catch(() => {});
+    console.log('[send-email] richiesta consenso inviata', { to: redactEmail(appt.emailPaziente) });
+  } catch (err) {
+    console.error('[send-email] richiesta consenso exception:', err.message);
+  }
+}
+function revocaEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
 
 // ── Template HTML ─────────────────────────────────────────────────────────────
 

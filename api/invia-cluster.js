@@ -10,8 +10,9 @@
 // n_destinatari = registro del titolare). In calce a ogni email di cluster il
 // link di revoca; conferma e revoca NON sono gated dal modulo.
 //
-// POST { action:'leggi_consenso',  token }                [pubblica, solo revoca]
-// POST { action:'revoca_consenso', token }                [pubblica]
+// POST { action:'leggi_consenso',    token }              [pubblica]
+// POST { action:'conferma_consenso', token }              [pubblica, solo token 'c' da mail di richiesta]
+// POST { action:'revoca_consenso',   token }              [pubblica, solo token 'r']
 // POST { action:'anteprima', criteri }                    [JWT medico + modulo]
 // POST { action:'invia', criteri, corpo, cluster_id? }    [JWT medico + modulo]
 
@@ -130,11 +131,44 @@ export default async function handler(req, res) {
   // ── Azioni pubbliche (token del paziente, nessun JWT, nessun gate modulo) ──
   // Il consenso si PRESTA solo in fase di prenotazione online personale: qui vive
   // soltanto la revoca (e la sua pagina), che deve funzionare sempre.
-  if (action === 'leggi_consenso' || action === 'revoca_consenso') {
+  if (action === 'leggi_consenso' || action === 'conferma_consenso' || action === 'revoca_consenso') {
     const payload = readPayload(serviceKey, body.token);
-    if (!payload || payload.a !== 'r' || (!payload.p && !(payload.e && payload.m))) {
-      return res.status(401).json({ error: 'link_non_valido' });
+    const okR = payload && payload.a === 'r' && (payload.p || (payload.e && payload.m));
+    const okC = payload && payload.a === 'c' && payload.ap;
+    if (!okR && !okC) return res.status(401).json({ error: 'link_non_valido' });
+    if (action === 'conferma_consenso' && !okC) return res.status(401).json({ error: 'link_non_valido' });
+    if (action === 'revoca_consenso' && !okR) return res.status(401).json({ error: 'link_non_valido' });
+
+    // Token 'c': richiesta di consenso ancorata a una prenotazione (mail automatica).
+    if (okC) {
+      const ar = await sb(`appuntamenti?id=eq.${encodeURIComponent(payload.ap)}&select=id,medico_id,email_paziente,consenso_comunicazioni_at,medici(titolo,nome,cognome)`);
+      const appt = ar.ok ? (await ar.json())[0] : null;
+      if (!appt || !appt.email_paziente) return res.status(404).json({ error: 'not_found' });
+      const medNome = appt.medici ? [appt.medici.titolo, appt.medici.nome, appt.medici.cognome].filter(Boolean).join(' ') : 'Il suo medico';
+      const pz = await sb(`pazienti?medico_id=eq.${encodeURIComponent(appt.medico_id)}&email=ilike.${encodeURIComponent(appt.email_paziente)}&select=id,consenso_comunicazioni_at,consenso_comunicazioni_revocato_at`);
+      const rowsPz = pz.ok ? await pz.json() : [];
+      const cAttivo = !!appt.consenso_comunicazioni_at || rowsPz.some(x => x.consenso_comunicazioni_at);
+      if (action === 'leggi_consenso') {
+        const stato = cAttivo ? 'attivo' : (rowsPz.some(x => x.consenso_comunicazioni_revocato_at) ? 'revocato' : 'nessuno');
+        return res.status(200).json({ medico: medNome, stato, azione: 'consenso', versione: payload.v || CONS_COMM_VERSIONE });
+      }
+      // conferma_consenso: timestamp server sull'appuntamento, e sul fascicolo se esiste
+      const nowC = new Date().toISOString();
+      const ur = await sb(`appuntamenti?id=eq.${appt.id}`, {
+        method: 'PATCH', headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ consenso_comunicazioni_at: nowC, consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE })
+      });
+      const urRows = ur.ok ? await ur.json() : [];
+      if (!urRows[0]) return res.status(500).json({ error: 'db' });
+      if (rowsPz.length) {
+        await sb(`pazienti?medico_id=eq.${encodeURIComponent(appt.medico_id)}&email=ilike.${encodeURIComponent(appt.email_paziente)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ consenso_comunicazioni_at: nowC, consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE, consenso_comunicazioni_revocato_at: null })
+        }).catch(() => {});
+      }
+      return res.status(200).json({ ok: true, medico: medNome, quando: urRows[0].consenso_comunicazioni_at, versione: urRows[0].consenso_comunicazioni_versione });
     }
+
     let medicoNome = 'Il suo medico', medicoId = null, emailPaz = null, pazIds = [], attivo = false;
     if (payload.p) {
       const pr = await sb(`pazienti?id=eq.${encodeURIComponent(payload.p)}&select=id,email,medico_id,consenso_comunicazioni_at,medici(titolo,nome,cognome)`);

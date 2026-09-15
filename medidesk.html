@@ -4415,8 +4415,10 @@ function checkView(){
     showCancelView();
   } else if(params.has('anticipa')){
     showAnticipaView();
+  } else if(params.has('consenso')){
+    showConsensoView('consenso');
   } else if(params.has('revoca_comm')){
-    showConsensoView();
+    showConsensoView('revoca');
   } else if(location.search.includes('booking') || location.pathname.startsWith('/m/') || location.pathname.startsWith('/c/')){
     showBookingView();
   } else if(location.pathname.startsWith('/t/')){
@@ -13221,7 +13223,8 @@ async function comRegistro(){
     :'<div style="font-size:13px;color:var(--ink3)">Nessun invio ancora.</div>';
 }
 
-// ── Revoca del consenso comunicazioni: vista pubblica (?revoca_comm=, senza login — s20) ──
+// ── Consenso comunicazioni: vista pubblica (?consenso= dalla mail di richiesta, ?revoca_comm=, senza login — s20) ──
+const CONS_INFORMATIVA_BOZZA='Il suo medico desidera poterle inviare via email comunicazioni proattive: promemoria di prevenzione, richiami e avvisi organizzativi. Il consenso \u00e8 facoltativo, non condiziona in alcun modo la cura n\u00e9 le sue prenotazioni e pu\u00f2 essere revocato in ogni momento dal link presente in calce a ogni comunicazione. Titolare del trattamento \u00e8 il medico indicato sopra. (Testo sintetico provvisorio: informativa completa in validazione legale.)';
 async function consApi(action, token){
   try{
     const r=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action, token:token})});
@@ -13229,12 +13232,15 @@ async function consApi(action, token){
     return { ok:r.ok, j:j };
   }catch(_){ return { ok:false, j:{} }; }
 }
-function showConsensoView(){
+function showConsensoView(mode){
   ['view-home','view-app','view-booking','view-portfolio','view-thread'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; });
   const v=document.getElementById('view-consenso'); if(v) v.style.display='block';
   document.documentElement.classList.add('th-page');
   const params=new URLSearchParams(location.search);
-  window._consToken=params.get('revoca_comm')||'';
+  window._consMode=mode;
+  window._consToken=params.get(mode==='revoca'?'revoca_comm':'consenso')||'';
+  const title=document.getElementById('cons-title');
+  if(title) title.textContent = mode==='revoca' ? 'Revoca del consenso' : 'Consenso alle comunicazioni';
   consInit();
 }
 async function consInit(){
@@ -13244,16 +13250,25 @@ async function consInit(){
   const r=await consApi('leggi_consenso', window._consToken);
   if(!r.ok){ body.textContent='Questo link non \u00e8 valido o \u00e8 scaduto. Se pensa sia un errore, contatti il suo medico.'; return; }
   if(med) med.textContent=r.j.medico||'';
-  if(r.j.stato!=='attivo'){ body.textContent='Nessun consenso attivo: non ricever\u00e0 comunicazioni proattive.'; return; }
-  body.textContent='Confermando, non ricever\u00e0 pi\u00f9 comunicazioni proattive dal suo medico. Potr\u00e0 sempre prestare di nuovo il consenso a una prossima prenotazione.';
-  act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Confermo la revoca</button>';
+  if(window._consMode==='revoca'){
+    if(r.j.stato!=='attivo'){ body.textContent='Nessun consenso attivo: non ricever\u00e0 comunicazioni proattive.'; return; }
+    body.textContent='Confermando, non ricever\u00e0 pi\u00f9 comunicazioni proattive dal suo medico. Potr\u00e0 sempre prestare di nuovo il consenso a una prossima prenotazione.';
+    act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Confermo la revoca</button>';
+    return;
+  }
+  if(r.j.stato==='attivo'){ body.textContent='Il suo consenso risulta gi\u00e0 attivo: non deve fare altro. Pu\u00f2 revocarlo in ogni momento dal link in calce a ogni comunicazione.'; return; }
+  body.textContent=CONS_INFORMATIVA_BOZZA;
+  act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Acconsento</button>';
 }
 async function consConferma(){
   const body=document.getElementById('cons-body'), act=document.getElementById('cons-actions');
   act.innerHTML=''; body.textContent='Un momento\u2026';
-  const r=await consApi('revoca_consenso', window._consToken);
+  const action = window._consMode==='revoca' ? 'revoca_consenso' : 'conferma_consenso';
+  const r=await consApi(action, window._consToken);
   if(!r.ok){ body.textContent='Operazione non riuscita: il link potrebbe non essere pi\u00f9 valido. Riapra il link dall\u2019email o contatti il suo medico.'; return; }
-  body.textContent='Revoca registrata. Non ricever\u00e0 pi\u00f9 comunicazioni proattive.';
+  body.textContent = window._consMode==='revoca'
+    ? 'Revoca registrata. Non ricever\u00e0 pi\u00f9 comunicazioni proattive.'
+    : 'Consenso registrato. Grazie: potr\u00e0 revocarlo in ogni momento dal link in calce a ogni comunicazione.';
 }
 
 const AST_REGISTRY = {
