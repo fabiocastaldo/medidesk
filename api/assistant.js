@@ -74,7 +74,7 @@ const TOOLS = [
   },
   {
     name: 'cerca_paziente',
-    description: 'Cerca pazienti per nome, cognome, email o telefono tra fascicoli e prenotati. Restituisce i match con id, data di nascita e data di inserimento. Usalo prima di aprire fascicoli o preparare azioni su un paziente. Se i match sono più di uno, chiedi al medico quale.',
+    description: 'Cerca pazienti per nome, cognome, email o telefono tra fascicoli e nuovi pazienti (prenotati senza fascicolo). Restituisce i match con id, data di nascita e data di inserimento. Usalo prima di aprire fascicoli o preparare azioni su un paziente. Se i match sono più di uno, chiedi al medico quale.',
     input_schema: {
       type: 'object',
       properties: { query: { type: 'string' } },
@@ -207,7 +207,7 @@ AGENDA
 - Calendario settimanale con trascinamento per spostare (chiede conferma e propone la notifica al paziente) e vista mese.
 
 PAZIENTI
-- Testata: «Crea fascicolo paziente». Ricerca per nome, email o telefono; filtri per centro e stato.
+- Testata: «Crea fascicolo paziente». Ricerca per nome, email o telefono; filtri per centro e per stato («Tutti», «In cura», «Nuovi pazienti»: i nuovi pazienti sono i prenotati senza fascicolo). Colonne Email e Telefono separate.
 - Lista a blocchi di 30: in fondo «Mostra altri» carica il blocco successivo. Un pallino ambra accanto al nome = risposte non lette.
 - Ogni riga (computer) o card (telefono) ha tre azioni: «Contatta», «+ Promemoria», «Carica visita». Sul telefono la card mostra nome e data di nascita.
 
