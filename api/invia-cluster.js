@@ -10,45 +10,21 @@
 // n_destinatari = registro del titolare). In calce a ogni email di cluster il
 // link di revoca; conferma e revoca NON sono gated dal modulo.
 //
-// POST { action:'richiedi_consenso', paziente_id }        [JWT medico + modulo]
-// POST { action:'leggi_consenso',    token }              [pubblica]
-// POST { action:'conferma_consenso', token }              [pubblica]
-// POST { action:'revoca_consenso',   token }              [pubblica]
+// POST { action:'leggi_consenso',  token }                [pubblica, solo revoca]
+// POST { action:'revoca_consenso', token }                [pubblica]
 // POST { action:'anteprima', criteri }                    [JWT medico + modulo]
 // POST { action:'invia', criteri, corpo, cluster_id? }    [JWT medico + modulo]
 
 import { Resend } from 'resend';
-import { createHmac, randomBytes, createHash, timingSafeEqual } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
+import { CONS_COMM_VERSIONE, readPayload, revocaLink } from '../lib/consenso-token.js';
 
-const CONS_COMM_VERSIONE = 'cons-comm-0.1-bozza'; // segnaposto: testo definitivo dal corpus legale (gate C)
 const MAX_CORPO = 4000;
 const MAX_DESTINATARI = 200;
 
 function hashToken(token) {
   return createHash('sha256').update(token, 'utf8').digest('hex');
-}
-function b64url(buf) {
-  return Buffer.from(buf).toString('base64url');
-}
-function signPayload(secret, payloadObj) {
-  const body = b64url(JSON.stringify(payloadObj));
-  const sig = createHmac('sha256', secret).update(body, 'utf8').digest('base64url');
-  return body + '.' + sig;
-}
-function readPayload(secret, token) {
-  if (typeof token !== 'string' || token.length > 600) return null;
-  const parts = token.split('.');
-  if (parts.length !== 2) return null;
-  const expected = createHmac('sha256', secret).update(parts[0], 'utf8').digest();
-  let given;
-  try { given = Buffer.from(parts[1], 'base64url'); } catch { return null; }
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
-  let payload;
-  try { payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8')); } catch { return null; }
-  if (!payload || typeof payload !== 'object') return null;
-  if (!Number.isFinite(payload.exp) || Date.now() > payload.exp) return null;
-  return payload;
 }
 
 async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
@@ -152,46 +128,54 @@ export default async function handler(req, res) {
   const action = body.action;
 
   // ── Azioni pubbliche (token del paziente, nessun JWT, nessun gate modulo) ──
-  if (action === 'leggi_consenso' || action === 'conferma_consenso' || action === 'revoca_consenso') {
+  // Il consenso si PRESTA solo in fase di prenotazione online personale: qui vive
+  // soltanto la revoca (e la sua pagina), che deve funzionare sempre.
+  if (action === 'leggi_consenso' || action === 'revoca_consenso') {
     const payload = readPayload(serviceKey, body.token);
-    if (!payload || !payload.p || (payload.a !== 'c' && payload.a !== 'r')) {
+    if (!payload || payload.a !== 'r' || (!payload.p && !(payload.e && payload.m))) {
       return res.status(401).json({ error: 'link_non_valido' });
     }
-    const pr = await sb(`pazienti?id=eq.${encodeURIComponent(payload.p)}&select=id,medico_id,consenso_comunicazioni_at,consenso_comunicazioni_revocato_at,medici(titolo,nome,cognome)`);
-    const paz = pr.ok ? (await pr.json())[0] : null;
-    if (!paz) return res.status(404).json({ error: 'not_found' });
-    const medicoNome = paz.medici ? [paz.medici.titolo, paz.medici.nome, paz.medici.cognome].filter(Boolean).join(' ') : 'Il suo medico';
-
+    let medicoNome = 'Il suo medico', medicoId = null, emailPaz = null, pazIds = [], attivo = false;
+    if (payload.p) {
+      const pr = await sb(`pazienti?id=eq.${encodeURIComponent(payload.p)}&select=id,email,medico_id,consenso_comunicazioni_at,medici(titolo,nome,cognome)`);
+      const paz = pr.ok ? (await pr.json())[0] : null;
+      if (!paz) return res.status(404).json({ error: 'not_found' });
+      medicoId = paz.medico_id; emailPaz = paz.email; pazIds = [paz.id];
+      attivo = !!paz.consenso_comunicazioni_at;
+      if (paz.medici) medicoNome = [paz.medici.titolo, paz.medici.nome, paz.medici.cognome].filter(Boolean).join(' ');
+    } else {
+      medicoId = payload.m; emailPaz = payload.e;
+      const mr = await sb(`medici?id=eq.${encodeURIComponent(medicoId)}&select=titolo,nome,cognome`);
+      const med = mr.ok ? (await mr.json())[0] : null;
+      if (!med) return res.status(404).json({ error: 'not_found' });
+      medicoNome = [med.titolo, med.nome, med.cognome].filter(Boolean).join(' ');
+      const pz = await sb(`pazienti?medico_id=eq.${encodeURIComponent(medicoId)}&email=ilike.${encodeURIComponent(emailPaz)}&select=id,consenso_comunicazioni_at`);
+      const rowsPz = pz.ok ? await pz.json() : [];
+      pazIds = rowsPz.map(x => x.id);
+      const ap = await sb(`appuntamenti?medico_id=eq.${encodeURIComponent(medicoId)}&email_paziente=ilike.${encodeURIComponent(emailPaz)}&consenso_comunicazioni_at=not.is.null&select=id&limit=1`);
+      const rowsAp = ap.ok ? await ap.json() : [];
+      attivo = rowsPz.some(x => x.consenso_comunicazioni_at) || rowsAp.length > 0;
+    }
     if (action === 'leggi_consenso') {
-      const stato = paz.consenso_comunicazioni_at ? 'attivo' : (paz.consenso_comunicazioni_revocato_at ? 'revocato' : 'nessuno');
-      return res.status(200).json({ medico: medicoNome, stato, azione: payload.a === 'c' ? 'consenso' : 'revoca', versione: payload.v || CONS_COMM_VERSIONE });
+      return res.status(200).json({ medico: medicoNome, stato: attivo ? 'attivo' : 'revocato', azione: 'revoca' });
     }
-    if (action === 'conferma_consenso') {
-      if (payload.a !== 'c') return res.status(401).json({ error: 'link_non_valido' });
-      const ur = await sb(`pazienti?id=eq.${paz.id}`, {
+    const now = new Date().toISOString();
+    // La revoca azzera il fascicolo (se esiste) E le tracce sulle prenotazioni,
+    // cosi' il trigger di ereditarieta' non potra' mai resuscitare un consenso revocato.
+    if (pazIds.length) {
+      const ur = await sb(`pazienti?id=in.(${pazIds.map(encodeURIComponent).join(',')})`, {
         method: 'PATCH', headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({
-          consenso_comunicazioni_at: new Date().toISOString(),
-          consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE,
-          consenso_comunicazioni_revocato_at: null
-        })
+        body: JSON.stringify({ consenso_comunicazioni_at: null, consenso_comunicazioni_versione: null, consenso_comunicazioni_revocato_at: now })
       });
-      const rows = ur.ok ? await ur.json() : [];
-      if (!rows[0]) return res.status(500).json({ error: 'db' });
-      return res.status(200).json({ ok: true, medico: medicoNome, quando: rows[0].consenso_comunicazioni_at, versione: rows[0].consenso_comunicazioni_versione });
+      if (!ur.ok) return res.status(500).json({ error: 'db' });
     }
-    // revoca_consenso: valido sia dal link di revoca (a='r') sia da un link consenso (ci ha ripensato: a='c')
-    const ur = await sb(`pazienti?id=eq.${paz.id}`, {
-      method: 'PATCH', headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({
-        consenso_comunicazioni_at: null,
-        consenso_comunicazioni_versione: null,
-        consenso_comunicazioni_revocato_at: new Date().toISOString()
-      })
-    });
-    const rows = ur.ok ? await ur.json() : [];
-    if (!rows[0]) return res.status(500).json({ error: 'db' });
-    return res.status(200).json({ ok: true, medico: medicoNome, quando: rows[0].consenso_comunicazioni_revocato_at });
+    if (emailPaz && medicoId) {
+      await sb(`appuntamenti?medico_id=eq.${encodeURIComponent(medicoId)}&email_paziente=ilike.${encodeURIComponent(emailPaz)}&consenso_comunicazioni_at=not.is.null`, {
+        method: 'PATCH',
+        body: JSON.stringify({ consenso_comunicazioni_at: null, consenso_comunicazioni_versione: null })
+      }).catch(() => {});
+    }
+    return res.status(200).json({ ok: true, medico: medicoNome, quando: now });
   }
 
   // ── Azioni del medico: JWT + gate modulo 'comunicazioni' ──────────────────
@@ -203,41 +187,6 @@ export default async function handler(req, res) {
   const medicoNome = [medico.titolo, medico.nome, medico.cognome].filter(Boolean).join(' ');
   if (!(medico.moduli && medico.moduli.comunicazioni === true)) {
     return res.status(403).json({ error: 'modulo_non_attivo' });
-  }
-
-  // ── richiedi_consenso ──────────────────────────────────────────────────────
-  if (action === 'richiedi_consenso') {
-    if (!body.paziente_id) return res.status(400).json({ error: 'parametri_mancanti' });
-    const pr = await sb(`pazienti?id=eq.${encodeURIComponent(body.paziente_id)}&medico_id=eq.${medico.id}&select=id,nome,cognome,email`);
-    const p = pr.ok ? (await pr.json())[0] : null;
-    if (!p) return res.status(404).json({ error: 'not_found' });
-    if (!p.email) return res.status(409).json({ error: 'email_mancante' });
-
-    const token = signPayload(serviceKey, { p: p.id, a: 'c', v: CONS_COMM_VERSIONE, exp: Date.now() + 30 * 86400000 });
-    const link = `https://${host}/?consenso=${encodeURIComponent(token)}`;
-    const negaToken = signPayload(serviceKey, { p: p.id, a: 'r', exp: Date.now() + 365 * 86400000 });
-    const linkNega = `https://${host}/?revoca_comm=${encodeURIComponent(negaToken)}`;
-    const corpoMail =
-      emailTitle('Richiesta di consenso alle comunicazioni') +
-      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(medicoNome)} le chiede il consenso a ricevere via email <strong>comunicazioni proattive</strong>: promemoria di prevenzione, richiami, avvisi organizzativi.</p>` +
-      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Il consenso &egrave; facoltativo e revocabile in ogni momento. Apra il link per leggere l'informativa e decidere.</p>` +
-      ctaButton(link, 'Leggi e decidi') +
-      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(link)}</p>` +
-      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Se non desidera acconsentire pu&ograve; semplicemente ignorare questa email. Il link &egrave; personale: non lo inoltri ad altri.</p>`;
-    const { error } = await resend.emails.send({
-      from: 'noreply@delphi-med.com', to: [p.email],
-      subject: `${medicoNome} le chiede un consenso — Delphi~Med`,
-      html: emailShell(corpoMail, { footerNote: `Non desidera ricevere comunicazioni proattive dal suo medico? <a href="${esc(linkNega)}" style="color:#888;">Lo neghi qui</a> &middot; Delphi~Med` })
-    });
-    if (error) { console.error('[invia-cluster] richiedi resend:', error.message || error); return res.status(502).json({ error: 'email_fallita' }); }
-
-    const ur = await sb(`pazienti?id=eq.${p.id}`, {
-      method: 'PATCH', headers: { 'Prefer': 'return=representation' },
-      body: JSON.stringify({ consenso_comunicazioni_richiesto_at: new Date().toISOString() })
-    });
-    const rows = ur.ok ? await ur.json() : [];
-    if (!rows[0]) return res.status(500).json({ error: 'db' });
-    return res.status(200).json({ ok: true, richiesto_il: rows[0].consenso_comunicazioni_richiesto_at });
   }
 
   // ── anteprima ──────────────────────────────────────────────────────────────
@@ -303,9 +252,8 @@ export default async function handler(req, res) {
         });
         if (!kr.ok) throw new Error('token_insert ' + kr.status);
 
-        const revocaToken = signPayload(serviceKey, { p: p.id, a: 'r', exp: Date.now() + 365 * 86400000 });
         const linkMsg = `https://${host}/t/${tokenThread}`;
-        const linkRevoca = `https://${host}/?revoca_comm=${encodeURIComponent(revocaToken)}`;
+        const linkRevoca = revocaLink(host, serviceKey, { pazienteId: p.id });
         const corpoMail =
           emailTitle('Una comunicazione dal suo medico') +
           `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(medicoNome)} le ha inviato una comunicazione.</p>` +

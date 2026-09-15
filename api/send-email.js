@@ -17,6 +17,7 @@
 
 import { Resend } from 'resend';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
+import { revocaLink } from '../lib/consenso-token.js';
 import { buildICS } from '../lib/ics-builder.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -239,6 +240,8 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     apptId:            appt.id,
     apptMedicoId:      appt.medico_id,
     emailPaziente:     appt.email_paziente,
+    medicoId:          appt.medico_id,
+    consensoComunicazioniAt: appt.consenso_comunicazioni_at || null,
     pazienteNome:      [appt.nome_paziente, appt.cognome_paziente].filter(Boolean).join(' '),
     data:              appt.data,
     ora:               (appt.ora || '').substring(0, 5),
@@ -409,7 +412,10 @@ export default async function handler(req, res) {
     const dataFmt = formatDateIt(appt.data);
     to            = appt.emailPaziente;
     subject       = `Conferma appuntamento con ${appt.medicoNome}`;
-    html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost });
+    const consFooter = appt.consensoComunicazioniAt
+      ? `Ha acconsentito a ricevere comunicazioni proattive dal medico. Non le desidera? <a href="${revocaLink(icsHost, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId })}" style="color:#888;">Revochi qui il consenso</a> &middot; Delphi~Med`
+      : undefined;
+    html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost, footer_note: consFooter });
     if (appt.apptId && appt.data && appt.ora) {
       const _ics = buildICS({ apptId: appt.apptId, data: appt.data, ora: appt.ora, summary: buildIcsSummary(appt.tipoVisita, appt.medicoNome), description: appt.medicoNome ? `Prenotazione confermata con ${appt.medicoNome}` : 'Prenotazione confermata', location: [appt.centroNome, appt.centroIndirizzo].filter(Boolean).join(', ') });
       icsAttachment = { filename: 'appuntamento.ics', content: Buffer.from(_ics).toString('base64'), contentType: 'text/calendar; charset=utf-8' };
@@ -760,7 +766,7 @@ function buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_
   return { googleUrl, icsUrl };
 }
 
-function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione, data_raw, appt_id, centro_indirizzo, ics_host }) {
+function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione, data_raw, appt_id, centro_indirizzo, ics_host, footer_note }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
   const anticipaUrl = 'https://delphi-med.com/?anticipa=' + encodeURIComponent(codice_cancellazione);
   const { googleUrl, icsUrl } = buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_id, codice_cancellazione, ics_host });
@@ -791,7 +797,7 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
     `<p style="font-size:13px;color:#555;line-height:1.6;margin:0 0 12px;max-width:480px;display:inline-block;">Vorresti essere avvisato nel caso si liberi una data pi&ugrave; vicina?</p><br>` +
     ctaButton(anticipaUrl, 'Avvisami se si libera un posto') +
     `</div>`;
-  return emailShell(body);
+  return emailShell(body, footer_note ? { footerNote: footer_note } : undefined);
 }
 
 function buildHtmlSpostamentoPaziente({ paziente_nome, medico_nome, centro_nome, data_fmt, ora, tipo_visita, centro_indirizzo }) {

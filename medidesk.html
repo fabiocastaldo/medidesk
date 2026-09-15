@@ -1831,7 +1831,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
         <div class="section-title">Consensi</div>
-        <div style="font-size:13px;color:var(--ink3);margin:6px 0 10px">Il consenso lo d&agrave; il paziente dal link che riceve via email: da qui puoi solo richiederlo. La revoca &egrave; sempre possibile dal link in calce a ogni comunicazione.</div>
+        <div style="font-size:13px;color:var(--ink3);margin:6px 0 10px">Il consenso si presta in fase di prenotazione online personale: qui vedi chi lo ha dato. Chi non ha acconsentito o lo ha revocato non compare. La revoca &egrave; sempre nel link in calce a ogni comunicazione.</div>
         <div id="com-consensi"></div>
       </div>
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
@@ -2348,6 +2348,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
               <input type="checkbox" id="bk-consent-health" style="margin-top:3px;flex-shrink:0">
               <span id="bk-consent-health-label">Acconsento al trattamento del tipo di visita e dell'area tematica come dati relativi alla salute (art. 9 GDPR).</span>
             </label>
+            <label id="bk-row-comm" style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;cursor:pointer">
+              <input type="checkbox" id="bk-consent-comm" style="margin-top:3px;flex-shrink:0">
+              <span id="bk-consent-comm-label"><strong>Facoltativo:</strong> acconsento a ricevere via email dal medico comunicazioni proattive (promemoria di prevenzione, richiami, avvisi organizzativi). Revocabile in ogni momento dal link in calce a ogni comunicazione. <span style="color:var(--ink3)">(Testo sintetico provvisorio: informativa completa in validazione legale.)</span></span>
+            </label>
             <div id="bk-auth-terzi" style="display:none;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-left:3px solid var(--accent);border-radius:6px;padding:12px 14px;margin-top:4px">
               <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                 <input type="checkbox" id="bk-consent-terzi" style="margin-top:3px;flex-shrink:0">
@@ -2423,7 +2427,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <span class="home-logo">Delphi~Med</span>
         </div>
         <div style="text-align:center;margin-bottom:6px">
-          <div id="cons-title" style="font-size:22px;font-weight:700;color:#fff">Consenso alle comunicazioni</div>
+          <div id="cons-title" style="font-size:22px;font-weight:700;color:#fff">Revoca del consenso</div>
           <div id="cons-medico" style="font-size:14px;color:rgba(255,255,255,.8);margin-top:6px"></div>
         </div>
         <div id="cons-body" style="max-width:520px;margin:16px auto 0;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:14px;line-height:1.55"></div>
@@ -4411,10 +4415,8 @@ function checkView(){
     showCancelView();
   } else if(params.has('anticipa')){
     showAnticipaView();
-  } else if(params.has('consenso')){
-    showConsensoView('consenso');
   } else if(params.has('revoca_comm')){
-    showConsensoView('revoca');
+    showConsensoView();
   } else if(location.search.includes('booking') || location.pathname.startsWith('/m/') || location.pathname.startsWith('/c/')){
     showBookingView();
   } else if(location.pathname.startsWith('/t/')){
@@ -7458,7 +7460,6 @@ function showPazienteDetail(id){
       <div class="field-row"><span class="field-key">Nascita</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-nascita" placeholder="GG/MM/AAAA" value="${escapeAttr(p.nascita||'')}"></span></div>
       <div class="field-row"><span class="field-key">Email</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-email" type="email" placeholder="aggiungi" value="${escapeAttr(p.email||_fb.email||'')}"></span></div>
       <div class="field-row"><span class="field-key">Telefono</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-tel" placeholder="aggiungi" value="${escapeAttr(p.tel||_fb.tel||'')}"></span></div>
-      ${(S.moduli&&S.moduli.comunicazioni===true)?`<div class="field-row"><span class="field-key">Comunicazioni</span><span class="field-val" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="pd-cons-stato">${escapeHtml(comStatoConsenso(p).t)}</span><button class="btn btn-sm btn-secondary" ${p.email?'':'disabled title="Serve un&rsquo;email del paziente" '}onclick="comRichiedi('${escapeAttr(id)}','scheda')">Richiedi consenso</button></span></div>`:''}
       <div style="text-align:right;margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="savePazienteAnagrafica('${escapeAttr(id)}')">Salva anagrafica</button></div>
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
@@ -9978,11 +9979,14 @@ function bkTogglePerConto(){
   if(hint)      hint.style.display      = on ? 'block' : 'none';
   if(rowBase)   rowBase.style.display   = on ? 'none'  : 'flex';
   if(rowHealth) rowHealth.style.display = on ? 'none'  : 'flex';
+  const rowComm = document.getElementById('bk-row-comm');
+  if(rowComm) rowComm.style.display = on ? 'none' : 'flex';
   if(auth)      auth.style.display      = on ? 'block' : 'none';
   if(on){
     if(intro) intro.innerHTML = 'I dati che inserisci sono della persona che riceverà la visita (l\'interessato) e sono trattati per conto del <strong>medico presso cui prenoti</strong>, titolare del trattamento — con Delphi~Med quale responsabile del trattamento — per gestire la sua prenotazione: l\'email di conferma e i promemoria sono inviati al recapito indicato. Non sono raccolti dati identificativi di chi effettua la prenotazione.';
     const cb=document.getElementById('bk-consent-base');   if(cb) cb.checked=false;
     const ch=document.getElementById('bk-consent-health'); if(ch) ch.checked=false;
+    const cc=document.getElementById('bk-consent-comm');   if(cc) cc.checked=false;
   } else {
     if(intro) intro.innerHTML = 'I dati che inserisci (nome, cognome, email, telefono) sono trattati per conto del <strong>medico presso cui prenoti</strong>, titolare del trattamento — con Delphi~Med quale responsabile del trattamento — per gestire la tua prenotazione: registrazione dell\'appuntamento, email di conferma con il link per la cancellazione e promemoria prima della visita, inviati al recapito indicato.';
     const ct=document.getElementById('bk-consent-terzi');  if(ct) ct.checked=false;
@@ -10078,7 +10082,8 @@ async function confirmBooking(){
           note: appt.note,
           data: bk.dateStr, ora: bk.ora,
           per_conto: perConto,
-          consenso_versione: consensoVersioneCorrente(perConto)
+          consenso_versione: consensoVersioneCorrente(perConto),
+          consenso_comunicazioni: !perConto && !bk.centroMode && (document.getElementById('bk-consent-comm')?.checked || false)
         })
       });
       const timeoutPromise = new Promise((_, reject) =>
@@ -10797,14 +10802,6 @@ function _contattiDaPrenotazioni(p){
   return { email, tel };
 }
 const _PAZ_PAGE=30; let _pazShown=_PAZ_PAGE;
-function _pazConsBtn(r){
-  if(r.tipo!=='paziente' || !(S.moduli&&S.moduli.comunicazioni===true)) return '';
-  const sp=(S.pazienti||[]).find(function(x){return String(x.id)===String(r.id);});
-  if(!sp) return '';
-  const st=comStatoConsenso(sp);
-  if(sp.consenso_comunicazioni_at) return ' <button class="paz-act" disabled title="'+escapeAttr(st.t)+'" style="color:var(--brand-bright)">Consenso ✓</button>';
-  return ' <button class="paz-act" '+(sp.email?'':'disabled ')+'title="'+escapeAttr(sp.email?st.t:'Serve un\u2019email del paziente')+'" onclick="event.stopPropagation();comRichiedi(\''+escapeAttr(String(r.id))+'\',\'lista\')">Richiedi consenso</button>';
-}
 function renderPazienti(more){
   _pazShown = more===true ? _pazShown+_PAZ_PAGE : _PAZ_PAGE;
   const tEl=document.getElementById('pazienti-table');
@@ -10864,7 +10861,7 @@ function _pazRowHTML(r){
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> `:'')+btnVis+_pazConsBtn(r);
+  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> `:'')+btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
@@ -10881,13 +10878,12 @@ function _pazCardHTML(r){
   const cVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const cCons=_pazConsBtn(r);
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-info">
       <div class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</div>
       <div class="paziente-meta">${meta||('&nbsp;')}</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')+cVis+cCons}</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')+cVis}</div>
   </div>`;
 }
 
@@ -13125,7 +13121,7 @@ async function comApi(payload){
   const res=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify(payload)});
   const j=await res.json().catch(()=>({}));
   if(!res.ok){
-    showToast(j.error==='modulo_non_attivo'?'Il modulo Comunicazioni non \u00e8 attivo.':j.error==='email_mancante'?'Il paziente non ha un\u2019email.':j.error==='nessun_destinatario'?'Nessun destinatario con questi criteri.':j.error==='corpo_mancante'?'Scrivi il testo della comunicazione.':j.error==='troppi_destinatari'?'Troppi destinatari per un solo invio.':j.error==='email_fallita'?'Invio email non riuscito.':'Operazione non riuscita.');
+    showToast(j.error==='modulo_non_attivo'?'Il modulo Comunicazioni non \u00e8 attivo.':j.error==='nessun_destinatario'?'Nessun destinatario con questi criteri.':j.error==='corpo_mancante'?'Scrivi il testo della comunicazione.':j.error==='troppi_destinatari'?'Troppi destinatari per un solo invio.':j.error==='email_fallita'?'Invio email non riuscito.':'Operazione non riuscita.');
     return null;
   }
   return j;
@@ -13142,30 +13138,18 @@ async function comLoad(){
   if(!(S.moduli&&S.moduli.comunicazioni===true)){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Il modulo Comunicazioni non \u00e8 attivo.</div>'; return; }
   if(!isOnline()){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Disponibile solo online.</div>'; return; }
   box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Caricamento\u2026</div>';
-  const { data, error } = await supabaseClient.from('pazienti').select('id,nome,cognome,email,consenso_comunicazioni_at,consenso_comunicazioni_versione,consenso_comunicazioni_richiesto_at,consenso_comunicazioni_revocato_at').order('cognome',{ascending:true});
+  const { data, error } = await supabaseClient.from('pazienti').select('id,nome,cognome,consenso_comunicazioni_at,consenso_comunicazioni_versione').not('consenso_comunicazioni_at','is',null).order('cognome',{ascending:true});
   if(error){ box.innerHTML='<div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
   const rows=data||[];
-  if(!rows.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessun paziente in archivio.</div>'; }
+  if(!rows.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessun consenso ancora: il paziente lo presta quando prenota online per s\u00e9.</div>'; }
   else box.innerHTML=rows.map(function(p){
     const st=comStatoConsenso(p);
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">'
       +'<div style="min-width:160px;font-weight:600">'+escapeHtml((p.cognome||'')+' '+(p.nome||''))+'</div>'
       +'<div style="flex:1;font-size:13px;color:'+st.c+'">'+escapeHtml(st.t)+'</div>'
-      +'<button class="btn btn-sm btn-secondary" '+(p.email?'':'disabled title="Serve un\u2019email del paziente" ')+'onclick="comRichiedi(\''+escapeAttr(p.id)+'\')">Richiedi consenso</button>'
       +'</div>';
   }).join('');
   comLoadClusterSel(); comRegistro();
-}
-async function comRichiedi(pazId, ctx){
-  const j=await comApi({action:'richiedi_consenso', paziente_id:pazId});
-  if(!j) return;
-  showToast('Richiesta di consenso inviata.');
-  const sp=(S.pazienti||[]).find(function(x){return String(x.id)===String(pazId);});
-  if(sp) sp.consenso_comunicazioni_richiesto_at=new Date().toISOString();
-  if(ctx==='scheda'){
-    const st=document.getElementById('pd-cons-stato'); if(st&&sp) st.textContent=comStatoConsenso(sp).t;
-  } else if(ctx==='lista'){ try{ renderPazienti(); }catch(_){ }
-  } else { comLoad(); }
 }
 function comCriteri(){
   const c={};
@@ -13245,8 +13229,7 @@ async function comRegistro(){
     :'<div style="font-size:13px;color:var(--ink3)">Nessun invio ancora.</div>';
 }
 
-// ── Consenso comunicazioni: vista pubblica (?consenso= / ?revoca_comm=, senza login — s20) ──
-const CONS_INFORMATIVA_BOZZA='Il suo medico desidera poterle inviare via email comunicazioni proattive: promemoria di prevenzione, richiami e avvisi organizzativi. Il consenso \u00e8 facoltativo, non condiziona in alcun modo la cura e pu\u00f2 essere revocato in ogni momento dal link presente in calce a ogni comunicazione. Titolare del trattamento \u00e8 il medico indicato sopra. (Testo sintetico provvisorio: informativa completa in validazione legale.)';
+// ── Revoca del consenso comunicazioni: vista pubblica (?revoca_comm=, senza login — s20) ──
 async function consApi(action, token){
   try{
     const r=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action, token:token})});
@@ -13254,15 +13237,12 @@ async function consApi(action, token){
     return { ok:r.ok, j:j };
   }catch(_){ return { ok:false, j:{} }; }
 }
-function showConsensoView(mode){
+function showConsensoView(){
   ['view-home','view-app','view-booking','view-portfolio','view-thread'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; });
   const v=document.getElementById('view-consenso'); if(v) v.style.display='block';
   document.documentElement.classList.add('th-page');
   const params=new URLSearchParams(location.search);
-  window._consToken=params.get(mode==='revoca'?'revoca_comm':'consenso')||'';
-  window._consMode=mode;
-  const title=document.getElementById('cons-title');
-  if(title) title.textContent = mode==='revoca' ? 'Revoca del consenso' : 'Consenso alle comunicazioni';
+  window._consToken=params.get('revoca_comm')||'';
   consInit();
 }
 async function consInit(){
@@ -13272,25 +13252,16 @@ async function consInit(){
   const r=await consApi('leggi_consenso', window._consToken);
   if(!r.ok){ body.textContent='Questo link non \u00e8 valido o \u00e8 scaduto. Se pensa sia un errore, contatti il suo medico.'; return; }
   if(med) med.textContent=r.j.medico||'';
-  if(window._consMode==='revoca'){
-    if(r.j.stato==='revocato'){ body.textContent='Il consenso risulta gi\u00e0 revocato: non ricever\u00e0 comunicazioni proattive.'; return; }
-    body.textContent='Confermando, non ricever\u00e0 pi\u00f9 comunicazioni proattive dal suo medico. Potr\u00e0 sempre dare di nuovo il consenso in futuro.';
-    act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Confermo la revoca</button>';
-  } else {
-    if(r.j.stato==='attivo'){ body.textContent='Il suo consenso risulta gi\u00e0 attivo: non deve fare altro. Pu\u00f2 revocarlo in ogni momento dal link in calce a ogni comunicazione.'; return; }
-    body.textContent=CONS_INFORMATIVA_BOZZA;
-    act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Acconsento</button>';
-  }
+  if(r.j.stato!=='attivo'){ body.textContent='Nessun consenso attivo: non ricever\u00e0 comunicazioni proattive.'; return; }
+  body.textContent='Confermando, non ricever\u00e0 pi\u00f9 comunicazioni proattive dal suo medico. Potr\u00e0 sempre prestare di nuovo il consenso a una prossima prenotazione.';
+  act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Confermo la revoca</button>';
 }
 async function consConferma(){
   const body=document.getElementById('cons-body'), act=document.getElementById('cons-actions');
   act.innerHTML=''; body.textContent='Un momento\u2026';
-  const action = window._consMode==='revoca' ? 'revoca_consenso' : 'conferma_consenso';
-  const r=await consApi(action, window._consToken);
+  const r=await consApi('revoca_consenso', window._consToken);
   if(!r.ok){ body.textContent='Operazione non riuscita: il link potrebbe non essere pi\u00f9 valido. Riapra il link dall\u2019email o contatti il suo medico.'; return; }
-  body.textContent = window._consMode==='revoca'
-    ? 'Revoca registrata. Non ricever\u00e0 pi\u00f9 comunicazioni proattive.'
-    : 'Consenso registrato. Grazie: potr\u00e0 revocarlo in ogni momento dal link in calce a ogni comunicazione.';
+  body.textContent='Revoca registrata. Non ricever\u00e0 pi\u00f9 comunicazioni proattive.';
 }
 
 const AST_REGISTRY = {
