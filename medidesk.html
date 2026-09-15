@@ -7231,7 +7231,7 @@ function showApptDetail(id){
       ${a.cancelled?`<div class="field-row"><span class="field-key">Cancellato il</span><span class="field-val">${a.cancelledAt?new Date(a.cancelledAt).toLocaleDateString('it-IT'):'—'}</span></div>`:''}
       ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
     </div>
-    ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${escapeAttr(id)}')">Ripristina appuntamento</button>`:''}
+    ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${escapeAttr(id)}')">Ripristina appuntamento</button>`:`<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="closeModal('modal-appt-detail');caricaVisitaDaAppt('${escapeAttr(id)}')">Carica visita</button>`}
 `;
   document.getElementById('btn-delete-appt').onclick = ()=>deleteAppuntamento(id);
   openModal('modal-appt-detail');
@@ -10852,38 +10852,30 @@ function renderPazienti(more){
   }
   const shown=list.slice(0,_pazShown);
   const moreBtn=list.length>shown.length?`<div class="paz-more"><button class="btn btn-secondary btn-sm" onclick="renderPazienti(true)">Mostra altri ${Math.min(_PAZ_PAGE,list.length-shown.length)}</button><span>${shown.length} di ${list.length}</span></div>`:'';
-  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Email</th><th>Telefono</th><th style="text-align:center">Visite</th><th></th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+moreBtn;
+  tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Email</th><th>Telefono</th><th style="text-align:center">Visite</th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+moreBtn;
   cEl.innerHTML=shown.map(_pazCardHTML).join('')+moreBtn;
 }
 
 function _pazRowHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
-  const btnVis=r.tipo==='paziente'
-    ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
-    :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> `:'')+btnVis;
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">${r.email?escapeHtml(r.email):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.tel?escapeHtml(r.tel):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="text-align:center">${r.tipo==='paziente'?r.nVisite:'<span class="paz-dim">&ndash;</span>'}</td>
-    <td style="text-align:right;white-space:nowrap">${azioni}</td>
   </tr>`;
 }
 function _pazCardHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
   const _cont=[r.email,r.tel].filter(Boolean).map(escapeHtml).join(' \u00b7 ');
   const meta=(r.nascita?`<span class="pm-nascita">${escapeHtml(r.nascita)}</span>`:'')+(_cont?`<span class="pm-contatti">${r.nascita?' \u00b7 ':''}${_cont}</span>`:'');
-  const cVis=r.tipo==='paziente'
-    ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
-    :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-info">
       <div class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</div>
       <div class="paziente-meta">${meta||('&nbsp;')}</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')+cVis}</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')}</div>
   </div>`;
 }
 

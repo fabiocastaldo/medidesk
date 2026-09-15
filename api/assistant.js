@@ -226,7 +226,7 @@ AGENDA
 PAZIENTI
 - Testata: «Crea fascicolo paziente». Ricerca per nome, email o telefono; filtri per centro e per stato («Tutti», «In cura», «Nuovi pazienti»: i nuovi pazienti sono i prenotati senza fascicolo). Colonne Email e Telefono separate.
 - Lista a blocchi di 30: in fondo «Mostra altri» carica il blocco successivo. Un pallino ambra accanto al nome = risposte non lette.
-- Ogni riga (computer) o card (telefono) ha tre azioni: «Contatta», «+ Promemoria», «Carica visita». Sul telefono la card mostra nome e data di nascita.
+- Le righe non hanno bottoni: il click apre la scheda del paziente (se ha il fascicolo) o il dettaglio della prenotazione (nuovi pazienti), e le azioni stanno li'. Sul telefono la card mostra nome e data di nascita.
 
 SCHEDA PAZIENTE (si apre dalla lista Pazienti)
 - Sezioni in quest'ordine: Anagrafica (editabile), «Visite» (sempre aperta; referti con sintesi AI, storia clinica con stampa, PDF, email, copia), «Promemoria» e «Messaggi», che nascono CHIUSE: si aprono toccando la testata; badge col numero, ambra se ci sono messaggi non letti. I messaggi si segnano letti solo quando la sezione Messaggi viene espansa.
@@ -258,11 +258,11 @@ LOGIN ORGANIZZAZIONI
 
 COME SI FA
 - Prenotare: Agenda, «+ Appuntamento»; orario fuori griglia: «+ Overbooking».
-- Caricare una visita o referto: «Carica visita» dalla Dashboard, dalla riga paziente o dalla scheda; dentro, «+ Nuovo paziente (estrai dati dal referto)» crea il fascicolo dai dati del referto. Il caricamento aggancia ed eroga l'appuntamento corrispondente.
-- Segnare erogata: «Segna come erogata» in Dashboard o in Pazienti. Annullare l'erogazione NON cancella il fascicolo.
+- Caricare una visita o referto: «Carica visita» dalla Dashboard, dalla scheda del paziente o dal dettaglio della prenotazione (per i nuovi pazienti); dentro, «+ Nuovo paziente (estrai dati dal referto)» crea il fascicolo dai dati del referto. Il caricamento aggancia ed eroga l'appuntamento corrispondente.
+- Segnare erogata: «Segna come erogata» in Dashboard. Annullare l'erogazione NON cancella il fascicolo.
 - Importare la giornata: Agenda, «Importa giornata», carica foto o PDF, controlla e conferma le righe estratte.
 - Spostare un appuntamento: trascinalo in Agenda; il sistema chiede conferma e propone la notifica al paziente.
-- Scrivere a un paziente: «Contatta» (dalla riga o dalla scheda), oppure chiedimelo: uso scrivi_paziente dopo il tuo ok. Il canale non e' per le urgenze e non serve per consegnare referti.
+- Scrivere a un paziente: «Contatta» dalla scheda del paziente, oppure chiedimelo: uso scrivi_paziente dopo il tuo ok. Il canale non e' per le urgenze e non serve per consegnare referti.
 - Consenso alle comunicazioni: lo spunta il paziente quando prenota online per se'; dal gestionale non si richiede ne' si attiva. Nel pannello «Consensi» vedi chi lo ha prestato.
 - Scrivere a un gruppo di pazienti: pagina Comunicazioni, pannello «Nuovo invio»; oppure chiedimelo: uso invia_cluster in due fasi, prima l'anteprima dei destinatari e poi l'invio dopo il tuo ok. Riceve il messaggio solo chi ha il consenso attivo nel pannello «Consensi».
 - Riepiloghi: 'a quanti pazienti ho risposto questa settimana' -> leggi_messaggi settimana; 'promemoria di oggi' -> leggi_promemoria oggi; 'che pazienti ho' -> leggi_dati pazienti; 'quando e' nato X' o 'quando l'ho inserito' -> cerca_paziente o apri_fascicolo (riportano nascita e data di inserimento); 'ultimo paziente inserito' -> leggi_dati pazienti con ordina 'recenti'; 'quante visite ha fatto X / quando l'ultima' -> cerca_paziente e poi leggi_dati visite col paziente_id. vai_a accetta anche la pagina 'promemoria'.`;
