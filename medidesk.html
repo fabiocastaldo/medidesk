@@ -487,7 +487,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 
 /* ── PRENOTAZIONE PUBBLICA ── */
 html.th-page, html.th-page body{background:var(--brand-deep);overscroll-behavior-y:none}
-#view-booking, #view-portfolio, #view-thread{display:none;min-height:100vh;min-height:100dvh;background:radial-gradient(100% 80% at 88% -2%,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 58%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
+#view-booking, #view-portfolio, #view-thread, #view-consenso{display:none;min-height:100vh;min-height:100dvh;background:radial-gradient(100% 80% at 88% -2%,color-mix(in srgb,var(--brand-bright) 55%,transparent),transparent 58%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
 .booking-wrap{max-width:680px;margin:0 auto;padding:48px 28px 40px}
 .booking-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.35)}
 /* hero */
@@ -1468,6 +1468,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('agenda')"><span class="icon"><svg class="ic"><use href="#ic-calendar"/></svg></span><span>Agenda</span></div>
       <div class="nav-item" onclick="showPage('pazienti')"><span class="icon"><svg class="ic"><use href="#ic-users"/></svg></span><span>Pazienti</span></div>
       <div class="nav-item" onclick="showPage('promemoria')"><span class="icon"><svg class="ic"><use href="#ic-clock"/></svg></span><span>Promemoria</span></div>
+      <div class="nav-item" id="nav-comunicazioni" style="display:none" onclick="showPage('comunicazioni')"><span class="icon"><svg class="ic"><use href="#ic-mail"/></svg></span><span>Comunicazioni</span></div>
       <div class="nav-item" onclick="showPage('centri')"><span class="icon"><svg class="ic"><use href="#ic-center"/></svg></span><span>Centri</span></div>
       <div class="nav-item" onclick="showPage('prestazioni')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Prestazioni</span></div>
       <div class="nav-item" onclick="showPage('profilo')"><span class="icon"><svg class="ic"><use href="#ic-user"/></svg></span><span>Profilo</span></div>
@@ -1821,6 +1822,44 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div id="prom-pg-fatti" style="margin-top:22px"></div>
     </div>
 
+    <div id="page-comunicazioni" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Comunicazioni</div>
+          <div class="page-subtitle">Invii proattivi ai pazienti con consenso</div>
+        </div>
+      </div>
+      <div class="card" style="padding:16px 18px;margin-bottom:16px">
+        <div class="section-title">Consensi</div>
+        <div style="font-size:13px;color:var(--ink3);margin:6px 0 10px">Il consenso lo d&agrave; il paziente dal link che riceve via email: da qui puoi solo richiederlo. La revoca &egrave; sempre possibile dal link in calce a ogni comunicazione.</div>
+        <div id="com-consensi"></div>
+      </div>
+      <div class="card" style="padding:16px 18px;margin-bottom:16px">
+        <div class="section-title">Nuovo invio</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <input type="number" id="com-eta-min" class="form-input" min="0" max="130" placeholder="Et&agrave; min" style="width:90px">
+          <input type="number" id="com-eta-max" class="form-input" min="0" max="130" placeholder="Et&agrave; max" style="width:90px">
+          <input type="number" id="com-uvg" class="form-input" min="1" max="3650" placeholder="Nessuna visita da (giorni)" style="width:210px">
+          <input id="com-tipo" class="form-input" placeholder="Tipo di visita (vuoto = tutti)" style="width:210px">
+          <select id="com-cat" class="form-input"><option value="">Prima visita o controllo: entrambi</option><option value="prima_visita">Prima visita</option><option value="controllo">Controllo</option></select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+          <select id="com-cluster-sel" class="form-input" onchange="comApplicaCluster()" style="min-width:170px"><option value="">Cluster salvati&hellip;</option></select>
+          <input id="com-cluster-nome" class="form-input" maxlength="80" placeholder="Nome cluster&hellip;" style="width:150px">
+          <button class="btn btn-secondary" onclick="comSalvaCluster()">Salva come cluster</button>
+          <button class="btn btn-secondary" onclick="comAnteprima()">Anteprima destinatari</button>
+        </div>
+        <div id="cluster_anteprima" style="margin-top:10px"></div>
+        <textarea id="com-corpo" rows="4" maxlength="4000" class="form-input" placeholder="Testo della comunicazione&hellip;" style="width:100%;box-sizing:border-box;margin-top:10px"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-primary" id="com-invia-btn" onclick="comInvia()">Invia a tutti</button></div>
+        <div id="com-esito" style="margin-top:10px"></div>
+      </div>
+      <div class="card" style="padding:16px 18px">
+        <div class="section-title">Registro invii</div>
+        <div id="com-registro"></div>
+      </div>
+    </div>
+
     <div id="page-statistiche" class="page">
       <div class="page-header">
         <div>
@@ -2171,6 +2210,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <button class="mnu-item" onclick="showPage('prestazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Prestazioni</span></button>
           <button class="mnu-item" onclick="showPage('statistiche')"><span class="mnu-ico"><svg class="ic"><use href="#ic-stats"/></svg></span><span class="mnu-lbl">Statistiche</span></button>
           <button class="mnu-item" onclick="showPage('manutenzione-archivio')"><span class="mnu-ico"><svg class="ic"><use href="#ic-archive"/></svg></span><span class="mnu-lbl">Archivio</span></button>
+          <button class="mnu-item" id="mnu-comunicazioni" style="display:none" onclick="showPage('comunicazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-mail"/></svg></span><span class="mnu-lbl">Comunicazioni</span></button>
         </div>
       </div>
       <div class="mnu-sec">
@@ -2373,6 +2413,21 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
         <div id="pf-list" style="max-width:520px;margin:14px auto 0"></div>
         <div id="pf-empty" style="display:none;text-align:center;color:rgba(255,255,255,.75);font-size:14px;margin:22px auto 0;max-width:420px"></div>
+      </div>
+    </div>
+
+<!-- ══════════════ PAGINA CONSENSO COMUNICAZIONI (?consenso= / ?revoca_comm=, senza login — s20) ══════════════ -->
+    <div id="view-consenso" style="display:none">
+      <div class="booking-wrap">
+        <div class="home-logo-wrap" style="align-items:center;text-align:center;margin-bottom:20px">
+          <span class="home-logo">Delphi~Med</span>
+        </div>
+        <div style="text-align:center;margin-bottom:6px">
+          <div id="cons-title" style="font-size:22px;font-weight:700;color:#fff">Consenso alle comunicazioni</div>
+          <div id="cons-medico" style="font-size:14px;color:rgba(255,255,255,.8);margin-top:6px"></div>
+        </div>
+        <div id="cons-body" style="max-width:520px;margin:16px auto 0;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:14px;line-height:1.55"></div>
+        <div id="cons-actions" style="max-width:520px;margin:14px auto 0;text-align:center"></div>
       </div>
     </div>
 
@@ -3725,6 +3780,8 @@ async function loadMedicoFromDB(user){
       S.medicoId             = data.id;
       _medicoPiano           = data.piano              || 'free';
       _medicoCreatedAt       = data.created_at         || null;
+      S.moduli               = (data.moduli && typeof data.moduli === 'object') ? data.moduli : {};
+      applyModuliGate();
       S.settings.titolo      = data.titolo            || '';
       S.settings.nomeProf    = data.nome               || '';
       S.settings.cognomeProf = data.cognome            || '';
@@ -4352,6 +4409,10 @@ function checkView(){
     showCancelView();
   } else if(params.has('anticipa')){
     showAnticipaView();
+  } else if(params.has('consenso')){
+    showConsensoView('consenso');
+  } else if(params.has('revoca_comm')){
+    showConsensoView('revoca');
   } else if(location.search.includes('booking') || location.pathname.startsWith('/m/') || location.pathname.startsWith('/c/')){
     showBookingView();
   } else if(location.pathname.startsWith('/t/')){
@@ -4428,7 +4489,7 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','promemoria','centri','prestazioni','profilo','piani','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','promemoria','comunicazioni','centri','prestazioni','profilo','piani','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
@@ -4442,6 +4503,7 @@ function showPage(id){
   window.scrollTo({top:0,behavior:'smooth'});
   if(id==='agenda') setAgendaView('week');
   if(id==='pazienti') renderPazienti();
+  if(id==='comunicazioni') comLoad();
   if(id==='centri') renderCentri();
   if(id==='prestazioni'){ renderPrestazioni(); renderTipiAree(); }
   if(id==='profilo'){ loadSettings(); prefillProfiloNome(); }
@@ -13040,6 +13102,178 @@ function _astRange(inp){
   return [String(inp.da||'0000-01-01'), String(inp.a||'9999-12-31')];
 }
 
+// ── Comunicazioni proattive: modulo, consensi double opt-in, invii (s20) ─────
+function applyModuliGate(){
+  const on=!!(S.moduli&&S.moduli.comunicazioni===true);
+  const n=document.getElementById('nav-comunicazioni'); if(n) n.style.display=on?'':'none';
+  const m=document.getElementById('mnu-comunicazioni'); if(m) m.style.display=on?'':'none';
+}
+async function comApi(payload){
+  const _jwt=await getAuthJwt();
+  const res=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify(payload)});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok){
+    showToast(j.error==='modulo_non_attivo'?'Il modulo Comunicazioni non \u00e8 attivo.':j.error==='email_mancante'?'Il paziente non ha un\u2019email.':j.error==='nessun_destinatario'?'Nessun destinatario con questi criteri.':j.error==='corpo_mancante'?'Scrivi il testo della comunicazione.':j.error==='troppi_destinatari'?'Troppi destinatari per un solo invio.':j.error==='email_fallita'?'Invio email non riuscito.':'Operazione non riuscita.');
+    return null;
+  }
+  return j;
+}
+function comStatoConsenso(p){
+  if(p.consenso_comunicazioni_at) return {t:'Attivo dal '+new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT')+(p.consenso_comunicazioni_versione?' \u00b7 '+p.consenso_comunicazioni_versione:''), c:'var(--brand-bright)'};
+  if(p.consenso_comunicazioni_revocato_at) return {t:'Revocato il '+new Date(p.consenso_comunicazioni_revocato_at).toLocaleDateString('it-IT'), c:'var(--warm)'};
+  if(p.consenso_comunicazioni_richiesto_at) return {t:'Richiesto il '+new Date(p.consenso_comunicazioni_richiesto_at).toLocaleDateString('it-IT'), c:'var(--ink3)'};
+  return {t:'Nessuno', c:'var(--ink3)'};
+}
+async function comLoad(){
+  applyModuliGate();
+  const box=document.getElementById('com-consensi'); if(!box) return;
+  if(!(S.moduli&&S.moduli.comunicazioni===true)){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Il modulo Comunicazioni non \u00e8 attivo.</div>'; return; }
+  if(!isOnline()){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Disponibile solo online.</div>'; return; }
+  box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Caricamento\u2026</div>';
+  const { data, error } = await supabaseClient.from('pazienti').select('id,nome,cognome,email,consenso_comunicazioni_at,consenso_comunicazioni_versione,consenso_comunicazioni_richiesto_at,consenso_comunicazioni_revocato_at').order('cognome',{ascending:true});
+  if(error){ box.innerHTML='<div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
+  const rows=data||[];
+  if(!rows.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessun paziente in archivio.</div>'; }
+  else box.innerHTML=rows.map(function(p){
+    const st=comStatoConsenso(p);
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">'
+      +'<div style="min-width:160px;font-weight:600">'+escapeHtml((p.cognome||'')+' '+(p.nome||''))+'</div>'
+      +'<div style="flex:1;font-size:13px;color:'+st.c+'">'+escapeHtml(st.t)+'</div>'
+      +'<button class="btn btn-sm btn-secondary" '+(p.email?'':'disabled title="Serve un\u2019email del paziente" ')+'onclick="comRichiedi(\''+escapeAttr(p.id)+'\')">Richiedi consenso</button>'
+      +'</div>';
+  }).join('');
+  comLoadClusterSel(); comRegistro();
+}
+async function comRichiedi(pazId){
+  const j=await comApi({action:'richiedi_consenso', paziente_id:pazId});
+  if(j){ showToast('Richiesta di consenso inviata.'); comLoad(); }
+}
+function comCriteri(){
+  const c={};
+  const emin=parseInt(document.getElementById('com-eta-min').value,10); if(Number.isInteger(emin)) c.eta_min=emin;
+  const emax=parseInt(document.getElementById('com-eta-max').value,10); if(Number.isInteger(emax)) c.eta_max=emax;
+  const uvg=parseInt(document.getElementById('com-uvg').value,10); if(Number.isInteger(uvg)&&uvg>0) c.ultima_visita_oltre_giorni=uvg;
+  const t=(document.getElementById('com-tipo').value||'').trim(); if(t) c.tipo_visita=t;
+  const cat=document.getElementById('com-cat').value; if(cat) c.categoria=cat;
+  return c;
+}
+async function comAnteprima(){
+  const box=document.getElementById('cluster_anteprima'); if(!box) return null;
+  box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Calcolo\u2026</div>';
+  const j=await comApi({action:'anteprima', criteri:comCriteri()});
+  if(!j){ box.innerHTML=''; return null; }
+  box.innerHTML='<div style="font-size:13px"><b>'+j.n+'</b> destinatari'+(j.n?': '+j.destinatari.map(function(d){return escapeHtml((d.cognome||'')+' '+(d.nome||''));}).join(', '):' \u2014 nessun paziente con consenso rientra nei criteri.')+'</div>';
+  return j;
+}
+async function comSalvaCluster(){
+  const nomeEl=document.getElementById('com-cluster-nome'); const nome=(nomeEl&&nomeEl.value||'').trim();
+  if(!nome){ showToast('Dai un nome al cluster.'); return; }
+  const { error } = await supabaseClient.from('cluster').insert({ medico_id:S.medicoId, nome:nome, criteri:comCriteri() });
+  if(error){ showToast('Salvataggio non riuscito.'); return; }
+  nomeEl.value=''; showToast('Cluster salvato.'); comLoadClusterSel();
+}
+async function comLoadClusterSel(){
+  const sel=document.getElementById('com-cluster-sel'); if(!sel) return;
+  const { data } = await supabaseClient.from('cluster').select('id,nome,criteri').order('nome',{ascending:true});
+  window._comClusters=data||[];
+  sel.innerHTML='<option value="">Cluster salvati\u2026</option>'+window._comClusters.map(function(c){return '<option value="'+escapeAttr(c.id)+'">'+escapeHtml(c.nome)+'</option>';}).join('');
+}
+function comApplicaCluster(){
+  const sel=document.getElementById('com-cluster-sel'); const c=(window._comClusters||[]).find(function(x){return String(x.id)===sel.value;});
+  const cr=(c&&c.criteri)||{};
+  document.getElementById('com-eta-min').value = Number.isInteger(cr.eta_min)?cr.eta_min:'';
+  document.getElementById('com-eta-max').value = Number.isInteger(cr.eta_max)?cr.eta_max:'';
+  document.getElementById('com-uvg').value = Number.isInteger(cr.ultima_visita_oltre_giorni)?cr.ultima_visita_oltre_giorni:'';
+  document.getElementById('com-tipo').value = cr.tipo_visita||'';
+  document.getElementById('com-cat').value = (cr.categoria==='prima_visita'||cr.categoria==='controllo')?cr.categoria:'';
+  window._comSelCluster=c?c.id:null;
+}
+async function comInvia(){
+  const btn=document.getElementById('com-invia-btn'); const esito=document.getElementById('com-esito');
+  const corpo=(document.getElementById('com-corpo').value||'').trim();
+  if(!corpo){ showToast('Scrivi il testo della comunicazione.'); return; }
+  if(!btn.dataset.arm){
+    const j=await comAnteprima(); if(!j) return;
+    if(!j.n){ showToast('Nessun destinatario con questi criteri.'); return; }
+    btn.dataset.arm='1'; btn.textContent='Conferma: invio a '+j.n+(j.n===1?' paziente':' pazienti');
+    setTimeout(function(){ if(btn.dataset.arm){ delete btn.dataset.arm; btn.textContent='Invia a tutti'; } }, 15000);
+    return;
+  }
+  delete btn.dataset.arm; btn.textContent='Invia a tutti'; btn.disabled=true;
+  esito.innerHTML='<div style="font-size:13px;color:var(--ink3)">Invio in corso\u2026</div>';
+  const j=await comApi({action:'invia', criteri:comCriteri(), corpo:corpo, cluster_id:window._comSelCluster||null});
+  btn.disabled=false;
+  if(!j){ esito.innerHTML=''; return; }
+  document.getElementById('com-corpo').value='';
+  esito.innerHTML='<div style="font-size:13px;color:var(--brand-bright)">Inviato a '+j.inviati+(j.inviati===1?' paziente':' pazienti')+'.'+(j.falliti&&j.falliti.length?' <span style="color:var(--warm)">Falliti: '+j.falliti.map(function(f){return escapeHtml((f.cognome||'')+' '+(f.nome||''));}).join(', ')+'</span>':'')+'</div>';
+  comRegistro();
+}
+function comCriteriLabel(c){
+  const parts=[];
+  if(c&&Number.isInteger(c.eta_min)) parts.push('et\u00e0 \u2265 '+c.eta_min);
+  if(c&&Number.isInteger(c.eta_max)) parts.push('et\u00e0 \u2264 '+c.eta_max);
+  if(c&&Number.isInteger(c.ultima_visita_oltre_giorni)) parts.push('nessuna visita da '+c.ultima_visita_oltre_giorni+' gg');
+  if(c&&c.tipo_visita) parts.push('tipo: '+c.tipo_visita);
+  if(c&&c.categoria) parts.push(c.categoria==='prima_visita'?'prima visita':'controllo');
+  return parts.length?parts.join(' \u00b7 '):'tutti i pazienti con consenso';
+}
+async function comRegistro(){
+  const box=document.getElementById('com-registro'); if(!box) return;
+  const { data, error } = await supabaseClient.from('invii').select('id,created_at,n_destinatari,criteri_snapshot').order('created_at',{ascending:false}).limit(20);
+  if(error){ box.innerHTML='<div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
+  const rows=data||[];
+  box.innerHTML=rows.length?rows.map(function(i){return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap"><div style="min-width:130px">'+new Date(i.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})+'</div><div style="flex:1;color:var(--ink3)">'+escapeHtml(comCriteriLabel(i.criteri_snapshot))+'</div><div><b>'+i.n_destinatari+'</b> destinatari</div></div>';}).join('')
+    :'<div style="font-size:13px;color:var(--ink3)">Nessun invio ancora.</div>';
+}
+
+// ── Consenso comunicazioni: vista pubblica (?consenso= / ?revoca_comm=, senza login — s20) ──
+const CONS_INFORMATIVA_BOZZA='Il suo medico desidera poterle inviare via email comunicazioni proattive: promemoria di prevenzione, richiami e avvisi organizzativi. Il consenso \u00e8 facoltativo, non condiziona in alcun modo la cura e pu\u00f2 essere revocato in ogni momento dal link presente in calce a ogni comunicazione. Titolare del trattamento \u00e8 il medico indicato sopra. (Testo sintetico provvisorio: informativa completa in validazione legale.)';
+async function consApi(action, token){
+  try{
+    const r=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action, token:token})});
+    const j=await r.json().catch(function(){return {};});
+    return { ok:r.ok, j:j };
+  }catch(_){ return { ok:false, j:{} }; }
+}
+function showConsensoView(mode){
+  ['view-home','view-app','view-booking','view-portfolio','view-thread'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const v=document.getElementById('view-consenso'); if(v) v.style.display='block';
+  document.documentElement.classList.add('th-page');
+  const params=new URLSearchParams(location.search);
+  window._consToken=params.get(mode==='revoca'?'revoca_comm':'consenso')||'';
+  window._consMode=mode;
+  const title=document.getElementById('cons-title');
+  if(title) title.textContent = mode==='revoca' ? 'Revoca del consenso' : 'Consenso alle comunicazioni';
+  consInit();
+}
+async function consInit(){
+  const body=document.getElementById('cons-body'), act=document.getElementById('cons-actions'), med=document.getElementById('cons-medico');
+  if(!body||!act) return;
+  body.textContent='Caricamento\u2026'; act.innerHTML='';
+  const r=await consApi('leggi_consenso', window._consToken);
+  if(!r.ok){ body.textContent='Questo link non \u00e8 valido o \u00e8 scaduto. Se pensa sia un errore, contatti il suo medico.'; return; }
+  if(med) med.textContent=r.j.medico||'';
+  if(window._consMode==='revoca'){
+    if(r.j.stato!=='attivo'){ body.textContent='Nessun consenso attivo da revocare.'; return; }
+    body.textContent='Confermando, non ricever\u00e0 pi\u00f9 comunicazioni proattive dal suo medico. Potr\u00e0 sempre dare di nuovo il consenso in futuro.';
+    act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Confermo la revoca</button>';
+  } else {
+    if(r.j.stato==='attivo'){ body.textContent='Il suo consenso risulta gi\u00e0 attivo: non deve fare altro. Pu\u00f2 revocarlo in ogni momento dal link in calce a ogni comunicazione.'; return; }
+    body.textContent=CONS_INFORMATIVA_BOZZA;
+    act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Acconsento</button>';
+  }
+}
+async function consConferma(){
+  const body=document.getElementById('cons-body'), act=document.getElementById('cons-actions');
+  act.innerHTML=''; body.textContent='Un momento\u2026';
+  const action = window._consMode==='revoca' ? 'revoca_consenso' : 'conferma_consenso';
+  const r=await consApi(action, window._consToken);
+  if(!r.ok){ body.textContent='Operazione non riuscita: il link potrebbe non essere pi\u00f9 valido. Riapra il link dall\u2019email o contatti il suo medico.'; return; }
+  body.textContent = window._consMode==='revoca'
+    ? 'Revoca registrata. Non ricever\u00e0 pi\u00f9 comunicazioni proattive.'
+    : 'Consenso registrato. Grazie: potr\u00e0 revocarlo in ogni momento dal link in calce a ogni comunicazione.';
+}
+
 const AST_REGISTRY = {
   async leggi_messaggi(inp){
     await msgRefreshNonLetti();
@@ -13222,6 +13456,26 @@ const AST_REGISTRY = {
     const perC={}, perT={};
     eff.forEach(x=>{ const cn=x.centroNome||'altro'; perC[cn]=(perC[cn]||0)+1; const t=x.tipo||'altro'; perT[t]=(perT[t]||0)+1; });
     return { periodo:{da:da,a:a}, totale:rows.length, effettuate:eff.length, cancellate:rows.length-eff.length, erogate:eff.filter(x=>x.erogata===true).length, per_centro:perC, per_tipo:perT };
+  },
+  async invia_cluster(inp){
+    if(!(S.moduli&&S.moduli.comunicazioni===true)) return { errore:'modulo_non_attivo' };
+    const criteri={};
+    if(Number.isInteger(inp.eta_min)) criteri.eta_min=inp.eta_min;
+    if(Number.isInteger(inp.eta_max)) criteri.eta_max=inp.eta_max;
+    if(Number.isInteger(inp.ultima_visita_oltre_giorni)) criteri.ultima_visita_oltre_giorni=inp.ultima_visita_oltre_giorni;
+    if(inp.tipo_visita) criteri.tipo_visita=String(inp.tipo_visita);
+    if(inp.categoria==='prima_visita'||inp.categoria==='controllo') criteri.categoria=inp.categoria;
+    const action = inp.solo_anteprima===false ? 'invia' : 'anteprima';
+    const corpo=String(inp.corpo||'').trim();
+    if(action==='invia' && !corpo) return { errore:'corpo mancante' };
+    const _jwt=await getAuthJwt();
+    const payload = action==='invia' ? { action:action, criteri:criteri, corpo:corpo } : { action:action, criteri:criteri };
+    const res=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify(payload)});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok) return { errore:String(j.error||('http '+res.status)) };
+    if(action==='anteprima') return { anteprima:true, destinatari_n:j.n, destinatari:(j.destinatari||[]).map(d=>(d.cognome||'')+' '+(d.nome||'')) };
+    try{ comRegistro(); }catch(_){ }
+    return { inviati:j.inviati, falliti:(j.falliti||[]).map(f=>(f.cognome||'')+' '+(f.nome||'')) };
   }
 };
 
