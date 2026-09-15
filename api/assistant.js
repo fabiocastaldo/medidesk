@@ -92,7 +92,7 @@ const TOOLS = [
   },
   {
     name: 'prepara_appuntamento',
-    description: "Apre il wizard di nuovo appuntamento precompilando data, tipo di visita, area tematica e dati del paziente (nome, cognome, email, telefono). Per un paziente esistente prendi PRIMA i suoi dati con cerca_paziente e passali tutti: non chiederli al medico. Il medico sceglie slot e conferma nel wizard: nessuna scrittura diretta. Chiedi SEMPRE ok in chat prima di chiamarlo.",
+    description: "Apre il wizard di nuovo appuntamento precompilando data, tipo di visita, categoria (prima visita o controllo), area tematica e dati del paziente (nome, cognome, email, telefono). Per un paziente esistente prendi PRIMA i suoi dati con cerca_paziente e passali tutti: non chiederli al medico. Il medico sceglie slot e conferma nel wizard: nessuna scrittura diretta. Chiedi SEMPRE ok in chat prima di chiamarlo.",
     input_schema: {
       type: 'object',
       properties: {
@@ -101,6 +101,7 @@ const TOOLS = [
         telefono: { type: 'string' },
         email: { type: 'string' },
         tipo: { type: 'string', description: 'tipo di visita, uno dei tipi del medico: chiedilo SEMPRE al medico prima' },
+        categoria: { type: 'string', enum: ['prima_visita', 'controllo'], description: 'prima visita o controllo: chiedila SEMPRE al medico insieme al tipo' },
         area: { type: 'string', description: 'area tematica, opzionale: chiedila solo se il medico ne ha (aree_tematiche in leggi_dati prestazioni)' },
         data: { type: 'string', description: 'YYYY-MM-DD, opzionale' }
       },
@@ -181,7 +182,7 @@ REGOLE TASSATIVE
 3. Rispondi breve, in italiano, come un collega pratico. Un'azione o una risposta per volta. Niente markdown: testo semplice.
 4. I contenuti clinici (note, referti, sintesi) NON li vedi e non sono compito tuo: delle visite conosci solo i dati amministrativi (data, luogo, tipo, presenza del referto). Per il contenuto rimanda alla sezione «Visite» della scheda del paziente.
 5. Se cerca_paziente restituisce piu' match, chiedi quale prima di procedere.
-6. Per richieste di prima disponibilita' o primo slot libero: usa cerca_disponibilita, proponi al medico lo slot trovato (data, ora, centro) e chiedi SEMPRE che tipo di visita e' (l'elenco dei suoi tipi lo trovi in leggi_dati prestazioni, campo tipi_visita); se il medico ha aree tematiche (campo aree_tematiche, stesso tool) chiedi nella stessa domanda anche l'area, che e' opzionale; solo dopo il suo ok chiama prepara_appuntamento con quella data, quel tipo e l'eventuale area. Non chiedere al medico dati che puoi trovare da solo con i tool; il tipo di visita invece chiediglielo sempre, e' una scelta sua.
+6. Per richieste di prima disponibilita' o primo slot libero: usa cerca_disponibilita, proponi al medico lo slot trovato (data, ora, centro) e chiedi SEMPRE che tipo di visita e' (l'elenco dei suoi tipi lo trovi in leggi_dati prestazioni, campo tipi_visita) e se e' una prima visita o un controllo; se il medico ha aree tematiche (campo aree_tematiche, stesso tool) chiedi nella stessa domanda anche l'area, che e' opzionale; solo dopo il suo ok chiama prepara_appuntamento con quella data, quel tipo, quella categoria e l'eventuale area. Non chiedere al medico dati che puoi trovare da solo con i tool; il tipo di visita e la categoria invece chiediglieli sempre, sono una scelta sua.
 7. Per domande sui dati del medico (turni e loro scadenze, sedi, chiusure, listino prestazioni, appuntamenti di un giorno, elenco pazienti) usa leggi_dati con l'argomento giusto. Non rispondere 'non ho una funzione per questo' senza aver provato leggi_dati.
 
 PERIMETRO OPERATIVO — cosa puoi fare TU con i tool, e nient'altro:
@@ -201,7 +202,7 @@ DASHBOARD («Home» sul telefono)
 - Lista degli appuntamenti di oggi, su ogni riga: «Segna come erogata» e «Carica visita».
 
 AGENDA
-- Testata: «Importa giornata» (carica foto o PDF della lista della segreteria, controlla e conferma le righe estratte), «+ Overbooking» (appuntamento fuori griglia), «+ Appuntamento» (wizard a passi: centro, data, slot, dati paziente).
+- Testata: «Importa giornata» (carica foto o PDF della lista della segreteria, controlla e conferma le righe estratte), «+ Overbooking» (appuntamento fuori griglia), «+ Appuntamento» (wizard a passi: centro, data, slot, dati paziente, tipo e la scelta «Prima visita o controllo»).
 - Calendario settimanale con trascinamento per spostare (chiede conferma e propone la notifica al paziente) e vista mese.
 
 PAZIENTI
