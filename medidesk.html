@@ -10797,6 +10797,14 @@ function _contattiDaPrenotazioni(p){
   return { email, tel };
 }
 const _PAZ_PAGE=30; let _pazShown=_PAZ_PAGE;
+function _pazConsBtn(r){
+  if(r.tipo!=='paziente' || !(S.moduli&&S.moduli.comunicazioni===true)) return '';
+  const sp=(S.pazienti||[]).find(function(x){return String(x.id)===String(r.id);});
+  if(!sp) return '';
+  const st=comStatoConsenso(sp);
+  if(sp.consenso_comunicazioni_at) return ' <button class="paz-act" disabled title="'+escapeAttr(st.t)+'" style="color:var(--brand-bright)">Consenso ✓</button>';
+  return ' <button class="paz-act" '+(sp.email?'':'disabled ')+'title="'+escapeAttr(sp.email?st.t:'Serve un\u2019email del paziente')+'" onclick="event.stopPropagation();comRichiedi(\''+escapeAttr(String(r.id))+'\',\'lista\')">Richiedi consenso</button>';
+}
 function renderPazienti(more){
   _pazShown = more===true ? _pazShown+_PAZ_PAGE : _PAZ_PAGE;
   const tEl=document.getElementById('pazienti-table');
@@ -10856,7 +10864,7 @@ function _pazRowHTML(r){
   const btnVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
-  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> `:'')+btnVis;
+  const azioni=(r.tipo==='paziente'?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> `:'')+btnVis+_pazConsBtn(r);
   return `<tr class="paz-row" onclick="${open}">
     <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
@@ -10873,12 +10881,13 @@ function _pazCardHTML(r){
   const cVis=r.tipo==='paziente'
     ?`<button class="paz-act" onclick="event.stopPropagation();openContattaPaziente('${escapeAttr(String(r.id))}')">Contatta</button> <button class="paz-act" onclick="event.stopPropagation();openPromemoriaPaziente('${escapeAttr(String(r.id))}')">+ Promemoria</button> <button class="paz-act" onclick="event.stopPropagation();openVisitaForPaziente('${escapeAttr(String(r.id))}')">Carica visita</button>`
     :`<button class="paz-act" onclick="event.stopPropagation();caricaVisitaDaAppt('${escapeAttr(String(r.apptId))}')">Carica visita</button>`;
+  const cCons=_pazConsBtn(r);
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-info">
       <div class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</div>
       <div class="paziente-meta">${meta||('&nbsp;')}</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')+cVis}</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')+cVis+cCons}</div>
   </div>`;
 }
 
@@ -13155,6 +13164,7 @@ async function comRichiedi(pazId, ctx){
   if(sp) sp.consenso_comunicazioni_richiesto_at=new Date().toISOString();
   if(ctx==='scheda'){
     const st=document.getElementById('pd-cons-stato'); if(st&&sp) st.textContent=comStatoConsenso(sp).t;
+  } else if(ctx==='lista'){ try{ renderPazienti(); }catch(_){ }
   } else { comLoad(); }
 }
 function comCriteri(){

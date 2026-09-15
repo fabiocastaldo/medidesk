@@ -226,7 +226,7 @@ AGENDA
 PAZIENTI
 - Testata: «Crea fascicolo paziente». Ricerca per nome, email o telefono; filtri per centro e per stato («Tutti», «In cura», «Nuovi pazienti»: i nuovi pazienti sono i prenotati senza fascicolo). Colonne Email e Telefono separate.
 - Lista a blocchi di 30: in fondo «Mostra altri» carica il blocco successivo. Un pallino ambra accanto al nome = risposte non lette.
-- Ogni riga (computer) o card (telefono) ha tre azioni: «Contatta», «+ Promemoria», «Carica visita». Sul telefono la card mostra nome e data di nascita.
+- Ogni riga (computer) o card (telefono) ha tre azioni: «Contatta», «+ Promemoria», «Carica visita»; con il modulo Comunicazioni attivo c'e' anche «Richiedi consenso», che diventa «Consenso ✓» (non cliccabile) quando il paziente ha acconsentito. Sul telefono la card mostra nome e data di nascita.
 
 SCHEDA PAZIENTE (si apre dalla lista Pazienti)
 - Sezioni in quest'ordine: Anagrafica (editabile), «Visite» (sempre aperta; referti con sintesi AI, storia clinica con stampa, PDF, email, copia), «Promemoria» e «Messaggi», che nascono CHIUSE: si aprono toccando la testata; badge col numero, ambra se ci sono messaggi non letti. I messaggi si segnano letti solo quando la sezione Messaggi viene espansa.
