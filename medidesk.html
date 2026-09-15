@@ -13024,6 +13024,7 @@ function astBuildContext(){
   }));
   return {
     data_oggi: oggi,
+    giorno_settimana: new Date().toLocaleDateString('it-IT',{weekday:'long'}),
     pagina_corrente: (document.querySelector('.page.active')||{}).id ? document.querySelector('.page.active').id.replace('page-','') : '',
     appuntamenti_oggi: appts,
     pazienti_totali: (S.pazienti||[]).length
@@ -13106,7 +13107,7 @@ const AST_REGISTRY = {
     setTimeout(()=>{ const n=document.getElementById('appt-nome'), c=document.getElementById('appt-cognome'), t=document.getElementById('appt-tel'), e=document.getElementById('appt-email');
       if(n&&inp.nome) n.value=inp.nome; if(c&&inp.cognome) c.value=inp.cognome; if(t&&inp.telefono) t.value=inp.telefono; if(e&&inp.email) e.value=inp.email;
       const ti=document.getElementById('appt-tipo'); if(ti&&inp.tipo){ const w=String(inp.tipo).toLowerCase().trim(); const opt=[...ti.options].find(o=>o.value.toLowerCase().trim()===w||o.textContent.toLowerCase().trim()===w); if(opt) ti.value=opt.value; }
-      const ar=document.getElementById('appt-area'); if(ar&&inp.area){ const wa=String(inp.area).toLowerCase().trim(); const oa=[...ar.options].find(o=>o.value.toLowerCase().trim()===wa||o.textContent.toLowerCase().trim()===wa); if(oa) ar.value=oa.value; } }, 250);
+      const ar=document.getElementById('appt-area'); if(ar&&inp.area){ const wa=String(inp.area).toLowerCase().trim(); const oa=[...ar.options].find(o=>o.value.toLowerCase().trim()===wa||o.textContent.toLowerCase().trim()===wa); if(oa) ar.value=oa.value; } if(inp.categoria){ const cat=document.querySelector('input[name="appt-cat"][value="'+(inp.categoria==='controllo'?'controllo':'prima_visita')+'"]'); if(cat) cat.checked=true; } }, 250);
     return { ok:true, nota:'wizard aperto; il medico sceglie centro/slot e salva' };
   },
 
