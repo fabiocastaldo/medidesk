@@ -272,6 +272,14 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 .hc-mailto:hover{color:var(--brand-deep)}
 .hc-x{position:absolute;top:6px;right:10px;background:none;border:none;color:var(--ink3);font-size:24px;line-height:1;cursor:pointer;padding:4px}
 .hc-x:hover{color:var(--ink)}
+.pwd-strength-bar{height:4px;background:var(--border);border-radius:2px;margin:10px 0 4px}
+#rec-strength-fill{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
+#rec-strength-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;min-height:15px;margin-bottom:6px}
+.pwd-criteria{margin:2px 0 4px;padding:0;list-style:none}
+.pwd-criteria li{font-size:12px;color:var(--ink3);padding:2px 0;transition:color .15s}
+.pwd-criteria li::before{content:'\2715  ';color:#ef4444;font-weight:700}
+.pwd-criteria li.met{color:var(--ink2)}
+.pwd-criteria li.met::before{content:'\2713  ';color:var(--brand-bright)}
 </style>
 </head>
 <body>
@@ -345,9 +353,18 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <div class="field">
           <label for="rec-pwd">Nuova password</label>
           <div class="pw-wrap">
-            <input id="rec-pwd" type="password" autocomplete="new-password">
+            <input id="rec-pwd" type="password" autocomplete="new-password" oninput="updateRecoveryStrength()">
             <button type="button" class="pw-eye" aria-label="Mostra password" onclick="togglePwEye(this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
+          <div class="pwd-strength-bar"><div id="rec-strength-fill"></div></div>
+          <div id="rec-strength-label"></div>
+          <ul class="pwd-criteria">
+            <li id="crit-c-len">Almeno 8 caratteri</li>
+            <li id="crit-c-upper">Almeno una lettera maiuscola</li>
+            <li id="crit-c-lower">Almeno una lettera minuscola</li>
+            <li id="crit-c-num">Almeno un numero</li>
+            <li id="crit-c-special">Almeno un carattere speciale (!@#$%...)</li>
+          </ul>
         </div>
         <div class="field">
           <label for="rec-pwd2">Ripeti password</label>
@@ -1521,6 +1538,20 @@ function showRecoveryView(){
   _inRecovery = true;
   show('view-login');
   _loginBlocks('login-recovery-block');
+}
+function updateRecoveryStrength(){
+  const pwd=document.getElementById('rec-pwd').value||'';
+  const criteria={
+    len:pwd.length>=8, upper:/[A-Z]/.test(pwd), lower:/[a-z]/.test(pwd),
+    num:/[0-9]/.test(pwd), special:/[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(pwd)
+  };
+  Object.keys(criteria).forEach(k=>{const el=document.getElementById('crit-c-'+k); if(el) el.classList.toggle('met',criteria[k]);});
+  const met=Object.values(criteria).filter(Boolean).length;
+  const fill=document.getElementById('rec-strength-fill'), label=document.getElementById('rec-strength-label');
+  if(!pwd.length){ fill.style.width='0'; fill.style.background=''; label.textContent=''; label.style.color=''; return; }
+  const levels=[{max:2,w:'25%',color:'#ef4444',text:'Debole'},{max:4,w:'60%',color:'#f59e0b',text:'Media'},{max:5,w:'100%',color:'var(--brand-bright)',text:'Forte'}];
+  const lvl=levels.find(l=>met<=l.max);
+  fill.style.width=lvl.w; fill.style.background=lvl.color; label.textContent=lvl.text; label.style.color=lvl.color;
 }
 async function recoverySave(){
   if(!sb) return;
