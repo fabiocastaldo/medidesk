@@ -239,23 +239,8 @@ export default async function handler(req, res) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // STEP 3: INSERT default tipi_visita (best-effort, non blocca su errore)
+  // STEP 3 rimosso (categoria sulla prenotazione): nessun tipo di default alla registrazione
   // ───────────────────────────────────────────────────────────────────────────
-  if (medicoId) {
-    try {
-      await fetch(`${base}/tipi_visita`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify([
-          { medico_id: medicoId, nome: 'Prima visita', is_default: true },
-          { medico_id: medicoId, nome: 'Controllo', is_default: true }
-        ])
-      });
-    } catch (e) {
-      console.warn('[register-doctor] insert tipi_visita failed (non bloccante):', e.message);
-    }
-  }
-
   // ───────────────────────────────────────────────────────────────────────────
   // STEP 4: genera JWT approve token e salvalo su approve_tokens
   // ───────────────────────────────────────────────────────────────────────────

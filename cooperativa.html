@@ -608,6 +608,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
             <div class="field"><label for="agb-tel">Telefono del paziente</label><input id="agb-tel" type="tel" maxlength="40" autocomplete="off"></div>
             <div class="field"><label for="agb-email">Email del paziente (facoltativa)</label><input id="agb-email" type="email" maxlength="160" autocomplete="off"></div>
             <div class="field"><label for="agb-servizio">Tipo di visita (facoltativo)</label><select id="agb-servizio"></select></div>
+            <div class="field"><label>Prima visita o controllo</label><div style="display:flex;gap:14px;padding:6px 0;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="radio" name="agb-cat" value="prima_visita" checked><span>Prima visita</span></label><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="radio" name="agb-cat" value="controllo"><span>Controllo</span></label></div></div>
             <div class="field"><label for="agb-area">Area (facoltativa)</label><select id="agb-area"></select></div>
           </div>
           <label class="ag-book-consenso"><input type="checkbox" id="agb-consenso"><span>Dichiaro di aver ricevuto dal paziente, telefonicamente o di persona, il consenso al trattamento dei dati personali necessari alla prenotazione.</span></label>
@@ -1936,6 +1937,7 @@ function agAnnullaPrenotazione(){
   _agBook = null;
   ['agb-nome','agb-cognome','agb-tel','agb-email'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   const cons = document.getElementById('agb-consenso'); if(cons) cons.checked = false;
+  const rc = document.querySelector('input[name="agb-cat"][value="prima_visita"]'); if(rc) rc.checked = true;
   if(_agCal.dateStr){ agBookIdle(); renderAgSlots(); } else { document.getElementById('ag-book').classList.add('hidden'); }
 }
 
@@ -1965,6 +1967,7 @@ async function agConfermaPrenotazione(){
         nome, cognome, telefono: tel,
         email: email || undefined,
         tipo_visita: document.getElementById('agb-servizio').value || undefined,
+        categoria: (document.querySelector('input[name="agb-cat"]:checked')||{}).value || 'prima_visita',
         area: document.getElementById('agb-area').value || undefined,
         consenso: true
       })

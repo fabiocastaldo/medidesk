@@ -190,6 +190,13 @@ async function verifyCancellationToken(apptId, token, supabaseUrl, serviceKey) {
 // Se medicoId != null: verifica ownership (appuntamento.medico_id === medicoId).
 // Ritorna oggetto ricco oppure { ok: false, status, error }
 
+const _CAT_LBL = { prima_visita: 'Prima visita', controllo: 'Controllo' };
+function _composeTipo(tipo, categoria) {
+  const cl = _CAT_LBL[categoria] || null;
+  if (!cl) return tipo;
+  if (tipo && cl.toLowerCase() === String(tipo).toLowerCase()) return tipo;
+  return tipo ? (tipo + ' \u00b7 ' + cl) : cl;
+}
 async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
   const base = `${supabaseUrl}/rest/v1`;
   const headers = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
@@ -235,7 +242,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     pazienteNome:      [appt.nome_paziente, appt.cognome_paziente].filter(Boolean).join(' '),
     data:              appt.data,
     ora:               (appt.ora || '').substring(0, 5),
-    tipoVisita:        appt.tipo_visita,
+    tipoVisita:        _composeTipo(appt.tipo_visita, appt.categoria),
     cancellationToken: appt.cancellation_token,
     medicoNome:        [medico.titolo, medico.nome, medico.cognome].filter(Boolean).join(' ') || 'il medico',
     medicoEmail:       medico.email || null,

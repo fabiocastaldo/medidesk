@@ -1654,7 +1654,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div style="margin-top:32px">
         <div class="section-title">Tipi di visita</div>
         <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Personalizza i tipi di visita disponibili al momento della prenotazione.</p>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Personalizza i tipi di visita disponibili al momento della prenotazione. Ogni tipo può essere erogato come <strong>prima visita</strong> o come <strong>controllo</strong>: lo si indica al momento della prenotazione (tu, il paziente o l'organizzazione) e la tariffa del tipo vale in entrambi i casi.</p>
           <div id="tipi-visita-list" class="tag-editor"></div>
           <div style="display:flex;gap:8px;margin-top:12px">
             <input class="form-input" id="new-tipo-visita" placeholder="es. Pre-chirurgica" style="flex:1" onkeydown="if(event.key==='Enter')addTipoVisita()" onblur="this.value=capitalizeName(this.value)">
@@ -2285,6 +2285,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div id="bk-prezzo-inline" style="display:none;margin-top:8px;font-size:14px;color:var(--ink)"></div>
           </div>
           <div class="form-group">
+            <label class="form-label">Prima visita o controllo</label>
+            <div style="display:flex;gap:16px;align-items:center;padding:4px 0">
+              <label style="display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer"><input type="radio" name="bk-cat" value="prima_visita" checked> Prima visita</label>
+              <label style="display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer"><input type="radio" name="bk-cat" value="controllo"> Controllo</label>
+            </div>
+          </div>
+          <div class="form-group">
             <label class="form-label">Area tematica (opzionale)</label>
             <select class="form-select" id="bk-area"></select>
           </div>
@@ -2496,6 +2503,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="form-group">
           <label class="form-label">Tipo visita</label>
           <select class="form-select" id="appt-tipo"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prima visita o controllo</label>
+          <div style="display:flex;gap:16px;align-items:center;padding:4px 0">
+            <label style="display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer"><input type="radio" name="appt-cat" value="prima_visita" checked> Prima visita</label>
+            <label style="display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer"><input type="radio" name="appt-cat" value="controllo"> Controllo</label>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Area tematica (opzionale)</label>
@@ -3697,10 +3711,6 @@ async function ensureMedicoRecord(user){
       const { data: newMedico, error: insErr } = await supabaseClient
         .from('medici').insert({ user_id: user.id, email: user.email }).select('id').single();
       if(insErr) throw insErr;
-      await supabaseClient.from('tipi_visita').insert([
-        { medico_id: newMedico.id, nome: 'Prima visita', is_default: true },
-        { medico_id: newMedico.id, nome: 'Controllo',    is_default: true }
-      ]);
     }
   } catch(e){ console.error('[Delphi~Med] ensureMedicoRecord:', e.message); }
 }
@@ -3940,6 +3950,7 @@ async function loadAppuntamentiFromDB(user){
         tel:        a.telefono_paziente || '',
         email:      a.email_paziente    || '',
         tipo:       a.tipo_visita       || '',
+        categoria:  a.categoria         || '',
         area:       a.area_tematica     || '',
         note:       a.note              || '',
         data:       a.data,
@@ -4010,6 +4021,7 @@ function startRealtimeChannel(){
         tel:        r.telefono_paziente || '',
         email:      r.email_paziente    || '',
         tipo:       r.tipo_visita       || '',
+        categoria:  r.categoria         || '',
         area:       r.area_tematica     || '',
         note:       r.note              || '',
         data:       r.data,
@@ -4045,6 +4057,7 @@ function startRealtimeChannel(){
       local.tel        = r.telefono_paziente || '';
       local.email      = r.email_paziente    || '';
       local.tipo       = r.tipo_visita       || '';
+      local.categoria  = r.categoria         || '';
       local.area       = r.area_tematica     || '';
       local.note       = r.note              || '';
       local.data       = r.data;
@@ -4141,7 +4154,6 @@ var S = {
 const MONTHS_IT=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const DAYS_IT_SHORT=['Lu','Ma','Me','Gi','Ve','Sa','Do'];
 const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-const TIPI_DEFAULT = ['Prima visita', 'Controllo'];
 const SPECIALIZZAZIONI_UFFICIALI = [
   'Allergologia e immunologia clinica','Anatomia patologica',
   'Anestesia, rianimazione, terapia intensiva e del dolore','Cardiologia',
@@ -4289,12 +4301,13 @@ function isChiusura(dateStr, centroId){
 }
 
 // ── ORDINAMENTO TIPI VISITA ──
+function _isPrimaVisita(a){
+  if(a && a.categoria) return a.categoria === 'prima_visita';
+  return ((a && a.tipo) || '').toLowerCase().includes('prima');
+}
+function _resetApptCat(){ const rc = document.querySelector('input[name="appt-cat"][value="prima_visita"]'); if(rc) rc.checked = true; }
 function sortTipiVisita(){
-  S.tipiVisita.sort((a,b)=>{
-    if(a==='Prima visita') return -1; if(b==='Prima visita') return 1;
-    if(a==='Controllo') return -1;    if(b==='Controllo') return 1;
-    return a.localeCompare(b,'it');
-  });
+  S.tipiVisita.sort((a,b)=>a.localeCompare(b,'it'));
 }
 function load(){
   // Carica solo preferenze UI — dati clinici vengono da Supabase al login
@@ -6329,6 +6342,7 @@ async function saveAppuntamento(){
       data:A.dateStr, ora:A.ora, centroId:A.centroId,
       centroNome: _aCentro ? _aCentro.nome : '',
       tipo: tipoEl ? tipoEl.value.trim() : '',
+      categoria: (document.querySelector('input[name="appt-cat"]:checked')||{}).value || 'prima_visita',
       area: areaEl ? areaEl.value.trim() : '',
       note:(document.getElementById('appt-note')||{}).value?.trim()||'',
       source:'medico'
@@ -6346,6 +6360,7 @@ async function saveAppuntamento(){
         telefono_paziente:  newAppt.tel  || null,
         email_paziente:     newAppt.email|| null,
         tipo_visita:        newAppt.tipo || null,
+        categoria:          newAppt.categoria || null,
         area_tematica:      newAppt.area || null,
         note:               newAppt.note || null,
         source:             'medico',
@@ -6676,7 +6691,7 @@ function _wgNuovoApptDaCella(ds, targetMin){
   if(!dentroFascia) return; // fuori dalle fasce: nessuna reazione
   if(!best){ showToast('Nessuno slot libero in questa fascia: usa Overbooking'); return; }
   A.prefillDate = null;
-  openModal('modal-appuntamento');
+  (_resetApptCat(),openModal('modal-appuntamento'));
   A.free = false;
   A.centroId = String(bestCentro.id);
   A.dateStr = ds;
@@ -7025,14 +7040,14 @@ function openAppuntamentoFromAgenda(){
   if(S.selectedDay){
     A.prefillDate = S.selectedDay;
   }
-  openModal('modal-appuntamento');
+  (_resetApptCat(),openModal('modal-appuntamento'));
   A.free = false;
   const _t = document.getElementById('appt-modal-title'); if(_t) _t.textContent = 'Nuovo appuntamento';
 }
 
 function openOverbookingFromAgenda(){
   A.prefillDate = null; // niente salto alla giornata: l'overbooking parte dall'inizio del wizard
-  openModal('modal-appuntamento');
+  (_resetApptCat(),openModal('modal-appuntamento'));
   A.free = true;
   const _t = document.getElementById('appt-modal-title'); if(_t) _t.textContent = 'Overbooking \u2014 orario libero';
 }
@@ -7139,6 +7154,7 @@ function showApptDetail(id){
       <div class="field-row"><span class="field-key">Data</span><span class="field-val">${formatDate(a.data)} alle ${escapeHtml(a.ora)}</span></div>
       <div class="field-row"><span class="field-key">Centro</span><span class="field-val">${escapeHtml(_centroNomeDetail)}</span></div>
       <div class="field-row"><span class="field-key">Tipo visita</span><span class="field-val">${escapeHtml(a.tipo||'—')}</span></div>
+      <div class="field-row"><span class="field-key">Categoria</span><span class="field-val">${a.categoria==='controllo' ? 'Controllo' : (a.categoria==='prima_visita' ? 'Prima visita' : 'Non indicata')}</span></div>
       ${!a.cancelled?`<div class="field-row"><span class="field-key">Erogazione</span><span class="field-val">${a.erogata===true?'<span style="color:#16a34a">Erogata ✓</span>':'Non erogata'}</span></div>`:''}
       ${a.area?`<div class="field-row"><span class="field-key">Area</span><span class="field-val">${escapeHtml(a.area)}</span></div>`:''}
       <div class="field-row"><span class="field-key">Note</span><span class="field-val">${escapeHtml(a.note||'—')}</span></div>
@@ -7200,7 +7216,7 @@ si comunica la seguente prenotazione:
 Paziente: ${a.cognome} ${a.nome}${a.tel?'\nTelefono: '+a.tel:''}${a.email?'\nEmail: '+a.email:''}
 Data: ${formatDate(a.data)}
 Ora: ${a.ora}
-Tipo visita: ${a.tipo||'Non specificato'}${a.area?'\nArea: '+a.area:''}
+Tipo visita: ${a.tipo||'Non specificato'}${a.categoria?'\nCategoria: '+(a.categoria==='controllo'?'Controllo':'Prima visita'):''}${a.area?'\nArea: '+a.area:''}
 ${a.note?'Note: '+a.note:''}
 
 Medico: ${medico}
@@ -7265,7 +7281,7 @@ function renderPending(){
     return `<div class="pending-card">
       <div class="pending-info">
         <div class="pending-name">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</div>
-        <div class="pending-detail">${formatDate(a.data)} alle ${escapeHtml(a.ora)} — ${centro?escapeHtml(centro.nome):'?'} — ${escapeHtml(a.tipo||'Visita')}</div>
+        <div class="pending-detail">${formatDate(a.data)} alle ${escapeHtml(a.ora)} — ${centro?escapeHtml(centro.nome):'?'} — ${escapeHtml(a.tipo||'Visita')}${a.categoria ? ' \u00b7 ' + (a.categoria==='controllo' ? 'Controllo' : 'Prima visita') : ''}</div>
       </div>
       <button class="btn btn-sm btn-primary" onclick="markSeen('${escapeAttr(a.id)}')">✓ Visto</button>
     </div>`;
@@ -8431,7 +8447,7 @@ function renderVisitaPazienti(){
       <div class="avatar-sm">${ini.toUpperCase()}</div>
       <div class="info">
         <strong>${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</strong>
-        <span>${escapeHtml(a.tipo||'Visita')}${a.area?' · '+escapeHtml(a.area):''}</span>
+        <span>${escapeHtml(a.tipo||'Visita')}${a.categoria ? ' \u00b7 ' + (a.categoria==='controllo' ? 'Controllo' : 'Prima visita') : ''}${a.area?' · '+escapeHtml(a.area):''}</span>
       </div>
       <span class="ora">${a.ora}</span>
     </div>`;
@@ -9953,6 +9969,7 @@ async function confirmBooking(){
     tel:document.getElementById('bk-tel').value.trim(),
     email:document.getElementById('bk-email').value.trim(),
     tipo:document.getElementById('bk-tipo').value.trim(),
+    categoria:(document.querySelector('input[name="bk-cat"]:checked')||{}).value||'prima_visita',
     area:document.getElementById('bk-area').value.trim(),
     note:'',
     data:bk.dateStr, ora:bk.ora,
@@ -9973,7 +9990,7 @@ async function confirmBooking(){
             booking_token: bk.centroToken,
             nome, cognome,
             email: appt.email, tel: appt.tel,
-            tipo: appt.tipo, area: appt.area,
+            tipo: appt.tipo, area: appt.area, categoria: appt.categoria,
             data: bk.dateStr, ora: bk.ora
           })
         });
@@ -9992,7 +10009,7 @@ async function confirmBooking(){
           centro_id: bk.centroId,
           nome, cognome,
           email: appt.email, tel: appt.tel,
-          tipo: appt.tipo, area: appt.area,
+          tipo: appt.tipo, area: appt.area, categoria: appt.categoria,
           note: appt.note,
           data: bk.dateStr, ora: bk.ora,
           per_conto: perConto,
@@ -10320,10 +10337,9 @@ async function waitlistUnsubscribe(){
 function renderTipiAree(){
   const tEl = document.getElementById('tipi-visita-list');
   if(tEl){
-    tEl.innerHTML = S.tipiVisita.map((t,i)=>{
-      const isDefault = TIPI_DEFAULT.includes(t);
-      return `<span class="tag-chip ${isDefault?'tag-default':''}">${t}${!isDefault?`<button class="tag-chip-x chip-remove-tipo" data-idx="${i}" title="Rimuovi">✕</button>`:''}</span>`;
-    }).join('');
+    tEl.innerHTML = S.tipiVisita.map((t,i)=>
+      `<span class="tag-chip">${t}<button class="tag-chip-x chip-remove-tipo" data-idx="${i}" title="Rimuovi">✕</button></span>`
+    ).join('');
   }
   const aEl = document.getElementById('aree-list');
   if(aEl){
@@ -10355,10 +10371,6 @@ async function addTipoVisita(){
 
 async function removeTipoVisita(idx){
   const t = S.tipiVisita[idx];
-  if(TIPI_DEFAULT.includes(t)){
-    await confermaModale('I tipi visita predefiniti non si possono rimuovere.', { titolo:'Impossibile rimuovere', ok:'Ho capito', soloOk:true });
-    return;
-  }
   if(!isOnline()){ showToast('Connessione necessaria per rimuovere un tipo visita'); return; }
   try {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -11412,7 +11424,7 @@ function renderStatistiche(){
   document.getElementById('kpi-cancellate-rate').textContent = `${cancRate}% del totale`;
 
   // KPI: Prime visite
-  const prime = effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+  const prime = effettuate.filter(a=>_isPrimaVisita(a)).length;
   document.getElementById('kpi-prime').textContent = prime;
   const primePct = effettuate.length > 0 ? Math.round((prime/effettuate.length)*100) : 0;
   document.getElementById('kpi-prime-pct').textContent = `${primePct}% sul totale visite`;
@@ -11435,7 +11447,7 @@ function renderStatistiche(){
   // Sparkline KPI (granularità adattiva al periodo)
   _renderKpiSpark('spark-effettuate', _adaptiveSparkSeries(effettuate), 'var(--accent)');
   _renderKpiSpark('spark-cancellate', _adaptiveSparkSeries(cancellate), '#dc2626');
-  _renderKpiSpark('spark-prime', _adaptiveSparkSeries(effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima'))), '#0EA5E9');
+  _renderKpiSpark('spark-prime', _adaptiveSparkSeries(effettuate.filter(a=>_isPrimaVisita(a))), '#0EA5E9');
   _renderKpiSpark('spark-ore', _adaptiveSparkSeriesOre(effettuate), '#8B5CF6');
 
   _renderInsights(all, effettuate, cancellate, prev, prevEffettuate);
@@ -11584,11 +11596,11 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
 
   // 7. PRIME VISITE con delta
   if(effettuate.length >= 10){
-    const prime = effettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+    const prime = effettuate.filter(a=>_isPrimaVisita(a)).length;
     const pctPrime = Math.round((prime/effettuate.length)*100);
     let deltaStr = '';
     if(hasComparison && prevEffettuate.length >= 10){
-      const prevPrime = prevEffettuate.filter(a=>(a.tipo||'').toLowerCase().includes('prima')).length;
+      const prevPrime = prevEffettuate.filter(a=>_isPrimaVisita(a)).length;
       const prevPct = Math.round((prevPrime/prevEffettuate.length)*100);
       const deltaPp = pctPrime - prevPct;
       if(Math.abs(deltaPp) >= 5){

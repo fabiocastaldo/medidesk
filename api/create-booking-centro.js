@@ -63,6 +63,7 @@ export default async function handler(req, res) {
   const email   = clean(b.email, 160);
   const tel     = clean(b.tel, 40);
   const tipo    = clean(b.tipo, 120);
+  const categoria = ['prima_visita','controllo'].includes(b.categoria) ? b.categoria : null;
   const area    = clean(b.area, 120);
   const data    = clean(b.data, 10);
   const ora     = clean(b.ora, 5);
@@ -112,6 +113,7 @@ export default async function handler(req, res) {
         telefono_paziente: tel || null,
         email_paziente: email,
         tipo_visita: tipo || null,
+        categoria,
         area_tematica: area || null,
         source: 'paziente',
         cancellation_token: cancellationToken,

@@ -39,6 +39,7 @@ export default async function handler(req, res) {
   const cognome  = clean(b.cognome, 80);
   const telefono = clean(b.telefono, 40);
   const tipo     = clean(b.tipo_visita, 120);
+  const categoria = ['prima_visita','controllo'].includes(b.categoria) ? b.categoria : null;
   const area     = clean(b.area, 120);
   const email    = clean(b.email, 160);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -110,6 +111,7 @@ export default async function handler(req, res) {
         telefono_paziente: telefono,
         email_paziente: email || null,
         tipo_visita: tipo || null,
+        categoria,
         area_tematica: area || null,
         source: 'paziente',
         segreteria_id: seg.id,
