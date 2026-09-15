@@ -19,15 +19,12 @@
 
 import { Resend } from 'resend';
 import { createHmac, randomBytes, createHash, timingSafeEqual } from 'crypto';
+import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
 
 const CONS_COMM_VERSIONE = 'cons-comm-0.1-bozza'; // segnaposto: testo definitivo dal corpus legale (gate C)
 const MAX_CORPO = 4000;
 const MAX_DESTINATARI = 200;
 
-function esc(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
 function hashToken(token) {
   return createHash('sha256').update(token, 'utf8').digest('hex');
 }
@@ -71,17 +68,6 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   return { ok: true, medico: rows[0] };
 }
 
-function mailShell(inner) {
-  return `
-<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a1a">
-  <div style="font-size:18px;font-weight:700;margin-bottom:12px">Delphi~Med</div>
-  ${inner}
-</div>`;
-}
-function bottone(link, label) {
-  return `<div style="margin:22px 0"><a href="${esc(link)}" style="display:inline-block;background:#0D5C8C;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">${esc(label)}</a></div>
-  <div style="font-size:13px;color:#555;line-height:1.5">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(link)}</div>`;
-}
 
 function calcolaEta(dataNascita, oggi) {
   const dn = new Date(dataNascita + 'T00:00:00');
@@ -229,15 +215,19 @@ export default async function handler(req, res) {
 
     const token = signPayload(serviceKey, { p: p.id, a: 'c', v: CONS_COMM_VERSIONE, exp: Date.now() + 30 * 86400000 });
     const link = `https://${host}/?consenso=${encodeURIComponent(token)}`;
-    const inner = `
-  <div style="font-size:15px;line-height:1.5">${esc(medicoNome)} le chiede il consenso a ricevere via email comunicazioni proattive (promemoria di prevenzione, richiami, avvisi organizzativi).</div>
-  <div style="font-size:15px;line-height:1.5;margin-top:10px">Il consenso &egrave; facoltativo e revocabile in ogni momento. Apra il link per leggere l'informativa e decidere.</div>
-  ${bottone(link, 'Leggi e decidi')}
-  <div style="font-size:12px;color:#888;margin-top:22px;line-height:1.5">Se non desidera acconsentire pu&ograve; semplicemente ignorare questa email. Il link &egrave; personale: non lo inoltri ad altri.</div>`;
+    const negaToken = signPayload(serviceKey, { p: p.id, a: 'r', exp: Date.now() + 365 * 86400000 });
+    const linkNega = `https://${host}/?revoca_comm=${encodeURIComponent(negaToken)}`;
+    const corpoMail =
+      emailTitle('Richiesta di consenso alle comunicazioni') +
+      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(medicoNome)} le chiede il consenso a ricevere via email <strong>comunicazioni proattive</strong>: promemoria di prevenzione, richiami, avvisi organizzativi.</p>` +
+      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Il consenso &egrave; facoltativo e revocabile in ogni momento. Apra il link per leggere l'informativa e decidere.</p>` +
+      ctaButton(link, 'Leggi e decidi') +
+      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(link)}</p>` +
+      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Se non desidera acconsentire pu&ograve; semplicemente ignorare questa email. Il link &egrave; personale: non lo inoltri ad altri.</p>`;
     const { error } = await resend.emails.send({
       from: 'noreply@delphi-med.com', to: [p.email],
       subject: `${medicoNome} le chiede un consenso — Delphi~Med`,
-      html: mailShell(inner)
+      html: emailShell(corpoMail, { footerNote: `Non desidera ricevere comunicazioni proattive dal suo medico? <a href="${esc(linkNega)}" style="color:#888;">Lo neghi qui</a> &middot; Delphi~Med` })
     });
     if (error) { console.error('[invia-cluster] richiedi resend:', error.message || error); return res.status(502).json({ error: 'email_fallita' }); }
 
@@ -316,16 +306,18 @@ export default async function handler(req, res) {
         const revocaToken = signPayload(serviceKey, { p: p.id, a: 'r', exp: Date.now() + 365 * 86400000 });
         const linkMsg = `https://${host}/t/${tokenThread}`;
         const linkRevoca = `https://${host}/?revoca_comm=${encodeURIComponent(revocaToken)}`;
-        const inner = `
-  <div style="font-size:15px;line-height:1.5">${esc(medicoNome)} le ha inviato una comunicazione.</div>
-  <div style="font-size:15px;line-height:1.5;margin-top:10px">Per leggerla e, se vuole, rispondere apra il link qui sotto.</div>
-  ${bottone(linkMsg, 'Apri la comunicazione')}
-  <div style="font-size:12px;color:#888;margin-top:22px;line-height:1.5">Questo canale non &egrave; adatto alle urgenze: in caso di emergenza contatti il 112 o si rechi al pronto soccorso. Il link &egrave; personale: non lo inoltri ad altri.</div>
-  <div style="font-size:12px;color:#888;margin-top:10px;line-height:1.5">Riceve questa email perch&eacute; ha dato il consenso alle comunicazioni proattive. Non desidera pi&ugrave; riceverne? <a href="${esc(linkRevoca)}" style="color:#555">Revochi qui il consenso</a>.</div>`;
+        const corpoMail =
+          emailTitle('Una comunicazione dal suo medico') +
+          `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(medicoNome)} le ha inviato una comunicazione.</p>` +
+          `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per leggerla e, se vuole, rispondere apra il link qui sotto.</p>` +
+          ctaButton(linkMsg, 'Apri la comunicazione') +
+          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(linkMsg)}</p>` +
+          noteBox('Questo canale non &egrave; adatto alle urgenze: in caso di emergenza contatti il <strong>112</strong> o si rechi al pronto soccorso. Il link &egrave; personale: non lo inoltri ad altri.') +
+          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Riceve questa email perch&eacute; ha dato il consenso alle comunicazioni proattive del suo medico.</p>`;
         const { error } = await resend.emails.send({
           from: 'noreply@delphi-med.com', to: [p.email],
           subject: `Comunicazione da ${medicoNome} — Delphi~Med`,
-          html: mailShell(inner)
+          html: emailShell(corpoMail, { footerNote: `Non desidera pi&ugrave; ricevere queste comunicazioni? <a href="${esc(linkRevoca)}" style="color:#888;">Revochi qui il consenso</a> &middot; Delphi~Med` })
         });
         if (error) throw new Error('resend ' + (error.message || 'errore'));
         inviati++;

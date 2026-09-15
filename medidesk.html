@@ -13254,7 +13254,7 @@ async function consInit(){
   if(!r.ok){ body.textContent='Questo link non \u00e8 valido o \u00e8 scaduto. Se pensa sia un errore, contatti il suo medico.'; return; }
   if(med) med.textContent=r.j.medico||'';
   if(window._consMode==='revoca'){
-    if(r.j.stato!=='attivo'){ body.textContent='Nessun consenso attivo da revocare.'; return; }
+    if(r.j.stato==='revocato'){ body.textContent='Il consenso risulta gi\u00e0 revocato: non ricever\u00e0 comunicazioni proattive.'; return; }
     body.textContent='Confermando, non ricever\u00e0 pi\u00f9 comunicazioni proattive dal suo medico. Potr\u00e0 sempre dare di nuovo il consenso in futuro.';
     act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Confermo la revoca</button>';
   } else {
