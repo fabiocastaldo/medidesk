@@ -298,7 +298,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   <div class="cardpane">
     <div class="card">
       <div class="card-logo"><div class="mark">Delphi~Med</div><div class="payoff">La regia dell'organizzazione</div></div>
-      <div style="display:flex;gap:6px;margin:14px 0 16px;background:#eef2f1;border-radius:10px;padding:4px">
+      <div id="login-modes" style="display:flex;gap:6px;margin:14px 0 16px;background:#eef2f1;border-radius:10px;padding:4px">
         <button type="button" class="login-mode active" id="mode-admin" onclick="setLoginMode('admin')">Amministratore</button>
         <button type="button" class="login-mode" id="mode-seg" onclick="setLoginMode('seg')">Segreteria</button>
       </div>
@@ -312,10 +312,11 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <label for="login-password">Password</label>
           <div class="pw-wrap">
             <input id="login-password" type="password" autocomplete="current-password" required>
-            <button type="button" class="pw-eye" id="pw-eye" aria-label="Mostra password" onclick="togglePw()"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button type="button" class="pw-eye" id="pw-eye" aria-label="Mostra password" onclick="togglePwEye(this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
         </div>
         <button class="btn" id="login-btn" onclick="doLogin()">Accedi</button>
+        <span class="helplink" style="margin-top:12px"><a href="#" onclick="showResetView(event)">Password dimenticata?</a></span>
       </div>
       <div id="login-seg-block" class="hidden">
         <p class="sub" style="margin-top:0">Niente password: ricevi un codice monouso alla tua email, se l'amministratore l'ha autorizzata.</p>
@@ -329,6 +330,33 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <input id="otp-code" type="text" inputmode="numeric" maxlength="8" placeholder="123456">
         </div>
         <button class="btn hidden" id="otp-verify-btn" onclick="otpVerify()">Verifica ed entra</button>
+      </div>
+      <div id="login-reset-block" class="hidden">
+        <p class="sub" style="margin-top:0">Ti inviamo un link per impostare una nuova password.</p>
+        <div class="field">
+          <label for="reset-email">Email</label>
+          <input id="reset-email" type="email" autocomplete="username">
+        </div>
+        <button class="btn" id="reset-send-btn" onclick="resetSend()">Inviami il link</button>
+        <span class="helplink"><a href="#" onclick="backToLogin(event)">&larr; Torna all'accesso</a></span>
+      </div>
+      <div id="login-recovery-block" class="hidden">
+        <p class="sub" style="margin-top:0">Imposta la nuova password: almeno 8 caratteri, con maiuscola, minuscola, numero e simbolo.</p>
+        <div class="field">
+          <label for="rec-pwd">Nuova password</label>
+          <div class="pw-wrap">
+            <input id="rec-pwd" type="password" autocomplete="new-password">
+            <button type="button" class="pw-eye" aria-label="Mostra password" onclick="togglePwEye(this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="rec-pwd2">Ripeti password</label>
+          <div class="pw-wrap">
+            <input id="rec-pwd2" type="password" autocomplete="new-password">
+            <button type="button" class="pw-eye" aria-label="Mostra password" onclick="togglePwEye(this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </div>
+        <button class="btn" id="rec-save-btn" onclick="recoverySave()">Salva e accedi</button>
       </div>
       <div id="login-msg" class="hidden"></div>
       <span class="helplink">La tua organizzazione non è ancora attiva?
@@ -1431,12 +1459,12 @@ function exportCompensiCSV(){
 // ── Occhio password + modal contatto (s18) ──
 const _EYE_ON='<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const _EYE_OFF='<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.4 10.4 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.06-5.94"/><path d="M9.9 4.24A10.5 10.5 0 0 1 12 5c7 0 11 7 11 7a19.8 19.8 0 0 1-3.22 4.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-function togglePw(){
-  const inp=document.getElementById('login-password'), b=document.getElementById('pw-eye');
+function togglePwEye(btn){
+  const inp=btn.parentElement.querySelector('input'); if(!inp) return;
   const show=inp.type==='password';
   inp.type=show?'text':'password';
-  b.innerHTML=show?_EYE_OFF:_EYE_ON;
-  b.setAttribute('aria-label',show?'Nascondi password':'Mostra password');
+  btn.innerHTML=show?_EYE_OFF:_EYE_ON;
+  btn.setAttribute('aria-label',show?'Nascondi password':'Mostra password');
 }
 function openHomeContact(ev,subject){
   if(ev&&ev.preventDefault)ev.preventDefault();
@@ -1455,6 +1483,65 @@ function copyHomeContact(){
   };
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText('info@delphi-med.com').then(done,fallback);}
   else fallback();
+}
+let _inRecovery = false;
+function _loginBlocks(activeId){
+  ['login-admin-block','login-seg-block','login-reset-block','login-recovery-block'].forEach(id =>
+    document.getElementById(id).classList.toggle('hidden', id !== activeId));
+  document.getElementById('login-modes').classList.toggle('hidden', activeId==='login-reset-block'||activeId==='login-recovery-block');
+  setMsg('');
+}
+function showResetView(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  const mail=document.getElementById('login-email').value.trim();
+  if(mail) document.getElementById('reset-email').value=mail;
+  _loginBlocks('login-reset-block');
+}
+function backToLogin(ev){
+  if(ev&&ev.preventDefault)ev.preventDefault();
+  _loginBlocks('login-admin-block');
+  setLoginMode('admin');
+}
+async function resetSend(){
+  if(!sb) return;
+  const email=document.getElementById('reset-email').value.trim();
+  if(!email){ setMsg('Inserisci la tua email.', 'err'); return; }
+  const btn=document.getElementById('reset-send-btn');
+  btn.disabled=true; setMsg('');
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/organizzazioni' });
+    if(error){ console.error('[Plancia] reset:', error.message); }
+    setMsg('Se l\'email è registrata, riceverai un link per impostare la nuova password.', 'info');
+  } catch(e){
+    console.error('[Plancia] reset:', e.message);
+    setMsg('Invio non riuscito. Riprova.', 'err');
+  } finally { btn.disabled=false; }
+}
+function showRecoveryView(){
+  _inRecovery = true;
+  show('view-login');
+  _loginBlocks('login-recovery-block');
+}
+async function recoverySave(){
+  if(!sb) return;
+  const pwd=document.getElementById('rec-pwd').value;
+  const pwd2=document.getElementById('rec-pwd2').value;
+  if(pwd!==pwd2){ setMsg('Le password non coincidono.', 'err'); return; }
+  if(pwd.length<8 || !/[A-Z]/.test(pwd) || !/[a-z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(pwd)){
+    setMsg('La password non soddisfa i criteri: almeno 8 caratteri con maiuscola, minuscola, numero e simbolo.', 'err'); return;
+  }
+  const btn=document.getElementById('rec-save-btn');
+  btn.disabled=true; setMsg('');
+  try {
+    const { error } = await sb.auth.updateUser({ password: pwd });
+    if(error){ setMsg('Aggiornamento non riuscito: link scaduto o password non valida. Richiedi un nuovo link.', 'err'); btn.disabled=false; return; }
+    _inRecovery=false;
+    enterPlancia();
+  } catch(e){
+    console.error('[Plancia] recovery:', e.message);
+    setMsg('Aggiornamento non riuscito. Riprova.', 'err');
+    btn.disabled=false;
+  }
 }
 function setLoginMode(m){
   const admin = m === 'admin';
@@ -2775,6 +2862,7 @@ function copiaCodice(){
 
 async function routeSession(){
   const { data: { session } } = await sb.auth.getSession();
+  if(_inRecovery){ showRecoveryView(); return; }
   if(!session){ show('view-login'); return; }
   enterPlancia(); // è coop-me a decidere (403 → view-denied): vale per Admin e operatori OTP
 }
@@ -2809,8 +2897,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('login-password').addEventListener('keydown', e => {
     if(e.key === 'Enter') doLogin();
   });
+  if(location.hash.includes('type=recovery')) _inRecovery = true;
   const ok = await initSupabase();
-  if(ok){ await routeSession(); } else { show('view-login'); }
+  if(ok){
+    sb.auth.onAuthStateChange((ev) => { if(ev === 'PASSWORD_RECOVERY') showRecoveryView(); });
+    await routeSession();
+  } else { show('view-login'); }
 });
 </script>
 </body>
