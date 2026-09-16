@@ -329,7 +329,7 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
 // ── Handler principale ────────────────────────────────────────────────────────
 
 const VALID_TIPI = new Set([
-  'conferma_appt_anon', 'conferma_appt_medico', 'cancellazione_paziente',
+  'conferma_appt_anon', 'conferma_appt_medico', 'richiesta_consenso_fascicolo', 'cancellazione_paziente',
   'cancellazione_paziente_coop',
   'notifica_centro_evento', 'cancellazione_centro_anon', 'chiusura_studio_centro',
   'account_eliminazione', 'notifica_prenotazione_coop',
