@@ -10263,13 +10263,40 @@ async function loadCancelPage(){
         Se non puoi venire, ti chiediamo gentilmente di cancellare il prima possibile:<br>
         lo slot tornerà subito disponibile per un altro paziente che ne ha bisogno.
       </p>
-      <button class="btn btn-warm" style="width:100%;padding:13px;margin-top:8px;font-size:15px" onclick="cancelBookingByToken('${escapeAttr(appt.id)}')">Conferma cancellazione</button>
+      <button id="cancel-confirm-btn" class="btn btn-warm" style="width:100%;padding:13px;margin-top:8px;font-size:15px" disabled onclick="cancelArmOrFire('${escapeAttr(appt.id)}')">Conferma cancellazione</button>
       <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="history.back()">Annulla</button>`;
+    // Bottone armato: nasce disabilitato (il gesto di scroll ereditato dal tocco
+    // sulla mail non deve poterlo attivare) e si abilita dopo 800 ms.
+    window._cancelArmedAt=0;
+    setTimeout(()=>{ const b=document.getElementById('cancel-confirm-btn'); if(b) b.disabled=false; },800);
   } catch(e){
     loading.style.display='none'; content.style.display='block';
     content.innerHTML='<div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--warm)"><use href="#ic-alert"/></svg></div><h2>Errore</h2><p>Si è verificato un errore. Riprova più tardi.</p>';
     console.error('[Delphi~Med] loadCancelPage:', e.message);
   }
+}
+// Conferma in due fasi: il primo tocco arma il bottone, il secondo esegue solo
+// se arriva almeno 500 ms dopo ed entro 6 s (poi si disarma da solo). Nessuno
+// sfioramento accidentale, singolo o doppio, puo' completare la cancellazione.
+function cancelArmOrFire(apptId){
+  const btn=document.getElementById('cancel-confirm-btn');
+  if(!btn||btn.disabled) return;
+  const now=Date.now();
+  if(!window._cancelArmedAt){
+    window._cancelArmedAt=now;
+    btn.textContent='Tocca di nuovo per cancellare';
+    btn.style.fontWeight='700';
+    window._cancelDisarmTimer=setTimeout(()=>{
+      window._cancelArmedAt=0;
+      const b=document.getElementById('cancel-confirm-btn');
+      if(b){ b.textContent='Conferma cancellazione'; b.style.fontWeight=''; }
+    },6000);
+    return;
+  }
+  if(now-window._cancelArmedAt<500) return;
+  clearTimeout(window._cancelDisarmTimer);
+  btn.disabled=true;
+  cancelBookingByToken(apptId);
 }
 async function cancelBookingByToken(apptId){
   try {
