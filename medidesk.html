@@ -10963,8 +10963,17 @@ async function salvaNuovoPaziente(){
   if(!nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
   const email=document.getElementById('np-email').value.trim();
   const tel=document.getElementById('np-tel').value.trim();
-  const dup=S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
-  if(dup && !(await confermaModale('Esiste gi\u00e0 un paziente con questo nome e cognome. Creare comunque un secondo fascicolo (caso di omonimia)?', { titolo:'Possibile omonimia', ok:'Crea comunque' }))) return;
+  let dup=S.pazienti.find(p=>p.nome.toLowerCase()===nome.toLowerCase()&&p.cognome.toLowerCase()===cognome.toLowerCase());
+  if(isOnline() && S.medicoId){
+    // dedup contro il DB, non solo contro la memoria: intercetta anche il retry
+    // dopo un insert riuscito ma con risposta persa (fascicolo fantasma).
+    try{
+      const { data: gia } = await supabaseClient.from('pazienti')
+        .select('id,nome,cognome,data_nascita').ilike('nome',nome).ilike('cognome',cognome).eq('data_nascita',nascitaIso).limit(1);
+      if(gia && gia.length) dup=gia[0];
+    }catch(_){ }
+  }
+  if(dup && !(await confermaModale('Esiste gi\u00e0 un fascicolo per '+escapeHtml(cognome+' '+nome)+(dup.data_nascita?' con la stessa data di nascita':'')+'. Creare comunque un secondo fascicolo (caso di omonimia)?', { titolo:'Fascicolo gi\u00e0 esistente?', ok:'Crea comunque' }))) return;
   let paz;
   if(isOnline() && S.medicoId){
     try{
@@ -10973,7 +10982,8 @@ async function salvaNuovoPaziente(){
         .select('id').single();
       if(error) throw error;
       paz={ id:newPaz.id, nome, cognome, nascita, tel, email, visite:[] };
-    }catch(e){ showToast('Errore: '+e.message); return; }
+      if(email) pazRichiestaConsensoFascicolo(newPaz.id);
+    }catch(e){ showToast('Errore: '+e.message+' \u2014 controlla in lista se il fascicolo esiste gi\u00e0 prima di riprovare.', 4000); return; }
   } else {
     paz={ id:Date.now(), nome, cognome, nascita, tel, email, visite:[] };
   }
