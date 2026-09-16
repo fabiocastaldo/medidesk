@@ -8,6 +8,7 @@
 // appartenere al medico), con in più i campi consenso della via diretta.
 
 import { randomUUID } from 'node:crypto';
+import { CONS_COMM_VERSIONE } from '../lib/consenso-token.js';
 import { verificaSlot } from '../lib/slot-guard.js';
 
 const rateMap = new Map();
@@ -83,6 +84,7 @@ export default async function handler(req, res) {
   const ora     = clean(b.ora, 5);
   const perConto = b.per_conto === true;
   const consensoVersione = clean(b.consenso_versione, 40);
+  const consensoComunicazioni = b.consenso_comunicazioni === true && !perConto; // mai per conto terzi
   if (!nome || !cognome) return res.status(400).json({ error: 'Nome e cognome obbligatori' });
   if (email && !isEmail(email)) return res.status(400).json({ error: 'Email non valida' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return res.status(400).json({ error: 'Data non valida' });
@@ -137,7 +139,8 @@ export default async function handler(req, res) {
         consenso_health_at: consentTs,
         consenso_versione: consensoVersione,
         per_conto: perConto,
-        da_centro: false
+        da_centro: false,
+        ...(consensoComunicazioni ? { consenso_comunicazioni_at: consentTs, consenso_comunicazioni_versione: CONS_COMM_VERSIONE } : {})
       })
     });
     if (r.status === 409) return res.status(409).json({ error: 'slot_taken' });
@@ -152,6 +155,17 @@ export default async function handler(req, res) {
     apptId = arr?.[0]?.id;
     if (!apptId) return res.status(500).json({ error: 'Creazione prenotazione fallita' });
   } catch { return res.status(500).json({ error: 'Creazione prenotazione fallita' }); }
+
+  // consenso comunicazioni: se esiste gia' un fascicolo con questa email, si accende subito
+  // (per i fascicoli futuri provvede il trigger di ereditarieta' sulle prenotazioni). Soft-fail.
+  if (consensoComunicazioni && email) {
+    try {
+      await sb(`pazienti?medico_id=eq.${encodeURIComponent(medicoId)}&email=ilike.${encodeURIComponent(email)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ consenso_comunicazioni_at: consentTs, consenso_comunicazioni_versione: CONS_COMM_VERSIONE, consenso_comunicazioni_revocato_at: null })
+      });
+    } catch { /* soft-fail */ }
+  }
 
   // 3) emit token email + conferma al paziente (come il gemello centro). Soft-fail.
   if (email) {
