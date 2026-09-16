@@ -34,7 +34,7 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   const userData = await userRes.json().catch(() => null);
   if (!userData?.id) return { ok: false, status: 401, error: 'Utente non riconosciuto' };
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&deleted_at=is.null&select=id,titolo,nome,cognome,moduli`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&deleted_at=is.null&select=id,titolo,nome,cognome,moduli,slug`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) return { ok: false, status: 403, error: 'Verifica account fallita' };
@@ -270,6 +270,7 @@ export default async function handler(req, res) {
 
     let inviati = 0;
     const falliti = [];
+    const linkPrenota = medico.slug ? `https://delphi-med.com/?booking&doc=${encodeURIComponent(medico.slug)}` : '';
     for (const p of dest) {
       try {
         const linkRevoca = revocaLink(host, serviceKey, { pazienteId: p.id });
@@ -277,7 +278,8 @@ export default async function handler(req, res) {
         const corpoMail =
           emailTitle(`Una comunicazione da ${esc(medicoNome)}`) +
           `<div style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;padding:14px 16px;background:#F7F9F8;border:1px solid #E7ECEA;border-radius:10px;">${corpoHtml}</div>` +
-          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Questa email &egrave; solo informativa e non prevede risposta: per ogni necessit&agrave; contatta lo studio come d'abitudine. La ricevi perch&eacute; hai dato il consenso alle comunicazioni proattive del tuo medico.</p>`;
+          (linkPrenota ? ctaButton(linkPrenota, 'Prenota online') : '') +
+          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Questa email &egrave; solo informativa e non prevede risposta. La ricevi perch&eacute; hai dato il consenso alle comunicazioni proattive del tuo medico.</p>`;
         const { error } = await resend.emails.send({
           from: 'noreply@delphi-med.com', to: [p.email],
           subject: `Comunicazione da ${medicoNome} — Delphi~Med`,
