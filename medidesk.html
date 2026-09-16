@@ -62,7 +62,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .sidebar-logo{padding:0 20px 28px;border-bottom:1px solid rgba(255,255,255,.08)}
 .sidebar-logo h1{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;letter-spacing:-.5px}
 .sidebar-logo p{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
-.nav{padding:16px 0;flex:1}
+.nav{padding:16px 0;flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:rgba(255,255,255,.85);font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .15s}
 .nav-item:hover{color:#fff;background:rgba(255,255,255,.06)}
 .nav-item.active{color:#fff;border-left-color:rgba(255,255,255,.9);background:rgba(255,255,255,.15)}
@@ -72,6 +72,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .uicon .ic{width:34px;height:34px}
 .btn .ic{vertical-align:-.15em;margin-right:6px}
 .sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08)}
+@media (max-height:860px){
+.sidebar{padding:14px 0}
+.sidebar-logo{padding:0 20px 16px}
+.nav{padding:8px 0}
+.nav-item{padding:7px 20px}
+.sidebar-bottom{padding:10px 20px}
+}
 .doctor-name strong{display:block;color:#fff;font-size:13px;margin-bottom:2px}
 .doctor-name span{font-size:11px;color:rgba(255,255,255,.45)}
 .main{margin-left:220px;flex:1;padding:32px;min-height:100vh}
