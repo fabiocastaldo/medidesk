@@ -317,6 +317,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .prest-assoc-chip .ic{width:13px;height:13px}
 .prest-assoc-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:12px;color:var(--ink3);flex-wrap:wrap}
 .prest-assoc-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.com-filtri-grid{display:grid;grid-template-columns:repeat(4,minmax(0,170px));gap:12px;margin-top:14px}
+@media(max-width:640px){.com-filtri-grid{grid-template-columns:1fr 1fr}}
 
 /* ── VISITA ── */
 .visita-item{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
@@ -1854,7 +1856,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
           <input id="com-cluster-nome" class="form-input" maxlength="80" placeholder="Nome del gruppo&hellip;" style="flex:1;min-width:220px;max-width:340px">
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,170px));gap:12px;margin-top:14px">
+        <div class="com-filtri-grid">
           <div><label class="form-label" style="font-size:11px" for="com-eta-min">Et&agrave; da (anni)</label><input type="number" id="com-eta-min" class="form-input" min="0" max="130" placeholder="Qualsiasi"></div>
           <div><label class="form-label" style="font-size:11px" for="com-eta-max">Et&agrave; fino a (anni)</label><input type="number" id="com-eta-max" class="form-input" min="0" max="130" placeholder="Qualsiasi"></div>
           <div><label class="form-label" style="font-size:11px" for="com-dal">Prenotati dal</label><input type="text" id="com-dal" class="form-input" placeholder="Qualsiasi data" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
