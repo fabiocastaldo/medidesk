@@ -1860,11 +1860,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div><label class="form-label" style="font-size:11px" for="com-dal">Prenotati dal</label><input type="text" id="com-dal" class="form-input" placeholder="Qualsiasi data" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
           <div><label class="form-label" style="font-size:11px" for="com-al">Prenotati fino al</label><input type="text" id="com-al" class="form-input" placeholder="Qualsiasi data" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
         </div>
-        <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--ink2)">Motivo della visita (prestazioni a catalogo)</div>
-        <div id="com-tipi-filtro" style="margin-top:8px"></div>
+        <div class="centro-turni-hdr" id="com-tipi-hdr" onclick="comToggleFiltroBlocco('tipi')">
+          <svg class="ic"><use href="#ic-file"/></svg>
+          <span id="com-tipi-title">Motivo della visita (prestazioni a catalogo)</span>
+          <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </div>
+        <div id="com-tipi-filtro" style="display:none;margin-top:8px"></div>
         <div id="com-aree-blocco" style="display:none">
-          <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--ink2)">Area tematica</div>
-          <div id="com-aree-filtro" style="margin-top:8px"></div>
+          <div class="centro-turni-hdr" id="com-aree-hdr" onclick="comToggleFiltroBlocco('aree')">
+            <svg class="ic"><use href="#ic-bulb"/></svg>
+            <span id="com-aree-title">Area tematica</span>
+            <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
+          </div>
+          <div id="com-aree-filtro" style="display:none;margin-top:8px"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">
           <button class="btn btn-secondary" onclick="comAnteprima()">Anteprima destinatari</button>
@@ -13317,12 +13325,21 @@ function comExportConsensi(){
 // Filtri a chip su catalogo: si memorizzano le voci SPENTE (come centri_esclusi).
 // Insieme vuoto = tutte accese = nessun filtro; il catalogo puo' crescere senza rompere la semantica.
 let _comTipiOff=new Set(), _comAreeOff=new Set();
+let _comTipiOpen=false, _comAreeOpen=false;
+function comToggleFiltroBlocco(kind){
+  if(kind==='tipi') _comTipiOpen=!_comTipiOpen; else _comAreeOpen=!_comAreeOpen;
+  comRenderFiltri();
+}
 function comRenderFiltri(){
   const tb=document.getElementById('com-tipi-filtro');
   if(tb){
     const cat=S.tipiVisita||[];
     _comTipiOff=new Set(Array.from(_comTipiOff).filter(function(n){return cat.indexOf(n)>=0;}));
     tb.innerHTML=comChipsHtml(cat,_comTipiOff,'tipi');
+    tb.style.display=_comTipiOpen?'':'none';
+    const hd=document.getElementById('com-tipi-hdr'); if(hd) hd.classList.toggle('open',_comTipiOpen);
+    const ti=document.getElementById('com-tipi-title');
+    if(ti){ const sel=cat.length-_comTipiOff.size; ti.textContent='Motivo della visita (prestazioni a catalogo)'+((cat.length&&sel<cat.length)?' \u00b7 '+sel+' di '+cat.length:''); }
   }
   const ab=document.getElementById('com-aree-filtro'); const blocco=document.getElementById('com-aree-blocco');
   if(ab&&blocco){
@@ -13332,6 +13349,10 @@ function comRenderFiltri(){
       blocco.style.display='';
       _comAreeOff=new Set(Array.from(_comAreeOff).filter(function(n){return cat.indexOf(n)>=0;}));
       ab.innerHTML=comChipsHtml(cat,_comAreeOff,'aree');
+      ab.style.display=_comAreeOpen?'':'none';
+      const hd=document.getElementById('com-aree-hdr'); if(hd) hd.classList.toggle('open',_comAreeOpen);
+      const ti=document.getElementById('com-aree-title');
+      if(ti){ const sel=cat.length-_comAreeOff.size; ti.textContent='Area tematica'+((sel<cat.length)?' \u00b7 '+sel+' di '+cat.length:''); }
     }
   }
 }
