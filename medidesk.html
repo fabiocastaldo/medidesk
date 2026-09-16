@@ -2586,7 +2586,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div id="mail-preview-appt" class="mail-preview" style="display:none"></div>
           <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
             <button class="btn btn-secondary btn-sm" onclick="previewMail()"><svg class="ic"><use href="#ic-eye"/></svg>Anteprima</button>
-            <button class="btn btn-secondary btn-sm" onclick="copyMail()"><svg class="ic"><use href="#ic-copy"/></svg>Copia mail</button>
             <button class="btn btn-secondary btn-sm" onclick="downloadICS()"><svg class="ic"><use href="#ic-download"/></svg>.ics</button>
           </div>
         </div>
@@ -2900,7 +2899,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="modal-body" id="modal-appt-detail-body"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary btn-sm" id="btn-delete-appt"><svg class="ic"><use href="#ic-trash"/></svg>Elimina</button>
-      <button class="btn btn-secondary btn-sm" onclick="copyMailFromDetail()"><svg class="ic"><use href="#ic-copy"/></svg>Copia mail</button>
       <button class="btn btn-secondary btn-sm" onclick="downloadICSFromDetail()"><svg class="ic"><use href="#ic-download"/></svg>.ics</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-appt-detail')">Chiudi</button>
     </div>
@@ -7312,8 +7310,6 @@ function previewMail(){
   const el = document.getElementById('mail-preview-appt');
   el.textContent = buildMailText(a); el.style.display='block';
 }
-function copyMail(){ const a=getCurrentFormAppt(); if(!a) return; navigator.clipboard.writeText(buildMailText(a)); showToast('Mail copiata ✓'); }
-function copyMailFromDetail(){ const a=S.appuntamenti.find(x=>String(x.id)===String(S.currentApptId)); if(!a) return; navigator.clipboard.writeText(buildMailText(a)); showToast('Mail copiata ✓'); }
 function getCurrentFormAppt(){
   if(!A.centroId||!A.dateStr||!A.ora){ showToast('Completa prima la selezione'); return null; }
   const nome=document.getElementById('appt-nome').value.trim();
