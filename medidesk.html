@@ -2350,7 +2350,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             </label>
             <label id="bk-row-comm" style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;cursor:pointer">
               <input type="checkbox" id="bk-consent-comm" style="margin-top:3px;flex-shrink:0">
-              <span id="bk-consent-comm-label"><strong>Facoltativo:</strong> acconsento a ricevere via email dal medico comunicazioni proattive (promemoria di prevenzione, richiami, avvisi organizzativi). Revocabile in ogni momento dal link in calce a ogni comunicazione. <span style="color:var(--ink3)">(Testo sintetico provvisorio: informativa completa in validazione legale.)</span></span>
+              <span id="bk-consent-comm-label"><strong>Facoltativo:</strong> acconsento a ricevere via email dal medico comunicazioni proattive (promemoria di prevenzione, richiami, avvisi organizzativi). Revocabile in ogni momento dal link in calce a ogni comunicazione.</span>
             </label>
             <div id="bk-auth-terzi" style="display:none;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-left:3px solid var(--accent);border-radius:6px;padding:12px 14px;margin-top:4px">
               <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
@@ -2484,6 +2484,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <div class="modal">
     <div class="modal-header"><span class="modal-title" id="appt-modal-title">Nuovo appuntamento</span><button class="modal-close" onclick="closeModal('modal-appuntamento')">✕</button></div>
     <div class="modal-body">
+      <div id="appt-data-banner" style="display:none;margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--accent-light);color:var(--accent);font-weight:600;font-size:14px;text-align:center"></div>
 
       <!-- STEP 0: scegli percorso -->
       <div class="appt-step" id="appt-step-0">
@@ -6168,7 +6169,16 @@ function apptResetWizard(){
   }
 }
 
+function apptUpdateDataBanner(){
+  const b=document.getElementById('appt-data-banner'); if(!b) return;
+  if(A.dateStr){
+    const d=new Date(A.dateStr+'T12:00:00');
+    b.textContent=d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    b.style.display='block';
+  } else { b.style.display='none'; }
+}
 function apptStep(n){
+  apptUpdateDataBanner();
   try {
     document.querySelectorAll('.appt-step').forEach(s=>s.classList.remove('active'));
     const map={0:'appt-step-0','1a':'appt-step-1a','1b':'appt-step-1b','2a':'appt-step-2a','2b':'appt-step-2b',3:'appt-step-3',4:'appt-step-4'};
@@ -13224,7 +13234,7 @@ async function comRegistro(){
 }
 
 // ── Consenso comunicazioni: vista pubblica (?consenso= dalla mail di richiesta, ?revoca_comm=, senza login — s20) ──
-const CONS_INFORMATIVA_BOZZA='Il suo medico desidera poterle inviare via email comunicazioni proattive: promemoria di prevenzione, richiami e avvisi organizzativi. Il consenso \u00e8 facoltativo, non condiziona in alcun modo la cura n\u00e9 le sue prenotazioni e pu\u00f2 essere revocato in ogni momento dal link presente in calce a ogni comunicazione. Titolare del trattamento \u00e8 il medico indicato sopra. (Testo sintetico provvisorio: informativa completa in validazione legale.)';
+const CONS_INFORMATIVA_BOZZA='Il tuo medico desidera poterti inviare via email comunicazioni proattive: promemoria di prevenzione, richiami e avvisi organizzativi. Il consenso \u00e8 facoltativo, non condiziona in alcun modo la cura n\u00e9 le tue prenotazioni e puoi revocarlo in ogni momento dal link presente in calce a ogni comunicazione. Titolare del trattamento \u00e8 il medico indicato sopra.';
 async function consApi(action, token){
   try{
     const r=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:action, token:token})});
@@ -13248,15 +13258,15 @@ async function consInit(){
   if(!body||!act) return;
   body.textContent='Caricamento\u2026'; act.innerHTML='';
   const r=await consApi('leggi_consenso', window._consToken);
-  if(!r.ok){ body.textContent='Questo link non \u00e8 valido o \u00e8 scaduto. Se pensa sia un errore, contatti il suo medico.'; return; }
+  if(!r.ok){ body.textContent='Questo link non \u00e8 valido o \u00e8 scaduto. Se pensi sia un errore, contatta il tuo medico.'; return; }
   if(med) med.textContent=r.j.medico||'';
   if(window._consMode==='revoca'){
-    if(r.j.stato!=='attivo'){ body.textContent='Nessun consenso attivo: non ricever\u00e0 comunicazioni proattive.'; return; }
-    body.textContent='Confermando, non ricever\u00e0 pi\u00f9 comunicazioni proattive dal suo medico. Potr\u00e0 sempre prestare di nuovo il consenso a una prossima prenotazione.';
+    if(r.j.stato!=='attivo'){ body.textContent='Nessun consenso attivo: non riceverai comunicazioni proattive.'; return; }
+    body.textContent='Confermando, non riceverai pi\u00f9 comunicazioni proattive dal tuo medico. Potrai sempre ridare il consenso riaprendo questa email di richiesta o a una prossima prenotazione.';
     act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Confermo la revoca</button>';
     return;
   }
-  if(r.j.stato==='attivo'){ body.textContent='Il suo consenso risulta gi\u00e0 attivo: non deve fare altro. Pu\u00f2 revocarlo in ogni momento dal link in calce a ogni comunicazione.'; return; }
+  if(r.j.stato==='attivo'){ body.textContent='Il tuo consenso risulta gi\u00e0 attivo: non devi fare altro. Puoi revocarlo in ogni momento dal link in calce a ogni comunicazione.'; return; }
   body.textContent=CONS_INFORMATIVA_BOZZA;
   act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Acconsento</button>';
 }
@@ -13265,10 +13275,10 @@ async function consConferma(){
   act.innerHTML=''; body.textContent='Un momento\u2026';
   const action = window._consMode==='revoca' ? 'revoca_consenso' : 'conferma_consenso';
   const r=await consApi(action, window._consToken);
-  if(!r.ok){ body.textContent='Operazione non riuscita: il link potrebbe non essere pi\u00f9 valido. Riapra il link dall\u2019email o contatti il suo medico.'; return; }
+  if(!r.ok){ body.textContent='Operazione non riuscita: il link potrebbe non essere pi\u00f9 valido. Riapri il link dall\u2019email o contatta il tuo medico.'; return; }
   body.textContent = window._consMode==='revoca'
-    ? 'Revoca registrata. Non ricever\u00e0 pi\u00f9 comunicazioni proattive.'
-    : 'Consenso registrato. Grazie: potr\u00e0 revocarlo in ogni momento dal link in calce a ogni comunicazione.';
+    ? 'Revoca registrata. Non riceverai pi\u00f9 comunicazioni proattive.'
+    : 'Consenso registrato. Grazie: potrai revocarlo in ogni momento dal link in calce a ogni comunicazione.';
 }
 
 const AST_REGISTRY = {

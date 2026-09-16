@@ -290,16 +290,16 @@ export default async function handler(req, res) {
         const linkRevoca = revocaLink(host, serviceKey, { pazienteId: p.id });
         const corpoMail =
           emailTitle('Una comunicazione dal suo medico') +
-          `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(medicoNome)} le ha inviato una comunicazione.</p>` +
-          `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per leggerla e, se vuole, rispondere apra il link qui sotto.</p>` +
+          `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(medicoNome)} ti ha inviato una comunicazione.</p>` +
+          `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per leggerla e, se vuoi, rispondere apri il link qui sotto.</p>` +
           ctaButton(linkMsg, 'Apri la comunicazione') +
-          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(linkMsg)}</p>` +
-          noteBox('Questo canale non &egrave; adatto alle urgenze: in caso di emergenza contatti il <strong>112</strong> o si rechi al pronto soccorso. Il link &egrave; personale: non lo inoltri ad altri.') +
-          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Riceve questa email perch&eacute; ha dato il consenso alle comunicazioni proattive del suo medico.</p>`;
+          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copia questo indirizzo nel browser:<br>${esc(linkMsg)}</p>` +
+          noteBox('Questo canale non &egrave; adatto alle urgenze: in caso di emergenza contatta il <strong>112</strong> o recati al pronto soccorso. Il link &egrave; personale: non inoltrarlo ad altri.') +
+          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Ricevi questa email perch&eacute; hai dato il consenso alle comunicazioni proattive del tuo medico.</p>`;
         const { error } = await resend.emails.send({
           from: 'noreply@delphi-med.com', to: [p.email],
           subject: `Comunicazione da ${medicoNome} — Delphi~Med`,
-          html: emailShell(corpoMail, { footerNote: `Non desidera pi&ugrave; ricevere queste comunicazioni? <a href="${esc(linkRevoca)}" style="color:#888;">Revochi qui il consenso</a> &middot; Delphi~Med` })
+          html: emailShell(corpoMail, { footerNote: `Non desideri pi&ugrave; ricevere queste comunicazioni? <a href="${esc(linkRevoca)}" style="color:#888;">Revoca qui il consenso</a> &middot; Delphi~Med` })
         });
         if (error) throw new Error('resend ' + (error.message || 'errore'));
         inviati++;

@@ -417,7 +417,7 @@ export default async function handler(req, res) {
     to            = appt.emailPaziente;
     subject       = `Conferma appuntamento con ${appt.medicoNome}`;
     const consFooter = appt.consensoComunicazioniAt
-      ? `Ha acconsentito a ricevere comunicazioni proattive dal medico. Non le desidera? <a href="${revocaLink(icsHost, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId })}" style="color:#888;">Revochi qui il consenso</a> &middot; Delphi~Med`
+      ? `Hai acconsentito a ricevere comunicazioni proattive dal medico. Non le desideri? <a href="${revocaLink(icsHost, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId })}" style="color:#888;">Revoca qui il consenso</a> &middot; Delphi~Med`
       : undefined;
     html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost, footer_note: consFooter });
     // Richiesta consenso automatica SOLO fuori dal flusso pubblico: online personale ha la casella,
@@ -752,15 +752,15 @@ async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey,
     const linkNega = revocaLink(host, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId });
     const corpoMail =
       emailTitle('Richiesta di consenso alle comunicazioni') +
-      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(appt.medicoNome)} le chiede il consenso a ricevere via email <strong>comunicazioni proattive</strong>: promemoria di prevenzione, richiami, avvisi organizzativi.</p>` +
-      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Il consenso &egrave; facoltativo, non incide in alcun modo sulla sua prenotazione e pu&ograve; essere revocato in ogni momento. Apra il link per leggere l'informativa e decidere.</p>` +
+      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(appt.medicoNome)} ti chiede il consenso a ricevere via email <strong>comunicazioni proattive</strong>: promemoria di prevenzione, richiami, avvisi organizzativi.</p>` +
+      `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Il consenso &egrave; facoltativo, non incide in alcun modo sulla tua prenotazione e puoi revocarlo in ogni momento. Apri il link per leggere l'informativa e decidere.</p>` +
       ctaButton(link, 'Leggi e decidi') +
-      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(link)}</p>` +
-      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Se non desidera acconsentire pu&ograve; semplicemente ignorare questa email: non ricever&agrave; altre richieste. Il link &egrave; personale: non lo inoltri ad altri.</p>`;
+      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copia questo indirizzo nel browser:<br>${esc(link)}</p>` +
+      `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Se non desideri acconsentire puoi semplicemente ignorare questa email: non riceverai altre richieste. Il link &egrave; personale: non inoltrarlo ad altri.</p>`;
     const { error } = await resend.emails.send({
       from: 'noreply@delphi-med.com', to: [appt.emailPaziente],
-      subject: `${appt.medicoNome} le chiede un consenso — Delphi~Med`,
-      html: emailShell(corpoMail, { footerNote: `Non desidera ricevere comunicazioni proattive dal suo medico? <a href="${revocaEsc(linkNega)}" style="color:#888;">Lo neghi qui</a> &middot; Delphi~Med` })
+      subject: `${appt.medicoNome} ti chiede un consenso — Delphi~Med`,
+      html: emailShell(corpoMail, { footerNote: `Non desideri ricevere comunicazioni proattive dal tuo medico? <a href="${revocaEsc(linkNega)}" style="color:#888;">Negalo qui</a> &middot; Delphi~Med` })
     });
     if (error) { console.error('[send-email] richiesta consenso resend:', error.message || error); return; }
 
