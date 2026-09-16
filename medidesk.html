@@ -312,6 +312,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .tag-chip.tag-default{background:var(--surface2);color:var(--ink2);border-color:var(--border)}
 .tag-chip-x{background:none;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:14px;line-height:1;padding:2px 6px;border-radius:50%;transition:all .15s}
 .tag-chip-x:hover{opacity:1;background:rgba(0,0,0,.08)}
+.prest-assoc-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-size:13px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--ink3);cursor:pointer;transition:all .15s}
+.prest-assoc-chip.on{background:var(--accent-light);color:var(--accent);border-color:#c0ddd5}
+.prest-assoc-chip .ic{width:13px;height:13px}
+.prest-assoc-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:12px;color:var(--ink3);flex-wrap:wrap}
+.prest-assoc-wrap{display:flex;flex-wrap:wrap;gap:8px}
 
 /* ── VISITA ── */
 .visita-item{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
@@ -5299,6 +5304,14 @@ function renderCentroCard(c, isActive){
       </div>
       ${_turniOpen.has(String(c.id)) ? `<div class="centro-turni-body">${turniHtml}${giornateHtml}</div>` : ''}
       ` : ''}
+      ${isActive ? `
+      <div class="centro-turni-hdr ${_prestAssocOpen.has(String(c.id))?'open':''}" onclick="togglePrestAssoc('${c.id}')">
+        <svg class="ic"><use href="#ic-file"/></svg>
+        <span>Associa prestazioni</span>
+        <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      ${_prestAssocOpen.has(String(c.id)) ? `<div class="centro-turni-body">${prestAssocHtml(c)}</div>` : ''}
+      ` : ''}
     </div>`;
 }
 
@@ -5320,6 +5333,69 @@ function toggleTurni(id){
   const k = String(id);
   if(_turniOpen.has(k)) _turniOpen.delete(k); else _turniOpen.add(k);
   renderCentri();
+}
+let _prestAssocOpen = new Set();
+function togglePrestAssoc(id){
+  const k = String(id);
+  if(_prestAssocOpen.has(k)) _prestAssocOpen.delete(k); else _prestAssocOpen.add(k);
+  renderCentri();
+}
+function tipoOffertoNelCentro(rec, centroId){
+  return !(((rec && rec.centri_esclusi) || []).map(String).includes(String(centroId)));
+}
+function tipiPerCentro(centroId){
+  const recs = S.tipiVisitaRecords || [];
+  if(!centroId || !recs.length) return (S.tipiVisita || []).slice();
+  const spente = new Set(recs.filter(r => !tipoOffertoNelCentro(r, centroId)).map(r => r.nome));
+  return (S.tipiVisita || []).filter(t => !spente.has(t));
+}
+function prestAssocHtml(c){
+  const recs = S.tipiVisitaRecords || [];
+  if(!recs.length) return `<div class="centro-booking-warn">Nessuna prestazione nel catalogo: aggiungi i tuoi tipi di visita nella pagina Prestazioni.</div>`;
+  const attive = recs.filter(r => tipoOffertoNelCentro(r, c.id)).length;
+  const chips = recs.map(r => {
+    const on = tipoOffertoNelCentro(r, c.id);
+    return `<button class="prest-assoc-chip${on ? ' on' : ''}" onclick="togglePrestAssocTipo('${c.id}','${escapeAttr(r.id)}')">${on ? '<svg class="ic"><use href="#ic-check"/></svg>' : ''}${escapeHtml(r.nome)}</button>`;
+  }).join('');
+  return `<div class="prest-assoc-tools">
+      <span>${attive} di ${recs.length} attive in questo centro</span>
+      <button class="btn btn-sm btn-secondary" onclick="setPrestAssocTutte('${c.id}', ${attive === 0 ? 'true' : 'false'})">${attive === 0 ? 'Seleziona tutto' : 'Deseleziona tutto'}</button>
+    </div>
+    <div class="prest-assoc-wrap">${chips}</div>
+    ${attive === 0 ? `<div class="centro-booking-warn" style="margin-top:10px">Nessuna prestazione associata: la prenotazione in questo centro non offrirà tipi di visita finché non ne selezioni almeno una.</div>` : ''}`;
+}
+async function togglePrestAssocTipo(centroId, tipoId){
+  if(!isOnline()){ showToast('Connessione necessaria per modificare le prestazioni del centro'); return; }
+  const rec = (S.tipiVisitaRecords || []).find(r => String(r.id) === String(tipoId));
+  if(!rec) return;
+  const cid = String(centroId);
+  const prima = (rec.centri_esclusi || []).map(String);
+  const dopo = prima.includes(cid) ? prima.filter(x => x !== cid) : prima.concat(cid);
+  try {
+    const { data, error } = await supabaseClient.from('tipi_visita')
+      .update({ centri_esclusi: dopo }).eq('id', rec.id).select('centri_esclusi').single();
+    if(error) throw error;
+    rec.centri_esclusi = data.centri_esclusi || dopo;
+    save(); renderCentri();
+    showToast(prima.includes(cid) ? 'Prestazione attivata nel centro ✓' : 'Prestazione disattivata nel centro');
+  } catch(e){ console.error('[Delphi~Med] togglePrestAssocTipo:', e.message); showToast('Errore: '+e.message); }
+}
+async function setPrestAssocTutte(centroId, attiva){
+  if(!isOnline()){ showToast('Connessione necessaria per modificare le prestazioni del centro'); return; }
+  const cid = String(centroId);
+  const daCambiare = (S.tipiVisitaRecords || []).filter(r => tipoOffertoNelCentro(r, cid) !== attiva);
+  try {
+    for(const rec of daCambiare){
+      const prima = (rec.centri_esclusi || []).map(String);
+      const dopo = attiva ? prima.filter(x => x !== cid) : prima.concat(cid);
+      const { data, error } = await supabaseClient.from('tipi_visita')
+        .update({ centri_esclusi: dopo }).eq('id', rec.id).select('centri_esclusi').single();
+      if(error) throw error;
+      rec.centri_esclusi = data.centri_esclusi || dopo;
+    }
+    save(); renderCentri();
+    showToast(attiva ? 'Tutte le prestazioni attivate nel centro ✓' : 'Tutte le prestazioni disattivate nel centro');
+  } catch(e){ console.error('[Delphi~Med] setPrestAssocTutte:', e.message); showToast('Errore: '+e.message); }
 }
 function armBookingAction(id, action){
   _linkPending = { id: String(id), action };
@@ -5990,9 +6066,9 @@ function populateCentroSelect(){
     : '<option value="">— Aggiungi prima un centro —</option>';
 }
 
-function populateTipiVisitaSelects(){
+function populateTipiVisitaSelects(centroId){
   sortTipiVisita();
-  const tipiHTML = S.tipiVisita.map(t=>`<option value="${escapeAttr(t)}">${t}</option>`).join('');
+  const tipiHTML = tipiPerCentro(centroId).map(t=>`<option value="${escapeAttr(t)}">${t}</option>`).join('');
   const areaHTML = '<option value="">— Nessuna —</option>' +
     S.areeTematiche.map(a=>`<option value="${escapeAttr(a)}">${a}</option>`).join('');
   ['appt-tipo','bk-tipo'].forEach(id=>{
@@ -6219,6 +6295,7 @@ function apptPathCenter(){
 
 function apptSelectCentro(id){
   A.centroId=id;
+  populateTipiVisitaSelects(id);
   const c=S.centri.find(x=>String(x.id)===String(id));
   document.getElementById('appt-step-2a-label').textContent = `Data — ${c.nome}`;
   apptStep('2a');
@@ -6319,6 +6396,7 @@ function apptShowCentriForDate(){
 
 function apptSelectCentroFromDate(id){
   A.centroId=id;
+  populateTipiVisitaSelects(id);
   apptShowSlots();
 }
 
@@ -6775,6 +6853,7 @@ function _wgNuovoApptDaCella(ds, targetMin){
   (_resetApptCat(),openModal('modal-appuntamento'));
   A.free = false;
   A.centroId = String(bestCentro.id);
+  populateTipiVisitaSelects(A.centroId);
   A.dateStr = ds;
   apptShowSlots();
   apptSelectSlot(best);
@@ -9720,7 +9799,8 @@ async function bkInit(){
             if(_addBtn){ _addBtn.style.display = 'inline-flex'; _bcard.parentNode.insertBefore(_addBtn, _bcard); }
           }
         }
-        const { data: tipiDB } = await supabaseClient.from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
+        const { data: tipiDB } = await supabaseClient.from('tipi_visita').select('id, nome, centri_esclusi').eq('medico_id', m.id).order('nome');
+        S.tipiVisitaRecords = tipiDB||[];
         S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
         const { data: areeDB } = await supabaseClient.from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
         S.areeTematiche = (areeDB||[]).map(r=>r.nome);
@@ -9734,7 +9814,7 @@ async function bkInit(){
         }
         const _aboutEl = document.getElementById('bk-about');
         if(_aboutEl){ _aboutEl.innerHTML = ''; _aboutEl.style.display = 'none'; }
-        populateTipiVisitaSelects();
+        populateTipiVisitaSelects(bk.centroId);
         const _now = new Date();
         bk.calYear = _now.getFullYear(); bk.calMonth = _now.getMonth();
         const _toggleLabel = document.getElementById('bk-per-conto')?.closest('label');
@@ -9785,7 +9865,8 @@ async function bkInit(){
       S.settings.nascondiCancellati       = m.nascondi_cancellati           === true;
       if(typeof _mostraCancellati !== 'undefined') _mostraCancellati = !S.settings.nascondiCancellati;
       const { data: tipiDB } = await supabaseClient
-        .from('tipi_visita').select('nome').eq('medico_id', m.id).order('nome');
+        .from('tipi_visita').select('id, nome, centri_esclusi').eq('medico_id', m.id).order('nome');
+      S.tipiVisitaRecords = tipiDB||[];
       S.tipiVisita = (tipiDB||[]).map(r=>r.nome);
       const { data: areeDB } = await supabaseClient
         .from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
@@ -9900,6 +9981,7 @@ function renderBkCentri(){
 
 function bkSelectCentro(id){
   bk.centroId=id;
+  populateTipiVisitaSelects(id);
   bkStep(2);
   renderBkCal();
 }
