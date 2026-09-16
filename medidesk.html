@@ -1858,10 +1858,6 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Et&agrave; da <input type="number" id="com-eta-min" class="form-input" min="0" max="130" style="width:70px"> a <input type="number" id="com-eta-max" class="form-input" min="0" max="130" style="width:70px"> anni</label>
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Prenotati dal <input type="date" id="com-dal" class="form-input" style="width:140px"> al <input type="date" id="com-al" class="form-input" style="width:140px"></label>
         </div>
-        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;align-items:center">
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Nessuna visita da <input type="number" id="com-uvg" class="form-input" min="1" max="3650" style="width:80px"> giorni</label>
-          <select id="com-cat" class="form-input"><option value="">Prima visita o controllo: entrambi</option><option value="prima_visita">Prima visita</option><option value="controllo">Controllo</option></select>
-        </div>
         <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--ink2)">Motivo della visita (prestazioni a catalogo)</div>
         <div id="com-tipi-filtro" style="margin-top:8px"></div>
         <div id="com-aree-blocco" style="display:none">
@@ -13367,8 +13363,6 @@ function comCriteri(){
   const c={};
   const emin=parseInt(document.getElementById('com-eta-min').value,10); if(Number.isInteger(emin)) c.eta_min=emin;
   const emax=parseInt(document.getElementById('com-eta-max').value,10); if(Number.isInteger(emax)) c.eta_max=emax;
-  const uvg=parseInt(document.getElementById('com-uvg').value,10); if(Number.isInteger(uvg)&&uvg>0) c.ultima_visita_oltre_giorni=uvg;
-  const cat=document.getElementById('com-cat').value; if(cat) c.categoria=cat;
   const dal=(document.getElementById('com-dal').value||'').trim(); if(dal) c.prenotati_dal=dal;
   const al=(document.getElementById('com-al').value||'').trim(); if(al) c.prenotati_al=al;
   const tcat=S.tipiVisita||[]; const tsel=tcat.filter(function(n){return !_comTipiOff.has(n);});
@@ -13403,8 +13397,6 @@ function comApplicaCluster(){
   const cr=(c&&c.criteri)||{};
   document.getElementById('com-eta-min').value = Number.isInteger(cr.eta_min)?cr.eta_min:'';
   document.getElementById('com-eta-max').value = Number.isInteger(cr.eta_max)?cr.eta_max:'';
-  document.getElementById('com-uvg').value = Number.isInteger(cr.ultima_visita_oltre_giorni)?cr.ultima_visita_oltre_giorni:'';
-  document.getElementById('com-cat').value = (cr.categoria==='prima_visita'||cr.categoria==='controllo')?cr.categoria:'';
   document.getElementById('com-dal').value = typeof cr.prenotati_dal==='string'?cr.prenotati_dal:'';
   document.getElementById('com-al').value = typeof cr.prenotati_al==='string'?cr.prenotati_al:'';
   const tsel=Array.isArray(cr.tipi_visita)?cr.tipi_visita:(cr.tipo_visita?[cr.tipo_visita]:null);
@@ -13727,13 +13719,11 @@ const AST_REGISTRY = {
     const criteri={};
     if(Number.isInteger(inp.eta_min)) criteri.eta_min=inp.eta_min;
     if(Number.isInteger(inp.eta_max)) criteri.eta_max=inp.eta_max;
-    if(Number.isInteger(inp.ultima_visita_oltre_giorni)) criteri.ultima_visita_oltre_giorni=inp.ultima_visita_oltre_giorni;
     if(Array.isArray(inp.tipi_visita)&&inp.tipi_visita.length) criteri.tipi_visita=inp.tipi_visita.map(String);
     else if(inp.tipo_visita) criteri.tipo_visita=String(inp.tipo_visita);
     if(Array.isArray(inp.aree)&&inp.aree.length) criteri.aree=inp.aree.map(String);
     if(typeof inp.prenotati_dal==='string'&&inp.prenotati_dal.trim()) criteri.prenotati_dal=inp.prenotati_dal.trim();
     if(typeof inp.prenotati_al==='string'&&inp.prenotati_al.trim()) criteri.prenotati_al=inp.prenotati_al.trim();
-    if(inp.categoria==='prima_visita'||inp.categoria==='controllo') criteri.categoria=inp.categoria;
     const action = inp.solo_anteprima===false ? 'invia' : 'anteprima';
     const corpo=String(inp.corpo||'').trim();
     if(action==='invia' && !corpo) return { errore:'corpo mancante' };
