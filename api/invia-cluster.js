@@ -5,10 +5,12 @@
 // La prova del consenso = possesso della casella + timestamp scritto dal server
 // + versione del testo acconsentito (pazienti.consenso_comunicazioni_*).
 // Invio massivo: criteri risolti SOLO lato server, destinatari = pazienti del
-// medico con email E consenso attivo; ogni destinatario riceve un thread
-// origine='cluster' agganciato a una riga di 'invii' (criteri_snapshot +
-// n_destinatari = registro del titolare). In calce a ogni email di cluster il
-// link di revoca; conferma e revoca NON sono gated dal modulo.
+// medico con email E consenso attivo. La comunicazione e' UNA SEMPLICE EMAIL col
+// testo nel corpo, da consultare: NESSUN thread, nessun canale di risposta (il
+// one-to-one resta a msg-thread per il dialogo clinico). Percio' il testo viaggia
+// in chiaro: mai contenuti clinici o riferiti al singolo. Resta la riga di 'invii'
+// (criteri_snapshot + n_destinatari = registro del titolare) e in calce a ogni
+// email il link di revoca; conferma e revoca NON sono gated dal modulo.
 //
 // POST { action:'leggi_consenso',    token }              [pubblica]
 // POST { action:'conferma_consenso', token }              [pubblica, solo token 'c' da mail di richiesta]
@@ -17,16 +19,12 @@
 // POST { action:'invia', criteri, corpo, cluster_id? }    [JWT medico + modulo]
 
 import { Resend } from 'resend';
-import { randomBytes, createHash } from 'crypto';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
 import { CONS_COMM_VERSIONE, readPayload, revocaLink } from '../lib/consenso-token.js';
 
 const MAX_CORPO = 4000;
 const MAX_DESTINATARI = 200;
 
-function hashToken(token) {
-  return createHash('sha256').update(token, 'utf8').digest('hex');
-}
 
 async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
@@ -36,7 +34,7 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   const userData = await userRes.json().catch(() => null);
   if (!userData?.id) return { ok: false, status: 401, error: 'Utente non riconosciuto' };
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&deleted_at=is.null&select=id,titolo,nome,cognome,moduli,msg_durata_giorni,msg_tempi_risposta`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&deleted_at=is.null&select=id,titolo,nome,cognome,moduli`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) return { ok: false, status: 403, error: 'Verifica account fallita' };
@@ -257,45 +255,16 @@ export default async function handler(req, res) {
     if (!ir.ok) { console.error('[invia-cluster] invii insert', ir.status); return res.status(500).json({ error: 'db' }); }
     const invio = (await ir.json())[0];
 
-    const durata = medico.msg_durata_giorni ?? 30;
-    const scadeIl = durata > 0 ? new Date(Date.now() + durata * 86400000).toISOString() : null;
-    const tokenExp = scadeIl || new Date(Date.now() + 365 * 86400000).toISOString();
-
     let inviati = 0;
     const falliti = [];
     for (const p of dest) {
-      let thread = null;
       try {
-        const tr = await sb('thread_messaggi', {
-          method: 'POST', headers: { 'Prefer': 'return=representation' },
-          body: JSON.stringify({
-            medico_id: medico.id, paziente_id: p.id, invio_id: invio.id,
-            origine: 'cluster', recapito_email: p.email, scade_il: scadeIl
-          })
-        });
-        if (!tr.ok) throw new Error('thread_insert ' + tr.status);
-        thread = (await tr.json())[0];
-
-        const mr = await sb('messaggi', { method: 'POST', body: JSON.stringify({ thread_id: thread.id, direzione: 'medico', corpo }) });
-        if (!mr.ok) throw new Error('messaggio_insert ' + mr.status);
-
-        const tokenThread = randomBytes(32).toString('base64url');
-        const kr = await sb('token_thread', {
-          method: 'POST',
-          body: JSON.stringify({ token_hash: hashToken(tokenThread), thread_id: thread.id, expires_at: tokenExp })
-        });
-        if (!kr.ok) throw new Error('token_insert ' + kr.status);
-
-        const linkMsg = `https://${host}/t/${tokenThread}`;
         const linkRevoca = revocaLink(host, serviceKey, { pazienteId: p.id });
+        const corpoHtml = esc(corpo).replace(/\r?\n/g, '<br>');
         const corpoMail =
-          emailTitle('Una comunicazione dal suo medico') +
-          `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(medicoNome)} ti ha inviato una comunicazione.</p>` +
-          `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per leggerla e, se vuoi, rispondere apri il link qui sotto.</p>` +
-          ctaButton(linkMsg, 'Apri la comunicazione') +
-          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copia questo indirizzo nel browser:<br>${esc(linkMsg)}</p>` +
-          noteBox('Questo canale non &egrave; adatto alle urgenze: in caso di emergenza contatta il <strong>112</strong> o recati al pronto soccorso. Il link &egrave; personale: non inoltrarlo ad altri.') +
-          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Ricevi questa email perch&eacute; hai dato il consenso alle comunicazioni proattive del tuo medico.</p>`;
+          emailTitle(`Una comunicazione da ${esc(medicoNome)}`) +
+          `<div style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;padding:14px 16px;background:#F7F9F8;border:1px solid #E7ECEA;border-radius:10px;">${corpoHtml}</div>` +
+          `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Questa email &egrave; solo informativa e non prevede risposta: per ogni necessit&agrave; contatta lo studio come d'abitudine. La ricevi perch&eacute; hai dato il consenso alle comunicazioni proattive del tuo medico.</p>`;
         const { error } = await resend.emails.send({
           from: 'noreply@delphi-med.com', to: [p.email],
           subject: `Comunicazione da ${medicoNome} — Delphi~Med`,
@@ -305,7 +274,6 @@ export default async function handler(req, res) {
         inviati++;
       } catch (e) {
         console.error('[invia-cluster] destinatario fallito:', p.id, e.message);
-        if (thread?.id) await sb(`thread_messaggi?id=eq.${thread.id}`, { method: 'DELETE' }).catch(() => {});
         falliti.push({ id: p.id, nome: p.nome, cognome: p.cognome });
       }
     }
