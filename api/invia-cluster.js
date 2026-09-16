@@ -59,8 +59,21 @@ function pulisciCriteri(raw) {
   if (Number.isInteger(c.eta_min) && c.eta_min >= 0 && c.eta_min <= 130) out.eta_min = c.eta_min;
   if (Number.isInteger(c.eta_max) && c.eta_max >= 0 && c.eta_max <= 130) out.eta_max = c.eta_max;
   if (Number.isInteger(c.ultima_visita_oltre_giorni) && c.ultima_visita_oltre_giorni > 0 && c.ultima_visita_oltre_giorni <= 3650) out.ultima_visita_oltre_giorni = c.ultima_visita_oltre_giorni;
-  if (typeof c.tipo_visita === 'string' && c.tipo_visita.trim()) out.tipo_visita = c.tipo_visita.trim().slice(0, 120);
+  // tipi_visita (motivo della visita, multiselezione dal catalogo); tipo_visita stringa = legacy dei cluster salvati
+  const tipi = Array.isArray(c.tipi_visita) ? c.tipi_visita
+    : (typeof c.tipo_visita === 'string' && c.tipo_visita.trim() ? [c.tipo_visita] : null);
+  if (tipi) {
+    const puliti = tipi.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim().slice(0, 120)).slice(0, 100);
+    if (puliti.length) out.tipi_visita = puliti;
+  }
+  if (Array.isArray(c.aree)) {
+    const puliti = c.aree.filter(a => typeof a === 'string' && a.trim()).map(a => a.trim().slice(0, 120)).slice(0, 100);
+    if (puliti.length) out.aree = puliti;
+  }
   if (c.categoria === 'prima_visita' || c.categoria === 'controllo') out.categoria = c.categoria;
+  const isData = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  if (isData(c.prenotati_dal)) out.prenotati_dal = c.prenotati_dal;
+  if (isData(c.prenotati_al)) out.prenotati_al = c.prenotati_al;
   return out;
 }
 
@@ -81,13 +94,16 @@ async function resolveDestinatari(sb, medicoId, criteri) {
     });
   }
 
-  if (paz.length && (criteri.tipo_visita || criteri.categoria || criteri.ultima_visita_oltre_giorni)) {
-    const ar = await sb(`appuntamenti?medico_id=eq.${medicoId}&paziente_id=not.is.null&cancelled=not.is.true&select=paziente_id,data,tipo_visita,categoria`);
+  if (paz.length && (criteri.tipi_visita || criteri.aree || criteri.categoria || criteri.ultima_visita_oltre_giorni || criteri.prenotati_dal || criteri.prenotati_al)) {
+    // Aggancio appuntamento->fascicolo per EMAIL (lowercase): paziente_id non viene
+    // popolato da nessun flusso reale, l'email del paziente invece viaggia sempre.
+    const ar = await sb(`appuntamenti?medico_id=eq.${medicoId}&email_paziente=not.is.null&cancelled=not.is.true&select=email_paziente,data,tipo_visita,area_tematica,categoria`);
     if (!ar.ok) throw new Error('appuntamenti_query ' + ar.status);
     const apps = await ar.json();
     const perPaz = new Map();
     for (const a of apps) {
-      const k = String(a.paziente_id);
+      const k = String(a.email_paziente || '').trim().toLowerCase();
+      if (!k) continue;
       if (!perPaz.has(k)) perPaz.set(k, []);
       perPaz.get(k).push(a);
     }
@@ -95,9 +111,17 @@ async function resolveDestinatari(sb, medicoId, criteri) {
       ? new Date(Date.now() - criteri.ultima_visita_oltre_giorni * 86400000).toISOString().slice(0, 10)
       : null;
     paz = paz.filter(p => {
-      const mie = perPaz.get(String(p.id)) || [];
-      if (criteri.tipo_visita && !mie.some(a => a.tipo_visita === criteri.tipo_visita)) return false;
+      const mie = perPaz.get(String(p.email || '').trim().toLowerCase()) || [];
+      if (criteri.tipi_visita && !mie.some(a => criteri.tipi_visita.includes(a.tipo_visita))) return false;
+      if (criteri.aree && !mie.some(a => a.area_tematica && criteri.aree.includes(a.area_tematica))) return false;
       if (criteri.categoria && !mie.some(a => a.categoria === criteri.categoria)) return false;
+      if ((criteri.prenotati_dal || criteri.prenotati_al) && !mie.some(a => {
+        const d = String(a.data || '');
+        if (!d) return false;
+        if (criteri.prenotati_dal && d < criteri.prenotati_dal) return false;
+        if (criteri.prenotati_al && d > criteri.prenotati_al) return false;
+        return true;
+      })) return false;
       if (soglia && mie.some(a => String(a.data) >= soglia)) return false;
       return true;
     });
