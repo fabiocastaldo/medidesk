@@ -1850,13 +1850,17 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
       </div>
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
-        <div class="section-title">Filtri e formazione cluster</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
-          <input type="number" id="com-eta-min" class="form-input" min="0" max="130" placeholder="Et&agrave; min" style="width:90px">
-          <input type="number" id="com-eta-max" class="form-input" min="0" max="130" placeholder="Et&agrave; max" style="width:90px">
-          <input type="number" id="com-uvg" class="form-input" min="1" max="3650" placeholder="Nessuna visita da (giorni)" style="width:210px">
-          <select id="com-cat" class="form-input"><option value="">Prima visita o controllo: entrambi</option><option value="prima_visita">Prima visita</option><option value="controllo">Controllo</option></select>
+        <div class="section-title">Crea gruppo di destinatari</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+          <input id="com-cluster-nome" class="form-input" maxlength="80" placeholder="Nome del gruppo&hellip;" style="flex:1;min-width:220px;max-width:340px">
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;align-items:center">
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Et&agrave; da <input type="number" id="com-eta-min" class="form-input" min="0" max="130" style="width:70px"> a <input type="number" id="com-eta-max" class="form-input" min="0" max="130" style="width:70px"> anni</label>
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Prenotati dal <input type="date" id="com-dal" class="form-input" style="width:140px"> al <input type="date" id="com-al" class="form-input" style="width:140px"></label>
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;align-items:center">
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Nessuna visita da <input type="number" id="com-uvg" class="form-input" min="1" max="3650" style="width:80px"> giorni</label>
+          <select id="com-cat" class="form-input"><option value="">Prima visita o controllo: entrambi</option><option value="prima_visita">Prima visita</option><option value="controllo">Controllo</option></select>
         </div>
         <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--ink2)">Motivo della visita (prestazioni a catalogo)</div>
         <div id="com-tipi-filtro" style="margin-top:8px"></div>
@@ -1866,15 +1870,14 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">
           <button class="btn btn-secondary" onclick="comAnteprima()">Anteprima destinatari</button>
-          <input id="com-cluster-nome" class="form-input" maxlength="80" placeholder="Nome cluster&hellip;" style="width:150px">
-          <button class="btn btn-secondary" onclick="comSalvaCluster()">Salva come cluster</button>
+          <button class="btn btn-secondary" onclick="comSalvaCluster()">Salva gruppo</button>
         </div>
         <div id="cluster_anteprima" style="margin-top:10px"></div>
       </div>
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
-        <div class="section-title">Selezione cluster e invio</div>
+        <div class="section-title">Selezione gruppo e invio</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
-          <select id="com-cluster-sel" class="form-input" onchange="comApplicaCluster()" style="min-width:170px"><option value="">Cluster salvati&hellip;</option></select>
+          <select id="com-cluster-sel" class="form-input" onchange="comApplicaCluster()" style="min-width:170px"><option value="">Gruppi salvati&hellip;</option></select>
         </div>
         <textarea id="com-corpo" rows="4" maxlength="4000" class="form-input" placeholder="Testo della comunicazione&hellip;" style="width:100%;box-sizing:border-box;margin-top:10px"></textarea>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
@@ -13384,16 +13387,16 @@ async function comAnteprima(){
 }
 async function comSalvaCluster(){
   const nomeEl=document.getElementById('com-cluster-nome'); const nome=(nomeEl&&nomeEl.value||'').trim();
-  if(!nome){ showToast('Dai un nome al cluster.'); return; }
+  if(!nome){ showToast('Dai un nome al gruppo.'); return; }
   const { error } = await supabaseClient.from('cluster').insert({ medico_id:S.medicoId, nome:nome, criteri:comCriteri() });
   if(error){ showToast('Salvataggio non riuscito.'); return; }
-  nomeEl.value=''; showToast('Cluster salvato.'); comLoadClusterSel();
+  nomeEl.value=''; showToast('Gruppo salvato.'); comLoadClusterSel();
 }
 async function comLoadClusterSel(){
   const sel=document.getElementById('com-cluster-sel'); if(!sel) return;
   const { data } = await supabaseClient.from('cluster').select('id,nome,criteri').order('nome',{ascending:true});
   window._comClusters=data||[];
-  sel.innerHTML='<option value="">Cluster salvati\u2026</option>'+window._comClusters.map(function(c){return '<option value="'+escapeAttr(c.id)+'">'+escapeHtml(c.nome)+'</option>';}).join('');
+  sel.innerHTML='<option value="">Gruppi salvati\u2026</option>'+window._comClusters.map(function(c){return '<option value="'+escapeAttr(c.id)+'">'+escapeHtml(c.nome)+'</option>';}).join('');
 }
 function comApplicaCluster(){
   const sel=document.getElementById('com-cluster-sel'); const c=(window._comClusters||[]).find(function(x){return String(x.id)===sel.value;});
