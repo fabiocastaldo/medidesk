@@ -1837,26 +1837,45 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
       </div>
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
-        <div class="section-title">Consensi</div>
-        <div style="font-size:13px;color:var(--ink3);margin:6px 0 10px">Il consenso si presta in fase di prenotazione online personale: qui vedi chi lo ha dato. Chi non ha acconsentito o lo ha revocato non compare. La revoca &egrave; sempre nel link in calce a ogni comunicazione.</div>
-        <div id="com-consensi"></div>
+        <div class="centro-turni-hdr" id="com-consensi-hdr" style="margin-top:0;padding-top:0;border-top:none" onclick="comToggleConsensi()">
+          <svg class="ic"><use href="#ic-check"/></svg>
+          <span id="com-consensi-title">Consensi</span>
+          <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </div>
+        <div id="com-consensi-body" style="display:none">
+          <div style="font-size:13px;color:var(--ink3);margin:8px 0 10px">Il consenso si presta in fase di prenotazione online personale: qui vedi chi lo ha dato. Chi non ha acconsentito o lo ha revocato non compare. La revoca &egrave; sempre nel link in calce a ogni comunicazione.</div>
+          <div id="com-consensi"></div>
+          <div id="com-consensi-more" style="margin-top:10px"></div>
+          <div style="margin-top:12px"><button class="btn btn-secondary" style="font-size:12px" onclick="comExportConsensi()">Esporta Excel</button></div>
+        </div>
       </div>
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
-        <div class="section-title">Nuovo invio</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <div class="section-title">Filtri e formazione cluster</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center">
           <input type="number" id="com-eta-min" class="form-input" min="0" max="130" placeholder="Et&agrave; min" style="width:90px">
           <input type="number" id="com-eta-max" class="form-input" min="0" max="130" placeholder="Et&agrave; max" style="width:90px">
           <input type="number" id="com-uvg" class="form-input" min="1" max="3650" placeholder="Nessuna visita da (giorni)" style="width:210px">
-          <input id="com-tipo" class="form-input" placeholder="Tipo di visita (vuoto = tutti)" style="width:210px">
           <select id="com-cat" class="form-input"><option value="">Prima visita o controllo: entrambi</option><option value="prima_visita">Prima visita</option><option value="controllo">Controllo</option></select>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Prenotati dal <input type="date" id="com-dal" class="form-input" style="width:140px"> al <input type="date" id="com-al" class="form-input" style="width:140px"></label>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-          <select id="com-cluster-sel" class="form-input" onchange="comApplicaCluster()" style="min-width:170px"><option value="">Cluster salvati&hellip;</option></select>
+        <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--ink2)">Motivo della visita (prestazioni a catalogo)</div>
+        <div id="com-tipi-filtro" style="margin-top:8px"></div>
+        <div id="com-aree-blocco" style="display:none">
+          <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--ink2)">Area tematica</div>
+          <div id="com-aree-filtro" style="margin-top:8px"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="comAnteprima()">Anteprima destinatari</button>
           <input id="com-cluster-nome" class="form-input" maxlength="80" placeholder="Nome cluster&hellip;" style="width:150px">
           <button class="btn btn-secondary" onclick="comSalvaCluster()">Salva come cluster</button>
-          <button class="btn btn-secondary" onclick="comAnteprima()">Anteprima destinatari</button>
         </div>
         <div id="cluster_anteprima" style="margin-top:10px"></div>
+      </div>
+      <div class="card" style="padding:16px 18px;margin-bottom:16px">
+        <div class="section-title">Selezione cluster e invio</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+          <select id="com-cluster-sel" class="form-input" onchange="comApplicaCluster()" style="min-width:170px"><option value="">Cluster salvati&hellip;</option></select>
+        </div>
         <textarea id="com-corpo" rows="4" maxlength="4000" class="form-input" placeholder="Testo della comunicazione&hellip;" style="width:100%;box-sizing:border-box;margin-top:10px"></textarea>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn btn-secondary" id="com-ai-btn" onclick="comOttimizza()"><svg class="ic" style="width:14px;height:14px"><use href="#ic-sparkles"/></svg>Ottimizza con AI</button>
@@ -13247,29 +13266,112 @@ function comStatoConsenso(p){
 async function comLoad(){
   applyModuliGate();
   const box=document.getElementById('com-consensi'); if(!box) return;
-  if(!(S.moduli&&S.moduli.comunicazioni===true)){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Il modulo Comunicazioni non \u00e8 attivo.</div>'; return; }
-  if(!isOnline()){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Disponibile solo online.</div>'; return; }
+  comRenderFiltri();
+  if(!(S.moduli&&S.moduli.comunicazioni===true)){ _comConsOpen=true; comSyncConsensiBody(); box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Il modulo Comunicazioni non \u00e8 attivo.</div>'; return; }
+  if(!isOnline()){ _comConsOpen=true; comSyncConsensiBody(); box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Disponibile solo online.</div>'; return; }
   box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Caricamento\u2026</div>';
   const { data, error } = await supabaseClient.from('pazienti').select('id,nome,cognome,consenso_comunicazioni_at,consenso_comunicazioni_versione').not('consenso_comunicazioni_at','is',null).order('cognome',{ascending:true});
+  comSyncConsensiBody();
   if(error){ box.innerHTML='<div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
-  const rows=data||[];
-  if(!rows.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessun consenso ancora: il paziente lo presta quando prenota online per s\u00e9.</div>'; }
-  else box.innerHTML=rows.map(function(p){
+  window._comConsensi=data||[];
+  _comConsensiShown=30;
+  comRenderConsensi();
+  comLoadClusterSel(); comRegistro();
+}
+let _comConsOpen=false, _comConsensiShown=30;
+function comSyncConsensiBody(){
+  const b=document.getElementById('com-consensi-body'); if(b) b.style.display=_comConsOpen?'':'none';
+  const h=document.getElementById('com-consensi-hdr'); if(h) h.classList.toggle('open', _comConsOpen);
+}
+function comToggleConsensi(){ _comConsOpen=!_comConsOpen; comSyncConsensiBody(); }
+function comRenderConsensi(){
+  const box=document.getElementById('com-consensi'); if(!box) return;
+  const rows=window._comConsensi||[];
+  const title=document.getElementById('com-consensi-title'); if(title) title.textContent='Consensi ('+rows.length+')';
+  const more=document.getElementById('com-consensi-more');
+  if(!rows.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessun consenso ancora: il paziente lo presta quando prenota online per s\u00e9.</div>'; if(more) more.innerHTML=''; return; }
+  box.innerHTML=rows.slice(0,_comConsensiShown).map(function(p){
     const st=comStatoConsenso(p);
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">'
       +'<div style="min-width:160px;font-weight:600">'+escapeHtml((p.cognome||'')+' '+(p.nome||''))+'</div>'
       +'<div style="flex:1;font-size:13px;color:'+st.c+'">'+escapeHtml(st.t)+'</div>'
       +'</div>';
   }).join('');
-  comLoadClusterSel(); comRegistro();
+  if(more) more.innerHTML = rows.length>_comConsensiShown
+    ? '<button class="btn btn-secondary" style="font-size:12px" onclick="comConsensiAltri()">Mostra altri 30</button><span style="font-size:12px;color:var(--ink3);margin-left:8px">'+Math.min(_comConsensiShown,rows.length)+' di '+rows.length+'</span>'
+    : '';
+}
+function comConsensiAltri(){ _comConsensiShown+=30; comRenderConsensi(); }
+function comExportConsensi(){
+  if(typeof XLSX==='undefined'){ showToast('Libreria Excel non caricata'); return; }
+  const rows=window._comConsensi||[];
+  if(!rows.length){ showToast('Nessun consenso da esportare.'); return; }
+  const aoa=[['Cognome','Nome','Consenso dal','Versione']].concat(rows.map(function(p){
+    return [p.cognome||'', p.nome||'', p.consenso_comunicazioni_at?new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT'):'', p.consenso_comunicazioni_versione||''];
+  }));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Consensi');
+  XLSX.writeFile(wb, 'Consensi_comunicazioni.xlsx');
+}
+// Filtri a chip su catalogo: si memorizzano le voci SPENTE (come centri_esclusi).
+// Insieme vuoto = tutte accese = nessun filtro; il catalogo puo' crescere senza rompere la semantica.
+let _comTipiOff=new Set(), _comAreeOff=new Set();
+function comRenderFiltri(){
+  const tb=document.getElementById('com-tipi-filtro');
+  if(tb){
+    const cat=S.tipiVisita||[];
+    _comTipiOff=new Set(Array.from(_comTipiOff).filter(function(n){return cat.indexOf(n)>=0;}));
+    tb.innerHTML=comChipsHtml(cat,_comTipiOff,'tipi');
+  }
+  const ab=document.getElementById('com-aree-filtro'); const blocco=document.getElementById('com-aree-blocco');
+  if(ab&&blocco){
+    const cat=S.areeTematiche||[];
+    if(!cat.length){ blocco.style.display='none'; }
+    else {
+      blocco.style.display='';
+      _comAreeOff=new Set(Array.from(_comAreeOff).filter(function(n){return cat.indexOf(n)>=0;}));
+      ab.innerHTML=comChipsHtml(cat,_comAreeOff,'aree');
+    }
+  }
+}
+function comChipsHtml(catalogo,off,kind){
+  if(!catalogo.length) return '<div style="font-size:12px;color:var(--ink3)">Nessuna prestazione nel catalogo: aggiungi i tuoi tipi di visita nella pagina Prestazioni.</div>';
+  const sel=catalogo.filter(function(n){return !off.has(n);});
+  const chips=catalogo.map(function(n,i){
+    const on=!off.has(n);
+    return '<button class="prest-assoc-chip'+(on?' on':'')+'" onclick="comToggleFiltroChip(\''+kind+'\','+i+')">'+(on?'<svg class="ic"><use href="#ic-check"/></svg>':'')+escapeHtml(n)+'</button>';
+  }).join('');
+  return '<div class="prest-assoc-tools"><span>'+sel.length+' di '+catalogo.length+' selezionate (tutte = nessun filtro)</span>'
+    +'<button class="btn btn-sm btn-secondary" onclick="comSetFiltroTutte(\''+kind+'\','+(sel.length===0?'true':'false')+')">'+(sel.length===0?'Seleziona tutto':'Deseleziona tutto')+'</button></div>'
+    +'<div class="prest-assoc-wrap">'+chips+'</div>'
+    +(sel.length===0?'<div class="centro-booking-warn" style="margin-top:10px">Nessuna voce selezionata: il filtro non si applica.</div>':'');
+}
+function comToggleFiltroChip(kind,i){
+  const off=kind==='tipi'?_comTipiOff:_comAreeOff;
+  const cat=kind==='tipi'?(S.tipiVisita||[]):(S.areeTematiche||[]);
+  const n=cat[i]; if(n==null) return;
+  if(off.has(n)) off.delete(n); else off.add(n);
+  comRenderFiltri();
+}
+function comSetFiltroTutte(kind,attiva){
+  const off=kind==='tipi'?_comTipiOff:_comAreeOff;
+  const cat=kind==='tipi'?(S.tipiVisita||[]):(S.areeTematiche||[]);
+  off.clear();
+  if(!attiva) cat.forEach(function(n){ off.add(n); });
+  comRenderFiltri();
 }
 function comCriteri(){
   const c={};
   const emin=parseInt(document.getElementById('com-eta-min').value,10); if(Number.isInteger(emin)) c.eta_min=emin;
   const emax=parseInt(document.getElementById('com-eta-max').value,10); if(Number.isInteger(emax)) c.eta_max=emax;
   const uvg=parseInt(document.getElementById('com-uvg').value,10); if(Number.isInteger(uvg)&&uvg>0) c.ultima_visita_oltre_giorni=uvg;
-  const t=(document.getElementById('com-tipo').value||'').trim(); if(t) c.tipo_visita=t;
   const cat=document.getElementById('com-cat').value; if(cat) c.categoria=cat;
+  const dal=(document.getElementById('com-dal').value||'').trim(); if(dal) c.prenotati_dal=dal;
+  const al=(document.getElementById('com-al').value||'').trim(); if(al) c.prenotati_al=al;
+  const tcat=S.tipiVisita||[]; const tsel=tcat.filter(function(n){return !_comTipiOff.has(n);});
+  if(_comTipiOff.size>0 && tsel.length>0 && tsel.length<tcat.length) c.tipi_visita=tsel;
+  const acat=S.areeTematiche||[]; const asel=acat.filter(function(n){return !_comAreeOff.has(n);});
+  if(_comAreeOff.size>0 && asel.length>0 && asel.length<acat.length) c.aree=asel;
   return c;
 }
 async function comAnteprima(){
@@ -13299,8 +13401,15 @@ function comApplicaCluster(){
   document.getElementById('com-eta-min').value = Number.isInteger(cr.eta_min)?cr.eta_min:'';
   document.getElementById('com-eta-max').value = Number.isInteger(cr.eta_max)?cr.eta_max:'';
   document.getElementById('com-uvg').value = Number.isInteger(cr.ultima_visita_oltre_giorni)?cr.ultima_visita_oltre_giorni:'';
-  document.getElementById('com-tipo').value = cr.tipo_visita||'';
   document.getElementById('com-cat').value = (cr.categoria==='prima_visita'||cr.categoria==='controllo')?cr.categoria:'';
+  document.getElementById('com-dal').value = typeof cr.prenotati_dal==='string'?cr.prenotati_dal:'';
+  document.getElementById('com-al').value = typeof cr.prenotati_al==='string'?cr.prenotati_al:'';
+  const tsel=Array.isArray(cr.tipi_visita)?cr.tipi_visita:(cr.tipo_visita?[cr.tipo_visita]:null);
+  _comTipiOff=new Set();
+  if(tsel) (S.tipiVisita||[]).forEach(function(n){ if(tsel.indexOf(n)<0) _comTipiOff.add(n); });
+  _comAreeOff=new Set();
+  if(Array.isArray(cr.aree)) (S.areeTematiche||[]).forEach(function(n){ if(cr.aree.indexOf(n)<0) _comAreeOff.add(n); });
+  comRenderFiltri();
   window._comSelCluster=c?c.id:null;
 }
 function pazRichiestaConsensoFascicolo(pazId){
@@ -13363,8 +13472,11 @@ function comCriteriLabel(c){
   if(c&&Number.isInteger(c.eta_min)) parts.push('et\u00e0 \u2265 '+c.eta_min);
   if(c&&Number.isInteger(c.eta_max)) parts.push('et\u00e0 \u2264 '+c.eta_max);
   if(c&&Number.isInteger(c.ultima_visita_oltre_giorni)) parts.push('nessuna visita da '+c.ultima_visita_oltre_giorni+' gg');
-  if(c&&c.tipo_visita) parts.push('tipo: '+c.tipo_visita);
+  if(c&&Array.isArray(c.tipi_visita)&&c.tipi_visita.length) parts.push('motivo: '+c.tipi_visita.join(', '));
+  else if(c&&c.tipo_visita) parts.push('motivo: '+c.tipo_visita);
+  if(c&&Array.isArray(c.aree)&&c.aree.length) parts.push('aree: '+c.aree.join(', '));
   if(c&&c.categoria) parts.push(c.categoria==='prima_visita'?'prima visita':'controllo');
+  if(c&&(c.prenotati_dal||c.prenotati_al)) parts.push(('prenotati '+(c.prenotati_dal?'dal '+c.prenotati_dal:'')+' '+(c.prenotati_al?'al '+c.prenotati_al:'')).replace(/\s+/g,' ').trim());
   return parts.length?parts.join(' \u00b7 '):'tutti i pazienti con consenso';
 }
 async function comRegistro(){
@@ -13613,7 +13725,11 @@ const AST_REGISTRY = {
     if(Number.isInteger(inp.eta_min)) criteri.eta_min=inp.eta_min;
     if(Number.isInteger(inp.eta_max)) criteri.eta_max=inp.eta_max;
     if(Number.isInteger(inp.ultima_visita_oltre_giorni)) criteri.ultima_visita_oltre_giorni=inp.ultima_visita_oltre_giorni;
-    if(inp.tipo_visita) criteri.tipo_visita=String(inp.tipo_visita);
+    if(Array.isArray(inp.tipi_visita)&&inp.tipi_visita.length) criteri.tipi_visita=inp.tipi_visita.map(String);
+    else if(inp.tipo_visita) criteri.tipo_visita=String(inp.tipo_visita);
+    if(Array.isArray(inp.aree)&&inp.aree.length) criteri.aree=inp.aree.map(String);
+    if(typeof inp.prenotati_dal==='string'&&inp.prenotati_dal.trim()) criteri.prenotati_dal=inp.prenotati_dal.trim();
+    if(typeof inp.prenotati_al==='string'&&inp.prenotati_al.trim()) criteri.prenotati_al=inp.prenotati_al.trim();
     if(inp.categoria==='prima_visita'||inp.categoria==='controllo') criteri.categoria=inp.categoria;
     const action = inp.solo_anteprima===false ? 'invia' : 'anteprima';
     const corpo=String(inp.corpo||'').trim();
