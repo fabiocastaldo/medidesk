@@ -565,7 +565,7 @@ export default async function handler(req, res) {
     const dataFmtSp = formatDateIt(appt.data);
     to            = appt.emailPaziente;
     subject       = `Appuntamento spostato \u2014 nuova data ${dataFmtSp}`;
-    html          = buildHtmlSpostamentoPaziente({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), data_fmt: esc(dataFmtSp), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_indirizzo: esc(appt.centroIndirizzo || '') });
+    html          = buildHtmlSpostamentoPaziente({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), data_fmt: esc(dataFmtSp), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_indirizzo: esc(appt.centroIndirizzo || ''), codice_cancellazione: esc(appt.cancellationToken) });
     if (appt.apptId && appt.data && appt.ora) {
       const _ics = buildICS({ apptId: appt.apptId, data: appt.data, ora: appt.ora, summary: buildIcsSummary(appt.tipoVisita, appt.medicoNome), description: appt.medicoNome ? `Appuntamento spostato con ${appt.medicoNome}` : 'Appuntamento spostato', location: [appt.centroNome, appt.centroIndirizzo].filter(Boolean).join(', ') });
       icsAttachment = { filename: 'appuntamento.ics', content: Buffer.from(_ics).toString('base64'), contentType: 'text/calendar; charset=utf-8' };
@@ -878,7 +878,9 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
   return emailShell(body, footer_note ? { footerNote: footer_note } : undefined);
 }
 
-function buildHtmlSpostamentoPaziente({ paziente_nome, medico_nome, centro_nome, data_fmt, ora, tipo_visita, centro_indirizzo }) {
+function buildHtmlSpostamentoPaziente({ paziente_nome, medico_nome, centro_nome, data_fmt, ora, tipo_visita, centro_indirizzo, codice_cancellazione }) {
+  const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
+  const anticipaUrl = 'https://delphi-med.com/?anticipa=' + encodeURIComponent(codice_cancellazione);
   const rows =
     detailRow('Medico', medico_nome) +
     detailRow('Nuova data', data_fmt) +
@@ -888,9 +890,15 @@ function buildHtmlSpostamentoPaziente({ paziente_nome, medico_nome, centro_nome,
     (tipo_visita ? detailRow('Tipo visita', tipo_visita, { last: true }) : '');
   const body =
     emailTitle('Appuntamento spostato') +
-    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${paziente_nome},<br>il Suo appuntamento ${medDi(medico_nome)} &egrave; stato spostato. Di seguito i nuovi dettagli; il codice di cancellazione gi&agrave; in Suo possesso resta valido.</p>` +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${paziente_nome},<br>il Suo appuntamento ${medDi(medico_nome)} &egrave; stato spostato. Di seguito i nuovi dettagli.</p>` +
     detailCard(rows) +
-    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">In allegato trova l&apos;evento aggiornato per il Suo calendario.</p>`;
+    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">In allegato trova l&apos;evento aggiornato per il Suo calendario.</p>` +
+    `<p style="font-size:13px;color:#555;line-height:1.6;text-align:center;margin:24px auto 12px;max-width:480px;">Se non pu&ograve; venire, Le chiediamo gentilmente di cancellare il prima possibile: lo slot torner&agrave; subito disponibile per un altro paziente che ne ha bisogno.</p>` +
+    ctaButton(cancelUrl, 'Cancella l&rsquo;appuntamento') +
+    `<div style="margin-top:32px;padding-top:24px;border-top:1px solid #e8e8e8;text-align:center;">` +
+    `<p style="font-size:13px;color:#555;line-height:1.6;margin:0 0 12px;max-width:480px;display:inline-block;">Vorrebbe essere avvisato nel caso si liberi una data pi&ugrave; vicina?</p><br>` +
+    ctaButton(anticipaUrl, 'Avvisami se si libera un posto') +
+    `</div>`;
   return emailShell(body);
 }
 
