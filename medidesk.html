@@ -4207,7 +4207,7 @@ var S = {
              email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'',
              x:'', bioLunga:'', specDescr:'', patologie:'', ambitiExpertise:[],
              foto_url: null },
-  tipiVisita: ['Prima visita', 'Controllo'],
+  tipiVisita: [],
   tipiVisitaRecords: [],
   areeTematiche: [],
   areeTematicheRecords: [],
@@ -10477,7 +10477,8 @@ async function removeTipoVisita(idx){
     const { data: { user } } = await supabaseClient.auth.getUser();
     const { data: med } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     const { count: nApp } = await supabaseClient.from('appuntamenti')
-      .select('id', { count: 'exact', head: true }).eq('medico_id', med.id).eq('tipo_visita', t);
+      .select('id', { count: 'exact', head: true }).eq('medico_id', med.id).eq('tipo_visita', t)
+      .or('cancelled.eq.false,cancelled.is.null');
     const { count: nPre } = await supabaseClient.from('prestazioni_centro')
       .select('id', { count: 'exact', head: true }).eq('medico_id', med.id).eq('tipo_visita', t);
     if((nApp||0) > 0 || (nPre||0) > 0){
