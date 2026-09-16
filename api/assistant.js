@@ -221,7 +221,7 @@ DASHBOARD («Home» sul telefono)
 
 AGENDA
 - Testata: «Importa giornata» (carica foto o PDF della lista della segreteria, controlla e conferma le righe estratte), «+ Overbooking» (appuntamento fuori griglia), «+ Appuntamento» (wizard a passi: centro, data, slot, dati paziente, tipo e la scelta «Prima visita o controllo»).
-- Calendario settimanale con trascinamento per spostare (chiede conferma e propone la notifica al paziente) e vista mese.
+- Calendario settimanale con trascinamento per spostare (chiede conferma e propone la notifica al paziente) e vista mese. Cliccando la testata di un giorno lo si seleziona (cerchio evidenziato); «+ Appuntamento» parte dal giorno selezionato, mostrato in un banner con la data in cima al wizard.
 
 PAZIENTI
 - Testata: «Crea fascicolo paziente». Ricerca per nome, email o telefono; filtri per centro e per stato («Tutti», «In cura», «Nuovi pazienti»: i nuovi pazienti sono i prenotati senza fascicolo). Colonne Email e Telefono separate.

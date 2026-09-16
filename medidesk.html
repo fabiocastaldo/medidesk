@@ -149,10 +149,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 #week-mobile{display:none}
 .wg{display:grid;grid-template-columns:56px repeat(7,1fr);border:1px solid var(--border);border-radius:var(--r);background:var(--surface);overflow:hidden}
 .wg-corner{border-bottom:1px solid var(--border)}
-.wg-hcell{padding:8px 4px 10px;text-align:center;border-bottom:1px solid var(--border);border-left:1px solid var(--border)}
+.wg-hcell{padding:8px 4px 10px;text-align:center;border-bottom:1px solid var(--border);border-left:1px solid var(--border);cursor:pointer}
+.wg-hcell:hover .wg-num{background:var(--accent-light)}
 .wg-dow{display:block;text-transform:uppercase;letter-spacing:.05em;font-size:10.5px;color:var(--ink3)}
 .wg-num{display:inline-block;font-size:17px;font-weight:600;color:var(--ink);width:30px;height:30px;line-height:30px;border-radius:50%;margin-top:2px}
 .wg-hcell.wg-today .wg-num{background:var(--brand-mid);color:#fff}
+.wg-hcell.wg-sel .wg-num{background:var(--accent);color:#fff;box-shadow:0 0 0 2px var(--accent-light)}
 .wg-allday-corner{border-bottom:1px solid var(--border)}
 .wg-allday{min-height:0;border-left:1px solid var(--border);border-bottom:1px solid var(--border);padding:2px 3px;display:flex;flex-direction:column;gap:2px}
 .wg-chip{font-size:10px;line-height:1.4;border-radius:4px;padding:1px 5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -6653,7 +6655,7 @@ function renderWeekGrid(days){
   let h = `<div class="wg" data-minh="${minH}">`;
   h += '<div class="wg-corner"></div>';
   perDay.forEach(p=>{
-    h += `<div class="wg-hcell${p.ds===today?' wg-today':''}"><span class="wg-dow">${DAYS_IT[p.d.getDay()]}</span><span class="wg-num">${p.d.getDate()}</span></div>`;
+    h += `<div class="wg-hcell${p.ds===today?' wg-today':''}${p.ds===S.selectedDay?' wg-sel':''}" onclick="selectDay('${p.ds}')" title="Seleziona questo giorno"><span class="wg-dow">${DAYS_IT[p.d.getDay()]}</span><span class="wg-num">${p.d.getDate()}</span></div>`;
   });
   if(hasAllday){
     h += '<div class="wg-allday-corner"></div>';
