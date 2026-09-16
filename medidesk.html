@@ -1854,9 +1854,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
           <input id="com-cluster-nome" class="form-input" maxlength="80" placeholder="Nome del gruppo&hellip;" style="flex:1;min-width:220px;max-width:340px">
         </div>
-        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;align-items:center">
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Et&agrave; da <input type="number" id="com-eta-min" class="form-input" min="0" max="130" style="width:70px"> a <input type="number" id="com-eta-max" class="form-input" min="0" max="130" style="width:70px"> anni</label>
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)">Prenotati dal <input type="date" id="com-dal" class="form-input" style="width:140px"> al <input type="date" id="com-al" class="form-input" style="width:140px"></label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,170px));gap:12px;margin-top:14px">
+          <div><label class="form-label" style="font-size:11px" for="com-eta-min">Et&agrave; da (anni)</label><input type="number" id="com-eta-min" class="form-input" min="0" max="130" placeholder="Qualsiasi"></div>
+          <div><label class="form-label" style="font-size:11px" for="com-eta-max">Et&agrave; fino a (anni)</label><input type="number" id="com-eta-max" class="form-input" min="0" max="130" placeholder="Qualsiasi"></div>
+          <div><label class="form-label" style="font-size:11px" for="com-dal">Prenotati dal</label><input type="text" id="com-dal" class="form-input" placeholder="Qualsiasi data" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
+          <div><label class="form-label" style="font-size:11px" for="com-al">Prenotati fino al</label><input type="text" id="com-al" class="form-input" placeholder="Qualsiasi data" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
         </div>
         <div style="margin-top:14px;font-size:12px;font-weight:600;color:var(--ink2)">Motivo della visita (prestazioni a catalogo)</div>
         <div id="com-tipi-filtro" style="margin-top:8px"></div>
@@ -13359,6 +13361,9 @@ function comSetFiltroTutte(kind,attiva){
   if(!attiva) cat.forEach(function(n){ off.add(n); });
   comRenderFiltri();
 }
+function comDataFocus(el){ el.type='date'; try{ el.showPicker(); }catch(_){ } }
+function comDataBlur(el){ if(!el.value) el.type='text'; }
+function comSetData(id,v){ const el=document.getElementById(id); if(!el) return; el.value = typeof v==='string'?v:''; el.type = el.value ? 'date' : 'text'; }
 function comCriteri(){
   const c={};
   const emin=parseInt(document.getElementById('com-eta-min').value,10); if(Number.isInteger(emin)) c.eta_min=emin;
@@ -13397,8 +13402,8 @@ function comApplicaCluster(){
   const cr=(c&&c.criteri)||{};
   document.getElementById('com-eta-min').value = Number.isInteger(cr.eta_min)?cr.eta_min:'';
   document.getElementById('com-eta-max').value = Number.isInteger(cr.eta_max)?cr.eta_max:'';
-  document.getElementById('com-dal').value = typeof cr.prenotati_dal==='string'?cr.prenotati_dal:'';
-  document.getElementById('com-al').value = typeof cr.prenotati_al==='string'?cr.prenotati_al:'';
+  comSetData('com-dal', cr.prenotati_dal);
+  comSetData('com-al', cr.prenotati_al);
   const tsel=Array.isArray(cr.tipi_visita)?cr.tipi_visita:(cr.tipo_visita?[cr.tipo_visita]:null);
   _comTipiOff=new Set();
   if(tsel) (S.tipiVisita||[]).forEach(function(n){ if(tsel.indexOf(n)<0) _comTipiOff.add(n); });
