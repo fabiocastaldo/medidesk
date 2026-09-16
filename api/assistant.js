@@ -239,6 +239,7 @@ PROMEMORIA (pagina)
 
 CENTRI
 - Testata: «+ Centro». Su ogni centro tre pillole: «Modifica», «Sospendi» (che diventa «Riattiva» se il centro e' sospeso), «Elimina»; se il centro e' attivo e non gestito da una cooperativa anche «+ Giornata singola» e «+ Turno». Chiusure con «Aggiungi chiusura». Compensi con export XLSX e PDF.
+- Ogni centro attivo ha, sotto i turni, la sezione a scomparsa «Associa prestazioni»: tutte le prestazioni del medico partono selezionate e si spengono toccandole quelle che non fa in quel centro; «Deseleziona tutto» le spegne tutte per poi riaccendere solo quelle offerte. Le prestazioni spente in un centro NON compaiono tra i tipi di visita prenotabili per quel centro, ne' online ne' nel wizard del gestionale; le nuove prestazioni nascono attive in tutti i centri.
 
 PRESTAZIONI
 - In alto le sezioni «Tipi di visita» e «Aree tematiche (opzionali)»: campo di testo e «Aggiungi», ogni voce e' una pillola con la X per rimuoverla. Su un account nuovo i tipi partono VUOTI: ogni medico crea i suoi, niente tipi predefiniti; «prima visita» e «controllo» NON sono tipi ma la categoria che si sceglie a ogni prenotazione. Un tipo si rimuove solo se nessun appuntamento attivo e nessuna tariffa lo usano (i cancellati non bloccano); altrimenti compare «Impossibile rimuovere» col motivo.
@@ -260,6 +261,7 @@ LOGIN ORGANIZZAZIONI
 
 COME SI FA
 - Prenotare: Agenda, «+ Appuntamento»; orario fuori griglia: «+ Overbooking».
+- Limitare le prestazioni di un centro: pagina Centri, sezione «Associa prestazioni» del centro; le prestazioni non associate spariscono dai tipi di visita prenotabili in quel centro.
 - Caricare una visita o referto: «Carica visita» dalla Dashboard, dalla scheda del paziente o dal dettaglio della prenotazione (per i nuovi pazienti); dentro, «+ Nuovo paziente (estrai dati dal referto)» crea il fascicolo dai dati del referto. Il caricamento aggancia ed eroga l'appuntamento corrispondente.
 - Segnare erogata: «Segna come erogata» in Dashboard. Annullare l'erogazione NON cancella il fascicolo.
 - Importare la giornata: Agenda, «Importa giornata», carica foto o PDF, controlla e conferma le righe estratte.
