@@ -1853,7 +1853,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
         <div id="cluster_anteprima" style="margin-top:10px"></div>
         <textarea id="com-corpo" rows="4" maxlength="4000" class="form-input" placeholder="Testo della comunicazione&hellip;" style="width:100%;box-sizing:border-box;margin-top:10px"></textarea>
-        <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-primary" id="com-invia-btn" onclick="comInvia()">Invia a tutti</button></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-secondary" id="com-ai-btn" onclick="comOttimizza()"><svg class="ic" style="width:14px;height:14px"><use href="#ic-sparkles"/></svg>Ottimizza con AI</button>
+          <button class="btn btn-primary" id="com-invia-btn" onclick="comInvia()">Invia a tutti</button>
+        </div>
         <div id="com-esito" style="margin-top:10px"></div>
       </div>
       <div class="card" style="padding:16px 18px">
@@ -13196,6 +13199,32 @@ function comApplicaCluster(){
   document.getElementById('com-tipo').value = cr.tipo_visita||'';
   document.getElementById('com-cat').value = (cr.categoria==='prima_visita'||cr.categoria==='controllo')?cr.categoria:'';
   window._comSelCluster=c?c.id:null;
+}
+async function comOttimizza(){
+  const ta=document.getElementById('com-corpo'); if(!ta) return;
+  const bozza=ta.value.trim();
+  if(!bozza){ showToast('Scrivi prima una bozza'); return; }
+  const btn=document.getElementById('com-ai-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Ottimizzo\u2026'; }
+  try{
+    const _jwt=await getAuthJwt();
+    const res=await fetch('/api/ottimizza-comunicazione',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},
+      body:JSON.stringify({corpo:bozza})
+    });
+    if (await trialGuard(res)) return;
+    if(!res.ok){
+      const e=await res.json().catch(function(){return {};});
+      throw new Error(e.error==='modulo_non_attivo'?'Il modulo Comunicazioni non \u00e8 attivo.':'HTTP '+res.status+(e.error?' \u2014 '+e.error:''));
+    }
+    const data=await res.json();
+    ta.value=data.content.map(function(i){return i.text||'';}).join('').trim();
+  }catch(err){
+    showToast(err.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.innerHTML='<svg class="ic" style="width:14px;height:14px"><use href="#ic-sparkles"></use></svg>Ottimizza con AI'; }
+  }
 }
 async function comInvia(){
   const btn=document.getElementById('com-invia-btn'); const esito=document.getElementById('com-esito');
