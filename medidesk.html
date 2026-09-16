@@ -318,7 +318,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .prest-assoc-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:12px;color:var(--ink3);flex-wrap:wrap}
 .prest-assoc-wrap{display:flex;flex-wrap:wrap;gap:8px}
 .com-filtri-grid{display:grid;grid-template-columns:repeat(4,minmax(0,170px));gap:12px;margin-top:14px}
-@media(max-width:640px){.com-filtri-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.com-filtri-grid{grid-template-columns:1fr 1fr}.com-filtri-grid .form-input{font-size:16px}}
 
 /* ── VISITA ── */
 .visita-item{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
@@ -1859,8 +1859,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="com-filtri-grid">
           <div><label class="form-label" style="font-size:11px" for="com-eta-min">Et&agrave; da (anni)</label><input type="number" id="com-eta-min" class="form-input" min="0" max="130" placeholder="Qualsiasi"></div>
           <div><label class="form-label" style="font-size:11px" for="com-eta-max">Et&agrave; fino a (anni)</label><input type="number" id="com-eta-max" class="form-input" min="0" max="130" placeholder="Qualsiasi"></div>
-          <div><label class="form-label" style="font-size:11px" for="com-dal">Prenotati dal</label><input type="text" id="com-dal" class="form-input" placeholder="Qualsiasi data" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
-          <div><label class="form-label" style="font-size:11px" for="com-al">Prenotati fino al</label><input type="text" id="com-al" class="form-input" placeholder="Qualsiasi data" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
+          <div><label class="form-label" style="font-size:11px" for="com-dal">Prenotati dal</label><input type="text" id="com-dal" class="form-input" placeholder="Qualsiasi data" onpointerdown="comDataPre(this)" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
+          <div><label class="form-label" style="font-size:11px" for="com-al">Prenotati fino al</label><input type="text" id="com-al" class="form-input" placeholder="Qualsiasi data" onpointerdown="comDataPre(this)" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></div>
         </div>
         <div class="centro-turni-hdr" id="com-tipi-hdr" onclick="comToggleFiltroBlocco('tipi')">
           <svg class="ic"><use href="#ic-file"/></svg>
@@ -13384,7 +13384,8 @@ function comSetFiltroTutte(kind,attiva){
   if(!attiva) cat.forEach(function(n){ off.add(n); });
   comRenderFiltri();
 }
-function comDataFocus(el){ el.type='date'; try{ el.showPicker(); }catch(_){ } }
+function comDataPre(el){ if(el.type!=='date') el.type='date'; }
+function comDataFocus(el){ if(el.type!=='date') el.type='date'; try{ el.showPicker(); }catch(_){ } }
 function comDataBlur(el){ if(!el.value) el.type='text'; }
 function comSetData(id,v){ const el=document.getElementById(id); if(!el) return; el.value = typeof v==='string'?v:''; el.type = el.value ? 'date' : 'text'; }
 function comCriteri(){
