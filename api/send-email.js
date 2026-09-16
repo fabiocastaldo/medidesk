@@ -340,7 +340,7 @@ const VALID_TIPI = new Set([
 
 const PATH1_TIPI = new Set([
   'notifica_medico_appuntamento', 'spostamento_paziente',
-  'conferma_appt_medico', 'cancellazione_paziente', 'notifica_centro_evento',
+  'conferma_appt_medico', 'richiesta_consenso_fascicolo', 'cancellazione_paziente', 'notifica_centro_evento',
   'chiusura_studio_centro', 'account_eliminazione'
 ]);
 
@@ -463,6 +463,21 @@ export default async function handler(req, res) {
         console.error('[send-email] notifica centro anon exception:', e.message);
       }
     }
+
+  } else if (tipo === 'richiesta_consenso_fascicolo') {
+    // Fascicolo creato a mano per un paziente mai prenotato: parte (una tantum,
+    // stessi paletti) la mail di richiesta consenso, ancorata al fascicolo.
+    const { paziente_id } = body;
+    if (!paziente_id) return res.status(400).json({ error: 'paziente_id obbligatorio' });
+    const pr = await fetch(`${base}/pazienti?id=eq.${encodeURIComponent(paziente_id)}&medico_id=eq.${encodeURIComponent(authCtx.medicoId)}&select=id,email`, { headers: dbHeaders }).catch(() => null);
+    const paz = pr && pr.ok ? (await pr.json())[0] : null;
+    if (!paz) return res.status(404).json({ error: 'not_found' });
+    if (!paz.email) return res.status(200).json({ ok: true, skipped: 'email_mancante' });
+    await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, serviceKey, appt: {
+      pazienteId: paz.id, medicoId: authCtx.medicoId, medicoNome: authCtx.medicoNome, emailPaziente: paz.email
+    } });
+    await auditLog(base, dbHeaders, authCtx.medicoId, tipo, 'paziente', paz.id, authCtx.authMode, paz.email, null);
+    return res.status(200).json({ ok: true });
 
   } else if (tipo === 'conferma_appt_medico') {
     const { appt_id } = body;
@@ -738,7 +753,7 @@ export default async function handler(req, res) {
 // Marca la richiesta sull'appuntamento (sempre) e sul fascicolo (se esiste).
 async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey, appt }) {
   try {
-    if (!appt?.emailPaziente || !appt.medicoId || !appt.apptId) return;
+    if (!appt?.emailPaziente || !appt.medicoId || (!appt.apptId && !appt.pazienteId)) return;
     const e = encodeURIComponent(appt.emailPaziente);
     const m = encodeURIComponent(appt.medicoId);
     const orPz = encodeURIComponent('(consenso_comunicazioni_at.not.is.null,consenso_comunicazioni_richiesto_at.not.is.null,consenso_comunicazioni_revocato_at.not.is.null)');
@@ -748,7 +763,7 @@ async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey,
     const ap = await fetch(`${base}/appuntamenti?medico_id=eq.${m}&email_paziente=ilike.${e}&or=${orAp}&select=id&limit=1`, { headers });
     if (!ap.ok || (await ap.json()).length) return;
 
-    const link = consensoLink(host, serviceKey, { apptId: appt.apptId });
+    const link = consensoLink(host, serviceKey, appt.apptId ? { apptId: appt.apptId } : { pazienteId: appt.pazienteId });
     const linkNega = revocaLink(host, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId });
     const corpoMail =
       emailTitle('Richiesta di consenso alle comunicazioni') +
@@ -765,10 +780,12 @@ async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey,
     if (error) { console.error('[send-email] richiesta consenso resend:', error.message || error); return; }
 
     const now = new Date().toISOString();
-    await fetch(`${base}/appuntamenti?id=eq.${encodeURIComponent(appt.apptId)}`, {
-      method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ consenso_comunicazioni_richiesto_at: now })
-    }).catch(() => {});
+    if (appt.apptId) {
+      await fetch(`${base}/appuntamenti?id=eq.${encodeURIComponent(appt.apptId)}`, {
+        method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consenso_comunicazioni_richiesto_at: now })
+      }).catch(() => {});
+    }
     await fetch(`${base}/pazienti?medico_id=eq.${m}&email=ilike.${e}`, {
       method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ consenso_comunicazioni_richiesto_at: now })

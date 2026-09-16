@@ -8580,6 +8580,7 @@ async function visitaSelectFromAppt(apptId){
           .insert({ medico_id: medico.id, nome: a.nome, cognome: a.cognome, telefono: a.tel||null, email: a.email||null }).select('id').single();
         if(error) throw error;
         paz = { id: newPaz.id, nome: a.nome, cognome: a.cognome, nascita:'', tel: a.tel||'', email: a.email||'', visite:[] };
+        if(a.email) pazRichiestaConsensoFascicolo(newPaz.id);
         console.log('[Delphi~Med] Paziente creato da appuntamento:', { id: newPaz.id });
       } catch(e){
         console.error('[Delphi~Med] visitaSelectFromAppt:', e.message);
@@ -10929,6 +10930,7 @@ async function _ensurePazienteDaAppt(a){
         .select('id').single();
       if(error) throw error;
       paz={ id:newPaz.id, nome:a.nome, cognome:a.cognome, nascita:'', tel:a.tel||'', email:a.email||'', visite:[] };
+      if(a.email) pazRichiestaConsensoFascicolo(newPaz.id);
     }catch(e){ console.warn('[Delphi~Med] fascicolo da erogazione:', e.message); return; }
   } else {
     paz={ id:Date.now(), nome:a.nome, cognome:a.cognome, nascita:'', tel:a.tel||'', email:a.email||'', visite:[] };
@@ -13199,6 +13201,15 @@ function comApplicaCluster(){
   document.getElementById('com-tipo').value = cr.tipo_visita||'';
   document.getElementById('com-cat').value = (cr.categoria==='prima_visita'||cr.categoria==='controllo')?cr.categoria:'';
   window._comSelCluster=c?c.id:null;
+}
+function pazRichiestaConsensoFascicolo(pazId){
+  // Fascicolo creato a mano: la mail di richiesta consenso parte dal server
+  // (stessi paletti una-tantum); fire-and-forget, mai bloccante.
+  try{
+    getAuthJwt().then(function(_jwt){
+      fetch('/api/send-email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify({tipo:'richiesta_consenso_fascicolo', paziente_id:String(pazId)})}).catch(function(){});
+    }).catch(function(){});
+  }catch(_){ }
 }
 async function comOttimizza(){
   const ta=document.getElementById('com-corpo'); if(!ta) return;

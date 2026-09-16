@@ -132,39 +132,52 @@ export default async function handler(req, res) {
   if (action === 'leggi_consenso' || action === 'conferma_consenso' || action === 'revoca_consenso') {
     const payload = readPayload(serviceKey, body.token);
     const okR = payload && payload.a === 'r' && (payload.p || (payload.e && payload.m));
-    const okC = payload && payload.a === 'c' && payload.ap;
+    const okC = payload && payload.a === 'c' && (payload.ap || payload.p);
     if (!okR && !okC) return res.status(401).json({ error: 'link_non_valido' });
     if (action === 'conferma_consenso' && !okC) return res.status(401).json({ error: 'link_non_valido' });
     if (action === 'revoca_consenso' && !okR) return res.status(401).json({ error: 'link_non_valido' });
 
-    // Token 'c': richiesta di consenso ancorata a una prenotazione (mail automatica).
+    // Token 'c': richiesta di consenso ancorata a una prenotazione (payload.ap)
+    // o a un fascicolo creato a mano (payload.p).
     if (okC) {
-      const ar = await sb(`appuntamenti?id=eq.${encodeURIComponent(payload.ap)}&select=id,medico_id,email_paziente,consenso_comunicazioni_at,medici(titolo,nome,cognome)`);
-      const appt = ar.ok ? (await ar.json())[0] : null;
-      if (!appt || !appt.email_paziente) return res.status(404).json({ error: 'not_found' });
-      const medNome = appt.medici ? [appt.medici.titolo, appt.medici.nome, appt.medici.cognome].filter(Boolean).join(' ') : 'Il suo medico';
-      const pz = await sb(`pazienti?medico_id=eq.${encodeURIComponent(appt.medico_id)}&email=ilike.${encodeURIComponent(appt.email_paziente)}&select=id,consenso_comunicazioni_at,consenso_comunicazioni_revocato_at`);
+      let appt = null, medRow = null, emailC = null, medicoIdC = null;
+      if (payload.ap) {
+        const ar = await sb(`appuntamenti?id=eq.${encodeURIComponent(payload.ap)}&select=id,medico_id,email_paziente,consenso_comunicazioni_at,medici(titolo,nome,cognome)`);
+        appt = ar.ok ? (await ar.json())[0] : null;
+        if (!appt || !appt.email_paziente) return res.status(404).json({ error: 'not_found' });
+        medRow = appt.medici; emailC = appt.email_paziente; medicoIdC = appt.medico_id;
+      } else {
+        const fr = await sb(`pazienti?id=eq.${encodeURIComponent(payload.p)}&select=id,medico_id,email,consenso_comunicazioni_at,consenso_comunicazioni_revocato_at,medici(titolo,nome,cognome)`);
+        const fas = fr.ok ? (await fr.json())[0] : null;
+        if (!fas || !fas.email) return res.status(404).json({ error: 'not_found' });
+        medRow = fas.medici; emailC = fas.email; medicoIdC = fas.medico_id;
+      }
+      const medNome = medRow ? [medRow.titolo, medRow.nome, medRow.cognome].filter(Boolean).join(' ') : 'Il suo medico';
+      const pz = await sb(`pazienti?medico_id=eq.${encodeURIComponent(medicoIdC)}&email=ilike.${encodeURIComponent(emailC)}&select=id,consenso_comunicazioni_at,consenso_comunicazioni_revocato_at`);
       const rowsPz = pz.ok ? await pz.json() : [];
-      const cAttivo = !!appt.consenso_comunicazioni_at || rowsPz.some(x => x.consenso_comunicazioni_at);
+      const cAttivo = !!(appt && appt.consenso_comunicazioni_at) || rowsPz.some(x => x.consenso_comunicazioni_at);
       if (action === 'leggi_consenso') {
         const stato = cAttivo ? 'attivo' : (rowsPz.some(x => x.consenso_comunicazioni_revocato_at) ? 'revocato' : 'nessuno');
         return res.status(200).json({ medico: medNome, stato, azione: 'consenso', versione: payload.v || CONS_COMM_VERSIONE });
       }
-      // conferma_consenso: timestamp server sull'appuntamento, e sul fascicolo se esiste
+      // conferma_consenso: timestamp server sull'ancora (appuntamento o fascicolo)
+      // e su tutti i fascicoli con quella email (il consenso e' della casella).
       const nowC = new Date().toISOString();
-      const ur = await sb(`appuntamenti?id=eq.${appt.id}`, {
-        method: 'PATCH', headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({ consenso_comunicazioni_at: nowC, consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE })
-      });
-      const urRows = ur.ok ? await ur.json() : [];
-      if (!urRows[0]) return res.status(500).json({ error: 'db' });
-      if (rowsPz.length) {
-        await sb(`pazienti?medico_id=eq.${encodeURIComponent(appt.medico_id)}&email=ilike.${encodeURIComponent(appt.email_paziente)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ consenso_comunicazioni_at: nowC, consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE, consenso_comunicazioni_revocato_at: null })
-        }).catch(() => {});
+      if (appt) {
+        const ur = await sb(`appuntamenti?id=eq.${appt.id}`, {
+          method: 'PATCH', headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify({ consenso_comunicazioni_at: nowC, consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE })
+        });
+        const urRows = ur.ok ? await ur.json() : [];
+        if (!urRows[0]) return res.status(500).json({ error: 'db' });
       }
-      return res.status(200).json({ ok: true, medico: medNome, quando: urRows[0].consenso_comunicazioni_at, versione: urRows[0].consenso_comunicazioni_versione });
+      const up = await sb(`pazienti?medico_id=eq.${encodeURIComponent(medicoIdC)}&email=ilike.${encodeURIComponent(emailC)}`, {
+        method: 'PATCH', headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ consenso_comunicazioni_at: nowC, consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE, consenso_comunicazioni_revocato_at: null })
+      });
+      const upRows = up.ok ? await up.json() : [];
+      if (!appt && !upRows[0]) return res.status(500).json({ error: 'db' });
+      return res.status(200).json({ ok: true, medico: medNome, quando: nowC, versione: payload.v || CONS_COMM_VERSIONE });
     }
 
     let medicoNome = 'Il suo medico', medicoId = null, emailPaz = null, pazIds = [], attivo = false;
