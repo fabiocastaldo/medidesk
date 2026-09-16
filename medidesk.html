@@ -8233,7 +8233,13 @@ function isoToIt(s){
 
 function expandCompactDate(s){
   s = String(s||'').trim();
-  return /^\d{8}$/.test(s) ? (s.slice(0,2)+'/'+s.slice(2,4)+'/'+s.slice(4)) : s;
+  if(/^\d{8}$/.test(s)) return s.slice(0,2)+'/'+s.slice(2,4)+'/'+s.slice(4);
+  if(/^\d{6}$/.test(s)){
+    // GGMMAA: pivot di secolo sull'anno corrente a due cifre (26): >26 -> 19xx, altrimenti 20xx
+    const yy=+s.slice(4);
+    return s.slice(0,2)+'/'+s.slice(2,4)+'/'+(yy>26?1900+yy:2000+yy);
+  }
+  return s;
 }
 
 function etaDaNascita(nascita){
