@@ -10,6 +10,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { verificaSlot } from '../lib/slot-guard.js';
+import { verificaTipo } from '../lib/tipo-guard.js';
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 
@@ -90,6 +91,11 @@ export default async function handler(req, res) {
   // turno attivo (giorno, dal/al, frequenza, griglia) OPPURE giornata singola
   // (disponibilita_singole) sulla data; ferie del medico bloccanti. 422 / 502.
   const sb = (path) => fetch(`${supabaseUrl}/rest/v1/${path}`, { headers: srvHeaders });
+  // Gate prestazione (lib/tipo-guard.js): tipo nel catalogo del medico e non escluso per il centro
+  const vt = await verificaTipo({ sb, medicoId, centroId, tipo });
+  if (!vt.ok) {
+    return res.status(vt.status).json({ error: vt.error });
+  }
   const v = await verificaSlot({ sb, medicoId, centroId, data, ora });
   if (!v.ok) {
     return res.status(v.status).json({ error: v.error });

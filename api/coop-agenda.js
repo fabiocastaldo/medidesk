@@ -99,9 +99,11 @@ export default async function handler(req, res) {
   ).catch(() => null);
   const chiusure = (chRes && chRes.ok) ? await chRes.json().catch(() => []) : [];
 
-  // tipi di visita dal profilo del medico (per il modulo prenotazione in plancia)
+  // tipi di visita dal profilo del medico (per il modulo prenotazione in plancia):
+  // `tipi_visita` globale dice solo se esiste un catalogo; la tendina usa la lista per centro,
+  // che esclude i tipi spenti su quel centro (centri_esclusi), come il booking pubblico.
   const tvRes = await fetch(
-    `${supabaseUrl}/rest/v1/tipi_visita?medico_id=eq.${encodeURIComponent(medicoId)}&select=nome,is_default&order=nome`,
+    `${supabaseUrl}/rest/v1/tipi_visita?medico_id=eq.${encodeURIComponent(medicoId)}&select=nome,is_default,centri_esclusi&order=nome`,
     { headers: srvHeaders }
   ).catch(() => null);
   const tipiVisita = (tvRes && tvRes.ok) ? await tvRes.json().catch(() => []) : [];
@@ -118,6 +120,9 @@ export default async function handler(req, res) {
     aree_tematiche: (Array.isArray(aree) ? aree : []).map(a => a.nome),
     centri: centri.map(c => ({
       id: c.id, nome: c.nome, coop_sede_id: c.coop_sede_id,
+      tipi_visita: (Array.isArray(tipiVisita) ? tipiVisita : [])
+        .filter(t => !((t.centri_esclusi || []).map(String).includes(String(c.id))))
+        .map(t => ({ nome: t.nome, is_default: !!t.is_default })),
       turni: (c.turni || []).map(t => ({
         giorno: t.giorno,
         inizio: String(t.inizio || '').slice(0, 5),
