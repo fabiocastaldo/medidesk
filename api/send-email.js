@@ -473,11 +473,15 @@ export default async function handler(req, res) {
     const paz = pr && pr.ok ? (await pr.json())[0] : null;
     if (!paz) return res.status(404).json({ error: 'not_found' });
     if (!paz.email) return res.status(200).json({ ok: true, skipped: 'email_mancante' });
-    await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, serviceKey, appt: {
+    const esitoCons = await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, serviceKey, appt: {
       pazienteId: paz.id, medicoId: authCtx.medicoId, medicoNome: authCtx.medicoNome, emailPaziente: paz.email
     } });
-    await auditLog(base, dbHeaders, authCtx.medicoId, tipo, 'paziente', paz.id, authCtx.authMode, paz.email, null);
-    return res.status(200).json({ ok: true });
+    // Audit SOLO se la mail e' partita davvero: una richiesta saltata (una tantum) non e' un invio.
+    if (esitoCons.sent) {
+      await auditLog(base, dbHeaders, authCtx.medicoId, tipo, 'paziente', paz.id, authCtx.authMode, paz.email, esitoCons.resendId);
+      return res.status(200).json({ ok: true });
+    }
+    return res.status(200).json({ ok: true, skipped: esitoCons.reason });
 
   } else if (tipo === 'conferma_appt_medico') {
     const { appt_id } = body;
@@ -751,17 +755,32 @@ export default async function handler(req, res) {
 // solo se per la coppia medico+email non esiste ALCUNO stato (ne' attivo, ne' gia'
 // richiesto, ne' revocato: chi ha revocato non va mai risollecitato in automatico).
 // Marca la richiesta sull'appuntamento (sempre) e sul fascicolo (se esiste).
+// Se la richiesta e' gia' partita da un appuntamento, non rimanda nulla ma porta il suo
+// richiesto_at sul fascicolo senza stato, cosi' la card Consensi dice il vero.
+// Ritorna { sent: true, resendId } oppure { sent: false, reason }.
 async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey, appt }) {
   try {
-    if (!appt?.emailPaziente || !appt.medicoId || (!appt.apptId && !appt.pazienteId)) return;
+    if (!appt?.emailPaziente || !appt.medicoId || (!appt.apptId && !appt.pazienteId)) return { sent: false, reason: 'dati_mancanti' };
     const e = encodeURIComponent(appt.emailPaziente);
     const m = encodeURIComponent(appt.medicoId);
     const orPz = encodeURIComponent('(consenso_comunicazioni_at.not.is.null,consenso_comunicazioni_richiesto_at.not.is.null,consenso_comunicazioni_revocato_at.not.is.null)');
     const pz = await fetch(`${base}/pazienti?medico_id=eq.${m}&email=ilike.${e}&or=${orPz}&select=id&limit=1`, { headers });
-    if (!pz.ok || (await pz.json()).length) return;
+    if (!pz.ok) return { sent: false, reason: 'lookup_fallito' };
+    if ((await pz.json()).length) return { sent: false, reason: 'stato_fascicolo' };
     const orAp = encodeURIComponent('(consenso_comunicazioni_at.not.is.null,consenso_comunicazioni_richiesto_at.not.is.null)');
-    const ap = await fetch(`${base}/appuntamenti?medico_id=eq.${m}&email_paziente=ilike.${e}&or=${orAp}&select=id&limit=1`, { headers });
-    if (!ap.ok || (await ap.json()).length) return;
+    const ap = await fetch(`${base}/appuntamenti?medico_id=eq.${m}&email_paziente=ilike.${e}&or=${orAp}&select=id,consenso_comunicazioni_richiesto_at&order=consenso_comunicazioni_richiesto_at.asc.nullslast&limit=1`, { headers });
+    if (!ap.ok) return { sent: false, reason: 'lookup_fallito' };
+    const apRows = await ap.json();
+    if (apRows.length) {
+      const giaRichiesto = apRows[0].consenso_comunicazioni_richiesto_at;
+      if (giaRichiesto) {
+        await fetch(`${base}/pazienti?medico_id=eq.${m}&email=ilike.${e}&consenso_comunicazioni_richiesto_at=is.null&consenso_comunicazioni_at=is.null&consenso_comunicazioni_revocato_at=is.null`, {
+          method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ consenso_comunicazioni_richiesto_at: giaRichiesto })
+        }).catch(() => {});
+      }
+      return { sent: false, reason: giaRichiesto ? 'gia_richiesto' : 'consenso_da_appuntamento' };
+    }
 
     const link = consensoLink(host, serviceKey, appt.apptId ? { apptId: appt.apptId } : { pazienteId: appt.pazienteId });
     const linkNega = revocaLink(host, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId });
@@ -772,12 +791,12 @@ async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey,
       ctaButton(link, 'Leggi e decidi') +
       `<p style="font-size:12px;color:#888;line-height:1.6;margin:0 0 20px;">Se il pulsante non funziona, copia questo indirizzo nel browser:<br>${esc(link)}</p>` +
       `<p style="font-size:12px;color:#888;line-height:1.6;margin:0;">Se non desideri acconsentire puoi semplicemente ignorare questa email: non riceverai altre richieste. Il link &egrave; personale: non inoltrarlo ad altri.</p>`;
-    const { error } = await resend.emails.send({
+    const { data: consSend, error } = await resend.emails.send({
       from: 'noreply@delphi-med.com', to: [appt.emailPaziente],
       subject: `${appt.medicoNome} ti chiede un consenso — Delphi~Med`,
       html: emailShell(corpoMail, { footerNote: `Non desideri ricevere comunicazioni proattive dal tuo medico? <a href="${revocaEsc(linkNega)}" style="color:#888;">Negalo qui</a> &middot; Delphi~Med` })
     });
-    if (error) { console.error('[send-email] richiesta consenso resend:', error.message || error); return; }
+    if (error) { console.error('[send-email] richiesta consenso resend:', error.message || error); return { sent: false, reason: 'resend_error' }; }
 
     const now = new Date().toISOString();
     if (appt.apptId) {
@@ -791,8 +810,10 @@ async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey,
       body: JSON.stringify({ consenso_comunicazioni_richiesto_at: now })
     }).catch(() => {});
     console.log('[send-email] richiesta consenso inviata', { to: redactEmail(appt.emailPaziente) });
+    return { sent: true, resendId: consSend?.id || null };
   } catch (err) {
     console.error('[send-email] richiesta consenso exception:', err.message);
+    return { sent: false, reason: 'exception' };
   }
 }
 function revocaEsc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
