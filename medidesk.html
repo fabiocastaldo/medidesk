@@ -1856,7 +1856,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <div style="font-size:13px;color:var(--ink3);margin:8px 0 10px">Il consenso lo presta solo il paziente: alla prenotazione online personale o dal link della email di richiesta. Qui vedi chi lo ha dato, chi ha ricevuto la richiesta senza rispondere e chi lo ha revocato: le comunicazioni partono solo verso i consensi attivi. Chi acconsente prenotando compare subito, ma riceve le comunicazioni solo da quando apri il suo fascicolo (il consenso vi passa da solo). La revoca &egrave; sempre nel link in calce a ogni comunicazione.</div>
           <div id="com-consensi"></div>
           <div id="com-consensi-more" style="margin-top:10px"></div>
-          <div style="margin-top:12px"><button class="btn btn-secondary" style="font-size:12px" onclick="comExportConsensi()">Esporta Excel</button></div>
+          <div style="margin-top:12px;display:flex;justify-content:flex-end"><button class="btn btn-secondary" style="font-size:12px" onclick="comExportConsensi()">Esporta Excel</button></div>
         </div>
       </div>
       <div class="card" style="padding:16px 18px;margin-bottom:16px">
@@ -13285,8 +13285,8 @@ async function comApi(payload){
   return j;
 }
 function comStatoConsenso(p){
-  if(p._daPren) return {t:'Attivo dal '+new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT')+(p.consenso_comunicazioni_versione?' \u00b7 '+p.consenso_comunicazioni_versione:'')+' \u00b7 da prenotazione, senza fascicolo', c:'var(--ink2)'};
-  if(p.consenso_comunicazioni_at) return {t:'Attivo dal '+new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT')+(p.consenso_comunicazioni_versione?' \u00b7 '+p.consenso_comunicazioni_versione:''), c:'var(--brand-bright)'};
+  if(p._daPren) return {t:'Attivo dal '+new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT')+' \u00b7 da prenotazione, senza fascicolo', c:'var(--ink2)'};
+  if(p.consenso_comunicazioni_at) return {t:'Attivo dal '+new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT'), c:'var(--brand-bright)'};
   if(p.consenso_comunicazioni_revocato_at) return {t:'Revocato il '+new Date(p.consenso_comunicazioni_revocato_at).toLocaleDateString('it-IT'), c:'var(--warm)'};
   if(p.consenso_comunicazioni_richiesto_at) return {t:'Richiesto il '+new Date(p.consenso_comunicazioni_richiesto_at).toLocaleDateString('it-IT'), c:'var(--ink3)'};
   return {t:'Nessuno', c:'var(--ink3)'};
