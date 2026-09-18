@@ -13362,8 +13362,8 @@ function comExportConsensi(){
   if(!rows.length){ showToast('Nessun consenso da esportare.'); return; }
   const dIt=function(v){ return v?new Date(v).toLocaleDateString('it-IT'):''; };
   const statoXl=['Attivo','Attivo da prenotazione, senza fascicolo','Richiesto','Revocato',''];
-  const aoa=[['Cognome','Nome','Stato','Consenso dal','Versione','Richiesto il','Revocato il']].concat(rows.map(function(p){
-    return [p.cognome||'', p.nome||'', statoXl[comRankConsenso(p)], dIt(p.consenso_comunicazioni_at), p.consenso_comunicazioni_versione||'', dIt(p.consenso_comunicazioni_richiesto_at), dIt(p.consenso_comunicazioni_revocato_at)];
+  const aoa=[['Cognome','Nome','Stato','Consenso dal','Richiesto il','Revocato il']].concat(rows.map(function(p){
+    return [p.cognome||'', p.nome||'', statoXl[comRankConsenso(p)], dIt(p.consenso_comunicazioni_at), dIt(p.consenso_comunicazioni_richiesto_at), dIt(p.consenso_comunicazioni_revocato_at)];
   }));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Consensi');
