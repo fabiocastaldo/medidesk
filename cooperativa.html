@@ -2672,7 +2672,9 @@ function annullaModifica(){
 }
 
 async function enterPlancia(){
-  show('view-plancia');
+  // La plancia si accende solo dopo il verdetto di coop-me: niente flash della shell
+  // per chi riceve 403. I refresh da dentro la plancia la trovano gia visibile.
+  if(document.getElementById('view-plancia').classList.contains('hidden')) show('view-boot');
   document.getElementById('plancia-who').textContent = 'Caricamento…';
   try {
     const { data: { session } } = await sb.auth.getSession();
@@ -2688,9 +2690,11 @@ async function enterPlancia(){
       (a.nome || '').localeCompare(b.nome || '', 'it'));
     console.log('[Plancia] Identità caricata:', _plancia.cooperativa.nome,
       '· medici:', _plancia.medici.length, '· codici attivi:', _plancia.codici_attivi.length);
+    show('view-plancia');
     renderPlancia();
   } catch(e){
     console.error('[Plancia] enterPlancia:', e.message);
+    show('view-plancia');
     document.getElementById('plancia-who').textContent = 'Errore di caricamento — ricarica la pagina';
   }
 }
