@@ -745,7 +745,11 @@ export default async function handler(req, res) {
 
   // ── Richiesta consenso comunicazioni (soft-fail, una tantum per medico+email) ──
   if (consApptCtx) {
-    await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, serviceKey, appt: consApptCtx });
+    const esitoApp = await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, serviceKey, appt: consApptCtx });
+    // Traccia solo gli invii veri, col loro resend_id (una richiesta saltata non e' un invio).
+    if (esitoApp.sent) {
+      await auditLog(base, dbHeaders, consApptCtx.medicoId || medicoIdAudit, 'richiesta_consenso_appuntamento', 'appuntamento', consApptCtx.apptId, authCtx.authMode, consApptCtx.emailPaziente, esitoApp.resendId);
+    }
   }
 
   return res.status(200).json({ ok: true });
