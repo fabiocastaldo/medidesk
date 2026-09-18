@@ -80,6 +80,37 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Cooperativa non attiva' });
   }
 
+  // Contrassegno identitario per le guardie client (medidesk.html: ensureMedicoRecord non crea
+  // un record medico, la sessione viene rimandata a /organizzazioni). app_metadata e scrivibile
+  // solo con service_role: l'utente non puo attribuirselo. Dalla fase 2b l'identita vive in
+  // segreterie e nessuno scriveva piu il contrassegno: un account di segreteria che faceva girare
+  // medidesk.html diventava un medico vuoto. Non si marca chi e anche un medico vero (nome o
+  // approvato), per non chiudergli medidesk. Soft-fail: la plancia funziona comunque.
+  let ruoloMarcato = false;
+  if (!(userData.app_metadata && userData.app_metadata.ruolo === 'cooperativa')) {
+    try {
+      const medRes = await fetch(
+        `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=nome,stato`,
+        { headers: srvHeaders }
+      );
+      if (!medRes.ok) throw new Error('lettura medici ' + medRes.status);
+      const med = (await medRes.json())?.[0];
+      if (med && (med.nome || med.stato === 'approvato')) {
+        console.log('[coop-me] utente anche medico: contrassegno non scritto');
+      } else {
+        const mRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userData.id)}`, {
+          method: 'PUT',
+          headers: { ...srvHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_metadata: { ruolo: 'cooperativa' } })
+        });
+        ruoloMarcato = mRes.ok;
+        if (!mRes.ok) console.error('[coop-me] contrassegno non scritto:', mRes.status);
+      }
+    } catch (e) {
+      console.error('[coop-me] contrassegno:', e.message);
+    }
+  }
+
   const [mediciRes, codiciRes, sediRes, serviziRes, saleRes] = await Promise.all([
     fetch(
       `${supabaseUrl}/rest/v1/centri?cooperativa_id=eq.${encodeURIComponent(coop.id)}&select=id,nome,attivo,medico_id,coop_sede_id,turni(id,giorno,inizio,fine,durata_slot,data_inizio_validita,data_fine_validita,coop_sala_id),medici(id,titolo,nome,cognome,specializzazione,telefono,email_pubblica,email)`,
@@ -137,6 +168,7 @@ export default async function handler(req, res) {
     cooperativa: { id: coop.id, nome: coop.nome, stato: coop.stato, booking_pubblico: coop.booking_pubblico === true, mail_conferma_paziente: coop.mail_conferma_paziente !== false, mail_notifica_medico: coop.mail_notifica_medico, mail_ricevuta_segreteria: coop.mail_ricevuta_segreteria !== false },
     segreteria: { nome: seg.nome, ruolo: seg.ruolo || 'admin' },
     ruolo: seg.ruolo || 'admin',
+    ruolo_marcato: ruoloMarcato,
     medici: Array.from(perMedico.values()),
     codici_attivi: codiciData || [],
     sedi: sediData || [],
