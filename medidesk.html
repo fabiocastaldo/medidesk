@@ -1495,7 +1495,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon"><svg class="ic"><use href="#ic-archive"/></svg></span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px"><svg class="ic" style="color:#f59e0b"><use href="#ic-alert"/></svg></span></span></div>
     </nav>
     <div class="sidebar-bottom">
-      <div class="doctor-name"><strong id="doctor-display">Dr. Mario Rossi</strong><span>Medico</span></div>
+      <div class="doctor-name"><strong id="doctor-display"></strong><span>Medico</span></div>
       <button class="sidebar-logout" id="sidebar-logout-btn" onclick="signOut()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Esci</button>
     </div>
   </aside>
@@ -1506,7 +1506,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <header class="mobile-header">
       <div class="mobile-header-text">
         <h1>Delphi~Med</h1>
-        <span id="mobile-doctor">Dr. Mario Rossi</span>
+        <span id="mobile-doctor"></span>
       </div>
     </header>
 
@@ -1516,7 +1516,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="dash-avatar" id="dash-avatar">—</div>
         <div>
           <div class="dash-hello" id="dash-hello">Buongiorno,</div>
-          <div class="dash-name" id="dash-name">Medico</div>
+          <div class="dash-name" id="dash-name">&nbsp;</div>
           <div class="dash-plan" id="dash-plan"></div>
         </div>
         <span id="today-date" style="display:none"></span>
@@ -1539,19 +1539,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="tile-grid">
         <div class="tile" onclick="showPage('pazienti')">
           <div class="tile-top"><span class="tile-label">Pazienti</span><span class="tile-chip"><svg class="ic"><use href="#ic-users"/></svg></span></div>
-          <div class="tile-num" id="tile-pazienti">0</div><div class="tile-sub">in cura</div>
+          <div class="tile-num" id="tile-pazienti">—</div><div class="tile-sub">in cura</div>
         </div>
         <div class="tile" onclick="showPage('centri')">
           <div class="tile-top"><span class="tile-label">Centri</span><span class="tile-chip"><svg class="ic"><use href="#ic-center"/></svg></span></div>
-          <div class="tile-num" id="tile-centri">0</div><div class="tile-sub">ambulatori</div>
+          <div class="tile-num" id="tile-centri">—</div><div class="tile-sub">ambulatori</div>
         </div>
         <div class="tile">
           <div class="tile-top"><span class="tile-label">In attesa</span><span class="tile-chip pending"><svg class="ic"><use href="#ic-clock"/></svg></span></div>
-          <div class="tile-num" id="tile-attesa">0</div><div class="tile-sub">da vedere</div>
+          <div class="tile-num" id="tile-attesa">—</div><div class="tile-sub">da vedere</div>
         </div>
         <div class="tile" onclick="showPage('statistiche')">
           <div class="tile-top"><span class="tile-label">Settimana</span><span class="tile-chip"><svg class="ic"><use href="#ic-stats"/></svg></span></div>
-          <div class="tile-num" id="tile-settimana">0</div><div class="tile-sub">visite</div>
+          <div class="tile-num" id="tile-settimana">—</div><div class="tile-sub">visite</div>
         </div>
       </div>
 
@@ -2306,7 +2306,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     <div class="bk-hero">
       <div class="bk-avatar" id="bk-avatar-display"></div>
       <div class="bk-hero-body">
-        <div class="bk-hero-name" id="bk-doctor-name">Dr. Mario Rossi</div>
+        <div class="bk-hero-name" id="bk-doctor-name"></div>
         <div class="bk-hero-spec" id="bk-doctor-spec">Medico specialista</div>
         <div class="bk-hero-divider"></div>
         <p class="bk-hero-bio" id="bk-hero-bio" style="display:none"></p>
@@ -4250,8 +4250,8 @@ function translateAuthError(msg){
 var S = {
   medicoId: null,
   centri:[], appuntamenti:[], pazienti:[],
-  settings:{ nome:'Dr. Mario Rossi', spec:'Medico specialista', bio:'', albo:'', alboProvincia:'', esperienza:'', lingue:[], specAltre:[],
-             titolo:'Dr.', nomeProf:'Mario', cognomeProf:'Rossi', slug:'',
+  settings:{ nome:'', spec:'Medico specialista', bio:'', albo:'', alboProvincia:'', esperienza:'', lingue:[], specAltre:[],
+             titolo:'', nomeProf:'', cognomeProf:'', slug:'',
              email:'', telefono:'', sitoWeb:'', linkedin:'', instagram:'', youtube:'', facebook:'',
              x:'', bioLunga:'', specDescr:'', patologie:'', ambitiExpertise:[],
              foto_url: null },
@@ -13883,7 +13883,13 @@ function astPhRotate(){
     alert(txt);
   }
   window.diagOvf=scan;
-  setTimeout(scan, 2500);
+  /* aspetta il caricamento reale (nome medico scritto da renderAll), tetto 20 s */
+  var t0=Date.now();
+  (function wait(){
+    var d=document.getElementById('doctor-display');
+    if((d&&d.textContent.trim())||Date.now()-t0>20000){ setTimeout(scan, 800); return; }
+    setTimeout(wait, 400);
+  })();
 })();
 </script>
 </body>
