@@ -1853,7 +1853,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
         </div>
         <div id="com-consensi-body" style="display:none">
-          <div style="font-size:13px;color:var(--ink3);margin:8px 0 10px">Il consenso lo presta solo il paziente: alla prenotazione online personale o dal link della email di richiesta. Qui vedi chi lo ha dato, chi ha ricevuto la richiesta senza rispondere e chi lo ha revocato: le comunicazioni partono solo verso i consensi attivi. La revoca &egrave; sempre nel link in calce a ogni comunicazione.</div>
+          <div style="font-size:13px;color:var(--ink3);margin:8px 0 10px">Il consenso lo presta solo il paziente: alla prenotazione online personale o dal link della email di richiesta. Qui vedi chi lo ha dato, chi ha ricevuto la richiesta senza rispondere e chi lo ha revocato: le comunicazioni partono solo verso i consensi attivi. Chi acconsente prenotando compare subito, ma riceve le comunicazioni solo da quando apri il suo fascicolo (il consenso vi passa da solo). La revoca &egrave; sempre nel link in calce a ogni comunicazione.</div>
           <div id="com-consensi"></div>
           <div id="com-consensi-more" style="margin-top:10px"></div>
           <div style="margin-top:12px"><button class="btn btn-secondary" style="font-size:12px" onclick="comExportConsensi()">Esporta Excel</button></div>
@@ -13285,12 +13285,13 @@ async function comApi(payload){
   return j;
 }
 function comStatoConsenso(p){
+  if(p._daPren) return {t:'Attivo dal '+new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT')+(p.consenso_comunicazioni_versione?' \u00b7 '+p.consenso_comunicazioni_versione:'')+' \u00b7 da prenotazione, senza fascicolo', c:'var(--ink2)'};
   if(p.consenso_comunicazioni_at) return {t:'Attivo dal '+new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT')+(p.consenso_comunicazioni_versione?' \u00b7 '+p.consenso_comunicazioni_versione:''), c:'var(--brand-bright)'};
   if(p.consenso_comunicazioni_revocato_at) return {t:'Revocato il '+new Date(p.consenso_comunicazioni_revocato_at).toLocaleDateString('it-IT'), c:'var(--warm)'};
   if(p.consenso_comunicazioni_richiesto_at) return {t:'Richiesto il '+new Date(p.consenso_comunicazioni_richiesto_at).toLocaleDateString('it-IT'), c:'var(--ink3)'};
   return {t:'Nessuno', c:'var(--ink3)'};
 }
-function comRankConsenso(p){ return p.consenso_comunicazioni_at?0:(p.consenso_comunicazioni_revocato_at?2:(p.consenso_comunicazioni_richiesto_at?1:3)); }
+function comRankConsenso(p){ return p._daPren?1:(p.consenso_comunicazioni_at?0:(p.consenso_comunicazioni_revocato_at?3:(p.consenso_comunicazioni_richiesto_at?2:4))); }
 async function comLoad(){
   applyModuliGate();
   const box=document.getElementById('com-consensi'); if(!box) return;
@@ -13301,8 +13302,30 @@ async function comLoad(){
   const { data, error } = await supabaseClient.from('pazienti').select('id,nome,cognome,consenso_comunicazioni_at,consenso_comunicazioni_versione,consenso_comunicazioni_richiesto_at,consenso_comunicazioni_revocato_at').or('consenso_comunicazioni_at.not.is.null,consenso_comunicazioni_richiesto_at.not.is.null,consenso_comunicazioni_revocato_at.not.is.null').order('cognome',{ascending:true});
   comSyncConsensiBody();
   if(error){ box.innerHTML='<div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
+  const rows0=(data||[]).slice();
+  // Consensi raccolti alle prenotazioni di pazienti SENZA fascicolo: il consenso sta sull'appuntamento
+  // finche' il medico non apre il fascicolo (lo eredita il trigger). Solo lettura; soft-fail.
+  try{
+    const [ra, rp] = await Promise.all([
+      supabaseClient.from('appuntamenti').select('nome_paziente,cognome_paziente,email_paziente,consenso_comunicazioni_at,consenso_comunicazioni_versione').not('consenso_comunicazioni_at','is',null).not('email_paziente','is',null),
+      supabaseClient.from('pazienti').select('email').not('email','is',null)
+    ]);
+    if(!ra.error && !rp.error){
+      const conFascicolo=new Set((rp.data||[]).map(function(x){ return String(x.email||'').trim().toLowerCase(); }));
+      const perEmail=new Map();
+      (ra.data||[]).forEach(function(a){
+        const k=String(a.email_paziente||'').trim().toLowerCase();
+        if(!k || conFascicolo.has(k)) return;
+        const prev=perEmail.get(k);
+        if(!prev || a.consenso_comunicazioni_at>prev.consenso_comunicazioni_at) perEmail.set(k,a);
+      });
+      Array.from(perEmail.values()).sort(function(a,b){ return String(a.cognome_paziente||'').localeCompare(String(b.cognome_paziente||''),'it'); }).forEach(function(a){
+        rows0.push({ _daPren:true, cognome:a.cognome_paziente||'', nome:a.nome_paziente||'', consenso_comunicazioni_at:a.consenso_comunicazioni_at, consenso_comunicazioni_versione:a.consenso_comunicazioni_versione });
+      });
+    }
+  }catch(_){ }
   // Attivi in testa, poi richiesti senza risposta, poi revocati; a parita' di stato vale l'ordine per cognome della query.
-  window._comConsensi=(data||[]).map(function(p,i){ return {p:p,i:i}; }).sort(function(a,b){ return (comRankConsenso(a.p)-comRankConsenso(b.p))||(a.i-b.i); }).map(function(x){ return x.p; });
+  window._comConsensi=rows0.map(function(p,i){ return {p:p,i:i}; }).sort(function(a,b){ return (comRankConsenso(a.p)-comRankConsenso(b.p))||(a.i-b.i); }).map(function(x){ return x.p; });
   _comConsensiShown=30;
   comRenderConsensi();
   comLoadClusterSel(); comRegistro();
@@ -13316,8 +13339,9 @@ function comToggleConsensi(){ _comConsOpen=!_comConsOpen; comSyncConsensiBody();
 function comRenderConsensi(){
   const box=document.getElementById('com-consensi'); if(!box) return;
   const rows=window._comConsensi||[];
-  const nAtt=rows.filter(function(p){ return !!p.consenso_comunicazioni_at; }).length;
-  const title=document.getElementById('com-consensi-title'); if(title) title.textContent='Consensi ('+nAtt+(nAtt===1?' attivo':' attivi')+')';
+  const nAtt=rows.filter(function(p){ return !!p.consenso_comunicazioni_at && !p._daPren; }).length;
+  const nPren=rows.filter(function(p){ return !!p._daPren; }).length;
+  const title=document.getElementById('com-consensi-title'); if(title) title.textContent='Consensi ('+nAtt+(nAtt===1?' attivo':' attivi')+(nPren?' \u00b7 '+nPren+' da prenotazione':'')+')';
   const more=document.getElementById('com-consensi-more');
   if(!rows.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessun consenso n\u00e9 richiesta ancora: il consenso lo presta solo il paziente.</div>'; if(more) more.innerHTML=''; return; }
   box.innerHTML=rows.slice(0,_comConsensiShown).map(function(p){
@@ -13337,7 +13361,7 @@ function comExportConsensi(){
   const rows=window._comConsensi||[];
   if(!rows.length){ showToast('Nessun consenso da esportare.'); return; }
   const dIt=function(v){ return v?new Date(v).toLocaleDateString('it-IT'):''; };
-  const statoXl=['Attivo','Richiesto','Revocato',''];
+  const statoXl=['Attivo','Attivo da prenotazione, senza fascicolo','Richiesto','Revocato',''];
   const aoa=[['Cognome','Nome','Stato','Consenso dal','Versione','Richiesto il','Revocato il']].concat(rows.map(function(p){
     return [p.cognome||'', p.nome||'', statoXl[comRankConsenso(p)], dIt(p.consenso_comunicazioni_at), p.consenso_comunicazioni_versione||'', dIt(p.consenso_comunicazioni_richiesto_at), dIt(p.consenso_comunicazioni_revocato_at)];
   }));
