@@ -331,6 +331,12 @@ export default async function handler(req, res) {
         falliti.push({ id: p.id, nome: p.nome, cognome: p.cognome });
       }
     }
+    // I non recapitati restano nel registro del titolare (colonna invii.falliti, s25): soft-fail,
+    // l'esito HTTP li riporta comunque.
+    if (falliti.length) {
+      const fr = await sb(`invii?id=eq.${encodeURIComponent(invio.id)}`, { method: 'PATCH', body: JSON.stringify({ falliti }) }).catch(() => null);
+      if (!fr || !fr.ok) console.error('[invia-cluster] falliti non registrati', invio.id, fr && fr.status);
+    }
     return res.status(200).json({ invio_id: invio.id, inviati, falliti });
   }
 

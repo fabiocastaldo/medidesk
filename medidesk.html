@@ -13547,12 +13547,18 @@ function comCriteriLabel(c){
   if(c&&(c.prenotati_dal||c.prenotati_al)) parts.push(('prenotati '+(c.prenotati_dal?'dal '+c.prenotati_dal:'')+' '+(c.prenotati_al?'al '+c.prenotati_al:'')).replace(/\s+/g,' ').trim());
   return parts.length?parts.join(' \u00b7 '):'tutti i pazienti con consenso';
 }
+function comFallitiLabel(f){
+  const arr=Array.isArray(f)?f:[];
+  if(!arr.length) return '';
+  const nomi=arr.map(function(x){ return ((x&&x.cognome)||'')+' '+((x&&x.nome)||''); }).join(', ');
+  return ' <span style="color:var(--warm)" title="'+escapeHtml(nomi)+'">\u00b7 '+arr.length+' non recapitat'+(arr.length===1?'o':'i')+': '+escapeHtml(nomi)+'</span>';
+}
 async function comRegistro(){
   const box=document.getElementById('com-registro'); if(!box) return;
-  const { data, error } = await supabaseClient.from('invii').select('id,created_at,n_destinatari,criteri_snapshot').order('created_at',{ascending:false}).limit(20);
+  const { data, error } = await supabaseClient.from('invii').select('id,created_at,n_destinatari,criteri_snapshot,falliti').order('created_at',{ascending:false}).limit(20);
   if(error){ box.innerHTML='<div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
   const rows=data||[];
-  box.innerHTML=rows.length?rows.map(function(i){return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap"><div style="min-width:130px">'+new Date(i.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})+'</div><div style="flex:1;color:var(--ink3)">'+escapeHtml(comCriteriLabel(i.criteri_snapshot))+'</div><div><b>'+i.n_destinatari+'</b> destinatari</div></div>';}).join('')
+  box.innerHTML=rows.length?rows.map(function(i){return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap"><div style="min-width:130px">'+new Date(i.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})+'</div><div style="flex:1;color:var(--ink3)">'+escapeHtml(comCriteriLabel(i.criteri_snapshot))+'</div><div><b>'+i.n_destinatari+'</b> destinatari'+comFallitiLabel(i.falliti)+'</div></div>';}).join('')
     :'<div style="font-size:13px;color:var(--ink3)">Nessun invio ancora.</div>';
 }
 
