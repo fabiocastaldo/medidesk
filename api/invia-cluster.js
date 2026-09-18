@@ -76,9 +76,29 @@ function pulisciCriteri(raw) {
 }
 
 async function resolveDestinatari(sb, medicoId, criteri) {
-  const pr = await sb(`pazienti?medico_id=eq.${medicoId}&email=not.is.null&consenso_comunicazioni_at=not.is.null&select=id,nome,cognome,email,data_nascita&order=cognome.asc`);
+  const pr = await sb(`pazienti?medico_id=eq.${medicoId}&email=not.is.null&select=id,nome,cognome,email,data_nascita,consenso_comunicazioni_at&order=cognome.asc`);
   if (!pr.ok) throw new Error('pazienti_query ' + pr.status);
-  let paz = await pr.json();
+  const fascicoli = await pr.json();
+  // Se esiste un fascicolo con quella email, decide il fascicolo (create-booking e il trigger
+  // gli portano il consenso, la revoca lo azzera). Senza fascicolo, vale il consenso dato
+  // prenotando: il paziente lo ha prestato a questo medico, il fascicolo e' solo un contenitore.
+  const conFascicolo = new Set(fascicoli.map(p => String(p.email || '').trim().toLowerCase()));
+  let paz = fascicoli.filter(p => p.consenso_comunicazioni_at)
+    .map(p => ({ id: p.id, nome: p.nome, cognome: p.cognome, email: p.email, data_nascita: p.data_nascita }));
+  const cr = await sb(`appuntamenti?medico_id=eq.${medicoId}&email_paziente=not.is.null&consenso_comunicazioni_at=not.is.null&select=nome_paziente,cognome_paziente,email_paziente,consenso_comunicazioni_at`);
+  if (!cr.ok) throw new Error('consensi_prenotazione_query ' + cr.status);
+  const perEmailPren = new Map();
+  for (const a of await cr.json()) {
+    const k = String(a.email_paziente || '').trim().toLowerCase();
+    if (!k || conFascicolo.has(k)) continue;
+    const prev = perEmailPren.get(k);
+    if (!prev || a.consenso_comunicazioni_at > prev.consenso_comunicazioni_at) perEmailPren.set(k, a);
+  }
+  for (const a of perEmailPren.values()) {
+    // Niente data di nascita senza fascicolo: un filtro per eta' li esclude, come i fascicoli senza data.
+    paz.push({ id: null, nome: a.nome_paziente || '', cognome: a.cognome_paziente || '', email: a.email_paziente, data_nascita: null, da_prenotazione: true });
+  }
+  paz.sort((x, y) => String(x.cognome || '').localeCompare(String(y.cognome || ''), 'it'));
 
   const oggi = new Date();
   if (criteri.eta_min != null || criteri.eta_max != null) {
@@ -290,7 +310,9 @@ export default async function handler(req, res) {
     const linkPrenota = medico.slug ? `https://delphi-med.com/?booking&doc=${encodeURIComponent(medico.slug)}` : '';
     for (const p of dest) {
       try {
-        const linkRevoca = revocaLink(host, serviceKey, { pazienteId: p.id });
+        const linkRevoca = p.id
+          ? revocaLink(host, serviceKey, { pazienteId: p.id })
+          : revocaLink(host, serviceKey, { email: p.email, medicoId: medico.id });
         const corpoHtml = esc(corpo).replace(/\r?\n/g, '<br>');
         const corpoMail =
           emailTitle(`Una comunicazione da ${esc(medicoNome)}`) +
