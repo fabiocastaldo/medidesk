@@ -3788,6 +3788,8 @@ async function showAppView(){
       if(user){
         await ensureMedicoRecord(user);
         await loadMedicoFromDB(user);
+        // nome e saluto subito: sono gia in S dopo loadMedicoFromDB, non aspettano le altre letture
+        try { updateDoctorName(); fillGreeting(); } catch(_){ }
         await loadCentriFromDB(user);
         await loadTipiVisitaFromDB(user);
         await loadAreeTematicheFromDB(user);
