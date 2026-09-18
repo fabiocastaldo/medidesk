@@ -3790,15 +3790,17 @@ async function showAppView(){
         await loadMedicoFromDB(user);
         // nome e saluto subito: sono gia in S dopo loadMedicoFromDB, non aspettano le altre letture
         try { updateDoctorName(); fillGreeting(); } catch(_){ }
-        await loadCentriFromDB(user);
-        await loadTipiVisitaFromDB(user);
-        await loadAreeTematicheFromDB(user);
-        await loadPrestazioniFromDB(user);
-        await loadPazientiFromDB(user);
-        await loadAppuntamentiFromDB(user);
-        await loadBlocchiFromDB(user);
-        await loadVisiteFromDB(user);
-        await loadChiusureFromDB(user);
+        // Letture in parallelo: restano in sequenza solo le dipendenze vere
+        // (centri -> appuntamenti/blocchi per il nome del centro; pazienti -> visite).
+        // Ogni loader intercetta i propri errori; allSettled per sicurezza.
+        await Promise.allSettled([
+          (async () => { await loadCentriFromDB(user); await Promise.allSettled([loadAppuntamentiFromDB(user), loadBlocchiFromDB(user)]); })(),
+          (async () => { await loadPazientiFromDB(user); await loadVisiteFromDB(user); })(),
+          loadTipiVisitaFromDB(user),
+          loadAreeTematicheFromDB(user),
+          loadPrestazioniFromDB(user),
+          loadChiusureFromDB(user)
+        ]);
         checkArchivioScaduto();
         showArchivioBannerIfNeeded();
         checkTurniInScadenza();
