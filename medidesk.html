@@ -213,7 +213,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .appt-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;transition:box-shadow .15s;cursor:pointer;margin-bottom:8px}
 .appt-card:hover{box-shadow:var(--shadow)}
 .appt-time{font-weight:600;font-size:15px;color:var(--accent);min-width:50px}
-.appt-info{flex:1}
+.appt-info{flex:1;min-width:0}
+.appt-actions{display:flex;gap:4px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end}
 .appt-patient{font-weight:600;font-size:14px}
 .appt-detail{font-size:12px;color:var(--ink3);margin-top:2px}
 .appt-centro{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:20px}
@@ -471,7 +472,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 @media(max-width:768px){#page-pazienti .search-bar{position:sticky;top:63px;z-index:40;background:var(--bg);padding:8px 0 6px;margin-bottom:12px}}
 @media(min-width:961px){#pazienti-list{display:none}}
 @media(max-width:960px){#pazienti-table{display:none}}
-@media(max-width:768px){.paziente-card{flex-wrap:wrap;padding:12px 14px;gap:8px 10px}.paziente-info{flex:1 1 0;min-width:0}.paziente-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.paziente-card>div:last-child{flex:0 0 100%;justify-content:stretch;gap:6px}.paziente-card>div:last-child>span{flex:0 0 100%;text-align:right;margin-bottom:-2px}.paziente-card .paz-act{flex:1 1 0;margin-left:0;padding:8px 4px;min-height:36px;font-size:12px;text-align:center}.paziente-card{position:relative}.paziente-card .pm-contatti{display:none}.paziente-card>div:last-child>span{position:absolute;top:12px;right:14px;flex:none;margin:0}.paziente-card .paziente-name{padding-right:70px}#page-pazienti .search-bar{gap:8px}#page-pazienti .search-input-wrap{flex:0 0 100%;min-width:0!important}#page-pazienti .paz-filter-sel{flex:1 1 0;min-width:0;width:auto}}
+@media(max-width:768px){.appt-card{flex-wrap:wrap}.appt-actions{flex:0 0 100%;margin-left:0;gap:6px;justify-content:stretch}.appt-actions .paz-act{flex:1 1 0;margin-left:0;min-width:0;padding:8px 4px;min-height:36px;text-align:center}.appt-actions .paz-act-erog{min-width:0}input[type=file]{max-width:100%}.paziente-card{flex-wrap:wrap;padding:12px 14px;gap:8px 10px}.paziente-info{flex:1 1 0;min-width:0}.paziente-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.paziente-card>div:last-child{flex:0 0 100%;justify-content:stretch;gap:6px}.paziente-card>div:last-child>span{flex:0 0 100%;text-align:right;margin-bottom:-2px}.paziente-card .paz-act{flex:1 1 0;margin-left:0;padding:8px 4px;min-height:36px;font-size:12px;text-align:center}.paziente-card{position:relative}.paziente-card .pm-contatti{display:none}.paziente-card>div:last-child>span{position:absolute;top:12px;right:14px;flex:none;margin:0}.paziente-card .paziente-name{padding-right:70px}#page-pazienti .search-bar{gap:8px}#page-pazienti .search-input-wrap{flex:0 0 100%;min-width:0!important}#page-pazienti .paz-filter-sel{flex:1 1 0;min-width:0;width:auto}}
 
 @media(max-width:768px){
   .mc-day{min-height:48px;padding:3px}
@@ -9023,7 +9024,7 @@ function renderDashboard(){
         <div class="appt-time">${a.ora}</div>
         <div class="appt-info"><div class="appt-patient">${a.cognome} ${a.nome}</div><div class="appt-detail">${a.tipo||'Visita'}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}${a.erogata===true?' · <span style="color:#16a34a">erogata</span>':''}</div></div>
         ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${c.nome}</div>`:''}
-        <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;flex-wrap:wrap;justify-content:flex-end" onclick="event.stopPropagation()">
+        <div class="appt-actions" onclick="event.stopPropagation()">
           <button class="paz-act paz-act-erog${a.erogata===true?' is-erogata':''}" onclick="toggleErogata('${a.id}',{silent:true})">${a.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>
           <button class="paz-act" onclick="caricaVisitaDaAppt('${a.id}')">Carica visita</button>
         </div>
