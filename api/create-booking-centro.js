@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { verificaSlot } from '../lib/slot-guard.js';
+import { verificaTipo } from '../lib/tipo-guard.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 60;
@@ -89,6 +90,12 @@ export default async function handler(req, res) {
   }
   const medicoId = resolved.medico_id;
   const centroId = resolved.centro.id;
+
+  // 1-ter) Gate prestazione: il tipo deve essere nel catalogo del medico e non escluso per il centro
+  {
+    const vt = await verificaTipo({ sb, medicoId, centroId, tipo });
+    if (!vt.ok) return res.status(vt.status).json({ error: vt.error });
+  }
 
   // 1-bis) Gate alla sorgente: lo slot deve essere offerto da un turno/giornata singola e non in ferie
   {

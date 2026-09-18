@@ -2092,9 +2092,10 @@ function agPickSlot(centroId, ds, ora){
   AGB_CAMPI.forEach(id => { document.getElementById(id).disabled = false; });
   document.getElementById('agb-btn').disabled = false;
   const svSel = document.getElementById('agb-servizio');
-  const tipi = (((_agCal.data || {}).tipi_visita) || []);
+  const catalogo = (((_agCal.data || {}).tipi_visita) || []);
+  const tipi = (c && c.tipi_visita) || [];
   let opts;
-  if(tipi.length){
+  if(catalogo.length){
     opts = ['<option value="">\u2014</option>'].concat(tipi.map(t => '<option value="' + esc(t.nome) + '"' + (t.is_default ? ' selected' : '') + '>' + esc(t.nome) + '</option>'));
   } else {
     const servizi = (((_plancia || {}).servizi) || []).filter(s => (s.medici || []).some(x => String(x) === String(mid)));
