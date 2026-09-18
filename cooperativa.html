@@ -2685,6 +2685,9 @@ async function enterPlancia(){
     if(res.status === 403){ show('view-denied'); return; }
     if(!res.ok) throw new Error('coop-me ' + res.status);
     _plancia = await res.json();
+    // contrassegno appena scritto da coop-me: rinfresco la sessione perche il token lo porti
+    // subito (medidesk.html legge app_metadata dalla sessione per rimandare qui)
+    if(_plancia.ruolo_marcato){ sb.auth.refreshSession().catch(e => console.warn('[Plancia] refreshSession:', e.message)); }
     (_plancia.medici || []).sort((a, b) =>
       (a.cognome || '').localeCompare(b.cognome || '', 'it') ||
       (a.nome || '').localeCompare(b.nome || '', 'it'));
