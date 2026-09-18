@@ -13857,41 +13857,6 @@ function astPhRotate(){
   try{ supabaseClient.auth.onAuthStateChange(()=>vis()); }catch(_){ }
 })();
 </script>
-<script>
-/* Sonda overflow orizzontale — temporanea, attiva SOLO con ?diag=ovf nell'URL. Da rimuovere a diagnosi fatta. */
-(function(){
-  if(location.search.indexOf('diag=ovf')<0) return;
-  function scan(){
-    var w=document.documentElement.clientWidth;
-    var out=[], all=document.querySelectorAll('body *');
-    for(var i=0;i<all.length;i++){
-      var e=all[i], st=getComputedStyle(e);
-      if(st.position==='fixed'||st.display==='none') continue;
-      var r=e.getBoundingClientRect();
-      if(r.width<=0) continue;
-      if(r.right>w+1||r.left<-1){
-        var id=e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+(typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/\s+/).slice(0,2).join('.'):'');
-        out.push({s:id, l:Math.round(r.left), r:Math.round(r.right), w:Math.round(r.width)});
-      }
-    }
-    out.sort(function(a,b){return b.r-a.r;});
-    var txt='viewport '+w+' | scrollW doc '+document.documentElement.scrollWidth+' body '+document.body.scrollWidth
-      +' | scale '+(window.visualViewport?Math.round(window.visualViewport.scale*100)/100:'n/a')
-      +' | pagina '+((document.querySelector('.page.active')||{}).id||'?')+'\n\n';
-    if(!out.length) txt+='Nessun elemento oltre il bordo.';
-    else for(var k=0;k<Math.min(8,out.length);k++) txt+=out[k].s+'\n  left '+out[k].l+'  right '+out[k].r+'  larg '+out[k].w+'\n';
-    alert(txt);
-  }
-  window.diagOvf=scan;
-  /* aspetta il caricamento reale (nome medico scritto da renderAll), tetto 20 s */
-  var t0=Date.now();
-  (function wait(){
-    var d=document.getElementById('doctor-display');
-    if((d&&d.textContent.trim())||Date.now()-t0>20000){ setTimeout(scan, 800); return; }
-    setTimeout(wait, 400);
-  })();
-})();
-</script>
 </body>
 </html>
 <!-- deploy -->
