@@ -1853,7 +1853,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <span class="centro-booking-chevron"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
         </div>
         <div id="com-consensi-body" style="display:none">
-          <div style="font-size:13px;color:var(--ink3);margin:8px 0 10px">Il consenso si presta in fase di prenotazione online personale: qui vedi chi lo ha dato. Chi non ha acconsentito o lo ha revocato non compare. La revoca &egrave; sempre nel link in calce a ogni comunicazione.</div>
+          <div style="font-size:13px;color:var(--ink3);margin:8px 0 10px">Il consenso lo presta solo il paziente: alla prenotazione online personale o dal link della email di richiesta. Qui vedi chi lo ha dato, chi ha ricevuto la richiesta senza rispondere e chi lo ha revocato: le comunicazioni partono solo verso i consensi attivi. La revoca &egrave; sempre nel link in calce a ogni comunicazione.</div>
           <div id="com-consensi"></div>
           <div id="com-consensi-more" style="margin-top:10px"></div>
           <div style="margin-top:12px"><button class="btn btn-secondary" style="font-size:12px" onclick="comExportConsensi()">Esporta Excel</button></div>
@@ -13290,6 +13290,7 @@ function comStatoConsenso(p){
   if(p.consenso_comunicazioni_richiesto_at) return {t:'Richiesto il '+new Date(p.consenso_comunicazioni_richiesto_at).toLocaleDateString('it-IT'), c:'var(--ink3)'};
   return {t:'Nessuno', c:'var(--ink3)'};
 }
+function comRankConsenso(p){ return p.consenso_comunicazioni_at?0:(p.consenso_comunicazioni_revocato_at?2:(p.consenso_comunicazioni_richiesto_at?1:3)); }
 async function comLoad(){
   applyModuliGate();
   const box=document.getElementById('com-consensi'); if(!box) return;
@@ -13297,10 +13298,11 @@ async function comLoad(){
   if(!(S.moduli&&S.moduli.comunicazioni===true)){ _comConsOpen=true; comSyncConsensiBody(); box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Il modulo Comunicazioni non \u00e8 attivo.</div>'; return; }
   if(!isOnline()){ _comConsOpen=true; comSyncConsensiBody(); box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Disponibile solo online.</div>'; return; }
   box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Caricamento\u2026</div>';
-  const { data, error } = await supabaseClient.from('pazienti').select('id,nome,cognome,consenso_comunicazioni_at,consenso_comunicazioni_versione').not('consenso_comunicazioni_at','is',null).order('cognome',{ascending:true});
+  const { data, error } = await supabaseClient.from('pazienti').select('id,nome,cognome,consenso_comunicazioni_at,consenso_comunicazioni_versione,consenso_comunicazioni_richiesto_at,consenso_comunicazioni_revocato_at').or('consenso_comunicazioni_at.not.is.null,consenso_comunicazioni_richiesto_at.not.is.null,consenso_comunicazioni_revocato_at.not.is.null').order('cognome',{ascending:true});
   comSyncConsensiBody();
   if(error){ box.innerHTML='<div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
-  window._comConsensi=data||[];
+  // Attivi in testa, poi richiesti senza risposta, poi revocati; a parita' di stato vale l'ordine per cognome della query.
+  window._comConsensi=(data||[]).map(function(p,i){ return {p:p,i:i}; }).sort(function(a,b){ return (comRankConsenso(a.p)-comRankConsenso(b.p))||(a.i-b.i); }).map(function(x){ return x.p; });
   _comConsensiShown=30;
   comRenderConsensi();
   comLoadClusterSel(); comRegistro();
@@ -13314,9 +13316,10 @@ function comToggleConsensi(){ _comConsOpen=!_comConsOpen; comSyncConsensiBody();
 function comRenderConsensi(){
   const box=document.getElementById('com-consensi'); if(!box) return;
   const rows=window._comConsensi||[];
-  const title=document.getElementById('com-consensi-title'); if(title) title.textContent='Consensi ('+rows.length+')';
+  const nAtt=rows.filter(function(p){ return !!p.consenso_comunicazioni_at; }).length;
+  const title=document.getElementById('com-consensi-title'); if(title) title.textContent='Consensi ('+nAtt+(nAtt===1?' attivo':' attivi')+')';
   const more=document.getElementById('com-consensi-more');
-  if(!rows.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessun consenso ancora: il paziente lo presta quando prenota online per s\u00e9.</div>'; if(more) more.innerHTML=''; return; }
+  if(!rows.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessun consenso n\u00e9 richiesta ancora: il consenso lo presta solo il paziente.</div>'; if(more) more.innerHTML=''; return; }
   box.innerHTML=rows.slice(0,_comConsensiShown).map(function(p){
     const st=comStatoConsenso(p);
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">'
@@ -13333,8 +13336,10 @@ function comExportConsensi(){
   if(typeof XLSX==='undefined'){ showToast('Libreria Excel non caricata'); return; }
   const rows=window._comConsensi||[];
   if(!rows.length){ showToast('Nessun consenso da esportare.'); return; }
-  const aoa=[['Cognome','Nome','Consenso dal','Versione']].concat(rows.map(function(p){
-    return [p.cognome||'', p.nome||'', p.consenso_comunicazioni_at?new Date(p.consenso_comunicazioni_at).toLocaleDateString('it-IT'):'', p.consenso_comunicazioni_versione||''];
+  const dIt=function(v){ return v?new Date(v).toLocaleDateString('it-IT'):''; };
+  const statoXl=['Attivo','Richiesto','Revocato',''];
+  const aoa=[['Cognome','Nome','Stato','Consenso dal','Versione','Richiesto il','Revocato il']].concat(rows.map(function(p){
+    return [p.cognome||'', p.nome||'', statoXl[comRankConsenso(p)], dIt(p.consenso_comunicazioni_at), p.consenso_comunicazioni_versione||'', dIt(p.consenso_comunicazioni_richiesto_at), dIt(p.consenso_comunicazioni_revocato_at)];
   }));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Consensi');
