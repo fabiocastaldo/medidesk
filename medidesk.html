@@ -5902,7 +5902,7 @@ async function saveTurno(){
   const aggiunti = [], conflitti = [];
   for(const giorno of giorni){
     const conf = turnoSovrapposto(giorno, inizio, fine, dataInizioValidita, dataFineValidita);
-    if(conf){ conflitti.push(`${GIORNI[giorno]} (${conf.inizio}–${conf.fine} presso ${conf.centro})`); continue; }
+    if(conf){ conflitti.push(`${GIORNI_FULL[giorno].toLowerCase()} (c'è già il turno ${conf.inizio}–${conf.fine} presso ${conf.centro})`); continue; }
     const turnoData = { giorno, inizio, fine, slot, frequenza, dataInizioValidita, dataFineValidita };
     if(!isOnline()){
       c.turni.push(turnoData); aggiunti.push(giorno);
@@ -5934,7 +5934,7 @@ async function saveTurno(){
     closeModal('modal-turno');
     showToast(aggiunti.length === 1 ? 'Turno aggiunto ✓' : `${aggiunti.length} turni aggiunti ✓`);
   } else if(conflitti.length){
-    showToast((aggiunti.length ? `${aggiunti.length} aggiunti; ` : '') + 'sovrapposizione: ' + conflitti.join(', '));
+    showToast((aggiunti.length ? `${aggiunti.length === 1 ? 'Turno aggiunto' : aggiunti.length + ' turni aggiunti'}. ` : '') + 'Non aggiunto perché si sovrappone: ' + conflitti.join('; '), 6000);
   }
 }
 function confirmDeleteTurno(centroId, idx){
@@ -6107,6 +6107,30 @@ function openGiornataSingola(centroId){
   renderGsCal();
   openModal('modal-giornata-singola');
 }
+// LF-23: una giornata singola non puo' cadere su una fascia gia' coperta (turno attivo quel giorno o altra giornata), su nessun centro
+function _turnoAttivoIl(t, dateStr){
+  const d = new Date(dateStr+'T12:00:00');
+  if(Number(t.giorno)!==d.getDay()) return false;
+  if(t.dataInizioValidita && dateStr < t.dataInizioValidita) return false;
+  if(t.dataFineValidita && dateStr > t.dataFineValidita) return false;
+  const freq = t.frequenza||1;
+  if(freq > 1 && t.dataInizioValidita){
+    const diffWeeks = Math.round((d - new Date(t.dataInizioValidita+'T12:00:00')) / (7*24*3600*1000));
+    if(diffWeeks < 0 || diffWeeks % freq !== 0) return false;
+  }
+  return true;
+}
+function giornataSovrapposta(dateStr, inizio, fine){
+  for(const c of (S.centri||[])){
+    for(const t of (c.turni||[])){
+      if(_turnoAttivoIl(t, dateStr) && inizio < t.fine && fine > t.inizio) return `c'è già il turno ${t.inizio}–${t.fine} presso ${c.nome}`;
+    }
+    for(const g of (c.giornateSingole||[])){
+      if(g.data===dateStr && inizio < g.fine && fine > g.inizio) return `c'è già la giornata ${g.inizio}–${g.fine} presso ${c.nome}`;
+    }
+  }
+  return null;
+}
 async function saveGiornataSingola(){
   const c=S.centri.find(x=>String(x.id)===String(_giornataSingolaTargetId)); if(!c) return;
   const inizio=document.getElementById('giornata-inizio').value;
@@ -6114,13 +6138,16 @@ async function saveGiornataSingola(){
   const slot=parseInt(document.getElementById('giornata-slot').value);
   if(!_gsSel.length){ showToast('Seleziona almeno una giornata'); return; }
   if(inizio>=fine){ showToast('L\'ora di fine deve essere successiva all\'inizio'); return; }
-  const dates=_gsSel.slice().sort();
-  const okMsg=dates.length===1?'Giornata aggiunta \u2713':dates.length+' giornate aggiunte \u2713';
+  const conflitti=[];
+  const dates=_gsSel.slice().sort().filter(function(d){ const cf=giornataSovrapposta(d, inizio, fine); if(cf){ conflitti.push(formatDate(d)+' ('+cf+')'); return false; } return true; });
+  const noMsg=conflitti.length ? ('Non aggiunt'+(conflitti.length===1?'a':'e')+' perché si sovrappone: '+conflitti.join('; ')) : '';
+  if(!dates.length){ showToast(noMsg, 6000); return; }
+  const okMsg=(dates.length===1?'Giornata aggiunta \u2713':dates.length+' giornate aggiunte \u2713')+(noMsg?'. '+noMsg:'');
   c.giornateSingole=c.giornateSingole||[];
   if(!isOnline()){
     dates.forEach(function(data){ c.giornateSingole.push({data,inizio,fine,slot,centroId:String(c.id)}); });
     save(); closeModal('modal-giornata-singola'); renderCentri();
-    showToast(okMsg); return;
+    showToast(okMsg, noMsg?6000:undefined); return;
   }
   try {
     const { data: {user} }=await supabaseClient.auth.getUser();
@@ -6129,7 +6156,7 @@ async function saveGiornataSingola(){
     if(error) throw error;
     (ins||[]).forEach(function(r){ c.giornateSingole.push({id:r.id,data:r.data,inizio,fine,slot,centroId:String(c.id)}); });
     save(); closeModal('modal-giornata-singola'); renderCentri();
-    showToast(okMsg);
+    showToast(okMsg, noMsg?6000:undefined);
   } catch(e){ console.error('[Delphi~Med] saveGiornataSingola:',e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 async function deleteGiornataSingola(centroId, data, inizio){
