@@ -7668,6 +7668,9 @@ async function msgLoadPaziente(id, apriThreadId){
   const box=document.getElementById('msg-box-'+id); if(!box) return;
   const _tAperti=new Set([...box.querySelectorAll('[id^="msg-t-"]')].filter(e=>e.style.display!=='none').map(e=>e.id.slice(6)));
   if(apriThreadId) _tAperti.add(String(apriThreadId));
+  const _bozze={}; box.querySelectorAll('textarea[id^="msg-"]').forEach(t=>{ if(t.value) _bozze[t.id]=t.value; });
+  const _nuovoBox=document.getElementById('msg-new-'+id); const _nuovoAperto=!!(_nuovoBox && _nuovoBox.style.display==='block');
+  const _fuoco=(document.activeElement && box.contains(document.activeElement) && document.activeElement.id) || null;
   box.innerHTML='<div class="section-title">Messaggi</div><div style="font-size:13px;color:var(--ink3)">Caricamento…</div>';
   if(!isOnline()){ box.innerHTML='<div class="section-title">Messaggi</div><div style="font-size:13px;color:var(--ink3)">Disponibili solo online.</div>'; return; }
   const { data: threads, error } = await supabaseClient.from('thread_messaggi')
@@ -7682,7 +7685,7 @@ async function msgLoadPaziente(id, apriThreadId){
   h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="msg-new-'+escapeAttr(id)+'" style="display:none;margin:8px 0 12px"><textarea id="msg-new-txt-'+escapeAttr(id)+'" rows="3" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box" placeholder="Primo messaggio al paziente (facoltativo). Riceverà un link per leggere e rispondere, senza registrarsi."></textarea>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm btn-secondary" onclick="msgApri(\''+escapeAttr(id)+'\')">Annulla</button><button class="btn btn-sm btn-primary" onclick="msgApriConferma(\''+escapeAttr(id)+'\')">Apri canale e invia</button></div></div>';
-  if(!threads||!threads.length){ h+='<div style="font-size:13px;color:var(--ink3)">Nessun canale aperto. Apra un canale per scrivere al paziente: riceverà un link per leggere e rispondere, senza registrarsi.</div></div>'; box.innerHTML=h; return; }
+  if(!threads||!threads.length){ h+='<div style="font-size:13px;color:var(--ink3)">Nessun canale aperto. Apra un canale per scrivere al paziente: riceverà un link per leggere e rispondere, senza registrarsi.</div></div>'; box.innerHTML=h; _msgRipristina(id, _bozze, _nuovoAperto, _fuoco); return; }
   threads.forEach(t=>{
     const msgs=(t.messaggi||[]).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at));
     const nonLetti=msgs.filter(m=>m.direzione==='paziente'&&!m.letto_at).length;
@@ -7700,8 +7703,15 @@ async function msgLoadPaziente(id, apriThreadId){
     h+='</div></div>';
   });
   h+='</div>'; box.innerHTML=h;
+  _msgRipristina(id, _bozze, _nuovoAperto, _fuoco);
   const ids=[]; threads.forEach(t=>(t.messaggi||[]).forEach(m=>{ if(m.direzione==='paziente'&&!m.letto_at) ids.push(m.id); }));
   _msgUnreadIds[_k]=ids; if(_pdOpen[_k]&&ids.length) pdToggle(_k,true);
+}
+// Dopo un ridisegno del box messaggi: bozze, riquadro «primo messaggio» e cursore tornano dov'erano (LF-12)
+function _msgRipristina(id, bozze, nuovoAperto, fuoco){
+  Object.keys(bozze||{}).forEach(k=>{ const t=document.getElementById(k); if(t) t.value=bozze[k]; });
+  const nb=document.getElementById('msg-new-'+id); if(nb && nuovoAperto) nb.style.display='block';
+  if(fuoco){ const f=document.getElementById(fuoco); if(f && f.offsetParent!==null){ try{ f.focus({preventScroll:true}); }catch(_){ f.focus(); } } }
 }
 async function msgApi(payload){
   const _jwt=await getAuthJwt();
@@ -7720,12 +7730,12 @@ function msgApri(id){
 async function msgApriConferma(id){
   const ta=document.getElementById('msg-new-txt-'+id); const corpo=(ta&&ta.value||'').trim();
   const j=await msgApi({action:'apri', paziente_id:id, corpo});
-  if(j){ showToast('Canale aperto: email inviata al paziente.'); msgLoadPaziente(id, j.thread_id); }
+  if(j){ if(ta) ta.value=''; const nb=document.getElementById('msg-new-'+id); if(nb) nb.style.display='none'; showToast('Canale aperto: email inviata al paziente.'); msgLoadPaziente(id, j.thread_id); }
 }
 async function msgScrivi(threadId, pazId){
   const ta=document.getElementById('msg-txt-'+threadId); const corpo=(ta&&ta.value||'').trim(); if(!corpo) return;
   const j=await msgApi({action:'scrivi', thread_id:threadId, corpo});
-  if(j){ showToast('Messaggio inviato.'); msgLoadPaziente(pazId, threadId); }
+  if(j){ if(ta) ta.value=''; showToast('Messaggio inviato.'); msgLoadPaziente(pazId, threadId); }
 }
 async function msgChiudi(threadId, pazId){
   if(!(await confermaModale('Il paziente non potrà più leggere né rispondere dal link ricevuto.', { titolo:'Chiudere il canale?', ok:'Chiudi canale' }))) return;
@@ -7739,7 +7749,12 @@ async function msgRefreshNonLetti(){
   if(!isOnline()) return;
   try{
     const { data } = await supabaseClient.from('messaggi').select('id,corpo,created_at,thread_messaggi!inner(paziente_id)').eq('direzione','paziente').is('letto_at',null);
+    const _prima=new Set((S.msgNonLetti||[]).map(m=>String(m.id)));
     S.msgNonLetti=(data||[]).map(m=>({ id:m.id, corpo:m.corpo, created_at:m.created_at, paziente_id:m.thread_messaggi&&m.thread_messaggi.paziente_id }));
+    // LF-12: fascicolo aperto e messaggio nuovo del suo paziente -> ridisegno del solo box messaggi
+    const _mp=document.getElementById('modal-paziente');
+    const _box=_mp && _mp.classList.contains('open') ? _mp.querySelector('[id^="msg-box-"]') : null;
+    if(_box){ const _pid=_box.id.slice(8); if(S.msgNonLetti.some(m=>String(m.paziente_id)===_pid && !_prima.has(String(m.id)))) msgLoadPaziente(_pid); }
   }catch(_){ S.msgNonLetti=S.msgNonLetti||[]; }
   const el=document.getElementById('hero-msg-n'), k=document.getElementById('hero-msg');
   const n=(S.msgNonLetti||[]).length; if(el) el.textContent=n; if(k){ k.classList.toggle('is-zero', n===0); k.classList.toggle('has-alert', n>0); }
