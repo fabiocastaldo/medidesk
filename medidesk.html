@@ -3189,7 +3189,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-conferma" style="z-index:99999" onclick="if(event.target===this)_chiudiConferma(false)">
+<div class="modal-overlay" id="modal-conferma" style="z-index:99999">
   <div class="modal" style="max-width:440px">
     <div class="modal-header">
       <span class="modal-title" id="conferma-titolo">Conferma</span>
@@ -3205,7 +3205,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-omonimi" style="z-index:99999" onclick="if(event.target===this)annullaOmonimi()">
+<div class="modal-overlay" id="modal-omonimi" style="z-index:99999">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
       <span class="modal-title">Pi&ugrave; fascicoli con questo nome</span>
@@ -4716,7 +4716,10 @@ function closeModal(id){
   }
   document.addEventListener('keydown', e => {
     if(e.key !== 'Escape' || e.isComposing || e.defaultPrevented) return;
-    const aperti = [...document.querySelectorAll('.modal-overlay.open')];
+    // in cima: z-index piu' alto (modal-conferma e modal-omonimi stanno a 99999), a parita' l'ultimo nel DOM
+    const aperti = [...document.querySelectorAll('.modal-overlay.open')]
+      .map((el, i) => ({ el, i, z: parseInt(getComputedStyle(el).zIndex, 10) || 0 }))
+      .sort((a, b) => a.z - b.z || a.i - b.i).map(o => o.el);
     const m = aperti[aperti.length - 1];
     if(!m || !m.id || !comandoChiusura(m)) return;
     e.preventDefault();
