@@ -1831,7 +1831,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
           <input type="date" id="prom-pg-data" class="form-input">
           <div style="position:relative;flex:1;min-width:220px;max-width:340px"><input id="prom-pg-paz-q" class="form-input" placeholder="Paziente (cerca per nome)…" autocomplete="off" oninput="pazSuggest(this,'prom-pg-paz')" style="width:100%;box-sizing:border-box"><input type="hidden" id="prom-pg-paz"><div class="paz-suggest" id="prom-pg-paz-list"></div></div>
-          <button class="btn btn-primary" onclick="promSalvaDaPagina()">Salva</button>
+          <button class="btn btn-primary" onclick="promSalvaDaPagina(this)">Salva</button>
           <button class="btn btn-secondary" onclick="promToggleFormPagina()">Annulla</button>
         </div>
       </div>
@@ -2905,7 +2905,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <input type="hidden" id="prom-md-paz">
       <div id="prom-md-list" style="margin-top:14px"></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-promemoria')">Chiudi</button><button class="btn btn-primary" onclick="promSalvaDaModale()">Salva</button></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-promemoria')">Chiudi</button><button class="btn btn-primary" onclick="promSalvaDaModale(this)">Salva</button></div>
   </div>
 </div>
 <!-- MODAL DETTAGLIO PAZIENTE -->
@@ -2930,7 +2930,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-nuovo-paziente')">Annulla</button>
-      <button class="btn btn-primary" onclick="salvaNuovoPaziente()">Salva</button>
+      <button class="btn btn-primary" onclick="salvaNuovoPaziente(this)">Salva</button>
     </div>
   </div>
 </div>
@@ -6520,7 +6520,7 @@ function apptSelectSlot(ora){
   apptStep(4);
 }
 
-async function saveAppuntamento(){
+async function saveAppuntamento(){ return salvaUnaVolta('appuntamento', document.getElementById('appt-save-btn'), async()=>{
   try {
     const nome=capitalizeName(document.getElementById('appt-nome').value.trim());
     const cognome=capitalizeName(document.getElementById('appt-cognome').value.trim());
@@ -6611,7 +6611,7 @@ async function saveAppuntamento(){
     if(err && err.code === '23505'){ showToast('Orario gi\u00e0 occupato per quel centro: scegli un altro minuto'); return; }
     showToast('Errore salvataggio: '+err.message);
   }
-}
+}); }
 
 async function deleteAppuntamento(id){
   const appt = S.appuntamenti.find(a=>String(a.id)===String(id));
@@ -7786,12 +7786,12 @@ function promRenderModale(){
   const mine=(S.promemoria||[]).filter(pr=>String(pr.paziente_id)===String(pazId));
   box.innerHTML = mine.length ? '<div class="section-title">Aperti ('+mine.length+')</div>'+mine.map(pr=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)"><input type="checkbox" onchange="promFatto(\''+pr.id+'\').then(promRenderModale)" style="margin-top:3px"><div><div style="font-size:14px">'+escapeHtml(pr.testo)+'</div><div style="font-size:12px;color:var(--ink3)">'+thFmt(pr.scadenza+'T12:00:00').slice(0,10)+'</div></div></div>').join('') : '<div style="font-size:13px;color:var(--ink3)">Nessun promemoria aperto per questo paziente.</div>';
 }
-async function promSalvaDaModale(){
+async function promSalvaDaModale(btn){ return salvaUnaVolta('prom-modale', btn, async()=>{
   const t=document.getElementById('prom-md-txt'), d=document.getElementById('prom-md-data'), pz=document.getElementById('prom-md-paz');
   const r=await promAdd({ testo:t.value, scadenza:d.value, paziente_id:pz.value||null });
   if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
   t.value=''; showToast('Promemoria salvato.'); promRenderModale();
-}
+}); }
 function promToggleFormPagina(){
   const f=document.getElementById('prom-form-pagina'); if(!f) return;
   const open=f.style.display!=='block'; f.style.display=open?'block':'none';
@@ -7801,14 +7801,14 @@ function promToggleFormPagina(){
     const t=document.getElementById('prom-pg-txt'); if(t) t.focus();
   }
 }
-async function promSalvaDaPagina(){
+async function promSalvaDaPagina(btn){ return salvaUnaVolta('prom-pagina', btn, async()=>{
   const t=document.getElementById('prom-pg-txt'), d=document.getElementById('prom-pg-data'), sel=document.getElementById('prom-pg-paz');
   const r=await promAdd({ testo:t&&t.value, scadenza:d&&d.value, paziente_id:sel&&sel.value||null });
   if(!r.errore){ const q=document.getElementById('prom-pg-paz-q'); if(q) q.value=''; if(sel) sel.value=''; }
   if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
   if(t) t.value=''; document.getElementById('prom-form-pagina').style.display='none';
   showToast('Promemoria salvato.'); promRenderPagina();
-}
+}); }
 async function promRenderPagina(){
   const ap=document.getElementById('prom-pg-aperti'), ft=document.getElementById('prom-pg-fatti'); if(!ap||!ft) return;
   const today=fmt(new Date());
@@ -7841,28 +7841,43 @@ function promRenderPaziente(pazId){
   let h=pdHead(_k,'Promemoria',mine.length,false,'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button>');
   h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="prom-form-'+escapeAttr(String(pazId))+'" style="display:none;margin:8px 0 10px"><input id="prom-txt-'+escapeAttr(String(pazId))+'" class="form-input" maxlength="500" placeholder="Es. aprire il canale tra una settimana" style="width:100%;box-sizing:border-box">';
-  h+='<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><input type="date" id="prom-data-'+escapeAttr(String(pazId))+'" class="form-input" value="'+fmt(new Date(Date.now()+7*86400000))+'"><button class="btn btn-sm btn-primary" onclick="promSalvaDaScheda(\''+escapeAttr(String(pazId))+'\')">Salva</button></div></div>';
+  h+='<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><input type="date" id="prom-data-'+escapeAttr(String(pazId))+'" class="form-input" value="'+fmt(new Date(Date.now()+7*86400000))+'"><button class="btn btn-sm btn-primary" onclick="promSalvaDaScheda(\''+escapeAttr(String(pazId))+'\',this)">Salva</button></div></div>';
   if(!mine.length) h+='<div style="font-size:13px;color:var(--ink3)">Nessun promemoria aperto.</div>';
   else h+=mine.map(pr=>'<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--border)"><input type="checkbox" onchange="promFatto(\''+pr.id+'\',\''+escapeAttr(String(pazId))+'\')" style="margin-top:3px"><div><div style="font-size:14px">'+escapeHtml(pr.testo)+'</div><div style="font-size:12px;color:var(--ink3)">'+thFmt(pr.scadenza+'T12:00:00').slice(0,10)+'</div></div></div>').join('');
   h+='</div>'; box.innerHTML=h;
 }
 function promToggleForm(pazId){ const f=document.getElementById('prom-form-'+pazId); if(!f) return; f.style.display=f.style.display==='block'?'none':'block'; if(f.style.display==='block'){ const t=document.getElementById('prom-txt-'+pazId); if(t) t.focus(); } }
+// LF-15: un salvataggio alla volta. Il doppio clic su Salva non scrive due righe:
+// la chiave blocca le chiamate sovrapposte, il pulsante (se c'e') resta spento con
+// l'etichetta 'Salvataggio...' fino alla fine, e torna com'era anche in caso di errore.
+const _salvataggiInCorso = new Set();
+async function salvaUnaVolta(chiave, btn, fn){
+  if(_salvataggiInCorso.has(chiave)) return;
+  _salvataggiInCorso.add(chiave);
+  const etichetta = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Salvataggio...'; }
+  try{ return await fn(); }
+  finally{
+    _salvataggiInCorso.delete(chiave);
+    if(btn){ btn.disabled = false; btn.textContent = etichetta; }
+  }
+}
 async function promAdd({testo, scadenza, paziente_id, thread_id}){
   testo=(testo||'').trim(); if(!testo) return { errore:'testo vuoto' };
   if(!/^\d{4}-\d{2}-\d{2}$/.test(scadenza||'')) return { errore:'data non valida' };
-  const medicoId = await (async()=>{ try{ const {data}=await supabaseClient.rpc('get_medico_id'); return data; }catch(_){ return null; } })();
+  const medicoId = S.medicoId || await (async()=>{ try{ const {data}=await supabaseClient.rpc('get_medico_id'); return data; }catch(_){ return null; } })();
   if(!medicoId) return { errore:'medico non identificato' };
   const { data, error } = await supabaseClient.from('promemoria').insert({ medico_id:medicoId, testo, scadenza, paziente_id:paziente_id||null, thread_id:thread_id||null }).select('id').single();
   if(error) return { errore:error.message };
   await promLoad();
   return { ok:true, promemoria_id:data.id };
 }
-async function promSalvaDaScheda(pazId){
+async function promSalvaDaScheda(pazId, btn){ return salvaUnaVolta('prom-scheda-'+pazId, btn, async()=>{
   const t=document.getElementById('prom-txt-'+pazId), d=document.getElementById('prom-data-'+pazId);
   const r=await promAdd({ testo:t&&t.value, scadenza:d&&d.value, paziente_id:pazId });
   if(r.errore){ showToast(r.errore==='testo vuoto'?'Scrivi il testo del promemoria.':'Salvataggio non riuscito.'); return; }
   showToast('Promemoria salvato.'); promRenderPaziente(pazId);
-}
+}); }
 async function promFatto(id, pazId){
   const { error } = await supabaseClient.from('promemoria').update({ fatto_at:new Date().toISOString() }).eq('id', id);
   if(error){ showToast('Aggiornamento non riuscito.'); return; }
@@ -11094,7 +11109,7 @@ function openNuovoPaziente(){
   ['np-nome','np-cognome','np-nascita','np-email','np-tel'].forEach(i=>{const el=document.getElementById(i); if(el) el.value='';});
   openModal('modal-nuovo-paziente');
 }
-async function salvaNuovoPaziente(){
+async function salvaNuovoPaziente(btn){ return salvaUnaVolta('nuovo-paziente', btn, async()=>{
   const nome=capitalizeName(document.getElementById('np-nome').value.trim());
   const cognome=capitalizeName(document.getElementById('np-cognome').value.trim());
   if(!nome||!cognome){ showToast('Nome e cognome sono obbligatori'); return; }
@@ -11131,7 +11146,7 @@ async function salvaNuovoPaziente(){
   S.pazienti.unshift(paz);
   save(); closeModal('modal-nuovo-paziente'); renderPazienti();
   showToast('Paziente creato \u2713');
-}
+}); }
 
 async function savePazienteAnagrafica(id){
   const p=S.pazienti.find(x=>String(x.id)===String(id)); if(!p) return;
