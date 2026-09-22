@@ -7409,6 +7409,7 @@ function showApptDetail(id){
       ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
     </div>
     ${a.cancelled?`<button class="btn btn-secondary" style="width:100%;margin-top:16px" onclick="ripristinaAppuntamento('${escapeAttr(id)}')">Ripristina appuntamento</button>`:`<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="closeModal('modal-appt-detail');caricaVisitaDaAppt('${escapeAttr(id)}')">Carica visita</button>`}
+    ${(!a.cancelled && a.data && a.data<=todayLocalISO())?`<button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="toggleErogata('${escapeAttr(id)}')">${a.erogata===true?'Annulla erogazione':'Segna come erogata'}</button>`:''}
 `;
   document.getElementById('btn-delete-appt').onclick = ()=>deleteAppuntamento(id);
   openModal('modal-appt-detail');
