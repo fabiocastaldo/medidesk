@@ -4686,9 +4686,6 @@ function closeModal(id){
   document.getElementById(id).classList.remove('open');
   if(id==='modal-nuova-visita') resetVisitaModal();
 }
-document.querySelectorAll('.modal-overlay').forEach(m=>{
-  m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); });
-});
 // LF-02: Esc chiude il modale aperto piu' in alto (stesso z-index per tutti: vince l'ultimo nel DOM) premendo il suo
 // stesso comando di chiusura (la X, altrimenti Annulla/Chiudi), cosi' le conferme si risolvono come con un clic.
 // Se nel modale l'utente ha scritto o scelto qualcosa (evento input: solo gesti veri, non i precompilati) chiede prima.
@@ -4707,20 +4704,32 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
     return m.querySelector('.modal-header .modal-close') || m.querySelector('.modal-close')
       || [...m.querySelectorAll('button')].find(b => /^(Annulla|Chiudi)$/.test(b.textContent.trim())) || null;
   }
-  document.addEventListener('keydown', async e => {
-    if(e.key !== 'Escape' || e.isComposing || e.defaultPrevented) return;
-    const aperti = [...document.querySelectorAll('.modal-overlay.open')];
-    const m = aperti[aperti.length - 1];
-    if(!m || !m.id) return;
+  // Chiusura «come l'utente»: comando del modale, con conferma se modificato. Usata da Esc e dal clic sullo sfondo (LF-36).
+  async function chiudiComeUtente(m){
     const btn = comandoChiusura(m);
-    if(!btn) return;
-    e.preventDefault();
     if(m.dataset.escModificato === '1'){
       const ok = await confermaModale('Hai scritto qualcosa che non è stato salvato. Chiudere comunque?',
         { titolo:'Modifiche non salvate', ok:'Chiudi senza salvare', annulla:'Continua a modificare' });
       if(!ok || !m.classList.contains('open')) return;
     }
-    btn.click();
+    if(btn) btn.click(); else closeModal(m.id);
+  }
+  document.addEventListener('keydown', e => {
+    if(e.key !== 'Escape' || e.isComposing || e.defaultPrevented) return;
+    const aperti = [...document.querySelectorAll('.modal-overlay.open')];
+    const m = aperti[aperti.length - 1];
+    if(!m || !m.id || !comandoChiusura(m)) return;
+    e.preventDefault();
+    chiudiComeUtente(m);
+  });
+  // Sfondo: chiude solo se pressione e rilascio avvengono sullo sfondo (una selezione iniziata nel modale e finita fuori non chiude)
+  document.querySelectorAll('.modal-overlay[id]').forEach(m => {
+    let giuSfondo = false;
+    m.addEventListener('mousedown', e => { giuSfondo = (e.target === m); });
+    m.addEventListener('click', e => {
+      const ok = giuSfondo && e.target === m; giuSfondo = false;
+      if(ok) chiudiComeUtente(m);
+    });
   });
 })();
 // Event delegation in capture phase: intercetta prima di onclick inline su visita-header
