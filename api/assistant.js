@@ -224,7 +224,7 @@ DASHBOARD («Home» sul telefono)
 AGENDA
 - Testata: «Importa giornata» (carica foto o PDF della lista della segreteria, controlla e conferma le righe estratte), «+ Overbooking» (appuntamento fuori griglia), «+ Appuntamento» (wizard a passi: centro, data, slot, dati paziente, tipo e la scelta «Prima visita o controllo»).
 - Calendario settimanale con trascinamento per spostare (chiede conferma e propone la notifica al paziente) e vista mese. Cliccando la testata di un giorno lo si seleziona (cerchio evidenziato); «+ Appuntamento» parte dal giorno selezionato, mostrato in un banner con la data in cima al wizard.
-- Cliccando un appuntamento si apre il dettaglio: dati, categoria e stato di erogazione, bottone grande «Carica visita» e sotto «Elimina» (cancella l'appuntamento, con conferma: partono la mail di cancellazione al paziente e la notifica al centro), «.ics» e «Chiudi». Se l'appuntamento e' gia' cancellato compare invece «Ripristina appuntamento».
+- Cliccando un appuntamento si apre il dettaglio: dati, categoria e stato di erogazione, bottone grande «Carica visita»; per gli appuntamenti di oggi o passati, sotto, «Segna come erogata» (se gia' erogato diventa «Annulla erogazione»); in fondo «Elimina» (cancella l'appuntamento, con conferma: partono la mail di cancellazione al paziente e la notifica al centro), «.ics» e «Chiudi». Se l'appuntamento e' gia' cancellato compare invece «Ripristina appuntamento».
 
 PAZIENTI
 - Testata: «Crea fascicolo paziente». Ricerca per nome, email o telefono; filtri per centro e per stato («Tutti», «In cura», «Nuovi pazienti»: i nuovi pazienti sono i prenotati senza fascicolo). Colonne Email e Telefono separate.
@@ -266,7 +266,7 @@ COME SI FA
 - Prenotare: Agenda, «+ Appuntamento»; orario fuori griglia: «+ Overbooking».
 - Limitare le prestazioni di un centro: pagina Centri, sezione «Associa prestazioni» del centro; le prestazioni non associate spariscono dai tipi di visita prenotabili in quel centro, anche per la segreteria dell'organizzazione.
 - Caricare una visita o referto: «Carica visita» dalla Dashboard, dalla scheda del paziente o dal dettaglio della prenotazione (per i nuovi pazienti); dentro, «+ Nuovo paziente (estrai dati dal referto)» crea il fascicolo dai dati del referto. Il caricamento aggancia ed eroga l'appuntamento corrispondente.
-- Segnare erogata: «Segna come erogata» in Dashboard. Annullare l'erogazione NON cancella il fascicolo.
+- Segnare erogata: «Segna come erogata» in Dashboard (appuntamenti di oggi) o nel dettaglio dell'appuntamento in Agenda (oggi o giorni passati, non futuri); dal dettaglio si annulla con «Annulla erogazione». Annullare l'erogazione NON cancella il fascicolo.
 - Importare la giornata: Agenda, «Importa giornata», carica foto o PDF, controlla e conferma le righe estratte.
 - Spostare un appuntamento: trascinalo in Agenda; il sistema chiede conferma e propone la notifica al paziente. Le mail di conferma e di spostamento al paziente portano due link: uno per cancellare l'appuntamento e uno per mettersi in lista d'attesa se si libera un posto; la pagina di cancellazione dal link esegue con un solo tocco su «Conferma cancellazione» («Annulla» riporta alla home).
 - Scrivere a un paziente: «Contatta» dalla scheda del paziente, oppure chiedimelo: uso scrivi_paziente dopo il tuo ok. Il canale non e' per le urgenze e non serve per consegnare referti.
