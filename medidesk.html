@@ -7652,6 +7652,8 @@ function showPazienteDetail(id){
       <button type="button" class="btn-del-paz" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:none;color:var(--warm);font-size:14px;cursor:pointer;padding:10px 4px;min-height:44px" data-pazid="${escapeAttr(id)}" data-action="delete-paziente"><svg class="ic"><use href="#ic-trash"/></svg> Elimina paziente</button>
     </div>`;
   _initPazienteModal(p);
+  const _mp=document.getElementById('modal-paziente');
+  if(_mp && !_mp.classList.contains('open')){ const _mb=_mp.querySelector('.modal'); if(_mb) _mb.scrollTop=0; }
   openModal('modal-paziente');
   if(canSint) _renderSintesiSalvata(id);
   msgLoadPaziente(id); promRenderPaziente(id);
@@ -7662,8 +7664,10 @@ function pdToggle(key, force){ const el=document.getElementById(key); if(!el) re
 function pdHead(key,label,n,warn,btn){ return '<div class="section-title pd-head'+(_pdOpen[key]?' pd-open':'')+'" id="'+key+'-head" onclick="pdToggle(\''+key+'\')"><span class="pd-lbl">'+label+'<span class="pd-badge'+(warn?' warn':'')+'">'+n+'</span><span class="pd-tri">&#9662;</span></span>'+(btn||'')+'</div>'; }
 
 // ── Messaggi paziente (lato medico, RLS diretta + api/msg-thread) — s11 ──────
-async function msgLoadPaziente(id){
+async function msgLoadPaziente(id, apriThreadId){
   const box=document.getElementById('msg-box-'+id); if(!box) return;
+  const _tAperti=new Set([...box.querySelectorAll('[id^="msg-t-"]')].filter(e=>e.style.display!=='none').map(e=>e.id.slice(6)));
+  if(apriThreadId) _tAperti.add(String(apriThreadId));
   box.innerHTML='<div class="section-title">Messaggi</div><div style="font-size:13px;color:var(--ink3)">Caricamento…</div>';
   if(!isOnline()){ box.innerHTML='<div class="section-title">Messaggi</div><div style="font-size:13px;color:var(--ink3)">Disponibili solo online.</div>'; return; }
   const { data: threads, error } = await supabaseClient.from('thread_messaggi')
@@ -7687,7 +7691,7 @@ async function msgLoadPaziente(id){
     h+='<div class="visita-date">Canale '+escapeHtml(t.origine)+' · '+escapeHtml(stato)+(nonLetti?' · <b style="color:var(--warm)">'+nonLetti+' da leggere</b>':'')+'</div>';
     h+='<div style="font-size:12px;color:var(--ink3)">'+msgs.length+' messaggi · aperto il '+thFmt(t.created_at).slice(0,10)+(t.scade_il?' · fino al '+thFmt(t.scade_il).slice(0,10):'')+'</div>';
     h+='</div><span style="color:var(--ink3)">▾</span></div>';
-    h+='<div class="visita-body" id="msg-t-'+t.id+'" style="display:none;white-space:normal">';
+    h+='<div class="visita-body" id="msg-t-'+t.id+'" style="display:'+(_tAperti.has(String(t.id))?'block':'none')+';white-space:normal">';
     h+=msgs.map(m=>'<div style="margin-bottom:8px;padding:8px 10px;border-radius:10px;background:'+(m.direzione==='medico'?'var(--bg2, rgba(0,0,0,.04))':'rgba(13,148,201,.12)')+'"><div style="font-size:11px;color:var(--ink3)">'+(m.direzione==='medico'?'Lei':'Paziente')+' · '+thFmt(m.created_at)+'</div><div style="white-space:pre-wrap;font-size:14px">'+escapeHtml(m.corpo)+'</div></div>').join('')||'<div style="font-size:13px;color:var(--ink3)">Nessun messaggio.</div>';
     if(stato==='attivo'){
       h+='<textarea id="msg-txt-'+t.id+'" rows="3" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box;margin-top:8px" placeholder="Scrivi al paziente…"></textarea>';
@@ -7716,12 +7720,12 @@ function msgApri(id){
 async function msgApriConferma(id){
   const ta=document.getElementById('msg-new-txt-'+id); const corpo=(ta&&ta.value||'').trim();
   const j=await msgApi({action:'apri', paziente_id:id, corpo});
-  if(j){ showToast('Canale aperto: email inviata al paziente.'); msgLoadPaziente(id); }
+  if(j){ showToast('Canale aperto: email inviata al paziente.'); msgLoadPaziente(id, j.thread_id); }
 }
 async function msgScrivi(threadId, pazId){
   const ta=document.getElementById('msg-txt-'+threadId); const corpo=(ta&&ta.value||'').trim(); if(!corpo) return;
   const j=await msgApi({action:'scrivi', thread_id:threadId, corpo});
-  if(j){ showToast('Messaggio inviato.'); msgLoadPaziente(pazId); }
+  if(j){ showToast('Messaggio inviato.'); msgLoadPaziente(pazId, threadId); }
 }
 async function msgChiudi(threadId, pazId){
   if(!(await confermaModale('Il paziente non potrà più leggere né rispondere dal link ricevuto.', { titolo:'Chiudere il canale?', ok:'Chiudi canale' }))) return;
@@ -8102,6 +8106,7 @@ function openVisitaForPaziente(pazId){
   closeModal('modal-paziente');
   visitaSelectExisting(pazId);
   openModal('modal-nuova-visita');
+  V.ritornoFascicolo = String(pazId);
 }
 async function deleteVisita(pazId, visitaId){
   if(!(await confermaModale('Eliminare questa visita?', { titolo:'Eliminare visita', ok:'Elimina' }))) return;
@@ -9006,6 +9011,7 @@ async function saveVisita(){
     paz.visite = paz.visite||[];
     paz.visite.unshift(visita);
     save();
+    const _ritornoFascicolo = V.ritornoFascicolo;
     closeModal('modal-nuova-visita');
     let _apptDaErogare=null;
     if(V.selectedApptId){
@@ -9017,6 +9023,7 @@ async function saveVisita(){
     }
     if(_apptDaErogare && _apptDaErogare.erogata!==true && !_apptDaErogare.cancelled) await toggleErogata(_apptDaErogare.id,{silent:true});
     renderPazienti(); updateStats(); renderDashboard();
+    if(_ritornoFascicolo && paz && String(paz.id)===_ritornoFascicolo) showPazienteDetail(paz.id);
     return { paz, visita };
   } catch(err){
     console.error('saveVisita error:', err.message);
@@ -9029,6 +9036,7 @@ async function saveVisita(){
 
 function resetVisitaModal(){
   resetVisitaUpload();
+  V.ritornoFascicolo = null;
 }
 
 function toggleNvReferto(){
