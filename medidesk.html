@@ -4689,6 +4689,40 @@ function closeModal(id){
 document.querySelectorAll('.modal-overlay').forEach(m=>{
   m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); });
 });
+// LF-02: Esc chiude il modale aperto piu' in alto (stesso z-index per tutti: vince l'ultimo nel DOM) premendo il suo
+// stesso comando di chiusura (la X, altrimenti Annulla/Chiudi), cosi' le conferme si risolvono come con un clic.
+// Se nel modale l'utente ha scritto o scelto qualcosa (evento input: solo gesti veri, non i precompilati) chiede prima.
+// Il visualizzatore referti (overlay senza id) ha il suo gestore e qui viene lasciato stare.
+(function escModali(){
+  const obs = new MutationObserver(recs => recs.forEach(r => {
+    const m = r.target, aperto = m.classList.contains('open');
+    if(aperto !== (m.dataset.escAperto === '1')){ m.dataset.escAperto = aperto ? '1' : ''; delete m.dataset.escModificato; }
+  }));
+  document.querySelectorAll('.modal-overlay[id]').forEach(m => obs.observe(m, { attributes:true, attributeFilter:['class'] }));
+  document.addEventListener('input', e => {
+    const m = e.target && e.target.closest ? e.target.closest('.modal-overlay.open[id]') : null;
+    if(m) m.dataset.escModificato = '1';
+  }, true);
+  function comandoChiusura(m){
+    return m.querySelector('.modal-header .modal-close') || m.querySelector('.modal-close')
+      || [...m.querySelectorAll('button')].find(b => /^(Annulla|Chiudi)$/.test(b.textContent.trim())) || null;
+  }
+  document.addEventListener('keydown', async e => {
+    if(e.key !== 'Escape' || e.isComposing || e.defaultPrevented) return;
+    const aperti = [...document.querySelectorAll('.modal-overlay.open')];
+    const m = aperti[aperti.length - 1];
+    if(!m || !m.id) return;
+    const btn = comandoChiusura(m);
+    if(!btn) return;
+    e.preventDefault();
+    if(m.dataset.escModificato === '1'){
+      const ok = await confermaModale('Hai scritto qualcosa che non è stato salvato. Chiudere comunque?',
+        { titolo:'Modifiche non salvate', ok:'Chiudi senza salvare', annulla:'Continua a modificare' });
+      if(!ok || !m.classList.contains('open')) return;
+    }
+    btn.click();
+  });
+})();
 // Event delegation in capture phase: intercetta prima di onclick inline su visita-header
 // (necessario su mobile: stopPropagation blocca toggleV prima dell'onclick inline)
 document.getElementById('modal-paziente').addEventListener('click', function(e){

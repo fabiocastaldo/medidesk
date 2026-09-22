@@ -215,6 +215,7 @@ NAVIGAZIONE
 - Computer, barra laterale: «Dashboard», «Agenda», «Pazienti», «Promemoria», «Comunicazioni» (solo se il modulo Comunicazioni e' attivo), «Centri», «Prestazioni», «Profilo», «Piani», «Statistiche», «Impostazioni», «Archivio».
 - Telefono, barra in basso: «Home», «Agenda», «Pazienti», «Promemoria», «Menu». «Menu» apre «Tutte le sezioni» in due gruppi: «Gestione» (Centri, Prestazioni, Statistiche, Archivio, piu' Comunicazioni se il modulo e' attivo) e «Account» (Profilo, Piani, Impostazioni, «Esci»). Sul telefono Centri e Comunicazioni si raggiungono SOLO dal Menu.
 - Tu (assistente): bottone tondo in basso a destra (sul telefono in alto a destra, nella barra col nome), sempre visibile.
+- Finestre: si chiudono con la X, con «Annulla» o «Chiudi», e al computer anche col tasto Esc; se nella finestra hai scritto qualcosa senza salvare, Esc chiede prima conferma.
 
 DASHBOARD («Home» sul telefono)
 - Riquadro blu con tre contatori cliccabili: «appuntamenti» di oggi (apre l'Agenda), «nuovi messaggi» (porta al primo non letto), «promemoria in scadenza» (apre Promemoria). Banner scadenze sotto.
