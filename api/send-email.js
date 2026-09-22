@@ -3,7 +3,8 @@
  *
  * PATH 1 (jwt_medico)        : Authorization: Bearer <Supabase JWT>
  *   Modalità: conferma_appt_medico, cancellazione_paziente,
- *             notifica_centro_evento, chiusura_studio_centro, account_eliminazione
+ *             notifica_centro_evento, chiusura_studio_centro, chiusura_annullata_centro,
+ *             account_eliminazione
  *
  * PATH 2 (email_token)       : body.email_token (jti opaco da tabella email_tokens)
  *   Modalità: conferma_appt_anon
@@ -271,6 +272,35 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
 // Ritorna { ok: true, dataInizio, dataFine, etichetta, centroNome, centroEmail }
 // oppure  { ok: false, status, error }
 
+// LF-28 — verifica per l'annullamento di una chiusura:
+// la chiusura non deve piu' esistere, il centro deve essere del medico, il centro deve aver ricevuto
+// l'avviso originale (audit chiusura_studio_centro verso la sua email) e non gia' l'annullamento.
+// Ritorna { ok, centroNome, centroEmail } | { ok:true, skipped } | { ok:false, status, error }.
+async function lookupAnnullamentoChiusura(chiusuraId, centroId, medicoId, base, headers) {
+  try {
+    const rc = await fetch(`${base}/chiusure?id=eq.${encodeURIComponent(chiusuraId)}&select=id`, { headers });
+    if (!rc.ok) throw new Error(`chiusure status ${rc.status}`);
+    if ((await rc.json()).length) return { ok: false, status: 409, error: 'La chiusura esiste ancora: eliminala prima di annunciarne l\'annullamento' };
+    const rt = await fetch(`${base}/centri?id=eq.${encodeURIComponent(centroId)}&select=id,nome,email_segreteria,medico_id`, { headers });
+    if (!rt.ok) throw new Error(`centri status ${rt.status}`);
+    const centro = (await rt.json())[0];
+    if (!centro) return { ok: false, status: 404, error: 'Centro non trovato' };
+    if (centro.medico_id !== medicoId) return { ok: false, status: 403, error: 'Accesso non autorizzato al centro' };
+    const email = String(centro.email_segreteria || '').trim().toLowerCase();
+    if (!email) return { ok: true, skipped: 'centro_senza_email' };
+    const ra = await fetch(`${base}/audit_log?medico_id=eq.${encodeURIComponent(medicoId)}&action=eq.email_inviata&target_id=eq.${encodeURIComponent(chiusuraId)}&select=details`, { headers });
+    if (!ra.ok) throw new Error(`audit status ${ra.status}`);
+    const righe = await ra.json();
+    const verso = (tp) => righe.some(r => r.details && r.details.tipo === tp && String(r.details.to || '').trim().toLowerCase() === email);
+    if (!verso('chiusura_studio_centro')) return { ok: true, skipped: 'non_avvisato' };
+    if (verso('chiusura_annullata_centro')) return { ok: true, skipped: 'gia_annullata' };
+    return { ok: true, centroNome: centro.nome, centroEmail: centro.email_segreteria };
+  } catch (e) {
+    console.error('[send-email] lookupAnnullamentoChiusura:', e.message);
+    return { ok: false, status: 500, error: 'Errore verifica annullamento chiusura' };
+  }
+}
+
 async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, serviceKey) {
   const base = `${supabaseUrl}/rest/v1`;
   const headers = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
@@ -331,7 +361,7 @@ async function lookupChiusura(chiusuraId, centroId, userId, supabaseUrl, service
 const VALID_TIPI = new Set([
   'conferma_appt_anon', 'conferma_appt_medico', 'richiesta_consenso_fascicolo', 'cancellazione_paziente',
   'cancellazione_paziente_coop',
-  'notifica_centro_evento', 'cancellazione_centro_anon', 'chiusura_studio_centro',
+  'notifica_centro_evento', 'cancellazione_centro_anon', 'chiusura_studio_centro', 'chiusura_annullata_centro',
   'account_eliminazione', 'notifica_prenotazione_coop',
   'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione',
   'notifica_medico_cancellazione', 'notifica_medico_appuntamento',
@@ -341,7 +371,7 @@ const VALID_TIPI = new Set([
 const PATH1_TIPI = new Set([
   'notifica_medico_appuntamento', 'spostamento_paziente',
   'conferma_appt_medico', 'richiesta_consenso_fascicolo', 'cancellazione_paziente', 'notifica_centro_evento',
-  'chiusura_studio_centro', 'account_eliminazione'
+  'chiusura_studio_centro', 'chiusura_annullata_centro', 'account_eliminazione'
 ]);
 
 export default async function handler(req, res) {
@@ -705,6 +735,29 @@ export default async function handler(req, res) {
     targetType    = 'centro';
     targetId      = chiusura_id;
 
+  } else if (tipo === 'chiusura_annullata_centro') {
+    // LF-28: annullamento di una chiusura gia' eliminata. Scrive solo al centro che aveva ricevuto
+    // l'avviso (prova: audit_log chiusura_studio_centro verso la sua email), una volta sola.
+    const { chiusura_id, centro_id, data_inizio, data_fine, etichetta } = body;
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const ISO  = /^\d{4}-\d{2}-\d{2}$/;
+    if (!UUID.test(String(chiusura_id || '')) || !UUID.test(String(centro_id || '')) || !ISO.test(String(data_inizio || '')) || !ISO.test(String(data_fine || ''))) {
+      return res.status(400).json({ error: 'chiusura_id, centro_id, data_inizio e data_fine obbligatori' });
+    }
+    const ann = await lookupAnnullamentoChiusura(chiusura_id, centro_id, authCtx.medicoId, base, dbHeaders);
+    if (!ann.ok) return res.status(ann.status).json({ error: ann.error });
+    if (ann.skipped) return res.status(200).json({ ok: true, skipped: ann.skipped });
+    const dataInizioFmt = formatDateIt(data_inizio);
+    const dataFineFmt   = formatDateIt(data_fine);
+    const et = String(etichetta || '').slice(0, 120);
+    to            = ann.centroEmail;
+    subject       = `Chiusura annullata — ${et || dataInizioFmt}`;
+    html          = buildHtmlChiusuraAnnullata({ data_inizio_fmt: esc(dataInizioFmt), data_fine_fmt: esc(dataFineFmt), etichetta: esc(et), centro_nome: esc(ann.centroNome), medico_nome: esc(authCtx.medicoNome) });
+    replyTo       = authCtx.userEmail;
+    medicoIdAudit = authCtx.medicoId;
+    targetType    = 'centro';
+    targetId      = chiusura_id;
+
   } else if (tipo === 'account_eliminazione') {
     to            = authCtx.userEmail;
     subject       = 'Account Delphi⁠~Med — eliminazione programmata';
@@ -1028,6 +1081,19 @@ function buildHtmlChiusura({ data_inizio_fmt, data_fine_fmt, etichetta, centro_n
     `<p style="font-size:15px;color:#1a1a1a;margin:0 0 20px;">Gentile <strong>${centro_nome}</strong>,</p>` +
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">il medico <strong>${medico_nome}</strong> ha programmato una chiusura dello studio${etichetta ? ` (<em>${etichetta}</em>)` : ''} ${periodo}.</p>` +
     noteBox('In questo periodo non verranno generati nuovi slot prenotabili. Gli appuntamenti gi&agrave; confermati restano in agenda.') +
+    `<p style="font-size:13px;color:#888;margin:0;">Per informazioni contattare direttamente il medico.</p>`;
+  return emailShell(body);
+}
+
+function buildHtmlChiusuraAnnullata({ data_inizio_fmt, data_fine_fmt, etichetta, centro_nome, medico_nome }) {
+  const periodo = data_inizio_fmt === data_fine_fmt
+    ? `del <strong>${data_inizio_fmt}</strong>`
+    : `dal <strong>${data_inizio_fmt}</strong> al <strong>${data_fine_fmt}</strong>`;
+  const body =
+    emailTitle('Chiusura studio annullata') +
+    `<p style="font-size:15px;color:#1a1a1a;margin:0 0 20px;">Gentile <strong>${centro_nome}</strong>,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">il medico <strong>${medico_nome}</strong> ha annullato la chiusura dello studio${etichetta ? ` (<em>${etichetta}</em>)` : ''} ${periodo} che vi era stata comunicata.</p>` +
+    noteBox('Lo studio resta aperto secondo i turni abituali: le date tornano prenotabili.') +
     `<p style="font-size:13px;color:#888;margin:0;">Per informazioni contattare direttamente il medico.</p>`;
   return emailShell(body);
 }

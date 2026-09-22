@@ -2992,7 +2992,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-chiusura')">Annulla</button>
-      <button class="btn btn-primary" onclick="saveChiusura()">Salva</button>
+      <button class="btn btn-primary" onclick="saveChiusura(this)">Salva</button>
     </div>
   </div>
 </div>
@@ -10756,7 +10756,7 @@ function openModalChiusura(){
   openModal('modal-chiusura');
 }
 
-async function saveChiusura(){
+async function saveChiusura(btn){ return salvaUnaVolta('chiusura', btn, async()=>{
   const etichetta=document.getElementById('chiusura-etichetta').value.trim();
   const inizio=document.getElementById('chiusura-inizio').value;
   const fine=document.getElementById('chiusura-fine').value;
@@ -10797,7 +10797,12 @@ async function saveChiusura(){
       }).select('id').single();
       if(error) throw error;
       nuova.id = data.id;
-    } catch(e){ console.error('[Delphi~Med] saveChiusura:', e.message); }
+    } catch(e){
+      // LF-27: niente 'salvata' se il DB ha rifiutato: il modale resta aperto per riprovare.
+      console.error('[Delphi~Med] saveChiusura:', e.message);
+      showToast('Chiusura non salvata: riprova. Se il problema continua, ricarica la pagina.', 4000);
+      return;
+    }
   }
   S.chiusure.push(nuova);
   save();
@@ -10817,7 +10822,7 @@ async function saveChiusura(){
       }
     }
   }
-}
+}); }
 
 async function inviaMailChiusuraAiCentri(ch, centri){
   if(!isOnline() || !S.medicoId) return;
@@ -10851,15 +10856,52 @@ async function inviaMailChiusuraAiCentri(ch, centri){
 }
 
 async function deleteChiusura(id){
-  if(!(await confermaModale('Eliminare questo periodo di chiusura?', { titolo:'Eliminare chiusura', ok:'Elimina' }))) return;
-  S.chiusure = (S.chiusure||[]).filter(ch=>String(ch.id)!==String(id));
-  save();
-  if(isOnline() && !String(id).startsWith('local-')){
-    try { await supabaseClient.from('chiusure').delete().eq('id', id); } catch(e){}
+  if(!(await confermaModale('Eliminare questo periodo di chiusura? I centri che avevi avvisato riceveranno una mail di annullamento.', { titolo:'Eliminare chiusura', ok:'Elimina' }))) return;
+  const ch = (S.chiusure||[]).find(x=>String(x.id)===String(id));
+  const inDB = isOnline() && !String(id).startsWith('local-');
+  if(inDB){
+    // LF-27: la chiusura sparisce dalla lista solo se il DB conferma di averla eliminata.
+    try {
+      const { data, error } = await supabaseClient.from('chiusure').delete().eq('id', id).select('id');
+      if(error) throw error;
+      if(!data || !data.length) throw new Error('nessuna riga eliminata');
+    } catch(e){
+      console.error('[Delphi~Med] deleteChiusura:', e.message);
+      showToast('Chiusura non eliminata: riprova. Se il problema continua, ricarica la pagina.', 4000);
+      return;
+    }
   }
+  S.chiusure = (S.chiusure||[]).filter(x=>String(x.id)!==String(id));
+  save();
   renderChiusure();
   if(S.agendaView==='month') renderAgenda();
   showToast('Chiusura eliminata ✓');
+  if(inDB && ch) await avvisaAnnullamentoChiusura(ch);
+}
+
+// LF-28: dopo l'eliminazione, avviso di annullamento ai centri. Il client chiede per ogni centro
+// con email; il server scrive solo a quelli che avevano ricevuto l'avviso della chiusura (prova in
+// audit_log) e mai due volte. Nessuna mail se nessun centro era stato avvisato: nessun toast in piu'.
+async function avvisaAnnullamentoChiusura(ch){
+  const centri = (S.centri||[]).filter(c=>c.email && String(c.email).trim());
+  if(!centri.length) return;
+  let jwt; try { jwt = await getAuthJwt(); } catch(_){ return; }
+  let inviate = 0, fallite = 0;
+  for(const c of centri){
+    try {
+      const r = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+        body: JSON.stringify({ tipo:'chiusura_annullata_centro', chiusura_id: ch.id, centro_id: c.id,
+          data_inizio: ch.data_inizio, data_fine: ch.data_fine, etichetta: ch.etichetta || '' })
+      });
+      let j = {}; try { j = await r.json(); } catch(_){}
+      if(r.ok && !j.skipped) inviate++;
+      else if(!r.ok){ fallite++; console.error('[Delphi~Med] annullamento chiusura centro', c.nome, r.status, j.error||''); }
+    } catch(e){ fallite++; console.error('[Delphi~Med] annullamento chiusura centro:', e.message); }
+  }
+  if(inviate && !fallite) showToast(`Annullamento inviato a ${inviate} centro/i ✓`);
+  else if(fallite) showToast(`Annullamento: ${inviate} inviato/i, ${fallite} non riuscito/i. Avvisa a mano i centri mancanti.`, 5000);
 }
 
 function renderChiusure(){
