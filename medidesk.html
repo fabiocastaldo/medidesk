@@ -4339,7 +4339,7 @@ async function generaPresentazioneAI(){
       showToast('Presentazione generata — rivedila e premi Salva ✓');
     }
   } catch(e){
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   } finally {
     if(btn){ btn.disabled = false; btn.innerHTML = orig; }
   }
@@ -4638,6 +4638,21 @@ function _chiudiConferma(val){
   const r = _confermaResolve; _confermaResolve = null;
   if(r) r(val);
 }
+// LF-34: al medico un testo italiano che dice cosa non e' riuscito e cosa fare; il messaggio tecnico va in console.
+// I messaggi gia' scritti per il medico (italiani, senza gergo) passano cosi' come sono.
+function erroreLeggibile(cosa, e){
+  const raw = String((e && typeof e === 'object') ? (e.message || e.error_description || e.error || '') : (e || '')).trim();
+  try { console.error('[Delphi~Med] ' + cosa + ':', raw, e); } catch(_){}
+  const r = raw.toLowerCase();
+  let testo;
+  if(/failed to fetch|networkerror|network request|load failed|timeout|timed out|offline/.test(r)) testo = 'connessione assente o instabile, riprova';
+  else if(/jwt|token.*(expired|scadut)|sessione non valida|not authenticated|non autenticato|refresh token/.test(r)) testo = 'sessione scaduta: esci e rientra, poi riprova';
+  else if(/duplicate key|23505|already exists|unique/.test(r)) testo = 'esiste gi\u00e0 un dato uguale';
+  else if(/permission denied|row-level security|42501|not allowed|forbidden|http 403/.test(r)) testo = 'operazione non permessa per questo account';
+  else if(!raw || /[a-z]+_[a-z_]+|http \d|\b\d{5}\b|pgrst|column|schema|relation|violates|constraint|\bnull\b|undefined|typeerror|referenceerror|syntaxerror|function|cannot|could not|failed|invalid|unexpected|not found|\brig[ae]\b/.test(r)) testo = 'riprova tra poco; se si ripete, ricarica la pagina';
+  else testo = raw;
+  return cosa + ': ' + testo;
+}
 function confermaModale(testo, opts){
   opts = opts || {};
   return new Promise(function(res){
@@ -4679,7 +4694,7 @@ function openModal(id){
     }
   } catch(err){
     console.error('openModal error:', err);
-    showToast('Errore apertura: '+err.message);
+    showToast(erroreLeggibile('Apertura non riuscita', err));
   }
 }
 function closeModal(id){
@@ -4914,7 +4929,7 @@ async function saveCentro(){
         if(error) throw error;
       } catch(e){
         console.error('[Delphi~Med] saveCentro update:', e.message);
-        showToast('Errore aggiornamento: ' + e.message); return;
+        showToast(erroreLeggibile('Aggiornamento non riuscito', e)); return;
       }
     }
     save(); _afterSave(true); return;
@@ -4941,7 +4956,7 @@ async function saveCentro(){
     save(); _afterSave(false);
   } catch(e){
     console.error('[Delphi~Med] saveCentro:', e.message);
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
 
@@ -5086,7 +5101,7 @@ async function savePrestazione(){
     showToast(wasEdit ? 'Tariffa aggiornata ✓' : 'Tariffa aggiunta ✓');
   } catch(e){
     console.error('[Delphi~Med] savePrestazione:', e.message);
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
 
@@ -5116,7 +5131,7 @@ async function removePrestazione(id){
     showToast('Tariffa eliminata ✓');
   } catch(e){
     console.error('[Delphi~Med] removePrestazione:', e.message);
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
 
@@ -5152,7 +5167,7 @@ async function handleImportFile(ev){
     const wb = XLSX.read(new Uint8Array(buf), { type:'array' });
     const ws = wb.Sheets[wb.SheetNames[0]];
     aoa = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
-  } catch(e){ showToast('File non leggibile: '+e.message); return; }
+  } catch(e){ showToast(erroreLeggibile('File non leggibile', e)); return; }
   const head = (aoa[0]||[]).map(h=>String(h).trim().toLowerCase());
   const iTipo = head.indexOf('tipo_visita');
   const iComp = head.indexOf('compenso');
@@ -5230,7 +5245,7 @@ async function confermaImportListino(){
     showToast(n+' tariff'+(n===1?'a importata':'e importate')+(skipped? (', '+skipped+' saltat'+(skipped===1?'a':'e')) : '')+' ✓');
   } catch(e){
     console.error('[Delphi~Med] confermaImportListino:', e.message);
-    showToast('Errore: '+e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
     if(btn) btn.disabled = false;
   }
 }
@@ -5473,7 +5488,7 @@ async function togglePrestAssocTipo(centroId, tipoId){
     rec.centri_esclusi = data.centri_esclusi || dopo;
     save(); renderCentri();
     showToast(prima.includes(cid) ? 'Prestazione attivata nel centro ✓' : 'Prestazione disattivata nel centro');
-  } catch(e){ console.error('[Delphi~Med] togglePrestAssocTipo:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi~Med] togglePrestAssocTipo:', e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 async function setPrestAssocTutte(centroId, attiva){
   if(!isOnline()){ showToast('Connessione necessaria per modificare le prestazioni del centro'); return; }
@@ -5490,7 +5505,7 @@ async function setPrestAssocTutte(centroId, attiva){
     }
     save(); renderCentri();
     showToast(attiva ? 'Tutte le prestazioni attivate nel centro ✓' : 'Tutte le prestazioni disattivate nel centro');
-  } catch(e){ console.error('[Delphi~Med] setPrestAssocTutte:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi~Med] setPrestAssocTutte:', e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 function armBookingAction(id, action){
   _linkPending = { id: String(id), action };
@@ -5539,7 +5554,7 @@ async function setCentroGestione(id, value){
     showToast(nuovo==='centro' ? 'Agenda gestita dal centro' : 'Prenotazione online attiva ✓');
   } catch(e){
     console.error('[Delphi~Med] setCentroGestione:', e.message);
-    showToast('Errore: ' + e.message); renderCentri();
+    showToast(erroreLeggibile('Operazione non riuscita', e)); renderCentri();
   }
 }
 let _importCentroId = null;
@@ -5638,7 +5653,7 @@ async function importEstrai(){
   } catch(err){
     console.error('[Delphi~Med] importEstrai:', err.message);
     if(rv) rv.innerHTML = '';
-    showToast('Errore: ' + err.message);
+    showToast(erroreLeggibile('Operazione non riuscita', err));
   } finally {
     if(btn){ btn.disabled = false; btn.textContent = 'Estrai'; }
   }
@@ -5789,7 +5804,7 @@ async function importConferma(){
     showToast('Importati: ' + okCount + (skipCount > 0 ? ' · Saltati (già in agenda): ' + skipCount : ''));
   } catch(err){
     console.error('[Delphi~Med] importConferma:', err.message);
-    showToast('Errore: ' + err.message);
+    showToast(erroreLeggibile('Operazione non riuscita', err));
     if(btn){ btn.disabled = false; btn.textContent = 'Conferma in agenda'; }
   }
 }
@@ -5824,7 +5839,7 @@ async function toggleCentro(id){
     showToast(newAttivo ? 'Centro riattivato ✓' : 'Centro disattivato');
   } catch(e){
     console.error('[Delphi~Med] toggleCentro:', e.message);
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
 
@@ -5905,7 +5920,7 @@ async function saveTurno(){
       aggiunti.push(giorno);
     } catch(e){
       console.error('[Delphi~Med] saveTurno:', e.message);
-      showToast('Errore: ' + e.message);
+      showToast(erroreLeggibile('Operazione non riuscita', e));
       break;
     }
   }
@@ -5951,7 +5966,7 @@ async function deleteTurno(centroId, idx){
     c.turni.splice(idx,1); save(); renderCentri(); renderAgenda();
   } catch(e){
     console.error('[Delphi~Med] deleteTurno:', e.message);
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
 // ── TERMINA TURNO DAL ──
@@ -6039,7 +6054,7 @@ async function _applicaTerminaTurno(centroId, idx, dataFine){
     _terminaTurnoState = null;
   } catch(e){
     console.error('[Delphi~Med] terminaTurno:', e.message);
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
 
@@ -6115,7 +6130,7 @@ async function saveGiornataSingola(){
     (ins||[]).forEach(function(r){ c.giornateSingole.push({id:r.id,data:r.data,inizio,fine,slot,centroId:String(c.id)}); });
     save(); closeModal('modal-giornata-singola'); renderCentri();
     showToast(okMsg);
-  } catch(e){ console.error('[Delphi~Med] saveGiornataSingola:',e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi~Med] saveGiornataSingola:',e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 async function deleteGiornataSingola(centroId, data, inizio){
   const c=S.centri.find(x=>String(x.id)===String(centroId)); if(!c) return;
@@ -6130,7 +6145,7 @@ async function deleteGiornataSingola(centroId, data, inizio){
       if(error) throw error;
     }
     c.giornateSingole.splice(idx,1); save(); renderCentri(); showToast('Giornata eliminata');
-  } catch(e){ console.error('[Delphi~Med] deleteGiornataSingola:',e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi~Med] deleteGiornataSingola:',e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 
 async function deleteCentro(id){
@@ -6151,7 +6166,7 @@ async function deleteCentro(id){
     console.error('[Delphi~Med] deleteCentro:', e.message);
     // Ripristina centroId in caso di errore
     S.appuntamenti.forEach(a=>{ if(a.centroId===null) a.centroId=id; });
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
 function populateCentroSelect(){
@@ -6339,7 +6354,7 @@ function apptResetWizard(){
     }
   } catch(err){
     console.error('apptResetWizard error:', err);
-    showToast('Errore wizard: '+err.message);
+    showToast(erroreLeggibile('Operazione non riuscita', err));
   }
 }
 
@@ -6384,7 +6399,7 @@ function apptPathCenter(){
     apptStep('1a');
   } catch(err){
     console.error('apptPathCenter error:', err);
-    showToast('Errore: '+err.message);
+    showToast(erroreLeggibile('Operazione non riuscita', err));
   }
 }
 
@@ -6655,7 +6670,7 @@ async function saveAppuntamento(){ return salvaUnaVolta('appuntamento', document
   } catch(err){
     console.error('saveAppuntamento error:', err);
     if(err && err.code === '23505'){ showToast('Orario gi\u00e0 occupato per quel centro: scegli un altro minuto'); return; }
-    showToast('Errore salvataggio: '+err.message);
+    showToast(erroreLeggibile('Salvataggio non riuscito', err));
   }
 }); }
 
@@ -6692,7 +6707,7 @@ async function deleteAppuntamento(id){
     }
   } catch(err){
     console.error('deleteAppuntamento error:', err);
-    showToast('Errore: '+err.message);
+    showToast(erroreLeggibile('Operazione non riuscita', err));
   }
 }
 
@@ -7432,7 +7447,7 @@ async function ripristinaAppuntamento(id){
     try {
       const {error}=await supabaseClient.from('appuntamenti').update({cancelled:false,cancelled_at:null}).eq('id',id);
       if(error) throw error;
-    } catch(e){ showToast('Errore: '+e.message); return; }
+    } catch(e){ showToast(erroreLeggibile('Operazione non riuscita', e)); return; }
   }
   a.cancelled=false; a.cancelledAt=null;
   save(); closeModal('modal-appt-detail');
@@ -7448,7 +7463,7 @@ async function toggleErogata(id, opts){
     try {
       const {error}=await supabaseClient.from('appuntamenti').update({erogata:nuovo}).eq('id',id);
       if(error) throw error;
-    } catch(e){ showToast('Errore: '+e.message); return; }
+    } catch(e){ showToast(erroreLeggibile('Operazione non riuscita', e)); return; }
   }
   a.erogata=nuovo;
   if(nuovo) await _ensurePazienteDaAppt(a);
@@ -8148,7 +8163,7 @@ async function deleteVisita(pazId, visitaId){
       }
       const { error } = await supabaseClient.from('visite').delete().eq('id', String(visitaId));
       if(error) throw error;
-    } catch(e){ console.error('[Delphi~Med] deleteVisita:', e.message); showToast('Errore: '+e.message); return; }
+    } catch(e){ console.error('[Delphi~Med] deleteVisita:', e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); return; }
   }
   paz.visite = (paz.visite||[]).filter(v=>String(v.id)!==String(visitaId));
   save();
@@ -8232,7 +8247,7 @@ async function salvaReferto(pid, vid){
     const _refertoEnc = await _encryptText(testo);
     const { error }=await supabaseClient.from('visite').update({referto_testo: _refertoEnc}).eq('id', vid);
     if(error) throw error;
-  }catch(e){ showToast('Errore: '+e.message); return; }
+  }catch(e){ showToast(erroreLeggibile('Operazione non riuscita', e)); return; }
   v.referto=testo;
   _refEdit.delete(pid+'-'+vid);
   _refDrafts.delete(pid+'-'+vid);
@@ -8311,7 +8326,7 @@ function _buildRefertoPDFDoc(pid, vid){
     }
     doc.text('Generato da Delphi~Med il '+new Date().toLocaleDateString('it-IT'), margin, y);
     return { doc, paz, v };
-  }catch(e){ showToast('Errore PDF: '+e.message); return null; }
+  }catch(e){ showToast(erroreLeggibile('PDF non generato', e)); return null; }
 }
 
 function downloadRefertoPDF(pid, vid){
@@ -8327,7 +8342,7 @@ function stampaReferto(pid, vid){
     const url=r.doc.output('bloburl');
     const w=window.open(url, '_blank');
     if(!w){ showToast('Sblocca i popup per stampare'); }
-  }catch(e){ showToast('Errore stampa: '+e.message); }
+  }catch(e){ showToast(erroreLeggibile('Stampa non riuscita', e)); }
 }
 
 function copiaReferto(pid, vid){
@@ -8409,7 +8424,7 @@ async function confirmDeletePaziente(id, exported){
     showToast('Paziente eliminato');
   } catch(e){
     console.error('[Delphi~Med] confirmDeletePaziente:', e.message);
-    showToast('Errore: ' + e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
 
@@ -8507,7 +8522,7 @@ function _buildStoriaPDFDoc(pazId){
     doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(150,150,150);
     doc.text('Generato da Delphi~Med il '+new Date().toLocaleDateString('it-IT'), margin, y);
     return { doc, paz };
-  } catch(e){ showToast('Errore PDF: '+e.message); return null; }
+  } catch(e){ showToast(erroreLeggibile('PDF non generato', e)); return null; }
 }
 
 function downloadStoriaPDF(pazId){
@@ -8522,7 +8537,7 @@ function stampaStoria(pazId){
     const url=r.doc.output('bloburl');
     const w=window.open(url, '_blank');
     if(!w){ showToast('Sblocca i popup per stampare'); }
-  }catch(e){ showToast('Errore stampa: '+e.message); }
+  }catch(e){ showToast(erroreLeggibile('Stampa non riuscita', e)); }
 }
 
 // ── PERSISTENZA SINTESI CLINICA (cifrata client-side, invalidazione a fingerprint) ──
@@ -8554,7 +8569,7 @@ async function _salvaSintesi(p, testo, fonte){
     showToast('Sintesi salvata nel fascicolo ✓');
   } catch(e){
     console.warn('[Delphi~Med] salvataggio sintesi fallito:', e.message);
-    showToast('Sintesi non salvata: '+e.message);
+    showToast(erroreLeggibile('Sintesi non salvata', e));
   }
 }
 
@@ -8595,7 +8610,7 @@ async function eliminaSintesi(pazId){
     showToast('Sintesi eliminata ✓');
   } catch(e){
     console.warn('[Delphi~Med] eliminazione sintesi fallita:', e.message);
-    showToast('Eliminazione non riuscita: '+e.message);
+    showToast(erroreLeggibile('Eliminazione non riuscita', e));
   }
 }
 
@@ -9032,7 +9047,7 @@ async function saveVisita(){
           throw vErr;
         }
         visita.id = dbV.id;
-      } catch(e){ if(e && e.message === 'TRIAL_EXPIRED'){ return null; } console.error('[Delphi~Med] saveVisita DB:', e.message); showToast('Errore DB: '+e.message); return null; }
+      } catch(e){ if(e && e.message === 'TRIAL_EXPIRED'){ return null; } console.error('[Delphi~Med] saveVisita DB:', e.message); showToast(erroreLeggibile('Salvataggio non riuscito', e)); return null; }
     }
 
     paz.visite = paz.visite||[];
@@ -9054,7 +9069,7 @@ async function saveVisita(){
     return { paz, visita };
   } catch(err){
     console.error('saveVisita error:', err.message);
-    showToast('Errore salvataggio: '+err.message);
+    showToast(erroreLeggibile('Salvataggio non riuscito', err));
     return null;
   } finally {
     if(btnSalva){ btnSalva.disabled = false; btnSalva.textContent = 'Salva nel fascicolo'; }
@@ -9443,7 +9458,7 @@ async function saveSettings(){
       showToast('Salvato ✓');
     } catch(e){
       console.error('[Delphi~Med] saveSettings DB:', e.message);
-      showToast('Errore salvataggio: ' + e.message);
+      showToast(erroreLeggibile('Salvataggio non riuscito', e));
     }
   } else {
     showToast('Salvato ✓');
@@ -9528,7 +9543,7 @@ async function uploadFotoProfilo(file){
   } catch(e){
     console.error('[Delphi~Med] uploadFotoProfilo:', e.message);
     setStatus('');
-    showToast('Errore upload foto: ' + e.message);
+    showToast(erroreLeggibile('Caricamento foto non riuscito', e));
   }
 }
 
@@ -9549,7 +9564,7 @@ async function removeFotoProfilo(){
     showToast('Foto rimossa ✓');
   } catch(e){
     console.error('[Delphi~Med] removeFotoProfilo:', e.message);
-    showToast('Errore rimozione foto: ' + e.message);
+    showToast(erroreLeggibile('Rimozione foto non riuscita', e));
   }
 }
 
@@ -10513,7 +10528,7 @@ async function cancelBookingByToken(apptId){
     if(window._cancelApptData && token) await sendNotificaCentroAnonimo(window._cancelApptData, token);
   } catch(e){
     if(_btn) _btn.disabled=false;
-    showToast('Errore nella cancellazione: '+e.message);
+    showToast(erroreLeggibile('Cancellazione non riuscita', e));
     console.error('[Delphi~Med] cancelBookingByToken:', e.message);
   }
 }
@@ -10622,7 +10637,7 @@ async function waitlistSubscribe(){
       </p>
       <a href="https://delphi-med.com" class="btn btn-secondary" style="display:inline-block;margin-top:16px;text-decoration:none;padding:12px 32px">Torna alla home</a>`;
   } catch(e){
-    showToast('Errore: '+e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
     console.error('[Delphi~Med] waitlistSubscribe:', e.message);
   }
 }
@@ -10641,7 +10656,7 @@ async function waitlistUnsubscribe(){
       <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">Non riceverai più avvisi per questo appuntamento.</p>
       <a href="https://delphi-med.com" class="btn btn-secondary" style="display:inline-block;margin-top:16px;text-decoration:none;padding:12px 32px">Torna alla home</a>`;
   } catch(e){
-    showToast('Errore: '+e.message);
+    showToast(erroreLeggibile('Operazione non riuscita', e));
     console.error('[Delphi~Med] waitlistUnsubscribe:', e.message);
   }
 }
@@ -10679,7 +10694,7 @@ async function addTipoVisita(){
     S.tipiVisitaRecords.push(rec);
     S.tipiVisita.push(rec.nome); sortTipiVisita(); inp.value=''; save(); renderTipiAree();
     populateTipiVisitaSelects(); showToast('Tipo aggiunto ✓');
-  } catch(e){ console.error('[Delphi~Med] addTipoVisita:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi~Med] addTipoVisita:', e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 
 async function removeTipoVisita(idx){
@@ -10708,7 +10723,7 @@ async function removeTipoVisita(idx){
     S.tipiVisita.splice(idx,1);
     S.tipiVisitaRecords = S.tipiVisitaRecords.filter(r => r.nome !== t);
     save(); renderTipiAree(); populateTipiVisitaSelects(); showToast('Rimosso');
-  } catch(e){ console.error('[Delphi~Med] removeTipoVisita:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi~Med] removeTipoVisita:', e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 
 async function addArea(){
@@ -10728,7 +10743,7 @@ async function addArea(){
     S.areeTematicheRecords.push(rec);
     S.areeTematiche.push(rec.nome); inp.value=''; save(); renderTipiAree();
     populateTipiVisitaSelects(); showToast('Area aggiunta ✓');
-  } catch(e){ console.error('[Delphi~Med] addArea:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi~Med] addArea:', e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 
 async function removeArea(idx){
@@ -10743,7 +10758,7 @@ async function removeArea(idx){
     S.areeTematiche.splice(idx,1);
     S.areeTematicheRecords = S.areeTematicheRecords.filter(r => r.nome !== a);
     save(); renderTipiAree(); populateTipiVisitaSelects(); showToast('Rimossa');
-  } catch(e){ console.error('[Delphi~Med] removeArea:', e.message); showToast('Errore: '+e.message); }
+  } catch(e){ console.error('[Delphi~Med] removeArea:', e.message); showToast(erroreLeggibile('Operazione non riuscita', e)); }
 }
 
 // ── CHIUSURE (FERIE) ──
@@ -11251,7 +11266,7 @@ async function salvaNuovoPaziente(btn){ return salvaUnaVolta('nuovo-paziente', b
       if(error) throw error;
       paz={ id:newPaz.id, nome, cognome, nascita, tel, email, visite:[] };
       if(email) pazRichiestaConsensoFascicolo(newPaz.id);
-    }catch(e){ showToast('Errore: '+e.message+' \u2014 controlla in lista se il fascicolo esiste gi\u00e0 prima di riprovare.', 4000); return; }
+    }catch(e){ showToast(erroreLeggibile('Operazione non riuscita', e)+' \u2014 controlla in lista se il fascicolo esiste gi\u00e0 prima di riprovare.', 4000); return; }
   } else {
     paz={ id:Date.now(), nome, cognome, nascita, tel, email, visite:[] };
   }
@@ -11274,7 +11289,7 @@ async function savePazienteAnagrafica(id){
         .eq('id', p.id).select('id');
       if(error) throw error;
       if(!data||!data.length) throw new Error('nessuna riga aggiornata');
-    }catch(e){ showToast('Errore salvataggio: '+e.message); return; }
+    }catch(e){ showToast(erroreLeggibile('Salvataggio non riuscito', e)); return; }
   }
   p.nascita=nascita; p.email=email; p.tel=tel;
   save(); renderPazienti();
@@ -11358,7 +11373,7 @@ async function saveImpostazione(toggleId){
         if(S.agendaView==='month') renderMonthView();
         else renderDayAppointments();
       }
-      showToast('Errore salvataggio: '+e.message);
+      showToast(erroreLeggibile('Salvataggio non riuscito', e));
     }
   } else {
     showToast('✓ Salvato (offline)');
@@ -11674,7 +11689,7 @@ function esportaDati(){
     showToast('Backup scaricato ✓');
   } catch(e){
     console.error('[Delphi~Med] esportaDati:', e.message);
-    showToast('Errore export: '+e.message);
+    showToast(erroreLeggibile('Esportazione non riuscita', e));
   }
 }
 
@@ -12574,7 +12589,7 @@ async function _setRicevuto(centroId, anno, mese, raw){
       const arr = (S.compensiRicevuti||[]).filter(r=>!(String(r.centro_id)===String(centroId)&&Number(r.anno)===anno&&Number(r.mese)===mese));
       arr.push(data); S.compensiRicevuti = arr;
     }
-  } catch(e){ showToast('Errore: '+e.message); _renderCompensiDelta(); return; }
+  } catch(e){ showToast(erroreLeggibile('Operazione non riuscita', e)); _renderCompensiDelta(); return; }
   save();
   _renderCompensiDelta();
   showToast(importo==null ? 'Incasso rimosso' : 'Incasso aggiornato ✓');
@@ -12649,7 +12664,7 @@ function _buildCompensiPDFDoc(){
     doc.text('Rendiconto privato di verifica - non e un documento fiscale.', margin, y); y+=4;
     doc.text('Generato da Delphi~Med il '+new Date().toLocaleDateString('it-IT'), margin, y);
     return doc;
-  } catch(e){ showToast('Errore PDF: '+e.message); return null; }
+  } catch(e){ showToast(erroreLeggibile('PDF non generato', e)); return null; }
 }
 
 function downloadCompensiPDF(){
@@ -12679,7 +12694,7 @@ function downloadCompensiXLSX(){
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(r1), 'Per prestazione');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(r2), 'Riconciliazione '+_compMese);
     XLSX.writeFile(wb, ('Compensi_'+_compMese+'.xlsx').replace(/\s/g,'_'));
-  } catch(e){ showToast('Errore Excel: '+e.message); }
+  } catch(e){ showToast(erroreLeggibile('Esportazione non riuscita', e)); }
 }
 
 
@@ -12868,7 +12883,7 @@ function cancelAccountDeletion(){
   supabaseClient.from('medici').update({ deleted_at: null, deletion_scheduled_at: null })
     .eq('id', S.medicoId)
     .then(({ error }) => {
-      if(error){ showToast('Errore: ' + error.message); return; }
+      if(error){ showToast(erroreLeggibile('Operazione non riuscita', error)); return; }
       document.getElementById('deletion-banner')?.remove();
       auditLog('account_deletion_cancelled', 'account', null, {});
       showToast('Eliminazione annullata ✓');
@@ -12903,7 +12918,7 @@ async function changeSogliaConservazione(newValue){
   if(isOnline() && S.medicoId){
     const { error } = await supabaseClient.from('medici')
       .update({ soglia_conservazione_anni: parsed }).eq('id', S.medicoId);
-    if(error){ showToast('Errore: ' + error.message); return; }
+    if(error){ showToast(erroreLeggibile('Operazione non riuscita', error)); return; }
   }
   await auditLog('soglia_conservazione_modificata', 'settings', null, { old_anni: oldValue, new_anni: parsed });
   S.settings.sogliaConservazione = parsed;
