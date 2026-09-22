@@ -112,11 +112,29 @@ export default async function handler(req, res) {
     const subject = tipo === 'apertura'
       ? `${medicoNome} ha aperto un canale con lei — Delphi~Med`
       : `Nuovo messaggio da ${medicoNome} (${ora}) — Delphi~Med`;
-    const { error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: 'noreply@delphi-med.com', to: [to], subject,
       html: emailHtml({ medicoNome, link, tipo, tempiRisposta: medico.msg_tempi_risposta })
     });
     if (error) throw new Error('resend ' + (error.message || 'errore'));
+    return data?.id || null;
+  }
+
+  // Traccia dell'invio riuscito (soft-fail, come auditLog di send-email): solo dopo
+  // che Resend ha accettato la mail, con il suo id. Nessuna traccia sui rami di rollback.
+  async function auditInvio(threadId, tipoAudit, to, resendId) {
+    try {
+      const r = await sb('audit_log', {
+        method: 'POST', headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          medico_id: medico.id, action: 'email_inviata', target_type: 'thread', target_id: String(threadId),
+          details: { tipo: tipoAudit, auth_mode: 'jwt_medico', to, resend_id: resendId }
+        })
+      });
+      if (!r.ok) console.error('[msg-thread] audit_log', r.status);
+    } catch (e) {
+      console.error('[msg-thread] audit_log:', e.message);
+    }
   }
 
   // ── apri ──────────────────────────────────────────────────────────────────
@@ -155,18 +173,20 @@ export default async function handler(req, res) {
     if (!tr.ok) { console.error('[msg-thread] thread insert', tr.status); return res.status(500).json({ error: 'db' }); }
     const thread = (await tr.json())[0];
 
+    let resendId = null;
     try {
       if (corpo) {
         const mr = await sb('messaggi', { method: 'POST', body: JSON.stringify({ thread_id: thread.id, direzione: 'medico', corpo }) });
         if (!mr.ok) throw new Error('messaggio_insert ' + mr.status);
       }
       const token = await emitToken(thread.id, tokenExp);
-      await sendMail(email, 'apertura', token);
+      resendId = await sendMail(email, 'apertura', token);
     } catch (e) {
       console.error('[msg-thread] apri rollback:', e.message);
       await sb(`thread_messaggi?id=eq.${thread.id}`, { method: 'DELETE' }).catch(() => {});
       return res.status(502).json({ error: 'email_fallita' });
     }
+    await auditInvio(thread.id, 'msg_thread_apertura', email, resendId);
     return res.status(200).json({ thread_id: thread.id });
   }
 
@@ -186,16 +206,18 @@ export default async function handler(req, res) {
     if (!mr.ok) return res.status(500).json({ error: 'db' });
     const msg = (await mr.json())[0];
 
+    let resendId = null;
     try {
       // tutti i link del canale restano validi (lettura e risposta) fino a scadenza o chiusura
       const tokenExp = t.scade_il || new Date(Date.now() + 365 * 86400000).toISOString();
       const token = await emitToken(t.id, tokenExp);
-      await sendMail(t.recapito_email, 'nuovo', token);
+      resendId = await sendMail(t.recapito_email, 'nuovo', token);
     } catch (e) {
       console.error('[msg-thread] scrivi rollback:', e.message);
       await sb(`messaggi?id=eq.${msg.id}`, { method: 'DELETE' }).catch(() => {});
       return res.status(502).json({ error: 'email_fallita' });
     }
+    await auditInvio(t.id, 'msg_thread_notifica', t.recapito_email, resendId);
     return res.status(200).json({ messaggio_id: msg.id });
   }
 
