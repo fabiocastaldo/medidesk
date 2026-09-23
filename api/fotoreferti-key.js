@@ -61,15 +61,18 @@ export default async function handler(req, res) {
       }));
       const wrapped = Buffer.from(gen.CiphertextBlob).toString('base64');
 
+      // Scrittura condizionale: la chiave si salva SOLO se la colonna è ancora vuota.
+      // Due chiamate concorrenti al primo accesso non devono mai sovrascriversi a vicenda:
+      // chi perde la corsa rilegge la chiave vinta e la decifra, invece di imporne una nuova.
       const patchRes = await fetch(
-        `${supabaseUrl}/rest/v1/medici?id=eq.${encodeURIComponent(medicoId)}`,
+        `${supabaseUrl}/rest/v1/medici?id=eq.${encodeURIComponent(medicoId)}&referti_dek=is.null`,
         {
           method: 'PATCH',
           headers: {
             'apikey': serviceKey,
             'Authorization': `Bearer ${serviceKey}`,
             'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
+            'Prefer': 'return=representation'
           },
           body: JSON.stringify({ referti_dek: wrapped })
         }
@@ -77,8 +80,25 @@ export default async function handler(req, res) {
       if (!patchRes || !patchRes.ok) {
         return res.status(500).json({ error: 'Si è verificato un errore. Riprova.' });
       }
-
-      dek = Buffer.from(gen.Plaintext).toString('base64');
+      const patched = await patchRes.json().catch(() => []);
+      if (Array.isArray(patched) && patched.length) {
+        dek = Buffer.from(gen.Plaintext).toString('base64');
+      } else {
+        const reRes = await fetch(
+          `${supabaseUrl}/rest/v1/medici?id=eq.${encodeURIComponent(medicoId)}&select=referti_dek`,
+          { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
+        ).catch(() => null);
+        const vinta = (reRes && reRes.ok) ? (await reRes.json().catch(() => []))?.[0]?.referti_dek : null;
+        if (!vinta) {
+          return res.status(500).json({ error: 'Si è verificato un errore. Riprova.' });
+        }
+        const dec = await kms.send(new DecryptCommand({
+          CiphertextBlob: Buffer.from(vinta, 'base64'),
+          EncryptionContext: { medico_id: medicoId },
+          KeyId: keyId
+        }));
+        dek = Buffer.from(dec.Plaintext).toString('base64');
+      }
     } else {
       const dec = await kms.send(new DecryptCommand({
         CiphertextBlob: Buffer.from(medico.referti_dek, 'base64'),
