@@ -11,6 +11,13 @@ const PRICE_MAP = {
 };
 
 export default async function handler(req, res) {
+  // GET: dice solo se l'offerta Founding e' aperta (si' se il price e' configurato
+  // nell'ambiente, stessa regola del 403 FOUNDING_SOLD_OUT qui sotto). Nessun id,
+  // nessun nome di variabile, nessuna lettura DB, nessuna chiamata a Stripe.
+  if (req.method === 'GET') {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json({ founding_disponibile: !!process.env.STRIPE_PRICE_FOUNDING_MONTH });
+  }
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

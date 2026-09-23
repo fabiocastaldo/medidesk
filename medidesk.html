@@ -13327,10 +13327,26 @@ async function renderPiani(){
   if(!el) return;
   el.innerHTML = '<div class="pln-wrap"><div class="pln-note">Caricamento…</div></div>';
   var piano='free', stato='', subIntervallo='';
-  try{
-    var res = await supabaseClient.from('medici').select('piano,stato,sub_intervallo').eq('id', S.medicoId).single();
-    if(res && res.data){ piano = res.data.piano || 'free'; stato = res.data.stato || ''; subIntervallo = res.data.sub_intervallo || ''; }
-  }catch(e){}
+  var foundingChiusa = await (async function(){
+    // LF-32: sa prima del clic se il Founding e' chiuso. Solo un false esplicito
+    // spegne il pulsante; errore, timeout o risposta strana = comportamento di prima.
+    var pDisp = (async function(){
+      try{
+        var ac = (typeof AbortController!=='undefined') ? new AbortController() : null;
+        var tm = ac ? setTimeout(function(){ ac.abort(); }, 4000) : null;
+        var r = await fetch('/api/stripe-checkout', { method:'GET', cache:'no-store', signal: ac ? ac.signal : undefined });
+        if(tm) clearTimeout(tm);
+        if(!r.ok) return false;
+        var d = await r.json();
+        return !!d && d.founding_disponibile === false;
+      }catch(e){ return false; }
+    })();
+    try{
+      var res = await supabaseClient.from('medici').select('piano,stato,sub_intervallo').eq('id', S.medicoId).single();
+      if(res && res.data){ piano = res.data.piano || 'free'; stato = res.data.stato || ''; subIntervallo = res.data.sub_intervallo || ''; }
+    }catch(e){}
+    return pDisp;
+  })();
   var approved = (stato === 'approvato');
   var isVip = (piano === 'vip');
   function cur(p){ return piano===p ? '<span class="pln-current">Piano attuale</span>' : ''; }
@@ -13364,7 +13380,7 @@ async function renderPiani(){
         + '<div class="pln-name">Founding ' + cur('founding') + '</div>'
         + '<div class="pln-price">€35<span>/mese</span></div><div class="pln-note">Prezzo bloccato a vita</div>'
         + feats
-        + '<div class="pln-cta" id="pln-founding-cta">' + btn('Attiva Founding', "piani_checkout('founding','month')", piano==='founding') + '</div>'
+        + '<div class="pln-cta" id="pln-founding-cta">' + ((foundingChiusa && piano!=='founding') ? '<button class="btn pln-btn" disabled>Offerta esaurita</button>' : btn('Attiva Founding', "piani_checkout('founding','month')", piano==='founding')) + '</div>'
       + '</div>'
       + '<div class="pln-card">'
         + '<div class="pln-name">Pro ' + cur('pro') + '</div>'
