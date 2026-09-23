@@ -808,10 +808,6 @@ async function initSupabase(){
   }
 }
 
-function isCooperativa(user){
-  return !!(user && user.app_metadata && user.app_metadata.ruolo === 'cooperativa');
-}
-
 function capitalizeWords(str){
   return String(str || '').trim().replace(/\s+/g, ' ').toLowerCase()
     .replace(/(^|[\s'\-])(\p{L})/gu, (m, p, c) => p + c.toUpperCase());
