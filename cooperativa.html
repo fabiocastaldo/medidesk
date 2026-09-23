@@ -2345,8 +2345,8 @@ function renderServiziCatalogo(){
     + servizi.map(s => `<tr>
         <td style="font-weight:600">${esc(s.nome)}</td>
         <td>${(s.medici||[]).length}</td>
-        <td><button class="act-btn" title="Rinomina servizio" onclick="rinominaServizio('${esc(s.id)}','${esc(s.nome).replace(/'/g,'&#39;')}')">✎</button>
-            <button class="act-btn act-danger" title="Elimina servizio" onclick="eliminaServizio('${esc(s.id)}','${esc(s.nome).replace(/'/g,'&#39;')}')">✕</button></td>
+        <td><button class="act-btn" title="Rinomina servizio" onclick="rinominaServizio('${esc(s.id)}')">✎</button>
+            <button class="act-btn act-danger" title="Elimina servizio" onclick="eliminaServizio('${esc(s.id)}')">✕</button></td>
       </tr>`).join('')
     + '</tbody></table>';
 }
@@ -2561,7 +2561,7 @@ function renderTurniTab(){
         <td style="font-weight:600">${esc(r.medico)}</td><td>${esc(r.sede)}</td>
         <td>${r.sala ? esc(r.sala) : '—'}</td>
         <td>${GG[r.giorno] || ''}</td><td>${esc(r.orario)}</td><td>${esc(String(r.slot))} min</td>
-        <td><button class="act-btn act-danger" title="Elimina turno" onclick="eliminaTurno('${esc(r.id)}','${esc(r.medico)}','${GG[r.giorno]||''} ${esc(r.orario)}')">✕</button></td>
+        <td><button class="act-btn act-danger" title="Elimina turno" onclick="eliminaTurno('${esc(r.id)}')">✕</button></td>
       </tr>`).join('')
     + '</tbody></table>';
 }
@@ -2627,7 +2627,7 @@ function renderAssocTurniTab(){
           <td>${fmtData(r.t.data_inizio_validita) || '—'}</td>
           <td>${fmtData(r.t.data_fine_validita) || '—'}</td>
           <td><button class="act-btn" title="Modifica turno" onclick="modificaTurno('${esc(r.t.id)}')">✎</button>
-              <button class="act-btn act-danger" title="Elimina turno" onclick="eliminaTurno('${esc(r.t.id)}','${esc(r.nome)}','${GG[r.t.giorno]||''} ${esc(orario)}')">✕</button></td>
+              <button class="act-btn act-danger" title="Elimina turno" onclick="eliminaTurno('${esc(r.t.id)}')">✕</button></td>
         </tr>`;
       }).join('')
     + '</tbody></table>';
@@ -2850,8 +2850,20 @@ async function assegnaTurno(){
   }
 }
 
-async function eliminaTurno(turnoId, medico, quando, forza){
-  if(!forza && !window.confirm('Eliminare il turno di ' + medico + ' (' + quando + ')?')) return;
+// Nome del medico e orario del turno letti da _plancia per id: i testi di terzi non
+// entrano mai negli attributi onclick (una stringa con apostrofo chiuderebbe il JS).
+function _turnoInfo(turnoId){
+  const d = _plancia || {};
+  for(const m of (d.medici||[])) for(const c of (m.centri||[])) for(const t of (c.turni||[])){
+    if(String(t.id) === String(turnoId)){
+      return { medico: nomeMedico(m) || 'questo medico', quando: ((GG[t.giorno]||'') + ' ' + String(t.inizio).slice(0,5) + '–' + String(t.fine).slice(0,5)).trim() };
+    }
+  }
+  return { medico: 'questo medico', quando: '' };
+}
+async function eliminaTurno(turnoId, forza){
+  const { medico, quando } = _turnoInfo(turnoId);
+  if(!forza && !window.confirm('Eliminare il turno di ' + medico + (quando ? ' (' + quando + ')' : '') + '?')) return;
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-turni', {
@@ -2862,7 +2874,7 @@ async function eliminaTurno(turnoId, medico, quando, forza){
     const body = await res.json().catch(() => ({}));
     if(res.status === 409 && body.visite){
       if(window.confirm('Attenzione: il turno di ' + medico + ' (' + quando + ') ha ' + body.visite + ' visite pianificate. Eliminarlo comunque? Le visite già prese NON verranno cancellate.')){
-        return eliminaTurno(turnoId, medico, quando, true);
+        return eliminaTurno(turnoId, true);
       }
       return;
     }
@@ -2877,15 +2889,20 @@ async function eliminaTurno(turnoId, medico, quando, forza){
   }
 }
 
-async function rinominaServizio(servizioId, nomeAttuale){
-  const nome = window.prompt('Nuovo nome del servizio:', nomeAttuale);
+function _servizioNome(servizioId){
+  const s = ((_plancia||{}).servizi||[]).find(x => String(x.id) === String(servizioId));
+  return s ? String(s.nome||'') : '';
+}
+async function rinominaServizio(servizioId){
+  const nome = window.prompt('Nuovo nome del servizio:', _servizioNome(servizioId));
   if(nome === null) return;
   const pulito = capitalizeWords(nome.trim());
   if(!pulito){ setBoxMsg('servizio-msg', 'Il nome del servizio è obbligatorio.', 'err'); return; }
   await _serviziCall({ action: 'rinomina', servizio_id: servizioId, nome: pulito }, 'Servizio rinominato.');
 }
 
-async function eliminaServizio(servizioId, nome){
+async function eliminaServizio(servizioId){
+  const nome = _servizioNome(servizioId) || 'questo servizio';
   if(!window.confirm('Eliminare il servizio "' + nome + '"? Le associazioni con i medici verranno rimosse.')) return;
   await _serviziCall({ action: 'elimina', servizio_id: servizioId }, 'Servizio eliminato.');
 }
