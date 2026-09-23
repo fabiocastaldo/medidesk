@@ -21,6 +21,22 @@
 import { Resend } from 'resend';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
 import { CONS_COMM_VERSIONE, readPayload, revocaLink } from '../lib/consenso-token.js';
+import { trialExpired } from '../lib/trial-gate.js';
+
+// Tetto per medico sugli invii massivi (T-03): contatore DB check_rate_limit, chiave 'medico:<id>'.
+const MAX_INVII_ORA = 10;
+
+async function checkRateLimitMedico(supabaseUrl, serviceKey, medicoId) {
+  try {
+    const r = await fetch(`${supabaseUrl}/rest/v1/rpc/check_rate_limit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` },
+      body: JSON.stringify({ p_endpoint: 'invia-cluster', p_ip: `medico:${medicoId}`, p_max_count: MAX_INVII_ORA, p_window_seconds: 3600 })
+    });
+    if (!r.ok) return true;
+    return (await r.json()) === true;
+  } catch { return true; }
+}
 
 const MAX_CORPO = 4000;
 const MAX_DESTINATARI = 200;
@@ -34,12 +50,13 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   const userData = await userRes.json().catch(() => null);
   if (!userData?.id) return { ok: false, status: 401, error: 'Utente non riconosciuto' };
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&deleted_at=is.null&select=id,titolo,nome,cognome,moduli,slug`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&deleted_at=is.null&select=id,titolo,nome,cognome,moduli,slug,piano,created_at`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) return { ok: false, status: 403, error: 'Verifica account fallita' };
   const rows = await medicoRes.json().catch(() => []);
   if (!rows?.[0]) return { ok: false, status: 403, error: 'Account non autorizzato' };
+  if (trialExpired(rows[0].piano, rows[0].created_at)) return { ok: false, status: 403, error: 'Periodo di prova scaduto', code: 'TRIAL_EXPIRED' };
   return { ok: true, medico: rows[0] };
 }
 
@@ -264,7 +281,7 @@ export default async function handler(req, res) {
   const authHeader = req.headers['authorization'];
   if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Autenticazione richiesta' });
   const auth = await checkMedicoAuth(authHeader.slice(7), supabaseUrl, anonKey, serviceKey);
-  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  if (!auth.ok) return res.status(auth.status).json(auth.code ? { error: auth.error, code: auth.code } : { error: auth.error });
   const medico = auth.medico;
   const medicoNome = [medico.titolo, medico.nome, medico.cognome].filter(Boolean).join(' ');
   if (!(medico.moduli && medico.moduli.comunicazioni === true)) {
@@ -292,6 +309,10 @@ export default async function handler(req, res) {
     catch (e) { console.error('[invia-cluster] invia resolve:', e.message); return res.status(500).json({ error: 'db' }); }
     if (!dest.length) return res.status(409).json({ error: 'nessun_destinatario' });
     if (dest.length > MAX_DESTINATARI) return res.status(413).json({ error: 'troppi_destinatari', n: dest.length, max: MAX_DESTINATARI });
+    // Tetto per medico, dopo la validazione e prima della riga in 'invii' (nessuna scrittura oltre il contatore).
+    if (!(await checkRateLimitMedico(supabaseUrl, serviceKey, medico.id))) {
+      return res.status(429).json({ error: 'Hai raggiunto il limite di ' + MAX_INVII_ORA + ' invii in un\'ora. Riprova più tardi.' });
+    }
 
     const ir = await sb('invii', {
       method: 'POST', headers: { 'Prefer': 'return=representation' },
