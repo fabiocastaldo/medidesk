@@ -87,6 +87,7 @@ export default async function handler(req, res) {
   const consensoVersione = clean(b.consenso_versione, 40);
   const consensoComunicazioni = b.consenso_comunicazioni === true && !perConto; // mai per conto terzi
   if (!nome || !cognome) return res.status(400).json({ error: 'Nome e cognome obbligatori' });
+  if (/[<>]/.test(nome + cognome)) return res.status(400).json({ error: 'Nome e cognome non possono contenere i caratteri < e >' });
   if (email && !isEmail(email)) return res.status(400).json({ error: 'Email non valida' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return res.status(400).json({ error: 'Data non valida' });
   if (!/^\d{2}:\d{2}$/.test(ora)) return res.status(400).json({ error: 'Ora non valida' });
