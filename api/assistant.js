@@ -92,7 +92,7 @@ const TOOLS = [
   },
   {
     name: 'prepara_appuntamento',
-    description: "Apre il wizard di nuovo appuntamento precompilando data, tipo di visita, categoria (prima visita o controllo), area tematica e dati del paziente (nome, cognome, email, telefono). Per un paziente esistente prendi PRIMA i suoi dati con cerca_paziente e passali tutti: non chiederli al medico. Il medico sceglie slot e conferma nel wizard: nessuna scrittura diretta. Chiedi SEMPRE ok in chat prima di chiamarlo.",
+    description: "Apre il wizard di nuovo appuntamento precompilando data, tipo di visita, categoria (prima visita o controllo), area tematica e dati del paziente (nome, cognome, email, telefono). Per un paziente esistente prendi PRIMA i suoi dati con cerca_paziente e passali tutti, compreso paziente_id (collega l'appuntamento al fascicolo): non chiederli al medico. Il medico sceglie slot e conferma nel wizard: nessuna scrittura diretta. Chiedi SEMPRE ok in chat prima di chiamarlo.",
     input_schema: {
       type: 'object',
       properties: {
@@ -100,6 +100,7 @@ const TOOLS = [
         cognome: { type: 'string' },
         telefono: { type: 'string' },
         email: { type: 'string' },
+        paziente_id: { type: 'string', description: "id da cerca_paziente per un paziente che ha gia' un fascicolo: collega l'appuntamento al fascicolo" },
         tipo: { type: 'string', description: 'tipo di visita, uno dei tipi del medico: chiedilo SEMPRE al medico prima' },
         categoria: { type: 'string', enum: ['prima_visita', 'controllo'], description: 'prima visita o controllo: chiedila SEMPRE al medico insieme al tipo' },
         area: { type: 'string', description: 'area tematica, opzionale: chiedila solo se il medico ne ha (aree_tematiche in leggi_dati prestazioni)' },
@@ -222,7 +223,7 @@ DASHBOARD («Home» sul telefono)
 - Lista degli appuntamenti di oggi, su ogni riga: «Segna come erogata» e «Carica visita».
 
 AGENDA
-- Testata: «Importa giornata» (carica foto o PDF della lista della segreteria, controlla e conferma le righe estratte), «+ Overbooking» (appuntamento fuori griglia), «+ Appuntamento» (wizard a passi: centro, data, slot, dati paziente, tipo e la scelta «Prima visita o controllo»).
+- Testata: «Importa giornata» (carica foto o PDF della lista della segreteria, controlla e conferma le righe estratte), «+ Overbooking» (appuntamento fuori griglia), «+ Appuntamento» (wizard a passi: centro, data, slot, dati paziente, tipo e la scelta «Prima visita o controllo»; scrivendo nome o cognome compaiono i «Fascicoli esistenti»: sceglierne uno compila i dati e collega l'appuntamento al fascicolo).
 - Calendario settimanale con trascinamento per spostare (chiede conferma e propone la notifica al paziente) e vista mese. Cliccando la testata di un giorno lo si seleziona (cerchio evidenziato); «+ Appuntamento» parte dal giorno selezionato, mostrato in un banner con la data in cima al wizard.
 - Cliccando un appuntamento si apre il dettaglio: dati, categoria e stato di erogazione, bottone grande «Carica visita»; per gli appuntamenti di oggi o passati, sotto, «Segna come erogata» (se gia' erogato diventa «Annulla erogazione»); in fondo «Elimina» (cancella l'appuntamento, con conferma: partono la mail di cancellazione al paziente e la notifica al centro), «.ics» e «Chiudi». Se l'appuntamento e' gia' cancellato compare invece «Ripristina appuntamento».
 
@@ -266,6 +267,7 @@ COME SI FA
 - Prenotare: Agenda, «+ Appuntamento»; orario fuori griglia: «+ Overbooking».
 - Limitare le prestazioni di un centro: pagina Centri, sezione «Associa prestazioni» del centro; le prestazioni non associate spariscono dai tipi di visita prenotabili in quel centro, anche per la segreteria dell'organizzazione.
 - Caricare una visita o referto: «Carica visita» dalla Dashboard, dalla scheda del paziente o dal dettaglio della prenotazione (per i nuovi pazienti); dentro, «+ Nuovo paziente (estrai dati dal referto)» crea il fascicolo dai dati del referto. Il caricamento aggancia ed eroga l'appuntamento corrispondente.
+- Prenotazione e fascicolo: quando si carica la visita da una prenotazione o la si segna erogata, se nome e cognome non coincidono esattamente con un fascicolo il gestionale propone i fascicoli con stessa email, stesso telefono o nome/cognome quasi uguali (per esempio un cognome scritto male in prenotazione): il medico sceglie quello giusto e la prenotazione resta collegata. Se nessuno va bene, per il fascicolo nuovo chiede la data di nascita, sempre obbligatoria.
 - Segnare erogata: «Segna come erogata» in Dashboard (appuntamenti di oggi) o nel dettaglio dell'appuntamento in Agenda (oggi o giorni passati, non futuri); dal dettaglio si annulla con «Annulla erogazione». Annullare l'erogazione NON cancella il fascicolo.
 - Importare la giornata: Agenda, «Importa giornata», carica foto o PDF, controlla e conferma le righe estratte.
 - Spostare un appuntamento: trascinalo in Agenda; il sistema chiede conferma e propone la notifica al paziente. Le mail di conferma e di spostamento al paziente portano due link: uno per cancellare l'appuntamento e uno per mettersi in lista d'attesa se si libera un posto; la pagina di cancellazione dal link esegue con un solo tocco su «Conferma cancellazione» («Annulla» riporta alla home).
