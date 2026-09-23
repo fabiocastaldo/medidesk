@@ -13,22 +13,25 @@ const LEGAL_DOCS = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Rate limit in-memory: 5 registrazioni/ora per IP (anti-spam abuse)
+// Rate limit: 5 registrazioni/ora per IP (anti-spam abuse), contatore DB condiviso
+// fra le istanze (RPC check_rate_limit, chiave 'ip:<ip>'); fail-open se il DB non risponde.
 // ─────────────────────────────────────────────────────────────────────────────
-const regRateMap = new Map();
 const REG_RATE_LIMIT = 5;
-const REG_RATE_WINDOW_MS = 60 * 60 * 1000;
+const REG_RATE_WINDOW_S = 3600;
 
-function checkRegRateLimit(ip) {
-  const now = Date.now();
-  const entry = regRateMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    regRateMap.set(ip, { count: 1, resetAt: now + REG_RATE_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= REG_RATE_LIMIT) return false;
-  entry.count++;
-  return true;
+async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return true;
+  try {
+    const res = await fetch(`${url}/rest/v1/rpc/check_rate_limit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ p_endpoint: endpoint, p_ip: ip, p_max_count: max, p_window_seconds: windowSeconds })
+    });
+    if (!res.ok) return true;
+    return (await res.json()) === true;
+  } catch { return true; }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -96,7 +99,7 @@ export default async function handler(req, res) {
   // Rate limit per IP
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
              req.socket?.remoteAddress || 'unknown';
-  if (!checkRegRateLimit(ip)) {
+  if (!(await checkSupabaseRateLimit(`ip:${ip}`, 'register-doctor', REG_RATE_LIMIT, REG_RATE_WINDOW_S))) {
     return res.status(429).json({ error: 'Troppi tentativi di registrazione. Riprova tra un\'ora.' });
   }
 
