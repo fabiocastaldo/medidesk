@@ -7122,7 +7122,7 @@ function renderWeekLegend(days){
     }
     const apptCentro=S.appuntamenti.find(a=>String(a.centroId)===cid && dayStrs.includes(a.data));
     const nome=apptCentro?.centroNome;
-    return nome?`<span class="month-legend-item" style="opacity:0.4"><span class="month-legend-dot" style="background:#999"></span>${nome} (eliminato)</span>`:'';
+    return nome?`<span class="month-legend-item" style="opacity:0.4"><span class="month-legend-dot" style="background:#999"></span>${escapeHtml(nome)} (eliminato)</span>`:'';
   }).filter(Boolean).join('');
   container.innerHTML = (items+ferieItem) ? `<div class="month-legend">${items+ferieItem}</div>` : '';
 }
@@ -7293,7 +7293,7 @@ function renderMonthView(){
       // centro eliminato: usa centroNome dall'appuntamento
       const apptCentro=S.appuntamenti.find(a=>String(a.centroId)===cid && new Date(a.data+'T12:00:00').getFullYear()===y && new Date(a.data+'T12:00:00').getMonth()===m);
       const nome=apptCentro?.centroNome;
-      return nome?`<span class="month-legend-item" style="opacity:0.4"><span class="month-legend-dot" style="background:#999"></span>${nome} (eliminato)</span>`:'';
+      return nome?`<span class="month-legend-item" style="opacity:0.4"><span class="month-legend-dot" style="background:#999"></span>${escapeHtml(nome)} (eliminato)</span>`:'';
     }).filter(Boolean).join('');
     if(items || ferieItemM) legendHtml = `<div class="month-legend">${items+ferieItemM}</div>`;
   }
