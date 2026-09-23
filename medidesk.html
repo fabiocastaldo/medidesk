@@ -2866,7 +2866,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita *</span><input class="form-input" id="ex-nascita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. Prima visita, Visita di controllo" style="flex:1" oninput="capFirstInput(this)"></div>
             <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
-            <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1" oninput="capFirstInput(this)"></div>
+            <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" list="ex-luogo-centri" placeholder="Scegli un centro o scrivi un altro luogo" autocomplete="off" style="flex:1" onfocus="_popolaCentriVisita()" oninput="capFirstInput(this)"><datalist id="ex-luogo-centri"></datalist></div>
           </div>
           <div class="form-group" style="margin-top:14px">
             <label class="form-label">Note (opzionale)</label>
@@ -4003,7 +4003,7 @@ async function loadVisiteFromDB(user){
   if(!isOnline() || !user || !S.medicoId) return;
   try {
     const { data, error } = await supabaseClient.from('visite')
-      .select('id, paziente_id, data_visita, luogo, contenuto_clinico, foto_referto_url, tipo_referto, referto_testo')
+      .select('id, paziente_id, data_visita, luogo, centro_id, contenuto_clinico, foto_referto_url, tipo_referto, referto_testo')
       .eq('medico_id', S.medicoId)
       .order('created_at', { ascending: false });
     if(error) throw error;
@@ -4019,7 +4019,7 @@ async function loadVisiteFromDB(user){
         let _referto = '';
         try { _referto = await _decryptText(v.referto_testo); }
         catch(e){ _referto = ''; console.warn('[Delphi~Med] referto non decifrabile, riga saltata:', v.id); }
-        paz.visite.push({ id:v.id, data:isoToIt(v.data_visita||''), luogo:v.luogo||'', clinica:_clinica, tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null, referto:_referto });
+        paz.visite.push({ id:v.id, data:isoToIt(v.data_visita||''), luogo:v.luogo||'', centroId:v.centro_id||null, clinica:_clinica, tipo:v.tipo_referto||'', foto_url:v.foto_referto_url||null, referto:_referto });
       }
     }
     save();
@@ -7642,6 +7642,10 @@ function _buildRefertoInner(paz, v){
   h+='</div>';
   return h;
 }
+// LF-10: il luogo della visita segue il centro per id (una rinomina non scollega le visite storiche)
+function _centroDaNome(nome){ const n=String(nome||'').trim().toLowerCase(); return n ? (S.centri||[]).find(c=>String(c.nome||'').trim().toLowerCase()===n) || null : null; }
+function _visitaLuogo(v){ const c=v&&v.centroId ? (S.centri||[]).find(x=>String(x.id)===String(v.centroId)) : null; return c ? c.nome : ((v&&v.luogo)||''); }
+function _popolaCentriVisita(){ const dl=document.getElementById('ex-luogo-centri'); if(dl) dl.innerHTML=(S.centri||[]).filter(c=>c.attivo!==false).map(c=>'<option value="'+escapeAttr(c.nome)+'"></option>').join(''); }
 function _buildVisitaHTML(paz, v, i){
   var pid=String(paz.id), vid=String(v.id);
   var h='<div class="visita-item">';
@@ -7649,7 +7653,7 @@ function _buildVisitaHTML(paz, v, i){
   h+='<div class="visita-header" onclick="toggleV(\'vv-'+pid+'-'+i+'\')">';
   h+='<div>';
   h+='<div class="visita-date"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-calendar"/></svg>'+escapeHtml(v.data||'N/A')+(v.tipo?' · '+escapeHtml(v.tipo):'')+'</div>';
-  h+='<div style="font-size:12px;color:var(--ink3)">'+escapeHtml(v.luogo||'')+'</div>';
+  h+='<div style="font-size:12px;color:var(--ink3)">'+escapeHtml(_visitaLuogo(v))+'</div>';
   h+='</div>';
   h+='<div style="display:flex;align-items:center;gap:6px">';
   h+='<button type="button" class="btn-del-visita" style="color:var(--warm);background:none;border:none;padding:10px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;flex-shrink:0"';
@@ -7660,6 +7664,8 @@ function _buildVisitaHTML(paz, v, i){
   h+='</div>';
   // ── Body collassabile: solo testo clinico e foto
   h+='<div class="visita-body" id="vv-'+pid+'-'+i+'" style="display:none">';
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:8px;white-space:normal"><button type="button" class="btn btn-sm btn-secondary" onclick="apriModificaVisita(\''+pid+'\',\''+vid+'\')">Modifica dettagli</button></div>';
+  h+='<div id="vmod-'+pid+'-'+vid+'" style="display:none;white-space:normal"></div>';
   h+=escapeHtml(v.clinica||'—');
   if(v.foto_url){
     var n=getFotoPaths(v.foto_url).length;
@@ -7711,6 +7717,37 @@ function showPazienteDetail(id){
   if(canSint) _renderSintesiSalvata(id);
   msgLoadPaziente(id); promRenderPaziente(id);
 }
+// LF-09: correggere data, tipo e centro di una visita salvata
+function apriModificaVisita(pid, vid){
+  const paz=(S.pazienti||[]).find(p=>String(p.id)===String(pid)); const v=paz&&(paz.visite||[]).find(x=>String(x.id)===String(vid));
+  const box=document.getElementById('vmod-'+pid+'-'+vid); if(!v||!box) return;
+  if(box.style.display==='block'){ box.style.display='none'; return; }
+  const opts=(S.centri||[]).filter(c=>c.attivo!==false).map(c=>'<option value="'+escapeAttr(c.nome)+'"></option>').join('');
+  box.innerHTML='<div class="extracted-fields" style="margin-bottom:10px">'
+    +'<div class="field-row"><span class="field-key">Data</span><input class="form-input" id="vmod-data-'+vid+'" placeholder="GG/MM/AAAA" value="'+escapeAttr(v.data||'')+'" style="flex:1"></div>'
+    +'<div class="field-row"><span class="field-key">Tipo</span><input class="form-input" id="vmod-tipo-'+vid+'" value="'+escapeAttr(v.tipo||'')+'" style="flex:1"></div>'
+    +'<div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="vmod-luogo-'+vid+'" list="vmod-centri-'+vid+'" autocomplete="off" placeholder="Scegli un centro o scrivi un altro luogo" value="'+escapeAttr(_visitaLuogo(v))+'" style="flex:1"><datalist id="vmod-centri-'+vid+'">'+opts+'</datalist></div>'
+    +'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px"><button type="button" class="btn btn-sm btn-secondary" onclick="apriModificaVisita(\''+pid+'\',\''+vid+'\')">Annulla</button><button type="button" class="btn btn-sm btn-primary" onclick="salvaModificaVisita(\''+pid+'\',\''+vid+'\', this)">Salva dettagli</button></div></div>';
+  box.style.display='block';
+}
+async function salvaModificaVisita(pid, vid, btn){ return salvaUnaVolta('modifica-visita', btn, async()=>{
+  const paz=(S.pazienti||[]).find(p=>String(p.id)===String(pid)); const v=paz&&(paz.visite||[]).find(x=>String(x.id)===String(vid));
+  if(!v) return;
+  const data=expandCompactDate(document.getElementById('vmod-data-'+vid).value.trim());
+  const dataIso=itToIso(data); if(!dataIso){ showToast('Data non valida: usa GG/MM/AAAA'); return; }
+  const tipoRaw=document.getElementById('vmod-tipo-'+vid).value.trim(); if(!tipoRaw){ showToast('Inserisci il tipo di visita'); return; }
+  const tipo=tipoRaw.charAt(0).toUpperCase()+tipoRaw.slice(1);
+  const luogoRaw=document.getElementById('vmod-luogo-'+vid).value.trim(); const c=_centroDaNome(luogoRaw);
+  const luogo=c?c.nome:luogoRaw, centroId=c?c.id:null;
+  if(!isOnline()){ showToast('Serve la connessione per modificare una visita'); return; }
+  try{
+    const { error } = await supabaseClient.from('visite').update({ data_visita:dataIso, tipo_referto:tipo, luogo:luogo||null, centro_id:centroId }).eq('id', vid).select('id').single();
+    if(error) throw error;
+    v.data=data; v.tipo=tipo; v.luogo=luogo; v.centroId=centroId;
+    paz.visite.sort((a,b)=>(itToIso(b.data)||'').localeCompare(itToIso(a.data)||''));
+    save(); showPazienteDetail(pid); showToast('Visita aggiornata \u2713');
+  }catch(e){ console.error('[Delphi~Med] salvaModificaVisita:', e.message); showToast(erroreLeggibile('Modifica non riuscita', e)); }
+}); }
 function toggleV(id){ const el=document.getElementById(id); el.style.display=el.style.display==='none'?'block':'none'; }
 const _pdOpen={}; const _msgUnreadIds={};
 function pdToggle(key, force){ const el=document.getElementById(key); if(!el) return; const open=(force===undefined)?el.style.display==='none':!!force; _pdOpen[key]=open; el.style.display=open?'block':'none'; const h=document.getElementById(key+'-head'); if(h) h.classList.toggle('pd-open',open); if(open&&key.startsWith('msg-body-')){ const ids=_msgUnreadIds[key]||[]; if(ids.length){ _msgUnreadIds[key]=[]; supabaseClient.from('messaggi').update({letto_at:new Date().toISOString()}).in('id',ids).then(()=>msgRefreshNonLetti()); } } }
@@ -8336,7 +8373,7 @@ function _buildRefertoPDFDoc(pid, vid){
     doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=8;
     var visitaLabel='Visita: '+(v.data||'N/A');
     if(v.tipo) visitaLabel+=' — '+v.tipo;
-    if(v.luogo) visitaLabel+=' — '+v.luogo;
+    if(_visitaLuogo(v)) visitaLabel+=' — '+_visitaLuogo(v);
     doc.setFont('helvetica','normal'); doc.setFontSize(10);
     doc.text(visitaLabel, margin, y); y+=7;
     doc.setDrawColor(220,220,220); doc.line(margin,y,pageW-margin,y); y+=8;
@@ -8975,7 +9012,9 @@ async function saveVisita(){
     const dataVisita = expandCompactDate(document.getElementById('ex-data-visita').value.trim()) || new Date().toLocaleDateString('it-IT');
     const dataVisitaIso = itToIso(dataVisita);
     if(!dataVisitaIso){ showToast('Data visita non valida: usa GG/MM/AAAA'); return null; }
-    const luogo = document.getElementById('ex-luogo').value.trim();
+    const _luogoRaw = document.getElementById('ex-luogo').value.trim();
+    const _centroV = _centroDaNome(_luogoRaw);
+    const luogo = _centroV ? _centroV.nome : _luogoRaw;
     const clinica = document.getElementById('ex-clinica').value.trim();
     const _tipoRaw = document.getElementById('ex-tipo-referto').value.trim();
     if(!_tipoRaw){
@@ -8985,7 +9024,7 @@ async function saveVisita(){
     }
     const tipoReferto = _tipoRaw.charAt(0).toUpperCase() + _tipoRaw.slice(1);
     const refertoModale = (document.getElementById('nv-referto')?.value || '').trim();
-    const visita = { id: Date.now(), data: dataVisita, luogo, clinica, tipo: tipoReferto, foto_url: null, referto: refertoModale };
+    const visita = { id: Date.now(), data: dataVisita, luogo, centroId: _centroV ? _centroV.id : null, clinica, tipo: tipoReferto, foto_url: null, referto: refertoModale };
 
     let authUser = null;
     if(isOnline()){ try{ const r = await supabaseClient.auth.getUser(); authUser = r.data.user; }catch(e){} }
@@ -9059,6 +9098,7 @@ async function saveVisita(){
           medico_id:         S.medicoId,
           data_visita:       dataVisitaIso,
           luogo:             luogo       || null,
+          centro_id:         visita.centroId || null,
           contenuto_clinico: _clinicaEnc,
           foto_referto_url:  visita.foto_url || null,
           tipo_referto:      tipoReferto || null,
@@ -11109,8 +11149,8 @@ function _pazCentriIds(p){
     if((a.nome||'').toLowerCase()===p.nome.toLowerCase()&&(a.cognome||'').toLowerCase()===p.cognome.toLowerCase()) ids.add(String(a.centroId));
   });
   (p.visite||[]).forEach(v=>{
-    if(!v.luogo) return;
-    const c=S.centri.find(x=>x.nome.toLowerCase()===v.luogo.toLowerCase());
+    if(v.centroId){ ids.add(String(v.centroId)); return; }
+    const c=_centroDaNome(v.luogo);
     if(c) ids.add(String(c.id));
   });
   return ids;
@@ -11491,7 +11531,7 @@ async function generateFullBackupZip(){
     (p.visite||[]).forEach(v => {
       visiteRows.push([
         p.cognome||'', p.nome||'', p.nascita||'',
-        v.data||'', v.luogo||'',
+        v.data||'', _visitaLuogo(v),
         (v.clinica||'').replace(/\n/g, ' \\n ')
       ]);
     });
@@ -11637,10 +11677,10 @@ h1{color:#0a8074}h2{border-bottom:1px solid #ccc;padding-bottom:4px;margin-top:3
 <h1>Documentazione paziente</h1>
 <p><strong>${escapeHtml(p.cognome||'')} ${escapeHtml(p.nome||'')}</strong></p>
 ${p.nascita ? `<p>Data di nascita: ${escapeHtml(p.nascita)}</p>` : ''}
-<h2>Cronologia clinica (${visite.length} visite)</h2>
+<h2>Cronologia clinica (${visite.length} ${plur(visite.length,'visita','visite')})</h2>
 ${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.slice().sort((a,b)=>(itToIso(a.data)||'').localeCompare(itToIso(b.data)||'')).map(v => `
 <div class="visita">
-  <div class="visita-date">${escapeHtml(v.data||'')}${v.luogo ? ` — ${escapeHtml(v.luogo)}` : ''}</div>
+  <div class="visita-date">${escapeHtml(v.data||'')}${_visitaLuogo(v) ? ` — ${escapeHtml(_visitaLuogo(v))}` : ''}</div>
   <div class="clinica">${escapeHtml(v.clinica||'')}</div>
 </div>
 `).join('')}
@@ -13884,7 +13924,7 @@ const AST_REGISTRY = {
       if(!p) return { errore:'serve un paziente_id valido: usa prima cerca_paziente' };
       const k=d=>String(d||'').split('/').reverse().join('-');
       const vs=(p.visite||[]).slice().sort((a,b)=>k(b.data).localeCompare(k(a.data))).slice(0,30)
-        .map(v=>({ data:v.data, luogo:v.luogo||'', tipo:v.tipo||'', ha_referto:!!(v.referto||v.foto_url) }));
+        .map(v=>({ data:v.data, luogo:_visitaLuogo(v), tipo:v.tipo||'', ha_referto:!!(v.referto||v.foto_url) }));
       return { paziente:(p.cognome||'')+' '+(p.nome||''), totale_visite:(p.visite||[]).length, visite:vs, ha_sintesi_clinica:!!p.sintesiEnc, nota:'solo dati amministrativi: i contenuti clinici si leggono nella scheda del paziente' };
     }
     if(arg==='pazienti'){
