@@ -826,7 +826,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .omonimo-row strong{font-size:14.5px;color:var(--ink)}
 .omonimo-row span{font-size:12.5px;color:var(--ink3)}
 .omonimo-row.omonimo-hint{border-color:var(--accent)}
-.omonimo-row .omonimo-badge{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);margin-top:2px}
+.appt-paz-sugg{margin:-4px 0 12px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}.appt-paz-sugg-h{font-size:11.5px;font-weight:700;color:var(--ink3);padding:7px 12px 4px;text-transform:uppercase;letter-spacing:.04em}.appt-paz-sugg button{display:block;width:100%;text-align:left;background:var(--surface);border:0;border-top:1px solid var(--border);padding:8px 12px;font:inherit;font-size:13.5px;cursor:pointer;color:var(--ink)}.appt-paz-sugg button:hover{background:var(--surface2,#f6f7f9)}.appt-paz-sugg small{color:var(--ink3);font-size:12px}.appt-paz-link{margin:-4px 0 12px;font-size:13px;color:var(--accent);font-weight:600}.appt-paz-link button{background:none;border:0;color:var(--ink3);cursor:pointer;font:inherit;font-weight:400;text-decoration:underline;margin-left:8px;padding:0}.omonimi-nuovo-box{margin-top:6px;padding-top:12px;border-top:1px solid var(--border)}.omonimi-nuovo-box .omonimi-nuovo-row{display:flex;gap:8px;margin-top:6px}.omonimo-row .omonimo-badge{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);margin-top:2px}
 @media(max-width:640px){.home-logo-payoff{display:none}}
 .home-hero{padding:18px 20px 26px;text-align:center;flex-shrink:0;margin:auto 0;width:100%;box-sizing:border-box}
 .home-hero h2{color:#fff;font-size:28px;font-weight:700;margin:0 0 10px;letter-spacing:-.4px}
@@ -2601,9 +2601,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="step-label">Dati paziente</div>
         <div class="confirm-box" id="appt-confirm-summary"></div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="appt-nome" placeholder="Mario"></div>
-          <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="appt-cognome" placeholder="Rossi"></div>
+          <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="appt-nome" placeholder="Mario" autocomplete="off" oninput="apptPazInput()"></div>
+          <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="appt-cognome" placeholder="Rossi" autocomplete="off" oninput="apptPazInput()"></div>
         </div>
+        <div id="appt-paz-sugg" class="appt-paz-sugg" style="display:none"></div>
+        <div id="appt-paz-link" class="appt-paz-link" style="display:none"></div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">Telefono</label><input class="form-input" id="appt-tel" placeholder="+39 333..."></div>
           <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="appt-email" type="email"></div>
@@ -3208,12 +3210,13 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <div class="modal-overlay" id="modal-omonimi" style="z-index:99999">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
-      <span class="modal-title">Pi&ugrave; fascicoli con questo nome</span>
+      <span class="modal-title" id="omonimi-titolo">Pi&ugrave; fascicoli con questo nome</span>
       <button class="modal-close" onclick="annullaOmonimi()">&#10005;</button>
     </div>
     <div class="modal-body">
-      <p style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.5">Esistono pi&ugrave; fascicoli omonimi. Scegli quello giusto: la visita verr&agrave; registrata l&igrave;.</p>
+      <p id="omonimi-testo" style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.5">Esistono pi&ugrave; fascicoli omonimi. Scegli quello giusto: la visita verr&agrave; registrata l&igrave;.</p>
       <div id="omonimi-lista"></div>
+      <div id="omonimi-nuovo"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="annullaOmonimi()">Annulla</button>
@@ -4084,7 +4087,8 @@ async function loadAppuntamentiFromDB(user){
         seen:        a.seen || false,
         cancelled:   a.cancelled === true,
         erogata:     a.erogata === true,
-        cancelledAt: a.cancelled_at || null
+        cancelledAt: a.cancelled_at || null,
+        pazienteId:  a.paziente_id || null
       };
     });
     save();
@@ -4155,7 +4159,8 @@ function startRealtimeChannel(){
         seen:       r.seen || false,
         cancelled:   r.cancelled === true,
         erogata:     r.erogata === true,
-        cancelledAt: r.cancelled_at || null
+        cancelledAt: r.cancelled_at || null,
+        pazienteId:  r.paziente_id || null
       });
       save();
       renderDashboard(); updateStats(); renderPending(); renderAgenda();
@@ -4192,6 +4197,7 @@ function startRealtimeChannel(){
       local.cancelled   = r.cancelled === true;
       local.erogata     = r.erogata === true;
       local.cancelledAt = r.cancelled_at || null;
+      local.pazienteId  = r.paziente_id || null;
       save();
       renderDashboard(); updateStats(); renderPending(); renderAgenda();
       if(r.cancelled === true && !wasCancelled){
@@ -4590,6 +4596,129 @@ function annullaOmonimi(){
   closeModal('modal-omonimi');
   const r=_omonimoResolve; _omonimoResolve=null; if(r)r(null);
 }
+function _omonimiDefault(){
+  const t=document.getElementById('omonimi-titolo'), x=document.getElementById('omonimi-testo'), n=document.getElementById('omonimi-nuovo');
+  if(t){ if(t.dataset.def===undefined) t.dataset.def=t.innerHTML; else t.innerHTML=t.dataset.def; }
+  if(x){ if(x.dataset.def===undefined) x.dataset.def=x.innerHTML; else x.innerHTML=x.dataset.def; }
+  if(n) n.innerHTML='';
+}
+// LF-11: riconciliazione appuntamento -> fascicolo. Il confronto esatto sul nome non basta:
+// un cognome scritto male in prenotazione creava in silenzio un secondo fascicolo.
+function _levenshtein(x,y){
+  x=String(x); y=String(y); if(x===y) return 0; if(!x.length) return y.length; if(!y.length) return x.length;
+  let prev=[]; for(let j=0;j<=y.length;j++) prev.push(j);
+  for(let i=1;i<=x.length;i++){ const cur=[i]; for(let j=1;j<=y.length;j++){ cur[j]=Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(x[i-1]===y[j-1]?0:1)); } prev=cur; }
+  return prev[y.length];
+}
+function _quasiUguale(a,b){ if(!a||!b||a===b) return false; const lim=Math.min(a.length,b.length)<=4?1:2; return _levenshtein(a,b)<=lim; }
+function _candidatiFascicolo(a){
+  const n=String(a.nome||'').toLowerCase().trim(), c=String(a.cognome||'').toLowerCase().trim();
+  const e=String(a.email||'').toLowerCase().trim(), t=String(a.tel||'').replace(/\D/g,'');
+  const out=[];
+  (S.pazienti||[]).forEach(function(p){
+    const pn=String(p.nome||'').toLowerCase().trim(), pc=String(p.cognome||'').toLowerCase().trim();
+    const pe=String(p.email||'').toLowerCase().trim(), pt=String(p.tel||'').replace(/\D/g,'');
+    const esatto=!!(n&&c&&pn===n&&pc===c);
+    const motivi=[];
+    if(esatto) motivi.push('stesso nome e cognome');
+    if(e&&pe&&pe===e) motivi.push('stessa email');
+    if(t.length>=6&&pt&&pt===t) motivi.push('stesso telefono');
+    if(!esatto&&n&&pn===n&&_quasiUguale(pc,c)) motivi.push('cognome simile');
+    if(!esatto&&c&&pc===c&&_quasiUguale(pn,n)) motivi.push('nome simile');
+    if(motivi.length) out.push({ p:p, esatto:esatto, motivi:motivi });
+  });
+  out.sort(function(x,y){ return (y.motivi.length-x.motivi.length) || ((y.esatto?1:0)-(x.esatto?1:0)); });
+  return out;
+}
+function scegliFascicoloAppt(a, cands){
+  return new Promise(function(res){
+    _omonimoResolve=res;
+    _omonimiDefault();
+    const chi=escapeHtml(((a.cognome||'')+' '+(a.nome||'')).trim());
+    const t=document.getElementById('omonimi-titolo'), x=document.getElementById('omonimi-testo');
+    if(cands.length){
+      if(t) t.textContent='\u00c8 gi\u00e0 un tuo paziente?';
+      if(x) x.innerHTML='La prenotazione di <strong>'+chi+'</strong> somiglia a questi fascicoli. Scegli quello giusto: la prenotazione verr\u00e0 collegata l\u00ec.';
+    } else {
+      if(t) t.textContent='Nuovo fascicolo';
+      if(x) x.innerHTML='Nessun fascicolo corrisponde a <strong>'+chi+'</strong>. Per crearlo serve la data di nascita: distingue gli omonimi e tiene le visite sempre sullo stesso paziente.';
+    }
+    const box=document.getElementById('omonimi-lista');
+    box.innerHTML=cands.map(function(c,i){
+      const p=c.p;
+      const det=[p.nascita?('nato/a '+p.nascita):null, p.email||null, p.tel||null].filter(Boolean).join(' \u00b7 ');
+      return '<button class="omonimo-row omonimo-hint" data-i="'+i+'"><strong>'+escapeHtml((p.cognome||'')+' '+(p.nome||''))+'</strong><span>'+escapeHtml(det||'nessun dettaglio')+'</span><span class="omonimo-badge">'+escapeHtml(c.motivi.join(' \u00b7 '))+'</span></button>';
+    }).join('');
+    box.querySelectorAll('.omonimo-row').forEach(function(b){
+      b.onclick=function(){
+        const p=cands[parseInt(b.getAttribute('data-i'),10)].p;
+        closeModal('modal-omonimi');
+        const r=_omonimoResolve; _omonimoResolve=null; if(r)r({ paz:p });
+      };
+    });
+    const nb=document.getElementById('omonimi-nuovo');
+    nb.innerHTML='<div class="omonimi-nuovo-box"><div class="form-label">'+(cands.length?'Nessuno di questi: nuovo fascicolo per '+chi:'Data di nascita di '+chi)+'</div>'
+      +'<div class="omonimi-nuovo-row"><input class="form-input" id="omonimi-nascita" placeholder="Data di nascita (GGMMAAAA)" autocomplete="off" style="flex:1">'
+      +'<button class="btn btn-primary" id="omonimi-crea" type="button">Crea fascicolo</button></div></div>';
+    const inp=document.getElementById('omonimi-nascita'), btn=document.getElementById('omonimi-crea');
+    const crea=function(){
+      const nascita=expandCompactDate((inp.value||'').trim());
+      const iso=nascita?itToIso(nascita):null;
+      if(!iso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); inp.focus(); return; }
+      if(iso>new Date().toLocaleDateString('en-CA')){ showToast('La data di nascita non pu\u00f2 essere nel futuro'); inp.focus(); return; }
+      closeModal('modal-omonimi');
+      const r=_omonimoResolve; _omonimoResolve=null; if(r)r({ nuovo:true, nascita:nascita, nascitaIso:iso });
+    };
+    btn.onclick=crea;
+    inp.onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); crea(); } };
+    openModal('modal-omonimi');
+    if(!cands.length) setTimeout(function(){ try{ inp.focus(); }catch(_){} }, 50);
+  });
+}
+async function _collegaApptFascicolo(a, paz){
+  if(!a||!paz||String(a.pazienteId||'')===String(paz.id)) return;
+  if(isOnline() && typeof a.id==='string' && String(paz.id).includes('-')){
+    try{
+      const { data, error } = await supabaseClient.from('appuntamenti').update({ paziente_id: paz.id }).eq('id', a.id).select('id');
+      if(error) throw error;
+      if(!data||!data.length) throw new Error('nessuna riga aggiornata');
+    }catch(e){ console.warn('[Delphi~Med] aggancio appuntamento-fascicolo:', e.message); return; }
+  }
+  a.pazienteId=String(paz.id);
+  save();
+}
+// Ritorna { paz, nuovo } oppure null se il medico annulla (o se la creazione non riesce).
+async function _fascicoloDaAppt(a){
+  if(!a) return null;
+  if(a.pazienteId){ const pl=(S.pazienti||[]).find(function(x){ return String(x.id)===String(a.pazienteId); }); if(pl) return { paz:pl, nuovo:false }; }
+  const cands=_candidatiFascicolo(a);
+  let paz=null, nuovo=false;
+  if(cands.length && cands.every(function(c){ return c.esatto; })){
+    paz = cands.length===1 ? cands[0].p : await scegliPazienteOmonimo(cands.map(function(c){ return c.p; }), {email:a.email, tel:a.tel});
+    if(!paz) return null;
+  } else {
+    const r=await scegliFascicoloAppt(a, cands);
+    if(!r) return null;
+    if(r.paz){ paz=r.paz; }
+    else {
+      if(!(isOnline() && S.medicoId)){ showToast('Fascicolo non creato: serve la connessione'); return null; }
+      try{
+        const { data: newPaz, error } = await supabaseClient.from('pazienti')
+          .insert({ medico_id:S.medicoId, nome:a.nome, cognome:a.cognome, data_nascita:r.nascitaIso, telefono:a.tel||null, email:a.email||null })
+          .select('id').single();
+        if(error) throw error;
+        paz={ id:newPaz.id, nome:a.nome, cognome:a.cognome, nascita:r.nascita, tel:a.tel||'', email:a.email||'', visite:[] };
+        if(a.email) pazRichiestaConsensoFascicolo(newPaz.id);
+      }catch(e){ console.error('[Delphi~Med] fascicolo da appuntamento:', e.message); showToast(erroreLeggibile('Fascicolo non creato', e)); return null; }
+      S.pazienti.unshift(paz);
+      save();
+      nuovo=true;
+    }
+  }
+  if(!nuovo) await _riversaContatti(paz, a);
+  await _collegaApptFascicolo(a, paz);
+  return { paz:paz, nuovo:nuovo };
+}
 function scegliPazienteOmonimo(cands, hint){
   if(!cands||!cands.length) return Promise.resolve(null);
   if(cands.length===1) return Promise.resolve(cands[0]);
@@ -4605,6 +4734,7 @@ function scegliPazienteOmonimo(cands, hint){
   if(byContact.length===1) return Promise.resolve(byContact[0]);
   return new Promise(function(res){
     _omonimoResolve=res;
+    _omonimiDefault();
     const box=document.getElementById('omonimi-lista');
     box.innerHTML=cands.map(function(p,i){
       const vs=p.visite||[];
@@ -6354,6 +6484,9 @@ function apptResetWizard(){
     A.calMonth = new Date().getMonth();
     A.prefillDate = prevPrefill;
     A.free = false;
+    A.pazienteId = null;
+    { const _s=document.getElementById('appt-paz-sugg'), _l=document.getElementById('appt-paz-link');
+      if(_s){ _s.style.display='none'; _s.innerHTML=''; } if(_l){ _l.style.display='none'; _l.innerHTML=''; } }
 
     ['appt-nome','appt-cognome','appt-tel','appt-email','appt-note'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.value='';
@@ -6636,7 +6769,8 @@ async function saveAppuntamento(){ return salvaUnaVolta('appuntamento', document
       categoria: (document.querySelector('input[name="appt-cat"]:checked')||{}).value || 'prima_visita',
       area: areaEl ? areaEl.value.trim() : '',
       note:(document.getElementById('appt-note')||{}).value?.trim()||'',
-      source:'medico'
+      source:'medico',
+      pazienteId: _apptPazCollegato(nome, cognome)
     };
     const cancellationToken = generateCancellationToken();
     newAppt.cancellationToken = cancellationToken;
@@ -6655,7 +6789,8 @@ async function saveAppuntamento(){ return salvaUnaVolta('appuntamento', document
         area_tematica:      newAppt.area || null,
         note:               newAppt.note || null,
         source:             'medico',
-        cancellation_token: cancellationToken
+        cancellation_token: cancellationToken,
+        paziente_id:        newAppt.pazienteId && String(newAppt.pazienteId).includes('-') ? newAppt.pazienteId : null
       }).select('id').single();
       if(error) throw error;
       newAppt.id = inserted.id;
@@ -7889,6 +8024,47 @@ function pazSuggestPick(id, hiddenId){
   const list=document.getElementById(hiddenId+'-list'); list.style.display='none';
 }
 document.addEventListener('click', e=>{ document.querySelectorAll('details.gdd[open]').forEach(d=>{ if(!d.contains(e.target)) d.open=false; }); });
+// LF-11: nel wizard «+ Appuntamento» si parte da un fascicolo esistente; la scelta scrive appuntamenti.paziente_id.
+function apptPazInput(){
+  const n=(document.getElementById('appt-nome').value||'').trim(), c=(document.getElementById('appt-cognome').value||'').trim();
+  if(A.pazienteId){
+    if(_apptPazCollegato(n, c)) return;
+    apptPazScollega(true);
+  }
+  const box=document.getElementById('appt-paz-sugg'); if(!box) return;
+  const toks=(n+' '+c).toLowerCase().split(/\s+/).filter(Boolean);
+  if(toks.join('').length<2){ box.style.display='none'; box.innerHTML=''; return; }
+  const hit=(S.pazienti||[]).filter(p=>{ const s=((p.nome||'')+' '+(p.cognome||'')).toLowerCase(); return toks.every(t=>s.includes(t)); }).slice(0,6);
+  if(!hit.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML='<div class="appt-paz-sugg-h">Fascicoli esistenti</div>'+hit.map(p=>{
+    const det=[p.nascita?('nato/a '+p.nascita):null, p.email||null].filter(Boolean).join(' \u00b7 ');
+    return '<button type="button" onclick="apptPazScegli(\''+escapeAttr(String(p.id))+'\')"><strong>'+escapeHtml((p.cognome||'')+' '+(p.nome||''))+'</strong>'+(det?' <small>'+escapeHtml(det)+'</small>':'')+'</button>';
+  }).join('');
+  box.style.display='block';
+}
+function apptPazScegli(id){
+  const p=(S.pazienti||[]).find(x=>String(x.id)===String(id)); if(!p) return;
+  A.pazienteId=String(p.id);
+  const set=(k,v)=>{ const el=document.getElementById(k); if(el) el.value=v||''; };
+  set('appt-nome', p.nome); set('appt-cognome', p.cognome);
+  if(p.tel) set('appt-tel', p.tel);
+  if(p.email) set('appt-email', p.email);
+  const box=document.getElementById('appt-paz-sugg'); if(box){ box.style.display='none'; box.innerHTML=''; }
+  const l=document.getElementById('appt-paz-link');
+  if(l){ l.innerHTML='Fascicolo collegato: '+escapeHtml((p.cognome||'')+' '+(p.nome||''))+(p.nascita?' \u00b7 nato/a '+escapeHtml(p.nascita):'')+'<button type="button" onclick="apptPazScollega()">scollega</button>'; l.style.display='block'; }
+}
+function apptPazScollega(silenzioso){
+  A.pazienteId=null;
+  const l=document.getElementById('appt-paz-link'); if(l){ l.style.display='none'; l.innerHTML=''; }
+  if(!silenzioso) apptPazInput();
+}
+// Il collegamento vale solo se nome e cognome nel form sono ancora quelli del fascicolo scelto.
+function _apptPazCollegato(nome, cognome){
+  if(!A.pazienteId) return null;
+  const p=(S.pazienti||[]).find(x=>String(x.id)===String(A.pazienteId)); if(!p) return null;
+  const eq=(x,y)=>String(x||'').toLowerCase().trim()===String(y||'').toLowerCase().trim();
+  return (eq(p.nome,nome) && eq(p.cognome,cognome)) ? String(p.id) : null;
+}
 document.addEventListener('click', e=>{ if(!e.target.closest('.paz-suggest') && !e.target.matches('input[id$="-q"]')) document.querySelectorAll('.paz-suggest').forEach(l=>l.style.display='none'); });
 let _promScadutiOpen=false, _promFattiOpen=false;
 function promToggleScaduti(){ _promScadutiOpen=!_promScadutiOpen; promRenderPagina(); }
@@ -8855,36 +9031,10 @@ function renderVisitaSearchResults(){
 async function visitaSelectFromAppt(apptId){
   const a = S.appuntamenti.find(x=>String(x.id)===String(apptId));
   if(!a) return;
-  let paz = null;
-  const _cands = _pazientiOmonimi(a.nome, a.cognome);
-  if(_cands.length===1){ paz=_cands[0]; }
-  else if(_cands.length>1){
-    paz = await scegliPazienteOmonimo(_cands, {email:a.email, tel:a.tel});
-    if(!paz){ showToast('Scelta fascicolo annullata'); closeModal('modal-nuova-visita'); return; }
-  }
-  if(!paz){
-    if(isOnline()){
-      try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
-        const { data: newPaz, error } = await supabaseClient.from('pazienti')
-          .insert({ medico_id: medico.id, nome: a.nome, cognome: a.cognome, telefono: a.tel||null, email: a.email||null }).select('id').single();
-        if(error) throw error;
-        paz = { id: newPaz.id, nome: a.nome, cognome: a.cognome, nascita:'', tel: a.tel||'', email: a.email||'', visite:[] };
-        if(a.email) pazRichiestaConsensoFascicolo(newPaz.id);
-        console.log('[Delphi~Med] Paziente creato da appuntamento:', { id: newPaz.id });
-      } catch(e){
-        console.error('[Delphi~Med] visitaSelectFromAppt:', e.message);
-        paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, nascita:'', visite:[] };
-      }
-    } else {
-      paz = { id: Date.now(), nome: a.nome, cognome: a.cognome, nascita:'', visite:[] };
-    }
-    S.pazienti.unshift(paz);
-    save();
-  } else {
-    _riversaContatti(paz, a);
-  }
+  if(!(a.nome||a.cognome)){ showToast('Appuntamento senza nome del paziente'); closeModal('modal-nuova-visita'); return; }
+  const r = await _fascicoloDaAppt(a);
+  if(!r){ showToast('Scelta fascicolo annullata'); closeModal('modal-nuova-visita'); return; }
+  const paz = r.paz;
   V.selectedPazienteId = paz.id;
   V.isNewPaziente = false;
   goToVisitaUpload(paz, a);
@@ -9130,6 +9280,7 @@ async function saveVisita(){
       _apptDaErogare=S.appuntamenti.find(x=>!x.cancelled && x.erogata!==true && x.data===dataVisitaIso &&
         (x.nome||'').toLowerCase()===paz.nome.toLowerCase() && (x.cognome||'').toLowerCase()===paz.cognome.toLowerCase());
     }
+    if(_apptDaErogare && paz && !_apptDaErogare.cancelled) await _collegaApptFascicolo(_apptDaErogare, paz);
     if(_apptDaErogare && _apptDaErogare.erogata!==true && !_apptDaErogare.cancelled) await toggleErogata(_apptDaErogare.id,{silent:true});
     renderPazienti(); updateStats(); renderDashboard();
     if(_ritornoFascicolo && paz && String(paz.id)===_ritornoFascicolo) showPazienteDetail(paz.id);
@@ -11266,29 +11417,9 @@ async function _riversaContatti(paz, a){
 
 async function _ensurePazienteDaAppt(a){
   if(!a||!(a.nome||a.cognome)) return;
-  const _cands=_pazientiOmonimi(a.nome, a.cognome);
-  let paz=null;
-  if(_cands.length===1){ paz=_cands[0]; }
-  else if(_cands.length>1){
-    paz=await scegliPazienteOmonimo(_cands, {email:a.email, tel:a.tel});
-    if(!paz){ showToast('Fascicolo non assegnato: omonimia non risolta'); return; }
-  }
-  if(paz){ await _riversaContatti(paz, a); return; }
-  if(isOnline() && S.medicoId){
-    try{
-      const { data: newPaz, error } = await supabaseClient.from('pazienti')
-        .insert({ medico_id: S.medicoId, nome: a.nome, cognome: a.cognome, telefono: a.tel||null, email: a.email||null })
-        .select('id').single();
-      if(error) throw error;
-      paz={ id:newPaz.id, nome:a.nome, cognome:a.cognome, nascita:'', tel:a.tel||'', email:a.email||'', visite:[] };
-      if(a.email) pazRichiestaConsensoFascicolo(newPaz.id);
-    }catch(e){ console.warn('[Delphi~Med] fascicolo da erogazione:', e.message); return; }
-  } else {
-    paz={ id:Date.now(), nome:a.nome, cognome:a.cognome, nascita:'', tel:a.tel||'', email:a.email||'', visite:[] };
-  }
-  S.pazienti.unshift(paz);
-  save();
-  showToast('Fascicolo creato per '+paz.cognome+' '+paz.nome+' \u2713');
+  const r=await _fascicoloDaAppt(a);
+  if(!r){ showToast('Fascicolo non assegnato: scelta annullata'); return; }
+  if(r.nuovo) showToast('Fascicolo creato per '+r.paz.cognome+' '+r.paz.nome+' \u2713');
 }
 
 async function caricaVisitaDaAppt(apptId){
@@ -13893,6 +14024,7 @@ const AST_REGISTRY = {
     openAppuntamentoFromAgenda();
     setTimeout(()=>{ const n=document.getElementById('appt-nome'), c=document.getElementById('appt-cognome'), t=document.getElementById('appt-tel'), e=document.getElementById('appt-email');
       if(n&&inp.nome) n.value=inp.nome; if(c&&inp.cognome) c.value=inp.cognome; if(t&&inp.telefono) t.value=inp.telefono; if(e&&inp.email) e.value=inp.email;
+      if(inp.paziente_id) apptPazScegli(inp.paziente_id);
       const ti=document.getElementById('appt-tipo'); if(ti&&inp.tipo){ const w=String(inp.tipo).toLowerCase().trim(); const opt=[...ti.options].find(o=>o.value.toLowerCase().trim()===w||o.textContent.toLowerCase().trim()===w); if(opt) ti.value=opt.value; }
       const ar=document.getElementById('appt-area'); if(ar&&inp.area){ const wa=String(inp.area).toLowerCase().trim(); const oa=[...ar.options].find(o=>o.value.toLowerCase().trim()===wa||o.textContent.toLowerCase().trim()===wa); if(oa) ar.value=oa.value; } if(inp.categoria){ const cat=document.querySelector('input[name="appt-cat"][value="'+(inp.categoria==='controllo'?'controllo':'prima_visita')+'"]'); if(cat) cat.checked=true; } }, 250);
     return { ok:true, nota:'wizard aperto; il medico sceglie centro/slot e salva' };
