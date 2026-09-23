@@ -306,7 +306,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .giornata-row{display:flex;align-items:center;gap:8px;font-size:13px;background:none;border-radius:0;padding:5px 2px}
 .turno-row span{flex:1;color:var(--ink2)}
 .centro-actions{display:flex;align-items:center;gap:6px}.centro-actions .centro-act-danger{color:var(--warm)}
-.centro-act{background:none;border:none;color:var(--ink3);padding:4px 5px;font-size:14px;line-height:1;cursor:pointer;border-radius:var(--r-sm);transition:color .15s,background .15s}
+.centro-act{background:none;border:none;color:var(--ink3);padding:6px 8px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;cursor:pointer;border-radius:var(--r-sm);transition:color .15s,background .15s}
 .centro-act:hover{color:var(--ink);background:var(--surface2)}
 .centro-act-danger{margin-left:10px}
 .centro-act-danger:hover{color:var(--warm)}
@@ -464,7 +464,7 @@ img.referto-thumb{max-width:100%;border-radius:var(--r-sm);margin-top:8px}
 .paz-act:hover{border-color:var(--accent);background:var(--accent-light)}
 .paz-act.is-erogata{color:#16a34a;border-color:#16a34a}
 .paz-act-erog{min-width:150px;text-align:center}
-.paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}
+.paz-edit-input{max-width:220px;padding:6px 8px;font-size:13px}#modal-paziente .field-val{flex:1;min-width:0}#paz-edit-email{max-width:none;width:100%;box-sizing:border-box}
 .pd-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}.pd-lbl{display:inline-flex;align-items:center;gap:7px}.pd-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--bg2, rgba(0,0,0,.06));color:var(--ink2);font-size:11px;font-weight:700;letter-spacing:0}.pd-badge.warn{background:var(--warm);color:#fff}.pd-tri{display:inline-block;transition:transform .15s;font-size:12px}.pd-head.pd-open .pd-tri{transform:rotate(180deg)}.pd-head .btn{min-width:122px;text-align:center;justify-content:center;flex-shrink:0}
 @media(max-width:768px){#modal-paziente .field-row{flex-direction:column;gap:3px}#modal-paziente .field-key{min-width:0;padding-top:0}#modal-paziente .field-val{width:100%}#modal-paziente .paz-edit-input{max-width:none;width:100%;box-sizing:border-box;font-size:15px}}
 .paz-more{display:flex;align-items:center;justify-content:center;gap:14px;padding:16px 0 6px;font-size:12.5px;color:var(--ink3)}
@@ -1528,9 +1528,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="hero-today">
           <div class="hero-label">Oggi</div>
           <div class="hero-row">
-            <div class="hero-kpi" onclick="event.stopPropagation();showPage('agenda')"><span class="hero-big" id="hero-count">0</span><span class="hero-unit">appuntamenti</span><span class="hero-unit-s">appuntamenti</span></div>
-            <div class="hero-kpi" id="hero-msg" onclick="event.stopPropagation();msgVaiANonLetti()"><span class="hero-big" id="hero-msg-n">0</span><span class="hero-unit">nuovi messaggi</span><span class="hero-unit-s">messaggi</span></div>
-            <div class="hero-kpi" id="hero-prom" onclick="event.stopPropagation();showPage('promemoria')"><span class="hero-big" id="hero-prom-n">0</span><span class="hero-unit">promemoria in scadenza</span><span class="hero-unit-s">promemoria</span></div>
+            <div class="hero-kpi" onclick="event.stopPropagation();showPage('agenda')"><span class="hero-big" id="hero-count">–</span><span class="hero-unit">appuntamenti</span><span class="hero-unit-s">appuntamenti</span></div>
+            <div class="hero-kpi" id="hero-msg" onclick="event.stopPropagation();msgVaiANonLetti()"><span class="hero-big" id="hero-msg-n">–</span><span class="hero-unit">nuovi messaggi</span><span class="hero-unit-s">messaggi</span></div>
+            <div class="hero-kpi" id="hero-prom" onclick="event.stopPropagation();showPage('promemoria')"><span class="hero-big" id="hero-prom-n">–</span><span class="hero-unit">promemoria in scadenza</span><span class="hero-unit-s">promemoria</span></div>
           </div>
         </div>
         <div class="hero-next" id="hero-next"></div>
@@ -2864,7 +2864,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div class="field-row" id="row-ex-nome"><span class="field-key">Nome</span><input class="form-input" id="ex-nome" style="flex:1"></div>
             <div class="field-row" id="row-ex-cognome"><span class="field-key">Cognome</span><input class="form-input" id="ex-cognome" style="flex:1"></div>
             <div class="field-row" id="row-ex-nascita"><span class="field-key">Data nascita *</span><input class="form-input" id="ex-nascita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
-            <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. RX torace, TC addome" style="flex:1" oninput="capFirstInput(this)"></div>
+            <div class="field-row"><span class="field-key">Tipo referto *</span><input class="form-input" id="ex-tipo-referto" placeholder="es. Prima visita, Visita di controllo" style="flex:1" oninput="capFirstInput(this)"></div>
             <div class="field-row"><span class="field-key">Data visita</span><input class="form-input" id="ex-data-visita" placeholder="GGMMAAAA o GG/MM/AAAA" onblur="this.value=expandCompactDate(this.value.trim())" style="flex:1"></div>
             <div class="field-row"><span class="field-key">Centro</span><input class="form-input" id="ex-luogo" style="flex:1" oninput="capFirstInput(this)"></div>
           </div>
@@ -4541,7 +4541,7 @@ function setupChipDelegation(){
 function renderAll(){
   renderCentri(); renderAgenda(); renderPazienti();
   renderDashboard(); updateStats(); updateDoctorName();
-  populateCentroSelect(); loadSettings(); renderPending();
+  loadSettings(); renderPending();
   renderTipiAree(); checkTurniInScadenza();
 }
 
@@ -4908,7 +4908,7 @@ async function saveCentro(){
     _centroEditId = null;
     closeModal('modal-centro');
     resetCentroForm();
-    renderCentri(); populateCentroSelect(); updateStats();
+    renderCentri(); updateStats();
     if(S.agendaView==='month') renderAgenda();
     showToast(isEdit ? 'Centro aggiornato ✓' : 'Centro aggiunto ✓');
   };
@@ -5308,7 +5308,6 @@ async function joinCooperativa(){
     console.log('[Delphi~Med] Collegato all\'organizzazione:', body.cooperativa && body.cooperativa.nome);
     await loadCentriFromDB(session.user);
     renderCentri();
-    if(typeof populateCentroSelect === 'function') populateCentroSelect();
     showToast('Collegato a ' + ((body.cooperativa && body.cooperativa.nome) || 'cooperativa') + ' ✓');
   } catch(e){
     console.error('[Delphi~Med] joinCooperativa:', e.message);
@@ -6183,13 +6182,13 @@ async function deleteCentro(id){
   S.appuntamenti.forEach(a=>{ if(String(a.centroId)===String(id)) a.centroId=null; });
   if(!isOnline()){
     S.centri = S.centri.filter(c=>String(c.id)!==String(id));
-    save(); renderCentri(); populateCentroSelect(); updateStats(); return;
+    save(); renderCentri(); updateStats(); return;
   }
   try {
     const { error } = await supabaseClient.from('centri').delete().eq('id', id);
     if(error) throw error;
     S.centri = S.centri.filter(c=>String(c.id)!==String(id));
-    save(); renderCentri(); populateCentroSelect(); updateStats();
+    save(); renderCentri(); updateStats();
     showToast('Centro eliminato ✓');
   } catch(e){
     console.error('[Delphi~Med] deleteCentro:', e.message);
@@ -6198,16 +6197,9 @@ async function deleteCentro(id){
     showToast(erroreLeggibile('Operazione non riuscita', e));
   }
 }
-function populateCentroSelect(){
-  const sel = document.getElementById('appt-centro'); if(!sel) return;
-  sel.innerHTML = S.centri.length
-    ? S.centri.map(c=>`<option value="${escapeAttr(c.id)}">${escapeHtml(c.nome)}</option>`).join('')
-    : '<option value="">— Aggiungi prima un centro —</option>';
-}
-
 function populateTipiVisitaSelects(centroId){
   sortTipiVisita();
-  const tipiHTML = tipiPerCentro(centroId).map(t=>`<option value="${escapeAttr(t)}">${t}</option>`).join('');
+  const tipiHTML = tipiPerCentro(centroId).map(t=>`<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('');
   const areaHTML = '<option value="">— Nessuna —</option>' +
     S.areeTematiche.map(a=>`<option value="${escapeAttr(a)}">${a}</option>`).join('');
   ['appt-tipo','bk-tipo'].forEach(id=>{
@@ -7854,6 +7846,7 @@ function pazSuggestPick(id, hiddenId){
   document.getElementById(hiddenId+'-q').value=p.cognome+' '+p.nome;
   const list=document.getElementById(hiddenId+'-list'); list.style.display='none';
 }
+document.addEventListener('click', e=>{ document.querySelectorAll('details.gdd[open]').forEach(d=>{ if(!d.contains(e.target)) d.open=false; }); });
 document.addEventListener('click', e=>{ if(!e.target.closest('.paz-suggest') && !e.target.matches('input[id$="-q"]')) document.querySelectorAll('.paz-suggest').forEach(l=>l.style.display='none'); });
 let _promScadutiOpen=false, _promFattiOpen=false;
 function promToggleScaduti(){ _promScadutiOpen=!_promScadutiOpen; promRenderPagina(); }
@@ -10777,6 +10770,7 @@ async function addArea(){
 
 async function removeArea(idx){
   const a = S.areeTematiche[idx];
+  if(!(await confermaModale(`Rimuovere l'area tematica «${a}»? L'operazione non è reversibile.`, { titolo:'Rimuovere area tematica', ok:'Rimuovi' }))) return;
   if(!isOnline()){
     S.areeTematiche.splice(idx,1); save(); renderTipiAree();
     populateTipiVisitaSelects(); showToast('Rimossa'); return;
@@ -11268,9 +11262,9 @@ function openNuovoPaziente(){
 async function salvaNuovoPaziente(btn){ return salvaUnaVolta('nuovo-paziente', btn, async()=>{
   const nome=capitalizeName(document.getElementById('np-nome').value.trim());
   const cognome=capitalizeName(document.getElementById('np-cognome').value.trim());
-  if(!nome||!cognome){ showToast('Nome e cognome sono obbligatori'); return; }
   const nascita=expandCompactDate(document.getElementById('np-nascita').value.trim());
-  if(!nascita){ showToast('La data di nascita \u00e8 obbligatoria: identifica il paziente in caso di omonimia'); return; }
+  const _manca=[!nome&&'nome',!cognome&&'cognome',!nascita&&'data di nascita'].filter(Boolean);
+  if(_manca.length){ showToast('Mancano: '+_manca.join(', ')+(!nascita?' (la data di nascita distingue gli omonimi)':''), 4000); return; }
   const nascitaIso=itToIso(nascita);
   if(!nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
   const email=document.getElementById('np-email').value.trim();
