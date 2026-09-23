@@ -4,7 +4,8 @@
 // cooperativa è attiva. Altrimenti non parte nessuna email e non nasce nessuna utenza.
 // Risposta parlante ma binaria (decisione di prodotto 01/09): 'codice inviato' oppure un unico
 // messaggio di non autorizzazione. Il rate limit IP/email (in memoria, per istanza) mitiga l'enumerazione.
-// Nessuna scrittura su DB: la sola scrittura (utenza auth al primo accesso) è di GoTrue.
+// L'iscrizione pubblica di GoTrue è chiusa (disable_signup): l'utenza al primo accesso
+// nasce QUI, via admin API con service_role, e solo dopo il gate su segreterie. Nessun'altra scrittura.
 
 const rateMap = new Map();
 const RATE_LIMIT_IP = 20;      // richieste per IP / ora
@@ -55,15 +56,33 @@ export default async function handler(req, res) {
   }
 
   {
-    // GoTrue spedisce il codice (SMTP configurato nel progetto); create_user per il primo accesso.
-    const otpRes = await fetch(`${supabaseUrl}/auth/v1/otp`, {
-      method: 'POST',
-      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, create_user: true })
+    // GoTrue spedisce il codice (SMTP configurato nel progetto) a un utente ESISTENTE:
+    // create_user a false, così non dipende dall'iscrizione pubblica (chiusa).
+    const authHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
+    const inviaOtp = () => fetch(`${supabaseUrl}/auth/v1/otp`, {
+      method: 'POST', headers: authHeaders, body: JSON.stringify({ email, create_user: false })
     }).catch(() => null);
+
+    let otpRes = await inviaOtp();
+    let otpErr = (otpRes && !otpRes.ok) ? await otpRes.text().catch(() => '') : '';
+    // Primo accesso: GoTrue risponde 422 otp_disabled («Signups not allowed for otp») perché
+    // l'utente non esiste. L'email ha già passato il gate su segreterie: la creo via admin API
+    // (email confermata: il possesso della casella lo prova il codice stesso) e rimando il codice.
+    if (otpRes && otpRes.status === 422 && /otp_disabled|signups? not allowed/i.test(otpErr)) {
+      const creaRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: 'POST', headers: authHeaders, body: JSON.stringify({ email, email_confirm: true })
+      }).catch(() => null);
+      // 422 = già registrato (corsa fra due richieste): si prosegue con l'invio.
+      if (!creaRes || (!creaRes.ok && creaRes.status !== 422)) {
+        const t = creaRes ? await creaRes.text().catch(() => '') : '';
+        console.error('[coop-otp] creazione utente fallita', creaRes?.status, t.slice(0, 200));
+        return res.status(502).json({ error: 'Invio del codice non riuscito. Riprova tra qualche minuto.' });
+      }
+      otpRes = await inviaOtp();
+      otpErr = (otpRes && !otpRes.ok) ? await otpRes.text().catch(() => '') : '';
+    }
     if (!otpRes || !otpRes.ok) {
-      const t = otpRes ? await otpRes.text().catch(() => '') : '';
-      console.error('[coop-otp] invio fallito', otpRes?.status, t.slice(0, 200));
+      console.error('[coop-otp] invio fallito', otpRes?.status, otpErr.slice(0, 200));
       return res.status(502).json({ error: 'Invio del codice non riuscito. Riprova tra qualche minuto.' });
     }
   }
