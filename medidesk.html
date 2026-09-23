@@ -3894,7 +3894,7 @@ async function loadMedicoFromDB(user){
           const banner = document.createElement('div');
           banner.id = 'deletion-banner';
           banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--warm);color:#fff;padding:12px 20px;text-align:center;z-index:9999;display:flex;align-items:center;justify-content:center;gap:12px;font-size:14px;flex-wrap:wrap';
-          banner.innerHTML = `<svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>Account in fase di eliminazione — ${daysLeft} giorni rimasti. <button onclick="cancelAccountDeletion()" style="background:#fff;color:var(--warm);border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600">Annulla eliminazione</button>`;
+          banner.innerHTML = `<svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>Account in fase di eliminazione — ${daysLeft} ${plur(daysLeft,'giorno rimasto','giorni rimasti')}. <button onclick="cancelAccountDeletion()" style="background:#fff;color:var(--warm);border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600">Annulla eliminazione</button>`;
           document.body.appendChild(banner);
         }
       }
@@ -4640,6 +4640,8 @@ function _chiudiConferma(val){
 }
 // LF-34: al medico un testo italiano che dice cosa non e' riuscito e cosa fare; il messaggio tecnico va in console.
 // I messaggi gia' scritti per il medico (italiani, senza gergo) passano cosi' come sono.
+// LF-13: singolare o plurale secondo il conteggio (1 = singolare, 0 e 2+ = plurale).
+function plur(n, sing, plu){ return Number(n)===1 ? sing : plu; }
 function erroreLeggibile(cosa, e){
   const raw = String((e && typeof e === 'object') ? (e.message || e.error_description || e.error || '') : (e || '')).trim();
   try { console.error('[Delphi~Med] ' + cosa + ':', raw, e); } catch(_){}
@@ -5212,7 +5214,7 @@ function _renderImportReview(){
   const nComp = _importRows.filter(r=>r.status==='compenso').length;
   const nDup = _importRows.filter(r=>r.status==='duplicato').length;
   const color = { ok:'#16a34a', conflitto:'#d97706', catalogo:'#dc2626', compenso:'#dc2626', duplicato:'#d97706' };
-  let h = `<div style="font-size:12px;color:var(--ink3);margin-bottom:8px">${nOk} da importare &middot; ${nConf} già presenti &middot; ${nDup} duplicate nel file &middot; ${nCat} fuori catalogo &middot; ${nComp} compenso non valido</div>`;
+  let h = `<div style="font-size:12px;color:var(--ink3);margin-bottom:8px">${nOk} da importare &middot; ${nConf} ${plur(nConf,'già presente','già presenti')} &middot; ${nDup} ${plur(nDup,'duplicata','duplicate')} nel file &middot; ${nCat} fuori catalogo &middot; ${nComp} compenso non valido</div>`;
   h += '<table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>';
   _importRows.forEach(r=>{
     const _eurR = n => Number(n).toLocaleString('it-IT', Number(n)%1===0 ? {maximumFractionDigits:0} : {minimumFractionDigits:2,maximumFractionDigits:2});
@@ -5468,7 +5470,7 @@ function prestAssocHtml(c){
     return `<button class="prest-assoc-chip${on ? ' on' : ''}" onclick="togglePrestAssocTipo('${c.id}','${escapeAttr(r.id)}')">${on ? '<svg class="ic"><use href="#ic-check"/></svg>' : ''}${escapeHtml(r.nome)}</button>`;
   }).join('');
   return `<div class="prest-assoc-tools">
-      <span>${attive} di ${recs.length} attive in questo centro</span>
+      <span>${attive} di ${recs.length} ${plur(attive,'attiva','attive')} in questo centro</span>
       <button class="btn btn-sm btn-secondary" onclick="setPrestAssocTutte('${c.id}', ${attive === 0 ? 'true' : 'false'})">${attive === 0 ? 'Seleziona tutto' : 'Deseleziona tutto'}</button>
     </div>
     <div class="prest-assoc-wrap">${chips}</div>
@@ -6419,7 +6421,7 @@ function apptPathCenter(){
       list.innerHTML=withTurni.map(c=>`
         <button class="centro-btn" onclick="apptSelectCentro('${c.id}')">
           <strong>${c.nome}</strong>
-          <span>${c.indirizzo||''} · ${c.turni.length} turni</span>
+          <span>${c.indirizzo||''} · ${c.turni.length} ${plur(c.turni.length,'turno','turni')}</span>
         </button>
       `).join('');
     }
@@ -7225,7 +7227,7 @@ function renderMonthView(){
       mcRows.push({col:c.colore||'#9AA8A5', nome:c.nome, rng:_rng, n:_n});
     });
     if(_blkDay) mcRows.push({col:'#9aa3af', nome:'Occupato', rng:'', n:0});
-    const mcRowsHtml = mcRows.slice(0,3).map(r=>`<div class="mc-row" style="background:${r.col}" title="${escapeAttr(r.nome)}">${r.rng?`<span class="mc-row-t">${r.rng}</span> `:''}${escapeHtml(r.nome)}${r.n?` \u00b7 <b>${r.n}</b>`:''}</div>`).join('') + (mcRows.length>3?`<div class="mc-row-more">+${mcRows.length-3} altri</div>`:'');
+    const mcRowsHtml = mcRows.slice(0,3).map(r=>`<div class="mc-row" style="background:${r.col}" title="${escapeAttr(r.nome)}">${r.rng?`<span class="mc-row-t">${r.rng}</span> `:''}${escapeHtml(r.nome)}${r.n?` \u00b7 <b>${r.n}</b>`:''}</div>`).join('') + (mcRows.length>3?`<div class="mc-row-more">+${mcRows.length-3} ${plur(mcRows.length-3,'altro','altri')}</div>`:'');
     // Avviso turno su festività
     const turniWarn = hol.isHoliday && dayAppts.length ? `<span class="mc-holiday-warn" title="Appuntamenti in festività">⚠️</span>` : '';
     let cls = 'mc-day';
@@ -7746,7 +7748,7 @@ async function msgLoadPaziente(id, apriThreadId){
     const stato=t.chiuso_at?'chiuso':(t.scade_il&&new Date(t.scade_il)<new Date()?'scaduto':'attivo');
     h+='<div class="visita-item" style="margin-top:10px"><div class="visita-header" onclick="toggleV(\'msg-t-'+t.id+'\')"><div>';
     h+='<div class="visita-date">Canale '+escapeHtml(t.origine)+' · '+escapeHtml(stato)+(nonLetti?' · <b style="color:var(--warm)">'+nonLetti+' da leggere</b>':'')+'</div>';
-    h+='<div style="font-size:12px;color:var(--ink3)">'+msgs.length+' messaggi · aperto il '+thFmt(t.created_at).slice(0,10)+(t.scade_il?' · fino al '+thFmt(t.scade_il).slice(0,10):'')+'</div>';
+    h+='<div style="font-size:12px;color:var(--ink3)">'+msgs.length+plur(msgs.length,' messaggio',' messaggi')+' · aperto il '+thFmt(t.created_at).slice(0,10)+(t.scade_il?' · fino al '+thFmt(t.scade_il).slice(0,10):'')+'</div>';
     h+='</div><span style="color:var(--ink3)">▾</span></div>';
     h+='<div class="visita-body" id="msg-t-'+t.id+'" style="display:'+(_tAperti.has(String(t.id))?'block':'none')+';white-space:normal">';
     h+=msgs.map(m=>'<div style="margin-bottom:8px;padding:8px 10px;border-radius:10px;background:'+(m.direzione==='medico'?'var(--bg2, rgba(0,0,0,.04))':'rgba(13,148,201,.12)')+'"><div style="font-size:11px;color:var(--ink3)">'+(m.direzione==='medico'?'Lei':'Paziente')+' · '+thFmt(m.created_at)+'</div><div style="white-space:pre-wrap;font-size:14px">'+escapeHtml(m.corpo)+'</div></div>').join('')||'<div style="font-size:13px;color:var(--ink3)">Nessun messaggio.</div>';
@@ -7811,7 +7813,7 @@ async function msgRefreshNonLetti(){
     if(_box){ const _pid=_box.id.slice(8); if(S.msgNonLetti.some(m=>String(m.paziente_id)===_pid && !_prima.has(String(m.id)))) msgLoadPaziente(_pid); }
   }catch(_){ S.msgNonLetti=S.msgNonLetti||[]; }
   const el=document.getElementById('hero-msg-n'), k=document.getElementById('hero-msg');
-  const n=(S.msgNonLetti||[]).length; if(el) el.textContent=n; if(k){ k.classList.toggle('is-zero', n===0); k.classList.toggle('has-alert', n>0); }
+  const n=(S.msgNonLetti||[]).length; if(el){ el.textContent=n; const _u=el.parentNode; const _a=_u.querySelector('.hero-unit'), _b=_u.querySelector('.hero-unit-s'); if(_a) _a.textContent=plur(n,'nuovo messaggio','nuovi messaggi'); if(_b) _b.textContent=plur(n,'messaggio','messaggi'); } if(k){ k.classList.toggle('is-zero', n===0); k.classList.toggle('has-alert', n>0); }
   const pg=document.getElementById('page-pazienti'); if(pg && pg.classList.contains('active')){ try{ renderPazienti(); }catch(_){ } }
 }
 function msgVaiANonLetti(){
@@ -9180,7 +9182,7 @@ function updateStats(){
   const today=fmt(new Date());
   const todayList=S.appuntamenti.filter(a=>a.data===today && !a.cancelled);
   const elCount=document.getElementById('hero-count');
-  if(elCount) elCount.textContent=todayList.length;
+  if(elCount){ elCount.textContent=todayList.length; const _u=elCount.parentNode.querySelectorAll('.hero-unit,.hero-unit-s'); _u.forEach(x=>{ x.textContent=plur(todayList.length,'appuntamento','appuntamenti'); }); }
   const elNext=document.getElementById('hero-next');
   if(elNext){
     const now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
@@ -9700,7 +9702,7 @@ function homeSearch(q){
         let cittaHtml = '';
         if(citta.length){
           const visibili = citta.slice(0,2).map(escapeHtml).join(', ');
-          const extra = citta.length > 2 ? ` e altre ${citta.length-2} sedi` : '';
+          const extra = citta.length > 2 ? (citta.length-2===1 ? ' e un\u2019altra sede' : ` e altre ${citta.length-2} sedi`) : '';
           cittaHtml = visibili + extra;
         }
         const sub = [specHtml, cittaHtml].filter(Boolean).join(' · ');
@@ -10895,7 +10897,7 @@ async function saveChiusura(btn){ return salvaUnaVolta('chiusura', btn, async()=
       return `• ${formatDate(a.data)} ${oraLbl} — ${a.cognome} ${a.nome}`;
     }).join('\n');
     const piu = conflitti.length>10 ? `\n…e altri ${conflitti.length-10}` : '';
-    const msg = `Attenzione: ci sono ${conflitti.length} appuntamenti prenotati nel periodo di chiusura:\n\n${lista}${piu}\n\nVuoi salvare comunque la chiusura?\n(Gli appuntamenti NON verranno cancellati automaticamente: dovrai gestirli a mano.)`;
+    const msg = `Attenzione: ${plur(conflitti.length,'c\u2019\u00e8 1 appuntamento prenotato',`ci sono ${conflitti.length} appuntamenti prenotati`)} nel periodo di chiusura:\n\n${lista}${piu}\n\nVuoi salvare comunque la chiusura?\n(Gli appuntamenti NON verranno cancellati automaticamente: dovrai gestirli a mano.)`;
     if(!(await confermaModale(msg, { titolo:'Appuntamenti in conflitto', ok:'Salva comunque' }))) return;
   }
   if(isOnline() && S.medicoId){
@@ -11179,7 +11181,7 @@ function renderPazienti(more){
     return;
   }
   const shown=list.slice(0,_pazShown);
-  const moreBtn=list.length>shown.length?`<div class="paz-more"><button class="btn btn-secondary btn-sm" onclick="renderPazienti(true)">Mostra altri ${Math.min(_PAZ_PAGE,list.length-shown.length)}</button><span>${shown.length} di ${list.length}</span></div>`:'';
+  const moreBtn=list.length>shown.length?`<div class="paz-more"><button class="btn btn-secondary btn-sm" onclick="renderPazienti(true)">${plur(Math.min(_PAZ_PAGE,list.length-shown.length),'Mostra un altro','Mostra altri '+Math.min(_PAZ_PAGE,list.length-shown.length))}</button><span>${shown.length} di ${list.length}</span></div>`:'';
   tEl.innerHTML=`<table class="paz-table"><thead><tr><th>Paziente</th><th>Data di nascita</th><th>Email</th><th>Telefono</th><th style="text-align:center">Visite</th></tr></thead><tbody>${shown.map(_pazRowHTML).join('')}</tbody></table>`+moreBtn;
   cEl.innerHTML=shown.map(_pazCardHTML).join('')+moreBtn;
 }
@@ -11574,9 +11576,9 @@ Conservalo in un luogo sicuro (disco cifrato, cloud privato, NAS). La responsabi
   <li>Visite: <strong>${meta.counts.visite}</strong></li>
   <li>Appuntamenti: <strong>${meta.counts.appuntamenti}</strong></li>
   <li>Centri: <strong>${meta.counts.centri}</strong></li>
-  <li>Referti scaricati con successo: <strong>${refertiOk}</strong>${refertiErrors > 0 ? ` <span style="color:#c00">(${refertiErrors} errori)</span>` : ''}</li>
+  <li>Referti scaricati con successo: <strong>${refertiOk}</strong>${refertiErrors > 0 ? ` <span style="color:#c00">(${refertiErrors} ${plur(refertiErrors,'errore','errori')})</span>` : ''}</li>
 </ul>
-${refertiErrors > 0 ? `<div class="warn"><strong>Attenzione</strong>: ${refertiErrors} referti non sono stati scaricati correttamente. Riprova a generare il backup, o controlla i log dell'app.</div>` : ''}
+${refertiErrors > 0 ? `<div class="warn"><strong>Attenzione</strong>: ${refertiErrors} ${plur(refertiErrors,'referto non è stato scaricato','referti non sono stati scaricati')} correttamente. Riprova a generare il backup, o controlla i log dell'app.</div>` : ''}
 <h2>Per il re-import futuro</h2>
 <p>Lo <code>snapshot.json</code> è progettato per essere reimportabile in una futura versione di Delphi~Med. Tienilo insieme alla cartella <code>referti/</code> per ripristinare l'archivio completo.</p>
 <hr style="margin-top:40px">
@@ -11602,7 +11604,7 @@ Per supporto: supporto@delphi-med.com</p>
   if(btn) btn.disabled = false;
 
   if(refertiErrors > 0){
-    showToast(`Backup scaricato — ${refertiErrors} referti non recuperati`);
+    showToast(`Backup scaricato — ${refertiErrors} ${plur(refertiErrors,'referto non recuperato','referti non recuperati')}`);
   } else {
     showToast('Backup scaricato ✓');
   }
@@ -11967,9 +11969,9 @@ function _renderInsights(all, effettuate, cancellate, prev, prevEffettuate){
     if(cancRate >= 25){
       insights.push({icon:'<svg class="ic"><use href="#ic-alert"/></svg>', html:`Tasso di cancellazione alto: <span class="neg">${Math.round(cancRate)}%</span> (<strong>${cancellate.length} su ${all.length}</strong>)${deltaStr}. Vale la pena capire se c'è un pattern.`});
     } else if(cancRate >= 15 && cancRate < 25){
-      insights.push({icon:'<svg class="ic"><use href="#ic-alert"/></svg>', html:`Tasso di cancellazione: <strong>${Math.round(cancRate)}%</strong> nel periodo (${cancellate.length} cancellazioni)${deltaStr}.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-alert"/></svg>', html:`Tasso di cancellazione: <strong>${Math.round(cancRate)}%</strong> nel periodo (${cancellate.length} ${plur(cancellate.length,'cancellazione','cancellazioni')})${deltaStr}.`});
     } else if(cancRate <= 5 && cancellate.length === 0 && all.length >= 15){
-      insights.push({icon:'<svg class="ic"><use href="#ic-check"/></svg>', html:`<span class="pos">Zero cancellazioni</span> nel periodo su ${all.length} appuntamenti. I tuoi pazienti rispettano gli orari.`});
+      insights.push({icon:'<svg class="ic"><use href="#ic-check"/></svg>', html:`<span class="pos">Zero cancellazioni</span> nel periodo su ${all.length} ${plur(all.length,'appuntamento','appuntamenti')}. I tuoi pazienti rispettano gli orari.`});
     }
   }
 
@@ -12837,9 +12839,9 @@ function openDeleteAccountModal(){
     <div style="background:var(--surface2);padding:12px;border-radius:8px;margin:14px 0;font-size:14px">
       <p style="margin:0 0 6px 0">Il tuo account contiene:</p>
       <ul style="margin:0;padding-left:20px">
-        <li><strong>${counts.nPazienti} pazienti</strong> con <strong>${counts.nVisite} visite registrate</strong></li>
+        <li><strong>${counts.nPazienti} ${plur(counts.nPazienti,'paziente','pazienti')}</strong> con <strong>${counts.nVisite} ${plur(counts.nVisite,'visita registrata','visite registrate')}</strong></li>
         <li><strong>${counts.nReferti} foto referti</strong> archiviate</li>
-        <li><strong>${counts.nAppuntamentiFuturi} appuntamenti futuri</strong> ancora attivi</li>
+        <li><strong>${counts.nAppuntamentiFuturi} ${plur(counts.nAppuntamentiFuturi,'appuntamento futuro','appuntamenti futuri')}</strong> ${plur(counts.nAppuntamentiFuturi,'ancora attivo','ancora attivi')}</li>
       </ul>
     </div>
     <div style="background:color-mix(in srgb, var(--warm,#e55) 12%, transparent);padding:12px;border-radius:8px;margin:14px 0;font-size:13px">
@@ -13585,7 +13587,7 @@ function comChipsHtml(catalogo,off,kind){
     const on=!off.has(n);
     return '<button class="prest-assoc-chip'+(on?' on':'')+'" onclick="comToggleFiltroChip(\''+kind+'\','+i+')">'+(on?'<svg class="ic"><use href="#ic-check"/></svg>':'')+escapeHtml(n)+'</button>';
   }).join('');
-  return '<div class="prest-assoc-tools"><span>'+sel.length+' di '+catalogo.length+' selezionate (tutte = nessun filtro)</span>'
+  return '<div class="prest-assoc-tools"><span>'+sel.length+' di '+catalogo.length+plur(sel.length,' selezionata',' selezionate')+' (tutte = nessun filtro)</span>'
     +'<button class="btn btn-sm btn-secondary" onclick="comSetFiltroTutte(\''+kind+'\','+(sel.length===0?'true':'false')+')">'+(sel.length===0?'Seleziona tutto':'Deseleziona tutto')+'</button></div>'
     +'<div class="prest-assoc-wrap">'+chips+'</div>'
     +(sel.length===0?'<div class="centro-booking-warn" style="margin-top:10px">Nessuna voce selezionata: il filtro non si applica.</div>':'');
@@ -13625,7 +13627,7 @@ async function comAnteprima(){
   box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Calcolo\u2026</div>';
   const j=await comApi({action:'anteprima', criteri:comCriteri()});
   if(!j){ box.innerHTML=''; return null; }
-  box.innerHTML='<div style="font-size:13px"><b>'+j.n+'</b> destinatari'+(j.n?': '+j.destinatari.map(function(d){return escapeHtml((d.cognome||'')+' '+(d.nome||''));}).join(', '):' \u2014 nessun paziente con consenso rientra nei criteri.')+'</div>';
+  box.innerHTML='<div style="font-size:13px"><b>'+j.n+'</b> '+plur(j.n,'destinatario','destinatari')+(j.n?': '+j.destinatari.map(function(d){return escapeHtml((d.cognome||'')+' '+(d.nome||''));}).join(', '):' \u2014 nessun paziente con consenso rientra nei criteri.')+'</div>';
   return j;
 }
 async function comSalvaCluster(){
@@ -13734,7 +13736,7 @@ async function comRegistro(){
   const { data, error } = await supabaseClient.from('invii').select('id,created_at,n_destinatari,criteri_snapshot,falliti').order('created_at',{ascending:false}).limit(20);
   if(error){ box.innerHTML='<div style="font-size:13px;color:var(--warm)">Errore nel caricamento.</div>'; return; }
   const rows=data||[];
-  box.innerHTML=rows.length?rows.map(function(i){return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap"><div style="min-width:130px">'+new Date(i.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})+'</div><div style="flex:1;color:var(--ink3)">'+escapeHtml(comCriteriLabel(i.criteri_snapshot))+'</div><div><b>'+i.n_destinatari+'</b> destinatari'+comFallitiLabel(i.falliti)+'</div></div>';}).join('')
+  box.innerHTML=rows.length?rows.map(function(i){return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap"><div style="min-width:130px">'+new Date(i.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'})+'</div><div style="flex:1;color:var(--ink3)">'+escapeHtml(comCriteriLabel(i.criteri_snapshot))+'</div><div><b>'+i.n_destinatari+'</b> '+plur(i.n_destinatari,'destinatario','destinatari')+comFallitiLabel(i.falliti)+'</div></div>';}).join('')
     :'<div style="font-size:13px;color:var(--ink3)">Nessun invio ancora.</div>';
 }
 
