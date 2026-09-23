@@ -3,21 +3,29 @@
 // richiesto a Supabase Auth SOLO se l'email è in segreterie con stato=attiva e la
 // cooperativa è attiva. Altrimenti non parte nessuna email e non nasce nessuna utenza.
 // Risposta parlante ma binaria (decisione di prodotto 01/09): 'codice inviato' oppure un unico
-// messaggio di non autorizzazione. Il rate limit IP/email (in memoria, per istanza) mitiga l'enumerazione.
+// messaggio di non autorizzazione. Il rate limit IP/email (contatore DB condiviso fra le istanze) mitiga l'enumerazione.
 // L'iscrizione pubblica di GoTrue è chiusa (disable_signup): l'utenza al primo accesso
 // nasce QUI, via admin API con service_role, e solo dopo il gate su segreterie. Nessun'altra scrittura.
 
-const rateMap = new Map();
 const RATE_LIMIT_IP = 20;      // richieste per IP / ora
 const RATE_LIMIT_EMAIL = 5;    // richieste per email / ora
-const RATE_WINDOW_MS = 60 * 60 * 1000;
+const RATE_WINDOW_S = 3600;
 
-function checkRate(key, limit) {
-  const now = Date.now();
-  const e = rateMap.get(key);
-  if (!e || now > e.resetAt) { rateMap.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS }); return true; }
-  if (e.count >= limit) return false;
-  e.count++; return true;
+// Contatore su DB (RPC check_rate_limit, chiavi 'ip:<ip>' e 'email:<email>'): vale per tutte
+// le istanze serverless; fail-open se il DB non risponde, come negli altri endpoint.
+async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return true;
+  try {
+    const res = await fetch(`${url}/rest/v1/rpc/check_rate_limit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ p_endpoint: endpoint, p_ip: ip, p_max_count: max, p_window_seconds: windowSeconds })
+    });
+    if (!res.ok) return true;
+    return (await res.json()) === true;
+  } catch { return true; }
 }
 
 
@@ -39,7 +47,8 @@ export default async function handler(req, res) {
   }
 
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  if (!checkRate(`ip:${ip}`, RATE_LIMIT_IP) || !checkRate(`email:${email}`, RATE_LIMIT_EMAIL)) {
+  if (!(await checkSupabaseRateLimit(`ip:${ip}`, 'coop-otp', RATE_LIMIT_IP, RATE_WINDOW_S)) ||
+      !(await checkSupabaseRateLimit(`email:${email}`, 'coop-otp', RATE_LIMIT_EMAIL, RATE_WINDOW_S))) {
     return res.status(429).json({ error: 'Troppe richieste. Riprova tra qualche minuto.' });
   }
 
