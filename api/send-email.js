@@ -187,6 +187,56 @@ async function verifyCancellationToken(apptId, token, supabaseUrl, serviceKey) {
   }
 }
 
+// ── guardiaReplayToken ────────────────────────────────────────────────────────
+// Per i tipi autenticati col solo cancellation_token (che il paziente riceve nella
+// mail di conferma): il token prova il possesso, non l'evento. Qui si pretende che
+// lo stato dell'appuntamento sia coerente col tipo (una cancellazione si notifica
+// solo se cancellato, una prenotazione solo se attiva), che ogni notifica di evento
+// parta una volta sola per appuntamento (audit_log) e che l'avviso di lista d'attesa,
+// ripetibile per natura, abbia un tetto per appuntamento (check_rate_limit).
+// Ritorna { ok: true } | { ok: true, skipped } | { ok: false, status, error }.
+
+const TIPI_SU_CANCELLATO = new Set(['notifica_medico_cancellazione', 'cancellazione_paziente_coop', 'cancellazione_centro_anon']);
+const TIPI_SU_ATTIVO     = new Set(['notifica_prenotazione_coop', 'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione', 'avviso_lista_attesa']);
+const LISTA_ATTESA_MAX_24H = 3;
+
+async function guardiaReplayToken(base, headers, tipo, apptId) {
+  let appt;
+  try {
+    const r = await fetch(`${base}/appuntamenti?id=eq.${encodeURIComponent(apptId)}&select=id,cancelled`, { headers });
+    if (!r.ok) throw new Error(`status ${r.status}`);
+    appt = (await r.json())?.[0];
+  } catch (e) {
+    console.error('[send-email] guardiaReplayToken appt:', e.message);
+    return { ok: false, status: 500, error: 'Errore verifica appuntamento' };
+  }
+  if (!appt) return { ok: false, status: 401, error: 'Token di cancellazione non valido' };
+  const cancellato = appt.cancelled === true;
+  if (TIPI_SU_CANCELLATO.has(tipo) && !cancellato) {
+    return { ok: false, status: 409, error: 'Appuntamento non cancellato' };
+  }
+  if (TIPI_SU_ATTIVO.has(tipo) && cancellato) {
+    return { ok: false, status: 409, error: 'Appuntamento cancellato' };
+  }
+  if (tipo === 'avviso_lista_attesa') {
+    try {
+      const r = await fetch(`${base}/rpc/check_rate_limit`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ p_endpoint: 'send-email', p_ip: `appt:${appt.id}`, p_max_count: LISTA_ATTESA_MAX_24H, p_window_seconds: 86400 })
+      });
+      if (r.ok && (await r.json()) === false) {
+        return { ok: false, status: 429, error: 'Troppi avvisi per questo appuntamento' };
+      }
+    } catch (e) { console.error('[send-email] guardiaReplayToken rate:', e.message); }
+    return { ok: true };
+  }
+  try {
+    const r = await fetch(`${base}/audit_log?action=eq.email_inviata&target_id=eq.${encodeURIComponent(appt.id)}&details->>tipo=eq.${encodeURIComponent(tipo)}&select=id&limit=1`, { headers });
+    if (r.ok && (await r.json())?.length) return { ok: true, skipped: 'gia_inviata' };
+  } catch (e) { console.error('[send-email] guardiaReplayToken audit:', e.message); }
+  return { ok: true };
+}
+
 // ── lookupAppt ────────────────────────────────────────────────────────────────
 // Tre query separate: appuntamento → medico → centro.
 // Se medicoId != null: verifica ownership (appuntamento.medico_id === medicoId).
@@ -428,10 +478,16 @@ export default async function handler(req, res) {
       console.log('[send-email] cancellazione_centro_anon: notifiche disabilitate', { appt_id: body.appt_id });
       return res.status(200).json({ ok: true, skipped: 'notifiche disabilitate per il centro' });
     }
+    const g = await guardiaReplayToken(base, dbHeaders, tipo, body.appt_id);
+    if (!g.ok) return res.status(g.status).json({ error: g.error });
+    if (g.skipped) return res.status(200).json({ ok: true, skipped: g.skipped });
     authCtx = { centroNome: ct.centroNome, centroEmail: ct.centroEmail, authMode: 'cancellation_token' };
   } else if (tipo === 'notifica_prenotazione_coop' || tipo === 'conferma_prenotazione_segreteria' || tipo === 'notifica_medico_prenotazione' || tipo === 'notifica_medico_cancellazione' || tipo === 'avviso_lista_attesa' || tipo === 'cancellazione_paziente_coop') {
     const ct = await verifyCancellationToken(body.appt_id, body.cancellation_token, supabaseUrl, serviceKey);
     if (!ct.ok) return res.status(ct.status).json({ error: ct.error });
+    const g = await guardiaReplayToken(base, dbHeaders, tipo, body.appt_id);
+    if (!g.ok) return res.status(g.status).json({ error: g.error });
+    if (g.skipped) return res.status(200).json({ ok: true, skipped: g.skipped });
     authCtx = { authMode: 'cancellation_token' };
   }
 
