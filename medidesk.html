@@ -1808,8 +1808,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div></div>
       </div>
 
-      <div style="margin-top:40px;padding-top:20px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-        <button class="btn btn-secondary" style="color:var(--warm)" onclick="resetAllData()"><svg class="ic"><use href="#ic-trash"/></svg>Reset dati</button>
+      <div style="margin-top:40px;padding-top:20px;border-top:0.5px solid var(--border);display:flex;justify-content:flex-end;align-items:center">
         <button class="btn btn-primary" onclick="saveSettings()">Salva</button>
       </div>
 
@@ -9842,14 +9841,6 @@ function updateDoctorName(){
   const name=getFullName();
   const dd=document.getElementById('doctor-display'); if(dd) dd.textContent=name;
   const m=document.getElementById('mobile-doctor'); if(m) m.textContent=name;
-}
-
-async function resetAllData(){
-  if(!(await confermaModale('Cancellare TUTTI i dati (centri, appuntamenti, pazienti)?\n\nQuesta azione non è reversibile.', { titolo:'Reset dati', ok:'Cancella tutto' }))) return;
-  if(!(await confermaModale('Sei davvero sicuro? Verrà cancellato tutto.', { titolo:'Conferma definitiva', ok:'Sì, cancella tutto' }))) return;
-  localStorage.removeItem('medidesk_v2');
-  localStorage.removeItem('medidesk_ui');
-  location.reload();
 }
 
 // ══════════════ HOME PUBBLICA ══════════════
