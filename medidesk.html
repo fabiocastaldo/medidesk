@@ -1921,8 +1921,8 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <button class="stats-period-btn" data-period="365" onclick="setStatsPeriod(365)">Anno</button>
         <button class="stats-period-btn" data-period="0" onclick="setStatsPeriod(0)">Tutto</button>
         <div class="stats-range">
-          <label class="stats-range-lbl"><span>Dal</span><input type="date" id="stats-dal" class="stats-period-date" aria-label="Dal"></label>
-          <label class="stats-range-lbl"><span>Al</span><input type="date" id="stats-al" class="stats-period-date" aria-label="Al"></label>
+          <label class="stats-range-lbl"><span>Dal</span><input type="text" id="stats-dal" class="stats-period-date" aria-label="Dal" placeholder="Qualsiasi data" onpointerdown="comDataPre(this)" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></label>
+          <label class="stats-range-lbl"><span>Al</span><input type="text" id="stats-al" class="stats-period-date" aria-label="Al" placeholder="Qualsiasi data" onpointerdown="comDataPre(this)" onfocus="comDataFocus(this)" onblur="comDataBlur(this)"></label>
           <button class="stats-period-btn" id="stats-range-btn" onclick="applyStatsRange()">Applica intervallo</button>
         </div>
       </div>
@@ -11900,8 +11900,8 @@ function setStatsPeriod(days){
   document.querySelectorAll('.stats-period-btn').forEach(b=>{
     b.classList.toggle('active', Number(b.dataset.period)===days);
   });
-  const dEl = document.getElementById('stats-dal'); if(dEl) dEl.value = '';
-  const aEl = document.getElementById('stats-al');  if(aEl) aEl.value = '';
+  comSetData('stats-dal', '');
+  comSetData('stats-al', '');
   renderStatistiche();
 }
 
@@ -11936,8 +11936,8 @@ function _statsFilteredAppuntamenti(){
   }
   return (S.appuntamenti||[]).filter(a=>{
     if(!a.data) return false;
-    if(!cutoff) return true;
     const d = new Date(a.data + 'T00:00:00');
+    if(!cutoff) return d <= now;
     return d >= cutoff && d <= now;
   });
 }
@@ -12406,13 +12406,39 @@ function _renderKpiSpark(containerId, series, color){
 }
 
 // ── BAR CHART SVG ──
+// LF-05: i mesi del grafico sono quelli del periodo scelto (preset o intervallo),
+// mai una finestra fissa: un mese fuori periodo a zero sarebbe un dato falso.
+function _statsMesiPeriodo(apps){
+  const mk = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  const oggi = mk(new Date());
+  let fine = oggi, inizio = null;
+  if(_statsRange){
+    if(_statsRange.al) fine = _statsRange.al.substring(0,7) < oggi ? _statsRange.al.substring(0,7) : oggi;
+    if(_statsRange.dal) inizio = _statsRange.dal.substring(0,7);
+  } else if(_statsPeriod > 0){
+    const c = new Date(); c.setDate(c.getDate() - _statsPeriod); inizio = mk(c);
+  }
+  if(!inizio){
+    const chiavi = apps.map(a=>String(a.data||'').substring(0,7)).filter(k=>k.length===7).sort();
+    inizio = chiavi.length ? chiavi[0] : fine;
+  }
+  if(inizio > fine) inizio = fine;
+  const mesi = [];
+  let [y, m] = inizio.split('-').map(Number);
+  while(true){
+    const k = `${y}-${String(m).padStart(2,'0')}`;
+    mesi.push(k);
+    if(k >= fine || mesi.length > 600) break;
+    m++; if(m > 12){ m = 1; y++; }
+  }
+  return mesi;
+}
+
 function _renderTrendMensile(apps){
-  const series = _seriesMonthly(apps, 12);
-  let start = series.findIndex(s=>s.value>0);
-  if(start === -1) start = series.length - 6;
-  if(start < 0) start = 0;
-  if(series.length - start < 6) start = Math.max(0, series.length - 6);
-  const data = series.slice(start);
+  const conta = {};
+  apps.forEach(a=>{ if(a.data){ const k = a.data.substring(0,7); conta[k] = (conta[k]||0) + 1; } });
+  const data = _statsMesiPeriodo(apps).map(k=>({key:k, value:conta[k]||0}));
+  const passoEtichette = Math.ceil(data.length / 12);
   const el = document.getElementById('chart-trend');
 
   if(data.every(d=>d.value===0)){
@@ -12427,7 +12453,7 @@ function _renderTrendMensile(apps){
   const maxVal = Math.max(...data.map(d=>d.value), 1);
   const niceMax = _niceTopValue(maxVal);
   const ticks = 4;
-  const barW = (cw / data.length) * 0.65;
+  const barW = Math.min((cw / data.length) * 0.65, 56);
   const slotW = cw / data.length;
   const labels = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 
@@ -12449,7 +12475,9 @@ function _renderTrendMensile(apps){
       svg += `<text class="barchart-value" x="${(x+barW/2).toFixed(1)}" y="${(y-5).toFixed(1)}">${d.value}</text>`;
     }
     const [yr, m] = d.key.split('-');
-    svg += `<text class="barchart-axis-text" x="${(x+barW/2).toFixed(1)}" y="${(H-padB+14).toFixed(1)}" text-anchor="middle">${labels[parseInt(m)-1]} '${yr.substring(2)}</text>`;
+    if((data.length - 1 - i) % passoEtichette === 0){
+      svg += `<text class="barchart-axis-text" x="${(x+barW/2).toFixed(1)}" y="${(H-padB+14).toFixed(1)}" text-anchor="middle">${labels[parseInt(m)-1]} '${yr.substring(2)}</text>`;
+    }
   });
 
   svg += `</svg>`;
