@@ -5353,8 +5353,8 @@ function renderCentroCard(c, isActive){
       <div class="centro-header">
         <div class="centro-dot" style="background:${c.colore}"></div>
         <div class="centro-info">
-          <div class="centro-nome">${c.nome} ${c.gestione==='cooperativa'?'<span class="badge-coop">Cooperativa</span>':''} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
-          <div class="centro-email">${c.email||'Nessuna email'} ${c.indirizzo?'· '+c.indirizzo:''}</div>
+          <div class="centro-nome">${escapeHtml(c.nome)} ${c.gestione==='cooperativa'?'<span class="badge-coop">Cooperativa</span>':''} ${!isActive?'<span class="badge-inactive">Disattivato</span>':''}</div>
+          <div class="centro-email">${escapeHtml(c.email||'Nessuna email')} ${c.indirizzo?'· '+escapeHtml(c.indirizzo):''}</div>
         </div>
         ${isActive && c.gestione!=='cooperativa'?`<button class="btn btn-sm btn-secondary" onclick="openGiornataSingola('${c.id}')">+ Giornata singola</button> <button class="btn btn-sm btn-primary" onclick="openAddTurno('${c.id}')">+ Turno</button>`:''}
         
@@ -6201,7 +6201,7 @@ async function deleteCentro(id){
 function populateCentroSelect(){
   const sel = document.getElementById('appt-centro'); if(!sel) return;
   sel.innerHTML = S.centri.length
-    ? S.centri.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')
+    ? S.centri.map(c=>`<option value="${escapeAttr(c.id)}">${escapeHtml(c.nome)}</option>`).join('')
     : '<option value="">— Aggiungi prima un centro —</option>';
 }
 
@@ -6420,8 +6420,8 @@ function apptPathCenter(){
     } else {
       list.innerHTML=withTurni.map(c=>`
         <button class="centro-btn" onclick="apptSelectCentro('${c.id}')">
-          <strong>${c.nome}</strong>
-          <span>${c.indirizzo||''} · ${c.turni.length} ${plur(c.turni.length,'turno','turni')}</span>
+          <strong>${escapeHtml(c.nome)}</strong>
+          <span>${escapeHtml(c.indirizzo||'')} · ${c.turni.length} ${plur(c.turni.length,'turno','turni')}</span>
         </button>
       `).join('');
     }
@@ -6525,8 +6525,8 @@ function apptShowCentriForDate(){
       const slots=getSlots(c,A.dateStr);
       const pres=A.free&&_presenzaGiorno(c,A.dateStr,d);
       return `<button class="centro-btn" onclick="apptSelectCentroFromDate('${c.id}')">
-        <strong>${c.nome}</strong>
-        <span>${c.indirizzo||''} · ${A.free?(pres?'<b style=\"color:var(--accent)\">sei in sede</b> · orario libero':'orario libero'):slots.length+' slot disponibili'}</span>
+        <strong>${escapeHtml(c.nome)}</strong>
+        <span>${escapeHtml(c.indirizzo||'')} · ${A.free?(pres?'<b style=\"color:var(--accent)\">sei in sede</b> · orario libero':'orario libero'):slots.length+' slot disponibili'}</span>
       </button>`;
     }).join('');
   }
@@ -6603,7 +6603,7 @@ function apptSelectSlot(ora){
   const centro=S.centri.find(c=>String(c.id)===String(A.centroId));
   const d=new Date(A.dateStr+'T12:00:00');
   document.getElementById('appt-confirm-summary').innerHTML=`
-    <div class="confirm-row"><span class="confirm-key">Centro</span><span>${centro.nome}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Centro</span><span>${escapeHtml(centro.nome)}</span></div>
     <div class="confirm-row"><span class="confirm-key">Data</span><span>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</span></div>
     <div class="confirm-row"><span class="confirm-key">Orario</span><span>${ora}</span></div>
   `;
@@ -7118,7 +7118,7 @@ function renderWeekLegend(days){
     if(c){
       const op=c.attivo===false?'0.5':'1';
       const w = turnoWindow(c, S.selectedDay);
-      return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}${w?` · ${w}`:''}${c.attivo===false?' (disattivato)':''}</span>`;
+      return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${escapeHtml(c.nome)}${w?` · ${w}`:''}${c.attivo===false?' (disattivato)':''}</span>`;
     }
     const apptCentro=S.appuntamenti.find(a=>String(a.centroId)===cid && dayStrs.includes(a.data));
     const nome=apptCentro?.centroNome;
@@ -7209,7 +7209,7 @@ function renderMonthView(){
         || (c.giornateSingole||[]).some(g => g.data === ds) )
     );
     const turniDots = centriConTurno.slice(0,4).map(c =>
-      `<span class="mc-dot mc-dot-turno" style="background:${c.colore}" title="${c.nome}"></span>`
+      `<span class="mc-dot mc-dot-turno" style="background:${c.colore}" title="${escapeAttr(c.nome)}"></span>`
     ).join('');
     const _blkDay = (S.blocchi||[]).some(b=>b.data===ds); const _blkDot = _blkDay ? '<span class="mc-dot" style="background:#9aa3af" title="Occupato (agenda del centro)"></span>' : ''; const dotsHtml = apptDots + turniDots + _blkDot;
     // Righe desktop: fascia oraria per centro + numero pazienti
@@ -7288,7 +7288,7 @@ function renderMonthView(){
       if(c) {
         const op=c.attivo===false?'0.5':'1';
         const w = turnoWindow(c, S.selectedDay);
-        return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${c.nome}${w?` · ${w}`:''}${c.attivo===false?' (disattivato)':''}</span>`;
+        return `<span class="month-legend-item" style="opacity:${op}"><span class="month-legend-dot" style="background:${c.colore}"></span>${escapeHtml(c.nome)}${w?` · ${w}`:''}${c.attivo===false?' (disattivato)':''}</span>`;
       }
       // centro eliminato: usa centroNome dall'appuntamento
       const apptCentro=S.appuntamenti.find(a=>String(a.centroId)===cid && new Date(a.data+'T12:00:00').getFullYear()===y && new Date(a.data+'T12:00:00').getMonth()===m);
@@ -7315,10 +7315,10 @@ function renderMonthView(){
           return `<div class="appt-card" onclick="showApptDetail('${a.id}')">
             <div class="appt-time">${a.ora}</div>
             <div class="appt-info">
-              <div class="appt-patient">${a.cognome} ${a.nome}</div>
-              <div class="appt-detail">${a.tipo||'Visita'}${a.area?' · '+a.area:''}${isOnlineAppt2?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}</div>
+              <div class="appt-patient">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</div>
+              <div class="appt-detail">${escapeHtml(a.tipo||'Visita')}${a.area?' · '+escapeHtml(a.area):''}${isOnlineAppt2?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}</div>
             </div>
-            ${cNome?`<div class="appt-centro" style="background:${cColore}22;color:${cColore};opacity:${cOp}">${cNome}</div>`:''}
+            ${cNome?`<div class="appt-centro" style="background:${cColore}22;color:${cColore};opacity:${cOp}">${escapeHtml(cNome)}</div>`:''}
           </div>`;
         }).join('');
     } else {
@@ -9163,8 +9163,8 @@ function renderDashboard(){
       const c=S.centri.find(x=>String(x.id)===String(a.centroId));
       return `<div class="appt-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showApptDetail('${a.id}')">
         <div class="appt-time">${a.ora}</div>
-        <div class="appt-info"><div class="appt-patient">${a.cognome} ${a.nome}</div><div class="appt-detail">${a.tipo||'Visita'}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}${a.erogata===true?' · <span style="color:#16a34a">erogata</span>':''}</div></div>
-        ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${c.nome}</div>`:''}
+        <div class="appt-info"><div class="appt-patient">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</div><div class="appt-detail">${escapeHtml(a.tipo||'Visita')}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}${a.erogata===true?' · <span style="color:#16a34a">erogata</span>':''}</div></div>
+        ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${escapeHtml(c.nome)}</div>`:''}
         <div class="appt-actions" onclick="event.stopPropagation()">
           <button class="paz-act paz-act-erog${a.erogata===true?' is-erogata':''}" onclick="toggleErogata('${a.id}',{silent:true})">${a.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>
           <button class="paz-act" onclick="caricaVisitaDaAppt('${a.id}')">Carica visita</button>
@@ -10411,9 +10411,9 @@ async function confirmBooking(){
   const d=new Date(bk.dateStr+'T12:00:00');
   const medicoDisplayName=document.getElementById('bk-doctor-name').textContent||getFullName();
   document.getElementById('bk-success-msg').innerHTML=
-    `L'appuntamento con <strong>${medicoDisplayName}</strong> è confermato.<br><br>`+
+    `L'appuntamento con <strong>${escapeHtml(medicoDisplayName)}</strong> è confermato.<br><br>`+
     `<svg class="ic" style="vertical-align:-.15em"><use href="#ic-calendar"/></svg> <strong>${d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} alle ${bk.ora}</strong><br>`+
-    `<svg class="ic" style="vertical-align:-.15em"><use href="#ic-center"/></svg> ${centro?centro.nome:''} ${centro&&centro.indirizzo?'– '+centro.indirizzo:''}<br><br>`+
+    `<svg class="ic" style="vertical-align:-.15em"><use href="#ic-center"/></svg> ${centro?escapeHtml(centro.nome):''} ${centro&&centro.indirizzo?'– '+escapeHtml(centro.indirizzo):''}<br><br>`+
     `${appt.email?'Riceverai un riepilogo all\'email indicata.':''}`;
   bkStep(5);
   // NOTA: notifica al centro nel flusso anon gestita dal backend in conferma_appt_anon (#5)
@@ -10865,7 +10865,7 @@ function openModalChiusura(){
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
       <input type="checkbox" data-centro-id="${c.id}" style="accent-color:${c.colore}">
       <span style="width:10px;height:10px;border-radius:50%;background:${c.colore};display:inline-block"></span>
-      ${c.nome}
+      ${escapeHtml(c.nome)}
     </label>`).join('');
   openModal('modal-chiusura');
 }
