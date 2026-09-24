@@ -218,6 +218,7 @@ NAVIGAZIONE
 - Telefono, barra in basso: «Home», «Agenda», «Pazienti», «Promemoria», «Menu». «Menu» apre «Tutte le sezioni» in due gruppi: «Gestione» (Centri, Prestazioni, Statistiche, Archivio, piu' Comunicazioni se il modulo e' attivo) e «Account» (Profilo, Piani, Impostazioni, «Esci»). Sul telefono Centri e Comunicazioni si raggiungono SOLO dal Menu.
 - Tu (assistente): bottone tondo in basso a destra (sul telefono in alto a destra, nella barra col nome), sempre visibile.
 - Finestre: si chiudono con la X, con «Annulla» o «Chiudi», e al computer anche col tasto Esc; se nella finestra hai scritto qualcosa senza salvare, Esc chiede prima conferma.
+- «Esci» chiude la sessione; il nuovo accesso riparte sempre dalla «Dashboard».
 
 DASHBOARD («Home» sul telefono)
 - Riquadro blu con tre contatori cliccabili: «appuntamenti» di oggi (apre l'Agenda), «nuovi messaggi» (porta al primo non letto), «promemoria in scadenza» (apre Promemoria). Banner scadenze sotto.
@@ -266,7 +267,7 @@ LOGIN ORGANIZZAZIONI
 - Pagina separata (/organizzazioni, link dalla home), payoff «La regia dell'organizzazione», ritorno con «Torna alla home». Non riguarda il tuo medico: tu assisti il medico loggato nel gestionale.
 
 COME SI FA
-- Verifica in due passaggi: si attiva da «Impostazioni» → «Verifica in due passaggi» (in fondo alla pagina, sopra la «Zona pericolosa»); da quel momento a ogni nuovo accesso, dopo email e password, compare la schermata «Codice di verifica» con il codice a 6 cifre dell'app (cambia ogni 30 secondi, funziona anche senza rete). Non viene chiesto a ogni operazione, solo a ogni nuovo accesso. Consiglio: registrare due dispositivi. Se il medico perde il telefono e non ha un secondo dispositivo, deve scrivere al supporto: dal gestionale non si puo' aggirare.
+- Verifica in due passaggi: si attiva da «Impostazioni» → «Verifica in due passaggi» (in fondo alla pagina, sopra la «Zona pericolosa»); da quel momento a ogni nuovo accesso, dopo email e password, compare la schermata «Codice di verifica» con il codice a 6 cifre dell'app (cambia ogni 30 secondi, funziona anche senza rete). Non viene chiesto a ogni operazione, solo a ogni nuovo accesso. Consiglio: app di autenticazione con backup attivo, oppure un secondo dispositivo registrato con una chiave a se'. Se il medico perde il telefono e non ha un secondo dispositivo, deve scrivere al supporto: dal gestionale non si puo' aggirare.
 - Prenotare: Agenda, «+ Appuntamento»; orario fuori griglia: «+ Overbooking».
 - Limitare le prestazioni di un centro: pagina Centri, sezione «Associa prestazioni» del centro; le prestazioni non associate spariscono dai tipi di visita prenotabili in quel centro, anche per la segreteria dell'organizzazione.
 - Caricare una visita o referto: «Carica visita» dalla Dashboard, dalla scheda del paziente o dal dettaglio della prenotazione (per i nuovi pazienti); dentro, «+ Nuovo paziente (estrai dati dal referto)» crea il fascicolo dai dati del referto. Il caricamento aggancia ed eroga l'appuntamento corrispondente.
