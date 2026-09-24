@@ -2244,7 +2244,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div style="margin-bottom:24px">
         <div class="section-title">Verifica in due passaggi</div>
         <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Oltre alla password, a ogni nuovo accesso ti verrà chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password). Protegge i fascicoli anche se la password viene rubata. Consiglio: registra due dispositivi, così un telefono perso non ti chiude fuori.</p>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">I fascicoli dei tuoi pazienti sono dati sanitari: chi entra col tuo account li legge tutti e ne decifra i referti. Con la sola password basta un'email di phishing o una password riusata su un altro sito. <strong>Ti raccomandiamo di attivare la verifica in due passaggi</strong>: oltre alla password, a ogni nuovo accesso ti verrà chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password). Richiede un minuto e protegge i fascicoli anche se la password viene rubata. Assicurati che l'app abbia il backup attivo, oppure registra qui un secondo dispositivo con una chiave a sé: così un telefono perso non ti chiude fuori.</p>
           <div id="mfa-stato" style="font-size:13px;margin-bottom:4px">Caricamento…</div>
           <div id="mfa-fattori"></div>
           <div id="mfa-enroll" style="display:none;margin-top:12px">
@@ -3739,6 +3739,11 @@ function checkSession(){
       _bootstrapDone = false;
       stopDashboardPolling();
       stopRealtimeChannel();
+      // Il prossimo accesso riparte dalla Dashboard, non dall'ultima pagina rimasta attiva nel DOM
+      try{
+        document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id==='page-dashboard'));
+        document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(n=>n.classList.remove('active'));
+      }catch(_){ }
       showAuthView();
     }
   });
