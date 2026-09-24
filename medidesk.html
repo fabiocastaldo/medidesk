@@ -2293,8 +2293,12 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div style="margin-bottom:24px">
         <div class="section-title">Password</div>
         <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Cambia la password quando vuoi, senza passare dall'email. Scegline una lunga e diversa da quelle che usi altrove: un gestore di password la ricorda per te.</p>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Ti raccomandiamo di cambiare la password periodicamente e di sceglierne una lunga e diversa da quelle che usi altrove: un gestore di password la ricorda per te. Per cambiarla serve la password attuale.</p>
           <div style="max-width:420px">
+            <div class="auth-field">
+              <label>Password attuale</label>
+              <div class="auth-pwd-wrap"><input type="password" id="sec-pwd-attuale" placeholder="••••••••" autocomplete="current-password"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
+            </div>
             <div class="auth-field">
               <label>Nuova password</label>
               <div class="auth-pwd-wrap"><input type="password" id="sec-pwd" placeholder="••••••••" autocomplete="new-password" minlength="8" oninput="updatePasswordStrengthSec()"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
@@ -3702,14 +3706,29 @@ function updatePasswordStrengthSec(){
 }
 async function cambiaPassword(btn){
   if(!isOnline()){ showToast('Connessione richiesta per cambiare password'); return; }
+  const attuale = document.getElementById('sec-pwd-attuale').value;
   const pwd     = document.getElementById('sec-pwd').value;
   const confirm = document.getElementById('sec-pwd-confirm').value;
+  if(!attuale){ showToast('Inserisci la password attuale'); return; }
   if(pwd !== confirm){ showToast('Le password non coincidono'); return; }
   const c = _pwdCriteri(pwd);
   if(!Object.values(c).every(Boolean)){ showToast('La password non soddisfa tutti i criteri richiesti'); return; }
+  if(attuale === pwd){ showToast('La nuova password deve essere diversa da quella attuale'); return; }
   await salvaUnaVolta('cambia-password', btn, async () => {
+    // La password attuale si verifica con un accesso su un client separato, che non tocca la sessione aperta
+    const { data: ud } = await supabaseClient.auth.getUser();
+    const email = ud && ud.user && ud.user.email;
+    if(!email){ showToast('Sessione non valida: esci e rientra'); return; }
+    const tmp = supabase.createClient(supabaseClient.supabaseUrl, supabaseClient.supabaseKey, { auth: { persistSession:false, autoRefreshToken:false, detectSessionInUrl:false, storageKey:'dm-verifica-password' } });
+    const { error: eV } = await tmp.auth.signInWithPassword({ email, password: attuale });
+    if(eV){
+      showToast(/Invalid login credentials/i.test(eV.message || '') ? 'Password attuale non corretta' : erroreLeggibile('Verifica non riuscita', eV));
+      return;
+    }
+    try{ await tmp.auth.signOut({ scope: 'local' }); }catch(_){ }
     const { error } = await supabaseClient.auth.updateUser({ password: pwd });
     if(error){ showToast(erroreLeggibile('Password non cambiata', error)); return; }
+    document.getElementById('sec-pwd-attuale').value = '';
     document.getElementById('sec-pwd').value = '';
     document.getElementById('sec-pwd-confirm').value = '';
     updatePasswordStrengthSec();
