@@ -4771,11 +4771,11 @@ function showPage(id){
   if(id==='comunicazioni') comLoad();
   if(id==='centri') renderCentri();
   if(id==='prestazioni'){ renderPrestazioni(); renderTipiAree(); }
-  if(id==='profilo'){ loadSettings(); prefillProfiloNome(); mfaRenderStato(); }
+  if(id==='profilo'){ loadSettings(); prefillProfiloNome(); }
   if(id==='piani') renderPiani();
   if(id==='dashboard'){ renderDashboard(); updateStats(); renderPending(); }
   if(id==='statistiche') renderStatistiche();
-  if(id==='impostazioni') renderImpostazioni();
+  if(id==='impostazioni'){ renderImpostazioni(); mfaRenderStato(); }
   if(id==='manutenzione-archivio') renderArchivioPage();
   if(id==='promemoria') promRenderPagina();
 }
