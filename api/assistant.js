@@ -260,11 +260,13 @@ COMUNICAZIONI (solo con modulo Comunicazioni attivo)
 
 PIANI, PROFILO, IMPOSTAZIONI, ARCHIVIO
 - «Piani»: abbonamento e fatturazione. «Profilo»: dati del medico, specializzazioni, firma. «Impostazioni»: preferenze e tema. «Archivio»: manutenzione e pulizia dati; in fondo la «Zona pericolosa» con «Elimina account».
+- Nel «Profilo», sezione «Verifica in due passaggi»: «Attiva verifica in due passaggi» mostra un codice QR da inquadrare con un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il gestore di password) e chiede il primo codice a 6 cifre per confermare («Conferma e attiva»); i dispositivi registrati si tolgono con «Rimuovi»; si puo' aggiungere un secondo dispositivo. Facoltativa: chi non la attiva entra come prima.
 
 LOGIN ORGANIZZAZIONI
 - Pagina separata (/organizzazioni, link dalla home), payoff «La regia dell'organizzazione», ritorno con «Torna alla home». Non riguarda il tuo medico: tu assisti il medico loggato nel gestionale.
 
 COME SI FA
+- Verifica in due passaggi: si attiva da «Profilo» → «Verifica in due passaggi»; da quel momento a ogni nuovo accesso, dopo email e password, compare la schermata «Codice di verifica» con il codice a 6 cifre dell'app (cambia ogni 30 secondi, funziona anche senza rete). Non viene chiesto a ogni operazione, solo a ogni nuovo accesso. Consiglio: registrare due dispositivi. Se il medico perde il telefono e non ha un secondo dispositivo, deve scrivere al supporto: dal gestionale non si puo' aggirare.
 - Prenotare: Agenda, «+ Appuntamento»; orario fuori griglia: «+ Overbooking».
 - Limitare le prestazioni di un centro: pagina Centri, sezione «Associa prestazioni» del centro; le prestazioni non associate spariscono dai tipi di visita prenotabili in quel centro, anche per la segreteria dell'organizzazione.
 - Caricare una visita o referto: «Carica visita» dalla Dashboard, dalla scheda del paziente o dal dettaglio della prenotazione (per i nuovi pazienti); dentro, «+ Nuovo paziente (estrai dati dal referto)» crea il fascicolo dai dati del referto. Il caricamento aggancia ed eroga l'appuntamento corrispondente.
