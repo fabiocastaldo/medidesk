@@ -7,6 +7,8 @@
 // e il realtime esistenti: il dato è suo (medico_id), l'organizzazione è
 // solo la mano che l'ha scritto. Tutto service_role, RLS invariata.
 
+import { richiediAal2 } from '../lib/aal-guard.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -61,12 +63,18 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,ruolo,cooperativa_id,cooperative(id,stato,booking_pubblico)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,ruolo,cooperativa_id,cooperative(mfa_obbligatoria,id,stato,booking_pubblico)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
   if (!seg || seg.stato !== 'attiva' || !seg.cooperative || seg.cooperative.stato !== 'attiva') {
     return res.status(403).json({ error: 'Account non abilitato' });
+  }
+  // T-15 ciclo 2: se l'amministratore ha reso obbligatoria la verifica in due passaggi,
+  // ogni chiamata della segreteria deve portare un token al secondo livello.
+  if (seg.cooperative.mfa_obbligatoria === true) {
+    const aalKo = richiediAal2(jwt);
+    if (aalKo) return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
   if (seg.ruolo !== 'admin') {
     return res.status(403).json({ error: 'Operazione riservata all\'amministratore' });

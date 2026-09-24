@@ -5,6 +5,8 @@
 // Tutte le letture avvengono con service_role: le tabelle coop hanno RLS
 // accesa e zero policy, quindi nessuna superficie anon/authenticated.
 
+import { aalDaJwt } from '../lib/aal-guard.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -78,6 +80,18 @@ export default async function handler(req, res) {
   const coop = seg.cooperative;
   if (!coop || coop.stato !== 'attiva') {
     return res.status(403).json({ error: 'Cooperativa non attiva' });
+  }
+
+  // T-15 ciclo 2: con la regola dell'organizzazione accesa, un token al primo livello non riceve
+  // la plancia (medici, recapiti, codici) ma solo l'ordine di completare la verifica. La plancia
+  // decide da sola fra "inserisci il codice" (fattore presente) e "attiva ora" (nessun fattore).
+  if (coop.mfa_obbligatoria === true && aalDaJwt(jwt) !== 'aal2') {
+    return res.status(200).json({
+      mfa_richiesta: true,
+      cooperativa: { id: coop.id, nome: coop.nome, stato: coop.stato, mfa_obbligatoria: true },
+      segreteria: { nome: seg.nome, ruolo: seg.ruolo || 'admin' },
+      ruolo: seg.ruolo || 'admin'
+    });
   }
 
   // Contrassegno identitario per le guardie client (medidesk.html: ensureMedicoRecord non crea

@@ -9,6 +9,7 @@
 // raccolto dal paziente (consenso_versione 'cons-coop-tel-1' marca il canale).
 
 import { randomUUID } from 'node:crypto';
+import { richiediAal2 } from '../lib/aal-guard.js';
 import { verificaSlot } from '../lib/slot-guard.js';
 import { verificaTipo } from '../lib/tipo-guard.js';
 
@@ -70,12 +71,18 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,cooperativa_id,cooperative(id,stato,mail_conferma_paziente,mail_notifica_medico,mail_ricevuta_segreteria)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,cooperativa_id,cooperative(mfa_obbligatoria,id,stato,mail_conferma_paziente,mail_notifica_medico,mail_ricevuta_segreteria)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
   if (!seg || seg.stato !== 'attiva' || !seg.cooperative || seg.cooperative.stato !== 'attiva') {
     return res.status(403).json({ error: 'Account non abilitato' });
+  }
+  // T-15 ciclo 2: se l'amministratore ha reso obbligatoria la verifica in due passaggi,
+  // ogni chiamata della segreteria deve portare un token al secondo livello.
+  if (seg.cooperative.mfa_obbligatoria === true) {
+    const aalKo = richiediAal2(jwt);
+    if (aalKo) return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
 
   // Perimetro: il centro deve appartenere alla cooperativa del chiamante ED essere del medico indicato

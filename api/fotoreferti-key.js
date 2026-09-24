@@ -1,4 +1,5 @@
 import { KMSClient, GenerateDataKeyCommand, DecryptCommand } from '@aws-sdk/client-kms';
+import { richiediAal2 } from '../lib/aal-guard.js';
 import { trialExpired } from '../lib/trial-gate.js';
 
 const kms = new KMSClient({ region: process.env.AWS_REGION || 'eu-central-1' });
@@ -27,6 +28,10 @@ export default async function handler(req, res) {
   }).catch(() => null);
   if (!userRes || !userRes.ok) {
     return res.status(401).json({ error: 'Token non valido o scaduto' });
+  }
+  const aalKo = richiediAal2(jwt);
+  if (aalKo) {
+    return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
   const userData = await userRes.json().catch(() => null);
   if (!userData?.id) {

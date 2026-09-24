@@ -17,6 +17,7 @@
 // Rollback simmetrico: se l'email di apertura fallisce il thread viene cancellato.
 
 import { Resend } from 'resend';
+import { richiediAal2 } from '../lib/aal-guard.js';
 import { createHash, randomBytes } from 'crypto';
 
 const MAX_CORPO = 4000;
@@ -35,6 +36,8 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
     headers: { 'Authorization': `Bearer ${jwt}`, 'apikey': anonKey }
   }).catch(() => null);
   if (!userRes || !userRes.ok) return { ok: false, status: 401, error: 'Token non valido o scaduto' };
+  const aalKo = richiediAal2(jwt);
+  if (aalKo) return { ok: false, status: aalKo.status, error: aalKo.error, code: aalKo.code };
   const userData = await userRes.json().catch(() => null);
   if (!userData?.id) return { ok: false, status: 401, error: 'Utente non riconosciuto' };
   const medicoRes = await fetch(
@@ -81,7 +84,7 @@ export default async function handler(req, res) {
   const authHeader = req.headers['authorization'];
   if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: 'Autenticazione richiesta' });
   const auth = await checkMedicoAuth(authHeader.slice(7), supabaseUrl, anonKey, serviceKey);
-  if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+  if (!auth.ok) return res.status(auth.status).json(auth.code ? { error: auth.error, code: auth.code } : { error: auth.error });
   const medico = auth.medico;
   const medicoNome = [medico.titolo, medico.nome, medico.cognome].filter(Boolean).join(' ');
 

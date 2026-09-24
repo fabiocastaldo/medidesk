@@ -1232,6 +1232,24 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <button class="auth-link" onclick="mfaLoginAnnulla()">← Torna al login</button>
     </div>
 
+    <!-- ATTIVAZIONE OBBLIGATORIA DELLA VERIFICA IN DUE PASSAGGI (T-15 ciclo 2) -->
+    <div class="auth-panel" id="auth-panel-mfa-setup">
+      <p style="font-size:13px;color:var(--ink2);line-height:1.6;margin:0 0 14px;text-align:center">Il gestionale contiene dati sanitari: per proteggerli, l'accesso richiede la <strong>verifica in due passaggi</strong>. Attivala ora con un'app di autenticazione (Google Authenticator, Microsoft Authenticator, Authy o simili): richiede un minuto e vale per ogni accesso futuro.</p>
+      <div id="auth-mfa-setup-body" style="display:none">
+        <p style="font-size:13px;color:var(--ink2);margin:0 0 8px">1. Inquadra il codice QR con l'app (oppure inserisci a mano la chiave).</p>
+        <div id="auth-mfa-qr" style="width:200px;height:200px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;box-sizing:border-box"></div>
+        <div style="font-size:12px;color:var(--ink3);margin:8px 0 12px;word-break:break-all;text-align:center">Chiave: <code id="auth-mfa-secret"></code></div>
+        <p style="font-size:13px;color:var(--ink2);margin:0 0 6px">2. Inserisci il primo codice mostrato dall'app.</p>
+        <div class="auth-field">
+          <label>Codice di verifica</label>
+          <input type="text" id="auth-mfa-setup-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" onkeydown="if(event.key==='Enter')mfaSetupConferma()">
+        </div>
+        <button class="auth-btn" id="auth-mfa-setup-btn" onclick="mfaSetupConferma()">Attiva ed entra</button>
+      </div>
+      <button class="auth-btn" id="auth-mfa-setup-avvia" onclick="mfaSetupAvvia()">Inizia l'attivazione</button>
+      <button class="auth-link" onclick="mfaSetupEsci()">Esci</button>
+    </div>
+
     <!-- REGISTRAZIONE -->
     <div class="auth-panel" id="auth-panel-register">
       <div id="reg-form-content">
@@ -2270,7 +2288,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div style="margin-bottom:24px">
         <div class="section-title">Verifica in due passaggi</div>
         <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">I fascicoli dei tuoi pazienti sono dati sanitari: chi entra col tuo account li legge tutti e ne decifra i referti. Con la sola password basta un'email di phishing o una password riusata su un altro sito. <strong>Ti raccomandiamo di attivare la verifica in due passaggi</strong>: oltre alla password, a ogni nuovo accesso ti verrà chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password). Richiede un minuto e protegge i fascicoli anche se la password viene rubata. Assicurati che l'app abbia il backup attivo, oppure registra qui un secondo dispositivo con una chiave a sé: così un telefono perso non ti chiude fuori.</p>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">I fascicoli dei tuoi pazienti sono dati sanitari: chi entra col tuo account li legge tutti e ne decifra i referti. Con la sola password basta un'email di phishing o una password riusata su un altro sito. Per questo <strong>la verifica in due passaggi è obbligatoria</strong>: oltre alla password, a ogni nuovo accesso ti viene chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password), e senza codice il gestionale non si apre. Assicurati che l'app abbia il backup attivo, oppure registra qui un secondo dispositivo con una chiave a sé: così un telefono perso non ti chiude fuori. L'ultimo dispositivo non si può rimuovere: per cambiare telefono aggiungi prima il nuovo, poi togli il vecchio. Se hai perso l'unico telefono, scrivi a support@delphi-med.com: dopo una verifica della tua identità azzeriamo la registrazione e al rientro la rifai da capo.</p>
           <div id="mfa-stato" style="font-size:13px;margin-bottom:4px">Caricamento…</div>
           <div id="mfa-fattori"></div>
           <div id="mfa-enroll" style="display:none;margin-top:12px">
@@ -3525,7 +3543,7 @@ function _aalDaSessione(session){
   }catch(_){ }
   const fattori = (session.user && Array.isArray(session.user.factors)) ? session.user.factors : [];
   const verificati = fattori.filter(f => f && f.status === 'verified').length;
-  return { corrente, richiesto: verificati > 0 && corrente !== 'aal2' };
+  return { corrente, verificati, richiesto: verificati > 0 && corrente !== 'aal2' };
 }
 function _apriMfaLogin(){
   document.getElementById('view-home').style.display    = 'none';
@@ -3541,12 +3559,98 @@ function _apriMfaLogin(){
 // Unico ingresso al gestionale per una sessione medico: se la verifica in due passaggi e' attiva
 // e il token e' ancora al primo livello, chiede il codice invece di aprire l'app.
 function entraOMfa(session){
-  if(_aalDaSessione(session).richiesto){
+  const lv = _aalDaSessione(session);
+  if(lv.richiesto){
     console.log('[Delphi~Med] Verifica in due passaggi richiesta');
     _apriMfaLogin();
     return;
   }
+  // T-15 ciclo 2: la verifica e' obbligatoria per il medico. Senza alcun dispositivo registrato
+  // non si entra: si attiva qui, e solo la sessione promossa ad aal2 apre il gestionale
+  // (il server e le policy del DB rifiutano comunque un token al primo livello).
+  if(lv.corrente !== 'aal2'){
+    console.log('[Delphi~Med] Verifica in due passaggi da attivare');
+    _apriMfaSetup();
+    return;
+  }
   showAppView();
+}
+let _mfaSetupId = null;
+function _apriMfaSetup(){
+  document.getElementById('view-home').style.display    = 'none';
+  document.getElementById('view-auth').style.display    = 'flex';
+  document.getElementById('view-app').style.display     = 'none';
+  document.getElementById('view-booking').style.display = 'none';
+  document.getElementById('auth-tabs').style.display    = 'none';
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('auth-panel-mfa-setup').classList.add('active');
+  document.getElementById('auth-mfa-setup-body').style.display = 'none';
+  document.getElementById('auth-mfa-setup-avvia').style.display = '';
+  _mfaSetupId = null;
+  clearAuthMsg();
+}
+async function mfaSetupAvvia(){
+  const btn = document.getElementById('auth-mfa-setup-avvia'); if(btn) btn.disabled = true;
+  try{
+    const nome = 'Dispositivo ' + new Date().toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const { data, error } = await supabaseClient.auth.mfa.enroll({ factorType:'totp', friendlyName: nome, issuer:'Delphi~Med' });
+    if(error) throw error;
+    _mfaSetupId = data.id;
+    const qr = document.getElementById('auth-mfa-qr'); qr.innerHTML = '';
+    const svg = String((data.totp && data.totp.qr_code) || '').replace(/^data:image\/svg\+xml;utf-8,/, '');
+    if(svg){
+      const img = document.createElement('img');
+      img.alt = 'Codice QR per l\'app di autenticazione';
+      img.style.cssText = 'width:100%;height:100%;display:block';
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      qr.appendChild(img);
+    }
+    document.getElementById('auth-mfa-secret').textContent = (data.totp && data.totp.secret) || '';
+    document.getElementById('auth-mfa-setup-code').value = '';
+    document.getElementById('auth-mfa-setup-body').style.display = '';
+    if(btn) btn.style.display = 'none';
+    setTimeout(() => { const c = document.getElementById('auth-mfa-setup-code'); if(c) c.focus(); }, 50);
+  }catch(e){
+    showAuthMsg(translateAuthError(e.message || String(e)), 'error');
+  }finally{ if(btn) btn.disabled = false; }
+}
+async function mfaSetupConferma(){
+  const code = (document.getElementById('auth-mfa-setup-code').value || '').replace(/\D/g,'');
+  if(!_mfaSetupId){ showAuthMsg('Premi «Inizia l\'attivazione» e inquadra il codice QR.', 'error'); return; }
+  if(code.length !== 6){ showAuthMsg('Inserisci le 6 cifre del codice', 'error'); return; }
+  const btn = document.getElementById('auth-mfa-setup-btn'); if(btn) btn.disabled = true;
+  try{
+    const { error } = await supabaseClient.auth.mfa.challengeAndVerify({ factorId: _mfaSetupId, code });
+    if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
+    const id = _mfaSetupId; _mfaSetupId = null;
+    // la sessione e' ora aal2: l'audit passa dalla RPC (il medico e' risolto da auth.uid())
+    try{ await supabaseClient.rpc('log_audit', { p_action:'mfa_fattore_aggiunto', p_target_type:'medico', p_target_id:null, p_details:{ factor_id:id, obbligatoria:true } }); }catch(_){ }
+    avvisoSicurezza('mfa_attivata');
+    clearAuthMsg();
+    document.getElementById('auth-tabs').style.display = '';
+    switchAuthTab('login');
+    showToast('Verifica in due passaggi attivata ✓');
+    showAppView();
+  }catch(e){
+    showAuthMsg('Errore di rete: ' + e.message, 'error');
+  }finally{ if(btn) btn.disabled = false; }
+}
+// Avviso di sicurezza via email al medico stesso (send-email, tipo avviso_sicurezza, con audit).
+// Fire-and-forget: se l'invio fallisce il gesto e' comunque fatto e tracciato in audit_log.
+async function avvisoSicurezza(evento){
+  try{
+    if(!isOnline()) return;
+    const _jwt = await getAuthJwt();
+    const r = await fetch('/api/send-email', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + _jwt }, body: JSON.stringify({ tipo:'avviso_sicurezza', evento }) });
+    if(!r.ok) console.warn('[Delphi~Med] avviso di sicurezza non inviato:', r.status);
+  }catch(e){ console.warn('[Delphi~Med] avviso di sicurezza:', e.message); }
+}
+async function mfaSetupEsci(){
+  const id = _mfaSetupId; _mfaSetupId = null;
+  if(id){ try{ await supabaseClient.auth.mfa.unenroll({ factorId: id }); }catch(_){ } }
+  document.getElementById('auth-tabs').style.display = '';
+  switchAuthTab('login');
+  try{ await supabaseClient.auth.signOut(); }catch(_){ }
 }
 async function mfaLoginVerifica(){
   const code = (document.getElementById('auth-mfa-code').value || '').replace(/\D/g,'');
@@ -3648,6 +3752,7 @@ async function mfaConfermaAttivazione(){
     document.getElementById('mfa-azioni').style.display = '';
     showToast('Verifica in due passaggi attivata ✓');
     auditLog('mfa_fattore_aggiunto', 'medico', S.medicoId, { factor_id: id });
+    avvisoSicurezza('mfa_attivata');
     mfaRenderStato();
   }catch(e){
     showToast(erroreLeggibile('Attivazione non confermata', e));
@@ -3661,13 +3766,23 @@ async function mfaAnnullaAttivazione(){
   mfaRenderStato();
 }
 async function mfaRimuovi(factorId){
-  const ok = await confermaModale('Senza questo dispositivo la verifica potrebbe non essere più richiesta e basterà la password per entrare. Rimuoverlo?', { titolo:'Rimuovi dispositivo', ok:'Rimuovi', annulla:'Annulla' });
+  // T-15 ciclo 2: la verifica e' obbligatoria, l'ultimo dispositivo non si rimuove (la sessione
+  // tornerebbe al primo livello e il gestionale si chiuderebbe). Prima se ne aggiunge uno nuovo.
+  try{
+    const { data: lf } = await supabaseClient.auth.mfa.listFactors();
+    if(lf && Array.isArray(lf.totp) && lf.totp.length <= 1){
+      showToast('La verifica in due passaggi è obbligatoria: per cambiare telefono aggiungi prima il nuovo dispositivo, poi rimuovi il vecchio');
+      return;
+    }
+  }catch(_){ }
+  const ok = await confermaModale('Rimuovere questo dispositivo? Resterà registrato l\'altro e la verifica continuerà a essere richiesta.', { titolo:'Rimuovi dispositivo', ok:'Rimuovi', annulla:'Annulla' });
   if(!ok) return;
   try{
     const { error } = await supabaseClient.auth.mfa.unenroll({ factorId });
     if(error){ showToast(translateAuthError(error.message)); return; }
     showToast('Dispositivo rimosso');
     auditLog('mfa_fattore_rimosso', 'medico', S.medicoId, { factor_id: factorId });
+    avvisoSicurezza('mfa_dispositivo_rimosso');
     mfaRenderStato();
   }catch(e){
     showToast(erroreLeggibile('Rimozione non riuscita', e));
@@ -3738,6 +3853,7 @@ async function cambiaPassword(btn){
     updatePasswordStrengthSec();
     showToast('Password cambiata ✓');
     auditLog('password_cambiata', 'medico', S.medicoId, {});
+    avvisoSicurezza('password_cambiata');
   });
 }
 async function esciDaTutti(btn){
@@ -3747,6 +3863,7 @@ async function esciDaTutti(btn){
   if(btn) btn.disabled = true;
   try{
     await auditLog('logout_tutti_dispositivi', 'medico', S.medicoId, {});
+    await avvisoSicurezza('logout_tutti_dispositivi');
     const { error } = await supabaseClient.auth.signOut({ scope: 'global' });
     if(error) throw error;
     // onAuthStateChange (SIGNED_OUT) gestirà il cambio di vista

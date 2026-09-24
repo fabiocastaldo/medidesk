@@ -6,6 +6,8 @@
 // centri della cooperativa (coop_booking_pubblico) così la SPA del medico
 // lo legge dai dati che già carica, a RLS invariata.
 
+import { richiediAal2 } from '../lib/aal-guard.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -51,12 +53,18 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,ruolo,cooperativa_id,cooperative(id,stato)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,ruolo,cooperativa_id,cooperative(mfa_obbligatoria,id,stato)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
   if (!seg || seg.stato !== 'attiva' || !seg.cooperative || seg.cooperative.stato !== 'attiva') {
     return res.status(403).json({ error: 'Account non abilitato' });
+  }
+  // T-15 ciclo 2: se l'amministratore ha reso obbligatoria la verifica in due passaggi,
+  // ogni chiamata della segreteria deve portare un token al secondo livello.
+  if (seg.cooperative.mfa_obbligatoria === true) {
+    const aalKo = richiediAal2(jwt);
+    if (aalKo) return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
   if (seg.ruolo !== 'admin') {
     return res.status(403).json({ error: 'Operazione riservata all\'amministratore' });
@@ -81,6 +89,17 @@ export default async function handler(req, res) {
 
   if (colonna === 'mfa_obbligatoria') {
     console.log('[coop-preferenze] mfa_obbligatoria', b.valore, 'cooperativa', seg.cooperativa_id, 'da', userData.id);
+    // Audit della plancia (T-15 ciclo 2): riga in audit_log senza medico, con segreteria e
+    // organizzazione nei dettagli. Soft-fail: la preferenza e' gia scritta.
+    await fetch(`${supabaseUrl}/rest/v1/audit_log`, {
+      method: 'POST',
+      headers: { ...srvHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        medico_id: null, action: 'mfa_obbligatoria_cambiata', target_type: 'cooperativa', target_id: String(seg.cooperativa_id),
+        details: { valore: coopRow[colonna] === true, segreteria_id: seg.id, user_id: userData.id, auth_mode: 'jwt_segreteria' }
+      })
+    }).then(r => { if (!r.ok) console.error('[coop-preferenze] audit non scritto', r.status); })
+      .catch(e => console.error('[coop-preferenze] audit:', e.message));
   }
 
   return res.status(200).json({ [colonna]: coopRow[colonna] });

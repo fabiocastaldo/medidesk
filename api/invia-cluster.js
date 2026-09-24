@@ -19,6 +19,7 @@
 // POST { action:'invia', criteri, corpo, cluster_id? }    [JWT medico + modulo]
 
 import { Resend } from 'resend';
+import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
 import { CONS_COMM_VERSIONE, readPayload, revocaLink } from '../lib/consenso-token.js';
 import { trialExpired } from '../lib/trial-gate.js';
@@ -47,6 +48,8 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
     headers: { 'Authorization': `Bearer ${jwt}`, 'apikey': anonKey }
   }).catch(() => null);
   if (!userRes || !userRes.ok) return { ok: false, status: 401, error: 'Token non valido o scaduto' };
+  const aalKo = richiediAal2(jwt);
+  if (aalKo) return { ok: false, status: aalKo.status, error: aalKo.error, code: aalKo.code };
   const userData = await userRes.json().catch(() => null);
   if (!userData?.id) return { ok: false, status: 401, error: 'Utente non riconosciuto' };
   const medicoRes = await fetch(

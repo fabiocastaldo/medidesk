@@ -401,6 +401,22 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         <button class="btn" id="login-mfa-btn" onclick="mfaLoginVerifica()">Verifica</button>
         <span class="helplink"><a href="#" onclick="mfaLoginAnnulla(event)">&larr; Torna all'accesso</a></span>
       </div>
+      <div id="login-mfa-setup-block" class="hidden">
+        <p class="sub" style="margin-top:0">La tua organizzazione richiede la <strong>verifica in due passaggi</strong> a ogni persona autorizzata. Attivala ora con un'app di autenticazione (Google Authenticator, Microsoft Authenticator, Authy o simili): richiede un minuto e la plancia si apre subito dopo.</p>
+        <div id="login-mfa-setup-body" class="hidden">
+          <p class="sub">1. Inquadra il codice QR con l'app (oppure inserisci a mano la chiave).</p>
+          <div id="login-mfa-qr" style="width:200px;height:200px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;box-sizing:border-box"></div>
+          <div style="font-size:12px;color:var(--ink3);margin:8px 0 12px;word-break:break-all;text-align:center">Chiave: <code id="login-mfa-secret"></code></div>
+          <p class="sub">2. Inserisci il primo codice mostrato dall'app.</p>
+          <div class="field">
+            <label for="login-mfa-setup-code">Codice di verifica</label>
+            <input id="login-mfa-setup-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" onkeydown="if(event.key==='Enter')mfaSetupConferma()">
+          </div>
+          <button class="btn" id="login-mfa-setup-btn" onclick="mfaSetupConferma()">Attiva ed entra</button>
+        </div>
+        <button class="btn" id="login-mfa-setup-avvia" onclick="mfaSetupAvvia()">Inizia l'attivazione</button>
+        <span class="helplink"><a href="#" onclick="mfaSetupEsci(event)">Esci</a></span>
+      </div>
       <div id="login-msg" class="hidden"></div>
       <span class="helplink">La tua organizzazione non è ancora attiva?
         <a href="#" onclick="openHomeContact(event,'Attivazione cooperativa Delphi~Med')">Richiedi l'attivazione</a>
@@ -828,7 +844,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
           <label class="toggle-switch"><input type="checkbox" id="pref-mfa" onchange="setPrefMfa(this.checked)"><span class="toggle-slider"></span></label>
           <span>
             <span style="font-weight:600">Verifica in due passaggi obbligatoria per tutti gli operatori</span><br>
-            <span style="font-size:13px;color:var(--ink2);line-height:1.55">Se attiva, ogni persona autorizzata di questa organizzazione, amministratore compreso, dovrà attivare la verifica in due passaggi al primo accesso e la plancia non si aprirà senza il codice. Oggi la regola viene registrata e mostrata; il blocco all'accesso sarà attivo con il prossimo aggiornamento della piattaforma.</span>
+            <span style="font-size:13px;color:var(--ink2);line-height:1.55">Se attiva, ogni persona autorizzata di questa organizzazione, amministratore compreso, dovrà attivare la verifica in due passaggi al primo accesso e la plancia non si aprirà senza il codice. Con la regola accesa ogni chiamata della plancia pretende una sessione verificata: chi non ha ancora un dispositivo lo registra al primo accesso, e l'ultimo dispositivo non si può rimuovere. Se un operatore perde il telefono, dalla tab Operatori puoi azzerare la sua verifica: al rientro la rifà da capo.</span>
           </span>
         </div>
         <div id="sic-pref-msg" class="hidden" style="margin-top:12px"></div>
@@ -1623,9 +1639,9 @@ function copyHomeContact(){
 }
 let _inRecovery = false;
 function _loginBlocks(activeId){
-  ['login-admin-block','login-seg-block','login-reset-block','login-recovery-block','login-mfa-block'].forEach(id =>
+  ['login-admin-block','login-seg-block','login-reset-block','login-recovery-block','login-mfa-block','login-mfa-setup-block'].forEach(id =>
     document.getElementById(id).classList.toggle('hidden', id !== activeId));
-  document.getElementById('login-modes').classList.toggle('hidden', activeId==='login-reset-block'||activeId==='login-recovery-block'||activeId==='login-mfa-block');
+  document.getElementById('login-modes').classList.toggle('hidden', activeId==='login-reset-block'||activeId==='login-recovery-block'||activeId==='login-mfa-block'||activeId==='login-mfa-setup-block');
   setMsg('');
 }
 function showResetView(ev){
@@ -1779,6 +1795,7 @@ function renderOperatori(){
       + '<td>' + esc(fmtData(o.dal)) + '</td><td>' + (o.primo_accesso_effettuato ? 'sì' : 'non ancora') + '</td>'
       + '<td style="white-space:nowrap">'
       + (o.ruolo === 'operatore' ? ('<button class="act-btn" onclick="statoOperatore(\'' + esc(o.id) + '\', ' + (o.stato !== 'attiva') + ')">' + (o.stato !== 'attiva' ? 'Riattiva' : 'Sospendi') + '</button> ') : '')
+      + ((o.ruolo === 'operatore' && o.primo_accesso_effettuato) ? ('<button class="act-btn" title="Telefono perso: rimuove i dispositivi di verifica in due passaggi dell\'operatore" onclick="azzeraMfaOperatore(\'' + esc(o.id) + '\')">Azzera verifica</button> ') : '')
       + '<button class="act-btn" title="Lettera di nomina (PDF)" onclick="letteraNomina(\'' + esc(o.id) + '\')">Nomina</button>'
       + '</td></tr>').join('')
     + '</tbody></table>';
@@ -1816,6 +1833,21 @@ async function statoOperatore(id, attiva){
     if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'aggiornamento');
     setOpMsg((attiva ? 'Riattivazione' : 'Sospensione') + ' registrata ✓ (effetto immediato).', 'info');
     loadOperatori();
+  } catch(e){ setOpMsg('Errore: ' + (e && e.message ? e.message : 'riprova'), 'err'); }
+}
+
+async function azzeraMfaOperatore(id){
+  if(!confirm('Rimuovere tutti i dispositivi di verifica in due passaggi di questo operatore? Al prossimo accesso dovrà registrarne uno nuovo (se la regola dell\'organizzazione è accesa). Farlo solo dopo aver verificato di persona chi lo chiede.')) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-operatori', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'azzera_mfa', segreteria_id: id })
+    });
+    const body = await res.json().catch(() => null);
+    if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'azzeramento');
+    setOpMsg('Verifica in due passaggi azzerata ✓ (dispositivi rimossi: ' + body.rimossi + ').', 'info');
   } catch(e){ setOpMsg('Errore: ' + (e && e.message ? e.message : 'riprova'), 'err'); }
 }
 
@@ -2812,6 +2844,14 @@ async function enterPlancia(){
     if(res.status === 403){ show('view-denied'); return; }
     if(!res.ok) throw new Error('coop-me ' + res.status);
     _plancia = await res.json();
+    // T-15 ciclo 2: la regola dell'organizzazione e' accesa e questa sessione e' ancora al primo
+    // livello senza alcun dispositivo (il caso "dispositivo presente" e' gia stato preso sopra):
+    // si attiva qui, poi enterPlancia riparte con la sessione promossa.
+    if(_plancia && _plancia.mfa_richiesta === true){
+      console.log('[Plancia] Verifica in due passaggi da attivare (regola dell\'organizzazione)');
+      _apriMfaSetup();
+      return;
+    }
     // contrassegno appena scritto da coop-me: rinfresco la sessione perche il token lo porti
     // subito (medidesk.html legge app_metadata dalla sessione per rimandare qui)
     if(_plancia.ruolo_marcato){ sb.auth.refreshSession().catch(e => console.warn('[Plancia] refreshSession:', e.message)); }
@@ -3087,6 +3127,72 @@ function _apriMfaLogin(){
   _loginBlocks('login-mfa-block');
   const c = document.getElementById('login-mfa-code'); if(c){ c.value = ''; setTimeout(() => c.focus(), 50); }
 }
+// Audit della plancia (T-15 ciclo 2): RPC che risolve la segreteria da auth.uid() e scrive in
+// audit_log senza medico. Soft-fail: l'evento resta comunque in console.
+async function _auditCoop(action, targetType, targetId, details){
+  try{
+    const { error } = await sb.rpc('log_audit_coop', { p_action: action, p_target_type: targetType || null, p_target_id: targetId ? String(targetId) : null, p_details: details || {} });
+    if(error) console.warn('[Plancia] audit non scritto:', error.message);
+  }catch(e){ console.warn('[Plancia] audit:', e.message); }
+}
+let _mfaSetupId = null;
+function _apriMfaSetup(){
+  show('view-login');
+  _loginBlocks('login-mfa-setup-block');
+  document.getElementById('login-mfa-setup-body').classList.add('hidden');
+  document.getElementById('login-mfa-setup-avvia').classList.remove('hidden');
+  _mfaSetupId = null;
+}
+async function mfaSetupAvvia(){
+  const btn = document.getElementById('login-mfa-setup-avvia'); btn.disabled = true; setMsg('');
+  try{
+    const nome = 'Dispositivo ' + new Date().toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const { data, error } = await sb.auth.mfa.enroll({ factorType:'totp', friendlyName: nome, issuer:'Delphi~Med' });
+    if(error) throw error;
+    _mfaSetupId = data.id;
+    const qr = document.getElementById('login-mfa-qr'); qr.innerHTML = '';
+    const svg = String((data.totp && data.totp.qr_code) || '').replace(/^data:image\/svg\+xml;utf-8,/, '');
+    if(svg){
+      const img = document.createElement('img');
+      img.alt = 'Codice QR per l\'app di autenticazione';
+      img.style.cssText = 'width:100%;height:100%;display:block';
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      qr.appendChild(img);
+    }
+    document.getElementById('login-mfa-secret').textContent = (data.totp && data.totp.secret) || '';
+    document.getElementById('login-mfa-setup-code').value = '';
+    document.getElementById('login-mfa-setup-body').classList.remove('hidden');
+    btn.classList.add('hidden');
+    setTimeout(() => { const c = document.getElementById('login-mfa-setup-code'); if(c) c.focus(); }, 50);
+  }catch(e){
+    console.error('[Plancia] mfaSetupAvvia:', e.message);
+    setMsg('Attivazione non avviata: ' + _mfaErr(e.message), 'err');
+  }finally{ btn.disabled = false; }
+}
+async function mfaSetupConferma(){
+  const code = (document.getElementById('login-mfa-setup-code').value || '').replace(/\D/g,'');
+  if(!_mfaSetupId){ setMsg('Premi «Inizia l\'attivazione» e inquadra il codice QR.', 'err'); return; }
+  if(code.length !== 6){ setMsg('Inserisci le 6 cifre del codice.', 'err'); return; }
+  const btn = document.getElementById('login-mfa-setup-btn'); btn.disabled = true; setMsg('');
+  try{
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: _mfaSetupId, code });
+    if(error){ setMsg(_mfaErr(error.message), 'err'); return; }
+    const id = _mfaSetupId; _mfaSetupId = null;
+    await _auditCoop('mfa_fattore_aggiunto', 'segreteria', null, { factor_id: id, obbligatoria: true });
+    enterPlancia();
+  }catch(e){
+    console.error('[Plancia] mfaSetupConferma:', e.message);
+    setMsg('Attivazione non confermata. Riprova.', 'err');
+  }finally{ btn.disabled = false; }
+}
+async function mfaSetupEsci(ev){
+  if(ev) ev.preventDefault();
+  const id = _mfaSetupId; _mfaSetupId = null;
+  if(id){ try{ await sb.auth.mfa.unenroll({ factorId: id }); }catch(_){ } }
+  try{ await sb.auth.signOut(); }catch(_){ }
+  _loginBlocks('login-admin-block');
+  setLoginMode('admin');
+}
 function _mfaErr(msg){
   msg = String(msg || '');
   if(/Invalid TOTP code/i.test(msg)) return 'Codice non valido o scaduto: controlla l\'ora del telefono e riprova.';
@@ -3198,10 +3304,11 @@ async function mfaConfermaAttivazione(){
   try{
     const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: _mfaEnrollId, code });
     if(error){ setBoxMsg('sic-mfa-msg', _mfaErr(error.message), 'err'); return; }
-    _mfaEnrollId = null;
+    const idAttivato = _mfaEnrollId; _mfaEnrollId = null;
     document.getElementById('sic-mfa-enroll').classList.add('hidden');
     document.getElementById('sic-mfa-azioni').style.display = '';
     setBoxMsg('sic-mfa-msg', 'Verifica in due passaggi attivata.', 'info');
+    _auditCoop('mfa_fattore_aggiunto', 'segreteria', null, { factor_id: idAttivato });
     mfaRenderStato();
   }catch(e){
     console.error('[Plancia] mfaConfermaAttivazione:', e.message);
@@ -3216,11 +3323,23 @@ async function mfaAnnullaAttivazione(){
   mfaRenderStato();
 }
 async function mfaRimuovi(factorId){
+  // Con la regola dell'organizzazione accesa l'ultimo dispositivo non si rimuove: la sessione
+  // tornerebbe al primo livello e la plancia si chiuderebbe.
+  if(_plancia && _plancia.cooperativa && _plancia.cooperativa.mfa_obbligatoria){
+    try{
+      const { data: lf } = await sb.auth.mfa.listFactors();
+      if(lf && Array.isArray(lf.totp) && lf.totp.length <= 1){
+        setBoxMsg('sic-mfa-msg', 'La verifica in due passaggi è obbligatoria per la tua organizzazione: per cambiare telefono aggiungi prima il nuovo dispositivo, poi rimuovi il vecchio.', 'err');
+        return;
+      }
+    }catch(_){ }
+  }
   if(!confirm('Senza questo dispositivo la verifica potrebbe non essere più richiesta e basteranno le credenziali per entrare. Rimuoverlo?')) return;
   try{
     const { error } = await sb.auth.mfa.unenroll({ factorId });
     if(error){ setBoxMsg('sic-mfa-msg', _mfaErr(error.message), 'err'); return; }
     setBoxMsg('sic-mfa-msg', 'Dispositivo rimosso.', 'info');
+    _auditCoop('mfa_fattore_rimosso', 'segreteria', null, { factor_id: factorId });
     mfaRenderStato();
   }catch(e){
     console.error('[Plancia] mfaRimuovi:', e.message);
@@ -3289,6 +3408,7 @@ async function sicCambiaPassword(){
     ['sic-pwd-attuale','sic-pwd','sic-pwd2'].forEach(id => document.getElementById(id).value = '');
     updateSicStrength();
     setBoxMsg('sic-pwd-msg', 'Password cambiata.', 'info');
+    _auditCoop('password_cambiata', 'segreteria', null, {});
   }catch(e){
     console.error('[Plancia] sicCambiaPassword:', e.message);
     setBoxMsg('sic-pwd-msg', 'Password non cambiata. Riprova.', 'err');
@@ -3298,6 +3418,7 @@ async function sicEsciDaTutti(){
   if(!confirm('Chiudere l\'accesso su tutti i dispositivi? Dovrai rientrare anche qui.')) return;
   const btn = document.getElementById('sic-esci-tutti-btn'); btn.disabled = true;
   try{
+    await _auditCoop('logout_tutti_dispositivi', 'segreteria', null, {});
     const { error } = await sb.auth.signOut({ scope: 'global' });
     if(error) throw error;
     setMsg('');

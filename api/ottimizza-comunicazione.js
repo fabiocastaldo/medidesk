@@ -4,6 +4,7 @@
 // Il testo prodotto e' IDENTICO per tutti i destinatari e viaggia in chiaro via email:
 // il prompt vieta contenuti riferiti al singolo paziente e dati clinici individuali.
 import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
+import { richiediAal2 } from '../lib/aal-guard.js';
 import { trialExpired } from '../lib/trial-gate.js';
 
 const rateMap = new Map();
@@ -62,6 +63,10 @@ export default async function handler(req, res) {
   }).catch(() => null);
   if (!userRes || !userRes.ok) {
     return res.status(401).json({ error: 'Token non valido o scaduto' });
+  }
+  const aalKo = richiediAal2(jwt);
+  if (aalKo) {
+    return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
   const userData = await userRes.json().catch(() => null);
   if (!userData?.id) {
