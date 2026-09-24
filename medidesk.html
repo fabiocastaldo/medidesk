@@ -2296,6 +2296,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Ti raccomandiamo di cambiare la password periodicamente e di sceglierne una lunga e diversa da quelle che usi altrove: un gestore di password la ricorda per te. Per cambiarla serve la password attuale.</p>
           <div style="max-width:420px">
             <div class="auth-field">
+              <label>Account</label>
+              <input type="email" id="sec-pwd-email" autocomplete="username" readonly style="background:var(--surface2);color:var(--ink2)">
+            </div>
+            <div class="auth-field">
               <label>Password attuale</label>
               <div class="auth-pwd-wrap"><input type="password" id="sec-pwd-attuale" placeholder="••••••••" autocomplete="current-password"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
             </div>
@@ -3751,6 +3755,11 @@ async function esciDaTutti(btn){
     if(btn) btn.disabled = false;
   }
 }
+async function secRenderAccount(){
+  // Il campo Account, con autocomplete="username", dice al gestore di password del browser quale nome utente abbinare alla password
+  const el = document.getElementById('sec-pwd-email'); if(!el) return;
+  try{ const { data } = await supabaseClient.auth.getUser(); el.value = (data && data.user && data.user.email) || ''; }catch(_){ el.value = ''; }
+}
 const SEC_CORSO_MODULI = [
   { parte:'A', n:1,  titolo:'Chi vede cosa',                     sotto:'Medico, segreteria, paziente dal link, Delphi~Med: chi legge cosa, cosa è cifrato' },
   { parte:'A', n:2,  titolo:'Il tuo account è la porta',         sotto:'Verifica in due passaggi, telefono perso, «Esci», gestionale aperto in sala d\'attesa' },
@@ -4068,6 +4077,8 @@ function showAuthView(){
   document.getElementById('view-auth').style.display    = 'none';
   document.getElementById('view-app').style.display     = 'none';
   document.getElementById('view-booking').style.display = 'none';
+  // La home riparte dall'alto: dopo «Esci» resterebbe lo scroll della pagina lasciata nel gestionale
+  window.scrollTo(0, 0);
 }
 
 const ABP=[
@@ -4954,7 +4965,7 @@ function showPage(id){
   if(id==='dashboard'){ renderDashboard(); updateStats(); renderPending(); }
   if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
-  if(id==='sicurezza'){ mfaRenderStato(); secRenderCorso(); }
+  if(id==='sicurezza'){ mfaRenderStato(); secRenderAccount(); secRenderCorso(); }
   if(id==='manutenzione-archivio') renderArchivioPage();
   if(id==='promemoria') promRenderPagina();
 }
