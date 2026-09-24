@@ -211,6 +211,23 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .toggle-switch input:checked~.toggle-slider::after{transform:translateX(18px)}
 .pref-row{display:flex;align-items:flex-start;gap:14px;max-width:680px}
 .pref-row + .pref-row{margin-top:18px}
+.sic-block{margin-bottom:26px}
+.sic-block h2{font-size:16px;color:var(--brand-mid);margin-bottom:8px}
+.sic-block p.sub{margin:0 0 12px}
+.sic-block .btn{width:auto;margin-top:8px;padding:10px 18px}
+.sic-block .btn-ghost.warn{color:#8C2F22;border-color:#EFCFC8;padding:6px 12px;font-size:12.5px;margin:0}
+.sic-fattore{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13px}
+#sic-qr{width:200px;height:200px;background:#fff;border:1px solid var(--border);border-radius:var(--r-sm);padding:8px;box-sizing:border-box}
+.sic-form{max-width:420px}
+.sec-corso-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.sec-corso-parte{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:600;margin-top:6px}
+.sec-mod{display:flex;gap:12px;padding:14px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--paper);opacity:.85}
+.sec-mod-n{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--brand-mid);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.sec-mod-body{min-width:0}
+.sec-mod-t{font-weight:600;font-size:14px;margin-bottom:2px}
+.sec-mod-s{font-size:12px;color:var(--ink3);line-height:1.4}
+.sec-mod-meta{display:flex;gap:10px;font-size:11px;color:var(--ink3);margin-top:8px}
+.sec-mod-stato{color:#8C2F22;font-weight:600}
 .mx-wrap{overflow-x:auto}
 .mx{border-collapse:collapse;font-size:13px;min-width:100%}
 .mx th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap}
@@ -375,6 +392,15 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         </div>
         <button class="btn" id="rec-save-btn" onclick="recoverySave()">Salva e accedi</button>
       </div>
+      <div id="login-mfa-block" class="hidden">
+        <p class="sub" style="margin-top:0">Inserisci il codice a 6 cifre generato dalla tua app di autenticazione.</p>
+        <div class="field">
+          <label for="login-mfa-code">Codice di verifica</label>
+          <input id="login-mfa-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" onkeydown="if(event.key==='Enter')mfaLoginVerifica()">
+        </div>
+        <button class="btn" id="login-mfa-btn" onclick="mfaLoginVerifica()">Verifica</button>
+        <span class="helplink"><a href="#" onclick="mfaLoginAnnulla(event)">&larr; Torna all'accesso</a></span>
+      </div>
       <div id="login-msg" class="hidden"></div>
       <span class="helplink">La tua organizzazione non è ancora attiva?
         <a href="#" onclick="openHomeContact(event,'Attivazione cooperativa Delphi~Med')">Richiedi l'attivazione</a>
@@ -433,6 +459,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <button class="sitem" id="tabbtn-compensi" onclick="switchTab('compensi')">Compensi</button>
       <button class="sitem" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
       <button class="sitem" id="tabbtn-preferenze" onclick="switchTab('preferenze')">Preferenze</button>
+      <button class="sitem" id="tabbtn-sicurezza" onclick="switchTab('sicurezza')">Sicurezza</button>
     </nav>
     <div class="side-foot">
       <div class="who" id="plancia-who"></div>
@@ -772,6 +799,98 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     
           </section>
 
+    <section id="tab-sicurezza" class="card-lite hidden">
+      <div class="sic-block">
+        <h2>Verifica in due passaggi</h2>
+        <p class="sub">Dalla plancia si leggono nomi e appuntamenti dei pazienti di tutti i medici dell'organizzazione: chi entra col tuo accesso li vede tutti. <strong>Ti raccomandiamo di attivare la verifica in due passaggi</strong>: oltre alla password o al codice via email, a ogni nuovo accesso ti verrà chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password). Assicurati che l'app abbia il backup attivo, oppure registra qui un secondo dispositivo con una chiave a sé: così un telefono perso non ti chiude fuori.</p>
+        <div id="sic-mfa-stato" style="font-size:13px;margin-bottom:4px">Caricamento…</div>
+        <div id="sic-mfa-fattori"></div>
+        <div id="sic-mfa-enroll" class="hidden" style="margin-top:12px">
+          <p class="sub" style="margin-bottom:10px">1. Inquadra il codice QR con l'app di autenticazione (oppure inserisci a mano la chiave qui sotto).</p>
+          <div id="sic-qr"></div>
+          <div style="font-size:12px;color:var(--ink3);margin:8px 0 14px;word-break:break-all">Chiave: <code id="sic-secret"></code></div>
+          <p class="sub" style="margin-bottom:8px">2. Inserisci il primo codice mostrato dall'app per confermare.</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <input type="text" id="sic-enroll-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" style="width:120px;padding:8px;border:1px solid var(--border);border-radius:var(--r-sm);letter-spacing:3px;font-family:inherit" onkeydown="if(event.key==='Enter')mfaConfermaAttivazione()">
+            <button class="btn" id="sic-enroll-btn" style="margin-top:0" onclick="mfaConfermaAttivazione()">Conferma e attiva</button>
+            <button class="btn btn-ghost" style="margin-top:0" onclick="mfaAnnullaAttivazione()">Annulla</button>
+          </div>
+        </div>
+        <div id="sic-mfa-azioni" style="margin-top:12px">
+          <button class="btn" id="sic-attiva-btn" onclick="mfaAvviaAttivazione()" style="display:none">Attiva verifica in due passaggi</button>
+        </div>
+        <div id="sic-mfa-msg" class="hidden" style="margin-top:12px"></div>
+      </div>
+
+      <div class="sic-block" id="sic-admin-block" style="display:none">
+        <h2>Regola dell'organizzazione</h2>
+        <div class="pref-row">
+          <label class="toggle-switch"><input type="checkbox" id="pref-mfa" onchange="setPrefMfa(this.checked)"><span class="toggle-slider"></span></label>
+          <span>
+            <span style="font-weight:600">Verifica in due passaggi obbligatoria per tutti gli operatori</span><br>
+            <span style="font-size:13px;color:var(--ink2);line-height:1.55">Se attiva, ogni persona autorizzata di questa organizzazione, amministratore compreso, dovrà attivare la verifica in due passaggi al primo accesso e la plancia non si aprirà senza il codice. Oggi la regola viene registrata e mostrata; il blocco all'accesso sarà attivo con il prossimo aggiornamento della piattaforma.</span>
+          </span>
+        </div>
+        <div id="sic-pref-msg" class="hidden" style="margin-top:12px"></div>
+      </div>
+
+      <div class="sic-block" id="sic-pwd-block">
+        <h2>Password</h2>
+        <p class="sub">Ti raccomandiamo di cambiare la password periodicamente e di sceglierne una lunga e diversa da quelle che usi altrove: un gestore di password la ricorda per te. Per cambiarla serve la password attuale.</p>
+        <div class="sic-form">
+          <div class="field">
+            <label for="sic-pwd-email">Account</label>
+            <input id="sic-pwd-email" type="email" autocomplete="username" readonly style="background:var(--paper);color:var(--ink2)">
+          </div>
+          <div class="field">
+            <label for="sic-pwd-attuale">Password attuale</label>
+            <div class="pw-wrap">
+              <input id="sic-pwd-attuale" type="password" autocomplete="current-password">
+              <button type="button" class="pw-eye" aria-label="Mostra password" onclick="togglePwEye(this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="sic-pwd">Nuova password</label>
+            <div class="pw-wrap">
+              <input id="sic-pwd" type="password" autocomplete="new-password" oninput="updateSicStrength()">
+              <button type="button" class="pw-eye" aria-label="Mostra password" onclick="togglePwEye(this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            </div>
+            <div class="pwd-strength-bar"><div id="sic-strength-fill"></div></div>
+            <div id="sic-strength-label"></div>
+            <ul class="pwd-criteria">
+              <li id="crit-s-len">Almeno 8 caratteri</li>
+              <li id="crit-s-upper">Almeno una lettera maiuscola</li>
+              <li id="crit-s-lower">Almeno una lettera minuscola</li>
+              <li id="crit-s-num">Almeno un numero</li>
+              <li id="crit-s-special">Almeno un carattere speciale (!@#$%...)</li>
+            </ul>
+          </div>
+          <div class="field">
+            <label for="sic-pwd2">Conferma password</label>
+            <div class="pw-wrap">
+              <input id="sic-pwd2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')sicCambiaPassword()">
+              <button type="button" class="pw-eye" aria-label="Mostra password" onclick="togglePwEye(this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            </div>
+          </div>
+          <button class="btn" id="sic-pwd-btn" onclick="sicCambiaPassword()">Cambia password</button>
+          <div id="sic-pwd-msg" class="hidden" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="sic-block">
+        <h2>Sessioni</h2>
+        <p class="sub">L'accesso resta aperto sul dispositivo finché non premi «Esci». Se hai lasciato la plancia aperta su un computer che non controlli più, o hai il dubbio che qualcuno conosca le tue credenziali, chiudi tutte le sessioni: dovrai rientrare ovunque, anche qui.</p>
+        <button class="btn btn-ghost" id="sic-esci-tutti-btn" onclick="sicEsciDaTutti()">Esci da tutti i dispositivi</button>
+        <div id="sic-sess-msg" class="hidden" style="margin-top:12px"></div>
+      </div>
+
+      <div class="sic-block">
+        <h2>Formazione sulla sicurezza</h2>
+        <p class="sub">Un percorso breve, tre minuti a modulo, per sapere cosa fa Delphi~Med per i dati dei pazienti e cosa dipende da te. Ogni modulo parte da una scena di segreteria e finisce con tre domande. La spunta di lettura resterà nel tuo account: vale come evidenza di formazione per l'organizzazione.</p>
+        <div class="sec-corso-grid" id="sic-corso"></div>
+      </div>
+    </section>
+
     <p class="plancia-note">Versione di anteprima: le funzioni della plancia vengono attivate progressivamente.</p>
     <footer>© <span id="footer-year">2026</span> Delphi~Med</footer>
   </div>
@@ -821,7 +940,8 @@ const SEC_TITOLI = {
   'medici': 'Medici', 'segreteria': 'Segreteria', 'sedi': 'Sedi', 'turni': 'Turni', 'servizi': 'Servizi',
   'assoc-servizi': 'Medici ↔ servizi', 'assoc-turni': 'Medici ↔ turni',
   'giornata': 'Giornata',
-  'statistiche': 'Statistiche', 'compensi': 'Compensi', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze'
+  'statistiche': 'Statistiche', 'compensi': 'Compensi', 'agenda': 'Agenda medico', 'preferenze': 'Preferenze',
+  'sicurezza': 'Sicurezza'
 };
 const SEC_SOTTO = {
   'medici': 'I medici collegati all\'organizzazione e il codice di collegamento',
@@ -835,13 +955,14 @@ const SEC_SOTTO = {
   'statistiche': 'La visione d\'insieme dell\'attivit\u00e0',
   'compensi': 'Chi paga chi per ogni sede: modello, regole e riconciliazione mensile',
   'agenda': 'Gestisci disponibilit\u00e0 e prenotazioni del medico',
-  'preferenze': 'Le impostazioni dell\'organizzazione'
+  'preferenze': 'Le impostazioni dell\'organizzazione',
+  'sicurezza': 'Accesso, password, sessioni e formazione'
 };
 
 const _ADMIN_TABS = ['segreteria','sedi','turni','servizi','assoc-servizi','assoc-turni','statistiche','compensi','preferenze'];
 function switchTab(t){
   if(_plancia && _plancia.ruolo !== 'admin' && _ADMIN_TABS.includes(t)) return;
-  ['medici','segreteria','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','compensi','agenda','preferenze'].forEach(x => {
+  ['medici','segreteria','sedi','turni','servizi','assoc-servizi','assoc-turni','giornata','statistiche','compensi','agenda','preferenze','sicurezza'].forEach(x => {
     document.getElementById('tab-' + x).classList.toggle('hidden', x !== t);
     document.getElementById('tabbtn-' + x).classList.toggle('active', x === t);
   });
@@ -851,6 +972,7 @@ function switchTab(t){
   if(t === 'compensi'){ initCompensi(); }
   if(t === 'giornata') initGiornata();
   if(t === 'segreteria'){ loadOperatori(); }
+  if(t === 'sicurezza'){ sicRender(); }
 }
 
 function nomeMedico(m){ return [m.nome, m.cognome].filter(Boolean).join(' '); }
@@ -1010,6 +1132,8 @@ function renderPlancia(){
   if(pmm) pmm.checked = !(d.cooperativa && d.cooperativa.mail_notifica_medico === false);
   const pms = document.getElementById('pref-mail-segreteria');
   if(pms) pms.checked = !(d.cooperativa && d.cooperativa.mail_ricevuta_segreteria === false);
+  const pmf = document.getElementById('pref-mfa');
+  if(pmf) pmf.checked = !!(d.cooperativa && d.cooperativa.mfa_obbligatoria);
 }
 
 function renderCoperturaTab(){
@@ -1499,9 +1623,9 @@ function copyHomeContact(){
 }
 let _inRecovery = false;
 function _loginBlocks(activeId){
-  ['login-admin-block','login-seg-block','login-reset-block','login-recovery-block'].forEach(id =>
+  ['login-admin-block','login-seg-block','login-reset-block','login-recovery-block','login-mfa-block'].forEach(id =>
     document.getElementById(id).classList.toggle('hidden', id !== activeId));
-  document.getElementById('login-modes').classList.toggle('hidden', activeId==='login-reset-block'||activeId==='login-recovery-block');
+  document.getElementById('login-modes').classList.toggle('hidden', activeId==='login-reset-block'||activeId==='login-recovery-block'||activeId==='login-mfa-block');
   setMsg('');
 }
 function showResetView(ev){
@@ -2674,6 +2798,13 @@ async function enterPlancia(){
   document.getElementById('plancia-who').textContent = 'Caricamento…';
   try {
     const { data: { session } } = await sb.auth.getSession();
+    // Unico ingresso alla plancia: se la verifica in due passaggi e' attiva e il token e' ancora
+    // al primo livello, chiede il codice invece di interrogare coop-me (vale per password, OTP e recovery).
+    if(_aalDaSessione(session).richiesto){
+      console.log('[Plancia] Verifica in due passaggi richiesta');
+      _apriMfaLogin();
+      return;
+    }
     const res = await fetch('/api/coop-me', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + session.access_token }
@@ -2936,6 +3067,272 @@ async function doLogin(){
   } finally {
     btn.disabled = false;
   }
+}
+
+// ── SICUREZZA: verifica in due passaggi, password, sessioni, corso ──
+function _aalDaSessione(session){
+  if(!session || !session.access_token) return { corrente:null, richiesto:false };
+  let corrente = null;
+  try{
+    const seg = String(session.access_token).split('.')[1] || '';
+    const b64 = seg.replace(/-/g,'+').replace(/_/g,'/') + '='.repeat((4 - seg.length % 4) % 4);
+    corrente = JSON.parse(atob(b64)).aal || null;
+  }catch(_){ }
+  const fattori = (session.user && Array.isArray(session.user.factors)) ? session.user.factors : [];
+  const verificati = fattori.filter(f => f && f.status === 'verified').length;
+  return { corrente, richiesto: verificati > 0 && corrente !== 'aal2' };
+}
+function _apriMfaLogin(){
+  show('view-login');
+  _loginBlocks('login-mfa-block');
+  const c = document.getElementById('login-mfa-code'); if(c){ c.value = ''; setTimeout(() => c.focus(), 50); }
+}
+function _mfaErr(msg){
+  msg = String(msg || '');
+  if(/Invalid TOTP code/i.test(msg)) return 'Codice non valido o scaduto: controlla l\'ora del telefono e riprova.';
+  if(/AAL2 required/i.test(msg)) return 'Serve il codice di verifica: esci e rientra inserendolo.';
+  if(/network|fetch/i.test(msg)) return 'Connessione assente o instabile, riprova.';
+  return 'Operazione non riuscita: riprova tra poco.';
+}
+async function mfaLoginVerifica(){
+  const code = (document.getElementById('login-mfa-code').value || '').replace(/\D/g,'');
+  if(code.length !== 6){ setMsg('Inserisci le 6 cifre del codice.', 'err'); return; }
+  const btn = document.getElementById('login-mfa-btn'); btn.disabled = true; setMsg('');
+  try{
+    const { data: lf, error: e1 } = await sb.auth.mfa.listFactors();
+    const fattore = lf && lf.totp && lf.totp[0];
+    if(e1 || !fattore){ setMsg('Nessun dispositivo di verifica trovato: torna all\'accesso e riprova.', 'err'); return; }
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: fattore.id, code });
+    if(error){ setMsg(_mfaErr(error.message), 'err'); return; }
+    setMsg('');
+    enterPlancia();
+  }catch(e){
+    console.error('[Plancia] mfaLoginVerifica:', e.message);
+    setMsg('Verifica non riuscita. Riprova.', 'err');
+  }finally{ btn.disabled = false; }
+}
+async function mfaLoginAnnulla(ev){
+  if(ev) ev.preventDefault();
+  try{ await sb.auth.signOut(); }catch(_){ }
+  _loginBlocks('login-admin-block');
+  setLoginMode('admin');
+}
+let _mfaEnrollId = null;
+async function sicRender(){
+  const admin = _plancia && _plancia.ruolo === 'admin';
+  // L'interruttore dell'organizzazione e la password solo per l'amministratore: gli operatori entrano col codice via email
+  document.getElementById('sic-admin-block').style.display = admin ? '' : 'none';
+  document.getElementById('sic-pwd-block').style.display = admin ? '' : 'none';
+  ['sic-mfa-msg','sic-pref-msg','sic-pwd-msg','sic-sess-msg'].forEach(id => setBoxMsg(id, ''));
+  const pmf = document.getElementById('pref-mfa');
+  if(pmf) pmf.checked = !!(_plancia && _plancia.cooperativa && _plancia.cooperativa.mfa_obbligatoria);
+  try{ const { data } = await sb.auth.getUser(); document.getElementById('sic-pwd-email').value = (data && data.user && data.user.email) || ''; }catch(_){ }
+  sicRenderCorso();
+  mfaRenderStato();
+}
+async function mfaRenderStato(){
+  const st = document.getElementById('sic-mfa-stato'); if(!st) return;
+  const lista = document.getElementById('sic-mfa-fattori');
+  const attiva = document.getElementById('sic-attiva-btn');
+  try{
+    const { data, error } = await sb.auth.mfa.listFactors();
+    if(error) throw error;
+    const tutti = (data && data.all) || [];
+    for(const f of tutti){
+      if(f && f.factor_type === 'totp' && f.status !== 'verified' && f.id !== _mfaEnrollId){
+        try{ await sb.auth.mfa.unenroll({ factorId: f.id }); }catch(_){ }
+      }
+    }
+    const fattori = (data && data.totp) || [];
+    if(fattori.length){
+      st.innerHTML = '<span style="color:var(--brand-mid);font-weight:600">Attiva</span> <span style="color:var(--ink2)">— il codice viene richiesto a ogni nuovo accesso.</span>';
+      lista.innerHTML = fattori.map(f =>
+        '<div class="sic-fattore"><span>' + esc(f.friendly_name || 'App di autenticazione') +
+        ' <span style="color:var(--ink3)">· registrato il ' + esc(fmtData(String(f.created_at || '').slice(0,10))) + '</span></span>' +
+        '<button class="btn btn-ghost warn" onclick="mfaRimuovi(\'' + esc(f.id) + '\')">Rimuovi</button></div>'
+      ).join('');
+      attiva.textContent = 'Aggiungi un secondo dispositivo';
+      attiva.style.display = fattori.length >= 2 ? 'none' : '';
+    } else {
+      st.innerHTML = '<span style="color:var(--ink2)">Non attiva — l\'accesso avviene con le sole credenziali.</span>';
+      lista.innerHTML = '';
+      attiva.textContent = 'Attiva verifica in due passaggi';
+      attiva.style.display = '';
+    }
+  }catch(e){
+    st.textContent = 'Stato non disponibile: riprova tra poco.';
+    console.error('[Plancia] mfaRenderStato:', e);
+  }
+}
+async function mfaAvviaAttivazione(){
+  const btn = document.getElementById('sic-attiva-btn'); btn.disabled = true; setBoxMsg('sic-mfa-msg', '');
+  try{
+    const nome = 'Dispositivo ' + new Date().toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const { data, error } = await sb.auth.mfa.enroll({ factorType:'totp', friendlyName: nome, issuer:'Delphi~Med' });
+    if(error) throw error;
+    _mfaEnrollId = data.id;
+    const qr = document.getElementById('sic-qr'); qr.innerHTML = '';
+    const svg = String((data.totp && data.totp.qr_code) || '').replace(/^data:image\/svg\+xml;utf-8,/, '');
+    if(svg){
+      const img = document.createElement('img');
+      img.alt = 'Codice QR per l\'app di autenticazione';
+      img.style.cssText = 'width:100%;height:100%;display:block';
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      qr.appendChild(img);
+    }
+    document.getElementById('sic-secret').textContent = (data.totp && data.totp.secret) || '';
+    document.getElementById('sic-enroll-code').value = '';
+    document.getElementById('sic-mfa-enroll').classList.remove('hidden');
+    document.getElementById('sic-mfa-azioni').style.display = 'none';
+    setTimeout(() => { const c = document.getElementById('sic-enroll-code'); if(c) c.focus(); }, 50);
+  }catch(e){
+    console.error('[Plancia] mfaAvviaAttivazione:', e.message);
+    setBoxMsg('sic-mfa-msg', 'Attivazione non avviata: ' + _mfaErr(e.message), 'err');
+  }finally{ btn.disabled = false; }
+}
+async function mfaConfermaAttivazione(){
+  const code = (document.getElementById('sic-enroll-code').value || '').replace(/\D/g,'');
+  if(!_mfaEnrollId){ setBoxMsg('sic-mfa-msg', 'Attivazione non avviata: premi «Attiva verifica in due passaggi».', 'err'); return; }
+  if(code.length !== 6){ setBoxMsg('sic-mfa-msg', 'Inserisci le 6 cifre del codice.', 'err'); return; }
+  const btn = document.getElementById('sic-enroll-btn'); btn.disabled = true;
+  try{
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: _mfaEnrollId, code });
+    if(error){ setBoxMsg('sic-mfa-msg', _mfaErr(error.message), 'err'); return; }
+    _mfaEnrollId = null;
+    document.getElementById('sic-mfa-enroll').classList.add('hidden');
+    document.getElementById('sic-mfa-azioni').style.display = '';
+    setBoxMsg('sic-mfa-msg', 'Verifica in due passaggi attivata.', 'info');
+    mfaRenderStato();
+  }catch(e){
+    console.error('[Plancia] mfaConfermaAttivazione:', e.message);
+    setBoxMsg('sic-mfa-msg', 'Attivazione non confermata. Riprova.', 'err');
+  }finally{ btn.disabled = false; }
+}
+async function mfaAnnullaAttivazione(){
+  const id = _mfaEnrollId; _mfaEnrollId = null;
+  document.getElementById('sic-mfa-enroll').classList.add('hidden');
+  document.getElementById('sic-mfa-azioni').style.display = '';
+  if(id){ try{ await sb.auth.mfa.unenroll({ factorId: id }); }catch(_){ } }
+  mfaRenderStato();
+}
+async function mfaRimuovi(factorId){
+  if(!confirm('Senza questo dispositivo la verifica potrebbe non essere più richiesta e basteranno le credenziali per entrare. Rimuoverlo?')) return;
+  try{
+    const { error } = await sb.auth.mfa.unenroll({ factorId });
+    if(error){ setBoxMsg('sic-mfa-msg', _mfaErr(error.message), 'err'); return; }
+    setBoxMsg('sic-mfa-msg', 'Dispositivo rimosso.', 'info');
+    mfaRenderStato();
+  }catch(e){
+    console.error('[Plancia] mfaRimuovi:', e.message);
+    setBoxMsg('sic-mfa-msg', 'Rimozione non riuscita. Riprova.', 'err');
+  }
+}
+async function setPrefMfa(valore){
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch('/api/coop-preferenze', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_mfa_obbligatoria', valore })
+    });
+    const body = await res.json().catch(() => ({}));
+    if(!res.ok){
+      document.getElementById('pref-mfa').checked = !valore;
+      setBoxMsg('sic-pref-msg', body.error || 'Salvataggio non riuscito.', 'err');
+      return;
+    }
+    console.log('[Plancia] mfa_obbligatoria =', body.mfa_obbligatoria);
+    if(_plancia && _plancia.cooperativa) _plancia.cooperativa.mfa_obbligatoria = body.mfa_obbligatoria;
+    setBoxMsg('sic-pref-msg', body.mfa_obbligatoria ? 'Verifica in due passaggi obbligatoria per tutti gli operatori.' : 'Verifica in due passaggi facoltativa: ogni operatore decide per sé.', 'info');
+  }catch(e){
+    console.error('[Plancia] setPrefMfa:', e.message);
+    document.getElementById('pref-mfa').checked = !valore;
+    setBoxMsg('sic-pref-msg', 'Salvataggio non riuscito. Riprova.', 'err');
+  }
+}
+function _sicCriteri(pwd){
+  return { len: pwd.length >= 8, upper: /[A-Z]/.test(pwd), lower: /[a-z]/.test(pwd), num: /[0-9]/.test(pwd), special: /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(pwd) };
+}
+function updateSicStrength(){
+  const pwd = document.getElementById('sic-pwd').value || '';
+  const criteria = _sicCriteri(pwd);
+  Object.keys(criteria).forEach(k => { const el = document.getElementById('crit-s-' + k); if(el) el.classList.toggle('met', criteria[k]); });
+  const met = Object.values(criteria).filter(Boolean).length;
+  const fill = document.getElementById('sic-strength-fill'), label = document.getElementById('sic-strength-label');
+  if(!pwd.length){ fill.style.width = '0'; fill.style.background = ''; label.textContent = ''; label.style.color = ''; return; }
+  const levels = [{max:2,w:'25%',color:'#ef4444',text:'Debole'},{max:4,w:'60%',color:'#f59e0b',text:'Media'},{max:5,w:'100%',color:'var(--brand-bright)',text:'Forte'}];
+  const lvl = levels.find(l => met <= l.max);
+  fill.style.width = lvl.w; fill.style.background = lvl.color; label.textContent = lvl.text; label.style.color = lvl.color;
+}
+let _sicPwdInCorso = false;
+async function sicCambiaPassword(){
+  if(_sicPwdInCorso) return;
+  const attuale = document.getElementById('sic-pwd-attuale').value;
+  const pwd = document.getElementById('sic-pwd').value;
+  const pwd2 = document.getElementById('sic-pwd2').value;
+  if(!attuale){ setBoxMsg('sic-pwd-msg', 'Inserisci la password attuale.', 'err'); return; }
+  if(pwd !== pwd2){ setBoxMsg('sic-pwd-msg', 'Le password non coincidono.', 'err'); return; }
+  if(!Object.values(_sicCriteri(pwd)).every(Boolean)){ setBoxMsg('sic-pwd-msg', 'La password non soddisfa tutti i criteri richiesti.', 'err'); return; }
+  if(attuale === pwd){ setBoxMsg('sic-pwd-msg', 'La nuova password deve essere diversa da quella attuale.', 'err'); return; }
+  const btn = document.getElementById('sic-pwd-btn'); btn.disabled = true; _sicPwdInCorso = true; setBoxMsg('sic-pwd-msg', '');
+  try{
+    // La password attuale si verifica con un accesso su un client separato, che non tocca la sessione aperta
+    const { data: ud } = await sb.auth.getUser();
+    const email = ud && ud.user && ud.user.email;
+    if(!email){ setBoxMsg('sic-pwd-msg', 'Sessione non valida: esci e rientra.', 'err'); return; }
+    const tmp = supabase.createClient(sb.supabaseUrl, sb.supabaseKey, { auth: { persistSession:false, autoRefreshToken:false, detectSessionInUrl:false, storageKey:'dm-coop-verifica-password' } });
+    const { error: eV } = await tmp.auth.signInWithPassword({ email, password: attuale });
+    if(eV){ setBoxMsg('sic-pwd-msg', /Invalid login credentials/i.test(eV.message || '') ? 'Password attuale non corretta.' : 'Verifica non riuscita. Riprova.', 'err'); return; }
+    try{ await tmp.auth.signOut({ scope: 'local' }); }catch(_){ }
+    const { error } = await sb.auth.updateUser({ password: pwd });
+    if(error){ setBoxMsg('sic-pwd-msg', 'Password non cambiata: ' + _mfaErr(error.message), 'err'); return; }
+    ['sic-pwd-attuale','sic-pwd','sic-pwd2'].forEach(id => document.getElementById(id).value = '');
+    updateSicStrength();
+    setBoxMsg('sic-pwd-msg', 'Password cambiata.', 'info');
+  }catch(e){
+    console.error('[Plancia] sicCambiaPassword:', e.message);
+    setBoxMsg('sic-pwd-msg', 'Password non cambiata. Riprova.', 'err');
+  }finally{ btn.disabled = false; _sicPwdInCorso = false; }
+}
+async function sicEsciDaTutti(){
+  if(!confirm('Chiudere l\'accesso su tutti i dispositivi? Dovrai rientrare anche qui.')) return;
+  const btn = document.getElementById('sic-esci-tutti-btn'); btn.disabled = true;
+  try{
+    const { error } = await sb.auth.signOut({ scope: 'global' });
+    if(error) throw error;
+    setMsg('');
+    _loginBlocks('login-admin-block');
+    setLoginMode('admin');
+    show('view-login');
+  }catch(e){
+    console.error('[Plancia] sicEsciDaTutti:', e.message);
+    setBoxMsg('sic-sess-msg', 'Uscita non riuscita. Riprova.', 'err');
+  }finally{ btn.disabled = false; }
+}
+const SIC_CORSO_MODULI = [
+  { parte:'A', n:1,  titolo:'Chi vede cosa',                         sotto:'Segreteria, medico, paziente dal link, Delphi~Med: cosa mostra la plancia e cosa no' },
+  { parte:'A', n:2,  titolo:'Il tuo accesso è la porta',             sotto:'Verifica in due passaggi, telefono perso, «Esci», plancia aperta al banco' },
+  { parte:'A', n:3,  titolo:'Consenso al trattamento',               sotto:'Informativa e consenso alla prenotazione, comunicazioni e revoca, minori' },
+  { parte:'A', n:4,  titolo:'Conservazione e archiviazione',         sotto:'Cosa resta e per quanto, richieste dei pazienti, data breach in 72 ore' },
+  { parte:'B', n:5,  titolo:'Phishing, smishing, vishing, quishing', sotto:'Nessuna urgenza legittima chiede codici o password' },
+  { parte:'B', n:6,  titolo:'Password',                              sotto:'Lunghezza prima della complessità, gestore, una per servizio' },
+  { parte:'B', n:7,  titolo:'Password condivise',                    sotto:'L\'accesso «della segreteria» che usano tutti, il codice girato al collega, il post-it: un accesso per persona' },
+  { parte:'B', n:8,  titolo:'Dispositivi',                           sotto:'Aggiornamenti, blocco schermo, telefono personale, wifi pubblico' },
+  { parte:'B', n:9,  titolo:'Social media e messaggistica',          sotto:'Appuntamenti su WhatsApp, pazienti su Instagram, gruppi di reparto' },
+  { parte:'B', n:10, titolo:'Ingegneria sociale al banco',           sotto:'Il finto tecnico, il finto paziente, il familiare al telefono' },
+  { parte:'B', n:11, titolo:'Quando qualcosa è andato storto',       sotto:'I segni, i primi tre gesti, chi chiamare, cosa non cancellare' }
+];
+function sicRenderCorso(){
+  const g = document.getElementById('sic-corso'); if(!g) return;
+  const parti = { A:'Delphi~Med e i dati dei pazienti', B:'Cybersicurezza per chi cura' };
+  let html = '';
+  ['A','B'].forEach(pt => {
+    html += '<div class="sec-corso-parte">Parte ' + pt + ' · ' + esc(parti[pt]) + '</div>';
+    SIC_CORSO_MODULI.filter(m => m.parte === pt).forEach(m => {
+      html += '<div class="sec-mod" aria-disabled="true"><div class="sec-mod-n">' + m.n + '</div><div class="sec-mod-body"><div class="sec-mod-t">' + esc(m.titolo) + '</div><div class="sec-mod-s">' + esc(m.sotto) + '</div><div class="sec-mod-meta"><span>3 minuti</span><span class="sec-mod-stato">In preparazione</span></div></div></div>';
+    });
+  });
+  g.innerHTML = html;
 }
 
 async function doLogout(){

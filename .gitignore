@@ -31,3 +31,7 @@ _diff.txt
 node_modules/
 .env*.local
 _*.txt
+
+# File di stato di sessione e smoke locali (mai nel repo pubblico)
+_stato/
+_smoke.html
