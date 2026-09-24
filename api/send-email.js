@@ -418,7 +418,7 @@ const VALID_TIPI = new Set([
   'account_eliminazione', 'notifica_prenotazione_coop',
   'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione',
   'notifica_medico_cancellazione', 'notifica_medico_appuntamento',
-  'spostamento_paziente', 'avviso_lista_attesa'
+  'spostamento_paziente', 'avviso_lista_attesa', 'avviso_sicurezza'
 ]);
 
 const PATH1_TIPI = new Set([
