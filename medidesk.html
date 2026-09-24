@@ -111,6 +111,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 
 /* ── DASHBOARD REDESIGN (Fase 2) ── */
 .dash-greet{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.sec-promemoria{display:none;align-items:flex-start;gap:14px;background:var(--surface);border:1px solid var(--brand);border-left:4px solid var(--brand);border-radius:10px;padding:14px 16px;margin-bottom:20px}
+.sec-promemoria.on{display:flex}
+.sec-promemoria .sec-pm-ico{flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center}
+.sec-promemoria .sec-pm-ico .ic{width:18px;height:18px;fill:currentColor}
+.sec-promemoria .sec-pm-body{flex:1;min-width:0}
+.sec-promemoria .sec-pm-title{font-weight:600;font-size:14px;margin-bottom:4px}
+.sec-promemoria .sec-pm-text{font-size:13px;color:var(--ink2);line-height:1.55}
+.sec-promemoria .sec-pm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.nav-item .sec-dot{display:none;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-left:auto}
+.nav-item.sec-attenzione .sec-dot{display:inline-block}
 .dash-avatar{width:52px;height:52px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-weight:600;font-size:17px;color:#fff;letter-spacing:.5px;background:linear-gradient(135deg,var(--brand-mid),var(--brand-deep));box-shadow:var(--shadow-soft)}
 .dash-hello{font-family:var(--font-serif);font-style:italic;font-size:16px;color:var(--ink2);line-height:1.1}
 .dash-name{font-family:var(--font-serif);font-size:26px;color:var(--ink);letter-spacing:-.3px;line-height:1.15}
@@ -1529,7 +1539,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('piani')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Piani</span></div>
       <div class="nav-item" onclick="showPage('statistiche')"><span class="icon"><svg class="ic"><use href="#ic-stats"/></svg></span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon"><svg class="ic"><use href="#ic-settings"/></svg></span><span>Impostazioni</span></div>
-      <div class="nav-item" onclick="showPage('sicurezza')"><span class="icon"><svg class="ic"><use href="#ic-lock"/></svg></span><span>Sicurezza</span></div>
+      <div class="nav-item" id="nav-sicurezza" onclick="showPage('sicurezza')"><span class="icon"><svg class="ic"><use href="#ic-lock"/></svg></span><span>Sicurezza</span><span class="sec-dot" title="Verifica in due passaggi da attivare"></span></div>
       <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon"><svg class="ic"><use href="#ic-archive"/></svg></span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px"><svg class="ic" style="color:#f59e0b"><use href="#ic-alert"/></svg></span></span></div>
     </nav>
     <div class="sidebar-bottom">
@@ -1550,6 +1560,17 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
+      <div class="sec-promemoria" id="sec-promemoria">
+        <div class="sec-pm-ico"><svg class="ic"><use href="#ic-lock"/></svg></div>
+        <div class="sec-pm-body">
+          <div class="sec-pm-title">Proteggi i fascicoli con la verifica in due passaggi</div>
+          <div class="sec-pm-text">Funziona come il codice dell'app della banca: un'app gratuita sul telefono ti mostra un numero a 6 cifre da inserire quando entri. Se qualcuno ti ruba la password, senza il tuo telefono non apre nulla. Servono due minuti, una volta sola.</div>
+          <div class="sec-pm-actions">
+            <button class="btn btn-primary" onclick="secVaiAttivazione()">Attiva ora</button>
+            <button class="btn btn-secondary" onclick="secRimandaPromemoria()">Più tardi</button>
+          </div>
+        </div>
+      </div>
       <div class="dash-greet">
         <div class="dash-avatar" id="dash-avatar">—</div>
         <div>
@@ -2288,7 +2309,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div style="margin-bottom:24px">
         <div class="section-title">Verifica in due passaggi</div>
         <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">I fascicoli dei tuoi pazienti sono dati sanitari: chi entra col tuo account li legge tutti e ne decifra i referti. Con la sola password basta un'email di phishing o una password riusata su un altro sito. Per questo <strong>la verifica in due passaggi è obbligatoria</strong>: oltre alla password, a ogni nuovo accesso ti viene chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password), e senza codice il gestionale non si apre. Assicurati che l'app abbia il backup attivo, oppure registra qui un secondo dispositivo con una chiave a sé: così un telefono perso non ti chiude fuori. L'ultimo dispositivo non si può rimuovere: per cambiare telefono aggiungi prima il nuovo, poi togli il vecchio. Se hai perso l'unico telefono, scrivi a support@delphi-med.com: dopo una verifica della tua identità azzeriamo la registrazione e al rientro la rifai da capo.</p>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">I fascicoli dei tuoi pazienti sono dati sanitari: chi entra col tuo account li legge tutti e ne decifra i referti. Con la sola password basta un'email di phishing o una password riusata su un altro sito. <strong>Ti chiediamo di attivare la verifica in due passaggi.</strong> Funziona come il codice dell'app della banca: un'app gratuita sul telefono (Google Authenticator o Microsoft Authenticator, dagli store; oppure il tuo gestore di password) ti mostra un numero a 6 cifre che inserisci dopo la password, solo quando entri da un nuovo dispositivo. Senza il tuo telefono, una password rubata non apre nulla: da quel momento il gestionale e i referti si aprono solo col codice. Servono due minuti: premi «Attiva verifica in due passaggi», inquadra il quadrato con l'app e copia il primo numero che compare. Consiglio: attiva il backup dell'app, oppure registra qui un secondo dispositivo con una chiave a sé, così un telefono perso non ti chiude fuori. Se hai perso l'unico telefono, scrivi a support@delphi-med.com: dopo una verifica della tua identità azzeriamo la registrazione e al rientro la rifai da capo.</p>
           <div id="mfa-stato" style="font-size:13px;margin-bottom:4px">Caricamento…</div>
           <div id="mfa-fattori"></div>
           <div id="mfa-enroll" style="display:none;margin-top:12px">
@@ -3565,15 +3586,40 @@ function entraOMfa(session){
     _apriMfaLogin();
     return;
   }
-  // T-15 ciclo 2: la verifica e' obbligatoria per il medico. Senza alcun dispositivo registrato
-  // non si entra: si attiva qui, e solo la sessione promossa ad aal2 apre il gestionale
-  // (il server e le policy del DB rifiutano comunque un token al primo livello).
-  if(lv.corrente !== 'aal2'){
+  // T-15 ciclo 2 (decisione di prodotto 24/09): chi ha un dispositivo entra solo col codice
+  // (ramo sopra, e il server lo pretende); chi non ne ha ancora entra come prima e trova il
+  // promemoria in Dashboard e sulla voce Sicurezza. L'obbligo secco al primo accesso si accende
+  // con MFA_OBBLIGATORIA_MEDICO (stesso nome dell'env del server).
+  if(lv.corrente !== 'aal2' && MFA_OBBLIGATORIA_MEDICO){
     console.log('[Delphi~Med] Verifica in due passaggi da attivare');
     _apriMfaSetup();
     return;
   }
   showAppView();
+}
+const MFA_OBBLIGATORIA_MEDICO = false;
+// Promemoria per chi non ha ancora un dispositivo: banner in Dashboard e pallino sulla voce
+// Sicurezza; sparisce da solo appena un dispositivo e' registrato. «Più tardi» lo nasconde
+// per questa sessione del browser (torna al prossimo accesso).
+async function secPromemoriaMfa(){
+  let manca = false;
+  try{
+    const { data: lf } = await supabaseClient.auth.mfa.listFactors();
+    manca = !(lf && Array.isArray(lf.totp) && lf.totp.length > 0);
+  }catch(_){ manca = false; }
+  const banner = document.getElementById('sec-promemoria');
+  const rimandato = (()=>{ try{ return sessionStorage.getItem('dm-sec-promemoria') === 'no'; }catch(_){ return false; } })();
+  if(banner) banner.classList.toggle('on', manca && !rimandato);
+  const nav = document.getElementById('nav-sicurezza'); if(nav) nav.classList.toggle('sec-attenzione', manca);
+  return manca;
+}
+function secRimandaPromemoria(){
+  try{ sessionStorage.setItem('dm-sec-promemoria', 'no'); }catch(_){ }
+  const banner = document.getElementById('sec-promemoria'); if(banner) banner.classList.remove('on');
+}
+function secVaiAttivazione(){
+  showPage('sicurezza');
+  setTimeout(() => { const b = document.getElementById('mfa-attiva-btn'); if(b && b.style.display !== 'none'){ b.click(); } }, 400);
 }
 let _mfaSetupId = null;
 function _apriMfaSetup(){
@@ -3753,7 +3799,7 @@ async function mfaConfermaAttivazione(){
     showToast('Verifica in due passaggi attivata ✓');
     auditLog('mfa_fattore_aggiunto', 'medico', S.medicoId, { factor_id: id });
     avvisoSicurezza('mfa_attivata');
-    mfaRenderStato();
+    mfaRenderStato(); secPromemoriaMfa();
   }catch(e){
     showToast(erroreLeggibile('Attivazione non confermata', e));
   }finally{ if(btn) btn.disabled = false; }
@@ -3766,16 +3812,7 @@ async function mfaAnnullaAttivazione(){
   mfaRenderStato();
 }
 async function mfaRimuovi(factorId){
-  // T-15 ciclo 2: la verifica e' obbligatoria, l'ultimo dispositivo non si rimuove (la sessione
-  // tornerebbe al primo livello e il gestionale si chiuderebbe). Prima se ne aggiunge uno nuovo.
-  try{
-    const { data: lf } = await supabaseClient.auth.mfa.listFactors();
-    if(lf && Array.isArray(lf.totp) && lf.totp.length <= 1){
-      showToast('La verifica in due passaggi è obbligatoria: per cambiare telefono aggiungi prima il nuovo dispositivo, poi rimuovi il vecchio');
-      return;
-    }
-  }catch(_){ }
-  const ok = await confermaModale('Rimuovere questo dispositivo? Resterà registrato l\'altro e la verifica continuerà a essere richiesta.', { titolo:'Rimuovi dispositivo', ok:'Rimuovi', annulla:'Annulla' });
+  const ok = await confermaModale('Senza questo dispositivo la verifica potrebbe non essere più richiesta e basterà la password per entrare. Rimuoverlo?', { titolo:'Rimuovi dispositivo', ok:'Rimuovi', annulla:'Annulla' });
   if(!ok) return;
   try{
     const { error } = await supabaseClient.auth.mfa.unenroll({ factorId });
@@ -3783,7 +3820,7 @@ async function mfaRimuovi(factorId){
     showToast('Dispositivo rimosso');
     auditLog('mfa_fattore_rimosso', 'medico', S.medicoId, { factor_id: factorId });
     avvisoSicurezza('mfa_dispositivo_rimosso');
-    mfaRenderStato();
+    mfaRenderStato(); secPromemoriaMfa();
   }catch(e){
     showToast(erroreLeggibile('Rimozione non riuscita', e));
   }
@@ -4316,6 +4353,7 @@ async function showAppView(){
   startDashboardPolling();
   startRealtimeChannel();
   await checkTrialExpiry();
+  secPromemoriaMfa();
 }
 
 async function ensureMedicoRecord(user){

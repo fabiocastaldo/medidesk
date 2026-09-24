@@ -5,7 +5,7 @@
 // Scrittura con service_role e Prefer: return=representation (read-back).
 
 import { randomBytes } from 'node:crypto';
-import { richiediAal2 } from '../lib/aal-guard.js';
+import { richiediAal2Secco } from '../lib/aal-guard.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 30;
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
   // T-15 ciclo 2: se l'amministratore ha reso obbligatoria la verifica in due passaggi,
   // ogni chiamata della segreteria deve portare un token al secondo livello.
   if (seg.cooperative.mfa_obbligatoria === true) {
-    const aalKo = richiediAal2(jwt);
+    const aalKo = richiediAal2Secco(jwt);
     if (aalKo) return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
   if (seg.ruolo !== 'admin') {

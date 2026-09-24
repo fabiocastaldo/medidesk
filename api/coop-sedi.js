@@ -2,7 +2,7 @@
 // Creazione di una sede dell'organizzazione dalla plancia.
 // Auth: JWT regista -> segreterie(attiva) -> cooperative(attiva). Scrittura service_role.
 
-import { richiediAal2 } from '../lib/aal-guard.js';
+import { richiediAal2Secco } from '../lib/aal-guard.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
   // T-15 ciclo 2: se l'amministratore ha reso obbligatoria la verifica in due passaggi,
   // ogni chiamata della segreteria deve portare un token al secondo livello.
   if (seg.cooperative.mfa_obbligatoria === true) {
-    const aalKo = richiediAal2(jwt);
+    const aalKo = richiediAal2Secco(jwt);
     if (aalKo) return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
   if (seg.ruolo !== 'admin') {

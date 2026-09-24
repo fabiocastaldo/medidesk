@@ -43,11 +43,11 @@ export default async function handler(req, res) {
   if (!userRes || !userRes.ok) {
     return res.status(401).json({ error: 'Token non valido o scaduto' });
   }
-  const aalKo = richiediAal2(jwt);
+  const userData = await userRes.json().catch(() => null);
+  const aalKo = richiediAal2(jwt, userData);
   if (aalKo) {
     return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
-  const userData = await userRes.json().catch(() => null);
   if (!userData?.id) {
     return res.status(401).json({ error: 'Utente non riconosciuto' });
   }

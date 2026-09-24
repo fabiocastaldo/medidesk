@@ -74,9 +74,9 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   if (!userRes || !userRes.ok) {
     return { ok: false, status: 401, error: 'Token non valido o scaduto' };
   }
-  const aalKo = richiediAal2(jwt);
-  if (aalKo) return { ok: false, status: aalKo.status, error: aalKo.error, code: aalKo.code };
   const userData = await userRes.json().catch(() => null);
+  const aalKo = richiediAal2(jwt, userData);
+  if (aalKo) return { ok: false, status: aalKo.status, error: aalKo.error, code: aalKo.code };
   if (!userData?.id) {
     return { ok: false, status: 401, error: 'Utente non riconosciuto' };
   }
