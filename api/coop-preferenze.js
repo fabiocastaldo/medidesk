@@ -27,7 +27,11 @@ export default async function handler(req, res) {
     set_booking_pubblico: 'booking_pubblico',
     set_mail_conferma_paziente: 'mail_conferma_paziente',
     set_mail_notifica_medico: 'mail_notifica_medico',
-    set_mail_ricevuta_segreteria: 'mail_ricevuta_segreteria'
+    set_mail_ricevuta_segreteria: 'mail_ricevuta_segreteria',
+    // Verifica in due passaggi obbligatoria per tutte le segreterie dell'organizzazione
+    // (admin compreso). Solo l'admin la cambia; oggi il flag si legge e si mostra, l'obbligo
+    // al primo accesso e la pretesa di aal2 sui coop-* arrivano col ciclo 2 di T-15.
+    set_mfa_obbligatoria: 'mfa_obbligatoria'
   };
   const colonna = AZIONI[b.action];
   if (!colonna || typeof b.valore !== 'boolean') {
@@ -74,6 +78,10 @@ export default async function handler(req, res) {
     { method: 'PATCH', headers: { ...srvHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ coop_booking_pubblico: b.valore }) }
   ).catch(() => null);
+
+  if (colonna === 'mfa_obbligatoria') {
+    console.log('[coop-preferenze] mfa_obbligatoria', b.valore, 'cooperativa', seg.cooperativa_id, 'da', userData.id);
+  }
 
   return res.status(200).json({ [colonna]: coopRow[colonna] });
 }
