@@ -6376,6 +6376,7 @@ async function getAuthJwt(){ try{ const {data:{session}}=await supabaseClient.au
 // ── SLOT LOGIC ──
 function getSlots(centro, dateStr, escludiPassati=false, inclusiOccupati=false){
   if(isChiusura(dateStr, centro.id)) return [];
+  if((S.blocchi||[]).some(b=>b.data===dateStr && String(b.centroId)===String(centro.id))) return []; // giornata occupata dall'agenda del centro (import)
   const d = new Date(dateStr+'T12:00:00');
   const dow = d.getDay();
   const turni = (centro.turni||[]).filter(t=>{
@@ -10117,6 +10118,16 @@ function bkRenderHero(m){
   }
   bk.aboutBio = m.bio_lunga || '';
 }
+// Giorni non prenotabili sulle pagine pubbliche (ferie e giornate gia' occupate dall'agenda del centro):
+// letti dalla RPC anonima e resi come chiusure, cosi' getSlots/isChiusura li spengono a calendario.
+async function bkLoadGiorniNonPrenotabili(medicoId){
+  try {
+    const { data, error } = await supabaseClient.rpc('get_giorni_non_prenotabili', { p_medico_id: medicoId });
+    if(error) throw error;
+    S.chiusure = (data||[]).map(r=>({ id:null, data_inizio:r.data_inizio, data_fine:r.data_fine, etichetta:'', centri_ids:r.centri_ids||[] }));
+  } catch(e){ console.error('[Delphi~Med] giorni non prenotabili:', e.message); }
+}
+
 async function bkInit(){
   const _cm = location.pathname.match(/^\/c\/([^\/?#]+)/);
   if(_cm){
@@ -10161,6 +10172,7 @@ async function bkInit(){
         const { data: areeDB } = await supabaseClient.from('aree_tematiche').select('nome').eq('medico_id', m.id).order('nome');
         S.areeTematiche = (areeDB||[]).map(r=>r.nome);
         bk.slotOccupati = (data.occupati||[]).map(s=>({ centroId: data.centro.id, data: s.data, ora: (s.ora||'').substring(0,5) }));
+        await bkLoadGiorniNonPrenotabili(m.id);
         bk.tariffe = {};
         (data.centro.prestazioni || []).forEach(r => {
           (bk.tariffe[String(data.centro.id)] ??= {})[r.tipo_visita] = r.prezzo;
@@ -10229,6 +10241,7 @@ async function bkInit(){
       S.areeTematiche = (areeDB||[]).map(r=>r.nome);
       const { data: slotDB } = await supabaseClient.rpc('get_slot_occupati', { p_medico_id: m.id });
       bk.slotOccupati = (slotDB||[]).map(s=>({ centroId: s.centro_id, data: s.data, ora: (s.ora||'').substring(0,5) }));
+      await bkLoadGiorniNonPrenotabili(m.id);
       const { data: tariffeDB } = await supabaseClient.rpc('get_tariffe_pubbliche', { p_medico_id: m.id });
       bk.tariffe = {};
       (tariffeDB || []).forEach(r => {

@@ -99,6 +99,14 @@ export default async function handler(req, res) {
   ).catch(() => null);
   const chiusure = (chRes && chRes.ok) ? await chRes.json().catch(() => []) : [];
 
+  // blocchi di occupazione (giornate del centro importate solo come conteggio): solo sui centri coop,
+  // resi alla plancia come chiusure di un giorno sul singolo centro (stessa guardia _agChiuso)
+  const blRes = await fetch(
+    `${supabaseUrl}/rest/v1/blocchi_occupazione?centro_id=in.(${inList})&data=gte.${da}&data=lte.${a}&select=centro_id,data`,
+    { headers: srvHeaders }
+  ).catch(() => null);
+  const blocchi = (blRes && blRes.ok) ? await blRes.json().catch(() => []) : [];
+
   // tipi di visita dal profilo del medico (per il modulo prenotazione in plancia):
   // `tipi_visita` globale dice solo se esiste un catalogo; la tendina usa la lista per centro,
   // che esclude i tipi spenti su quel centro (centri_esclusi), come il booking pubblico.
@@ -142,6 +150,8 @@ export default async function handler(req, res) {
     occupati: occupati.map(o => ({ centro_id: o.centro_id, data: o.data, ora: String(o.ora || '').slice(0, 5) })),
     chiusure: (Array.isArray(chiusure) ? chiusure : []).map(ch => ({
       data_inizio: ch.data_inizio, data_fine: ch.data_fine, centri_ids: ch.centri_ids || []
-    }))
+    })).concat((Array.isArray(blocchi) ? blocchi : []).map(b => ({
+      data_inizio: b.data, data_fine: b.data, centri_ids: [b.centro_id]
+    })))
   });
 }
