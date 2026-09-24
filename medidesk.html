@@ -1212,6 +1212,17 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <button class="auth-link" onclick="switchAuthTab('reset')">Password dimenticata?</button>
     </div>
 
+    <!-- VERIFICA IN DUE PASSAGGI (secondo passaggio del login, solo se il medico l'ha attivata dal Profilo) -->
+    <div class="auth-panel" id="auth-panel-mfa">
+      <p style="font-size:13px;color:var(--ink2);line-height:1.6;margin:0 0 18px;text-align:center">Inserisci il codice a 6 cifre generato dalla tua app di autenticazione.</p>
+      <div class="auth-field">
+        <label>Codice di verifica</label>
+        <input type="text" id="auth-mfa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" onkeydown="if(event.key==='Enter')mfaLoginVerifica()">
+      </div>
+      <button class="auth-btn" id="auth-mfa-btn" onclick="mfaLoginVerifica()">Verifica</button>
+      <button class="auth-link" onclick="mfaLoginAnnulla()">← Torna al login</button>
+    </div>
+
     <!-- REGISTRAZIONE -->
     <div class="auth-panel" id="auth-panel-register">
       <div id="reg-form-content">
@@ -2227,6 +2238,29 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <span style="font-size:14px">anni dall'ultima visita</span>
           </div>
           <p style="font-size:12px;color:var(--ink3);margin-top:8px">Valore predefinito: 10 anni. Verifica sempre la normativa applicabile alla tua situazione specifica.</p>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div class="section-title">Verifica in due passaggi</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Oltre alla password, a ogni nuovo accesso ti verrà chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password). Protegge i fascicoli anche se la password viene rubata. Consiglio: registra due dispositivi, così un telefono perso non ti chiude fuori.</p>
+          <div id="mfa-stato" style="font-size:13px;margin-bottom:4px">Caricamento…</div>
+          <div id="mfa-fattori"></div>
+          <div id="mfa-enroll" style="display:none;margin-top:12px">
+            <p style="font-size:13px;color:var(--ink2);margin-bottom:10px">1. Inquadra il codice QR con l'app di autenticazione (oppure inserisci a mano la chiave qui sotto).</p>
+            <div id="mfa-qr" style="width:200px;height:200px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;box-sizing:border-box"></div>
+            <div style="font-size:12px;color:var(--ink3);margin:8px 0 14px;word-break:break-all">Chiave: <code id="mfa-secret"></code></div>
+            <p style="font-size:13px;color:var(--ink2);margin-bottom:8px">2. Inserisci il primo codice mostrato dall'app per confermare.</p>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <input type="text" id="mfa-enroll-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" style="width:120px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);letter-spacing:3px" onkeydown="if(event.key==='Enter')mfaConfermaAttivazione()">
+              <button class="btn btn-primary" id="mfa-enroll-btn" onclick="mfaConfermaAttivazione()">Conferma e attiva</button>
+              <button class="btn btn-secondary" onclick="mfaAnnullaAttivazione()">Annulla</button>
+            </div>
+          </div>
+          <div id="mfa-azioni" style="margin-top:12px">
+            <button class="btn btn-primary" id="mfa-attiva-btn" onclick="mfaAvviaAttivazione()" style="display:none">Attiva verifica in due passaggi</button>
+          </div>
         </div></div>
       </div>
 
@@ -3394,7 +3428,7 @@ async function signIn(){
     }
 
     console.log('[Delphi~Med] signIn: successo');
-    showAppView();
+    entraOMfa(data.session);
   } catch(e) {
     setAuthLoading(false);
     showAuthMsg('Errore di rete: ' + e.message, 'error');
@@ -3406,6 +3440,168 @@ async function signOut(){
   _refertiKey = null;
   await supabaseClient.auth.signOut();
   // onAuthStateChange (SIGNED_OUT) gestirà il cambio di vista
+}
+
+// ── VERIFICA IN DUE PASSAGGI (TOTP, facoltativa: T-15 ciclo 1) ──
+// Livello della sessione calcolato dal token in mano, senza chiamate all'SDK:
+// usabile anche dentro la callback di onAuthStateChange (che tiene il lock di auth).
+function _aalDaSessione(session){
+  if(!session || !session.access_token) return { corrente:null, richiesto:false };
+  let corrente = null;
+  try{
+    const seg = String(session.access_token).split('.')[1] || '';
+    const b64 = seg.replace(/-/g,'+').replace(/_/g,'/') + '='.repeat((4 - seg.length % 4) % 4);
+    corrente = JSON.parse(atob(b64)).aal || null;
+  }catch(_){ }
+  const fattori = (session.user && Array.isArray(session.user.factors)) ? session.user.factors : [];
+  const verificati = fattori.filter(f => f && f.status === 'verified').length;
+  return { corrente, richiesto: verificati > 0 && corrente !== 'aal2' };
+}
+function _apriMfaLogin(){
+  document.getElementById('view-home').style.display    = 'none';
+  document.getElementById('view-auth').style.display    = 'flex';
+  document.getElementById('view-app').style.display     = 'none';
+  document.getElementById('view-booking').style.display = 'none';
+  document.getElementById('auth-tabs').style.display    = 'none';
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('auth-panel-mfa').classList.add('active');
+  const c = document.getElementById('auth-mfa-code'); if(c){ c.value = ''; setTimeout(() => c.focus(), 50); }
+  clearAuthMsg();
+}
+// Unico ingresso al gestionale per una sessione medico: se la verifica in due passaggi e' attiva
+// e il token e' ancora al primo livello, chiede il codice invece di aprire l'app.
+function entraOMfa(session){
+  if(_aalDaSessione(session).richiesto){
+    console.log('[Delphi~Med] Verifica in due passaggi richiesta');
+    _apriMfaLogin();
+    return;
+  }
+  showAppView();
+}
+async function mfaLoginVerifica(){
+  const code = (document.getElementById('auth-mfa-code').value || '').replace(/\D/g,'');
+  if(code.length !== 6){ showAuthMsg('Inserisci le 6 cifre del codice', 'error'); return; }
+  const btn = document.getElementById('auth-mfa-btn'); if(btn) btn.disabled = true;
+  try{
+    const { data: lf, error: e1 } = await supabaseClient.auth.mfa.listFactors();
+    const fattore = lf && lf.totp && lf.totp[0];
+    if(e1 || !fattore){ showAuthMsg('Nessun dispositivo di verifica trovato: torna al login e riprova.', 'error'); return; }
+    const { error } = await supabaseClient.auth.mfa.challengeAndVerify({ factorId: fattore.id, code });
+    if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
+    clearAuthMsg();
+    document.getElementById('auth-tabs').style.display = '';
+    switchAuthTab('login');
+    showAppView();
+  }catch(e){
+    showAuthMsg('Errore di rete: ' + e.message, 'error');
+  }finally{ if(btn) btn.disabled = false; }
+}
+async function mfaLoginAnnulla(){
+  document.getElementById('auth-tabs').style.display = '';
+  switchAuthTab('login');
+  try{ await supabaseClient.auth.signOut(); }catch(_){ }
+}
+
+// Profilo: stato, attivazione (QR + primo codice) e rimozione dei dispositivi.
+let _mfaEnrollId = null;
+async function mfaRenderStato(){
+  const st = document.getElementById('mfa-stato'); if(!st) return;
+  const lista = document.getElementById('mfa-fattori');
+  const attiva = document.getElementById('mfa-attiva-btn');
+  if(!isOnline()){ st.textContent = 'Non disponibile in modalità offline.'; return; }
+  try{
+    const { data, error } = await supabaseClient.auth.mfa.listFactors();
+    if(error) throw error;
+    const tutti = (data && data.all) || [];
+    // Attivazioni abbandonate (fattori mai confermati) vengono tolte in silenzio.
+    for(const f of tutti){
+      if(f && f.factor_type === 'totp' && f.status !== 'verified' && f.id !== _mfaEnrollId){
+        try{ await supabaseClient.auth.mfa.unenroll({ factorId: f.id }); }catch(_){ }
+      }
+    }
+    const fattori = (data && data.totp) || [];
+    if(fattori.length){
+      st.innerHTML = '<span style="color:var(--accent);font-weight:600">Attiva</span> <span style="color:var(--ink2)">— il codice viene richiesto a ogni nuovo accesso.</span>';
+      lista.innerHTML = fattori.map(f =>
+        `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:13px">` +
+        `<span>${escapeHtml(f.friendly_name || 'App di autenticazione')} <span style="color:var(--ink3)">· registrato il ${escapeHtml(formatDate(String(f.created_at || '').slice(0,10)))}</span></span>` +
+        `<button class="btn btn-secondary" style="color:var(--warm);border-color:var(--warm)" onclick="mfaRimuovi('${escapeHtml(f.id)}')">Rimuovi</button></div>`
+      ).join('');
+      attiva.textContent = 'Aggiungi un secondo dispositivo';
+      attiva.style.display = fattori.length >= 2 ? 'none' : '';
+    } else {
+      st.innerHTML = '<span style="color:var(--ink2)">Non attiva — l\'accesso avviene con la sola password.</span>';
+      lista.innerHTML = '';
+      attiva.textContent = 'Attiva verifica in due passaggi';
+      attiva.style.display = '';
+    }
+  }catch(e){
+    st.textContent = 'Stato non disponibile: riprova tra poco.';
+    console.error('[Delphi~Med] mfaRenderStato:', e);
+  }
+}
+async function mfaAvviaAttivazione(){
+  const btn = document.getElementById('mfa-attiva-btn'); if(btn) btn.disabled = true;
+  try{
+    const nome = 'Dispositivo ' + new Date().toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const { data, error } = await supabaseClient.auth.mfa.enroll({ factorType:'totp', friendlyName: nome, issuer:'Delphi~Med' });
+    if(error) throw error;
+    _mfaEnrollId = data.id;
+    const qr = document.getElementById('mfa-qr'); qr.innerHTML = '';
+    const svg = String((data.totp && data.totp.qr_code) || '').replace(/^data:image\/svg\+xml;utf-8,/, '');
+    if(svg){
+      const img = document.createElement('img');
+      img.alt = 'Codice QR per l\'app di autenticazione';
+      img.style.cssText = 'width:100%;height:100%;display:block';
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      qr.appendChild(img);
+    }
+    document.getElementById('mfa-secret').textContent = (data.totp && data.totp.secret) || '';
+    document.getElementById('mfa-enroll-code').value = '';
+    document.getElementById('mfa-enroll').style.display = '';
+    document.getElementById('mfa-azioni').style.display = 'none';
+    setTimeout(() => { const c = document.getElementById('mfa-enroll-code'); if(c) c.focus(); }, 50);
+  }catch(e){
+    showToast(erroreLeggibile('Attivazione non avviata', e));
+  }finally{ if(btn) btn.disabled = false; }
+}
+async function mfaConfermaAttivazione(){
+  const code = (document.getElementById('mfa-enroll-code').value || '').replace(/\D/g,'');
+  if(!_mfaEnrollId){ showToast('Attivazione non avviata: premi «Attiva verifica in due passaggi»'); return; }
+  if(code.length !== 6){ showToast('Inserisci le 6 cifre del codice'); return; }
+  const btn = document.getElementById('mfa-enroll-btn'); if(btn) btn.disabled = true;
+  try{
+    const { error } = await supabaseClient.auth.mfa.challengeAndVerify({ factorId: _mfaEnrollId, code });
+    if(error){ showToast(translateAuthError(error.message)); return; }
+    const id = _mfaEnrollId; _mfaEnrollId = null;
+    document.getElementById('mfa-enroll').style.display = 'none';
+    document.getElementById('mfa-azioni').style.display = '';
+    showToast('Verifica in due passaggi attivata ✓');
+    auditLog('mfa_fattore_aggiunto', 'medico', S.medicoId, { factor_id: id });
+    mfaRenderStato();
+  }catch(e){
+    showToast(erroreLeggibile('Attivazione non confermata', e));
+  }finally{ if(btn) btn.disabled = false; }
+}
+async function mfaAnnullaAttivazione(){
+  const id = _mfaEnrollId; _mfaEnrollId = null;
+  document.getElementById('mfa-enroll').style.display = 'none';
+  document.getElementById('mfa-azioni').style.display = '';
+  if(id){ try{ await supabaseClient.auth.mfa.unenroll({ factorId: id }); }catch(_){ } }
+  mfaRenderStato();
+}
+async function mfaRimuovi(factorId){
+  const ok = await confermaModale('Senza questo dispositivo la verifica potrebbe non essere più richiesta e basterà la password per entrare. Rimuoverlo?', { titolo:'Rimuovi dispositivo', ok:'Rimuovi', annulla:'Annulla' });
+  if(!ok) return;
+  try{
+    const { error } = await supabaseClient.auth.mfa.unenroll({ factorId });
+    if(error){ showToast(translateAuthError(error.message)); return; }
+    showToast('Dispositivo rimosso');
+    auditLog('mfa_fattore_rimosso', 'medico', S.medicoId, { factor_id: factorId });
+    mfaRenderStato();
+  }catch(e){
+    showToast(erroreLeggibile('Rimozione non riuscita', e));
+  }
 }
 
 async function resetPassword(){
@@ -3529,7 +3725,7 @@ function checkSession(){
         window.location.replace('/organizzazioni');
         return;
       }
-      if(session){ showAppView(); } else { showAuthView(); }
+      if(session){ entraOMfa(session); } else { showAuthView(); }
     } else if(event === 'SIGNED_IN'){
       if(_inPasswordRecovery){ return; }
       if(_isCoopSession(session)){
@@ -3537,7 +3733,7 @@ function checkSession(){
         window.location.replace('/organizzazioni');
         return;
       }
-      showAppView();
+      entraOMfa(session);
     } else if(event === 'SIGNED_OUT'){
       _appInitialized = false;
       _bootstrapDone = false;
@@ -4250,6 +4446,8 @@ function translateAuthError(msg){
   if(msg.includes('User already registered'))   return 'Email già registrata — prova ad accedere';
   if(msg.includes('Password should be'))        return 'La password deve avere almeno 8 caratteri';
   if(msg.includes('Unable to validate'))        return 'Email non valida';
+  if(msg.includes('Invalid TOTP code'))         return 'Codice non valido o scaduto: controlla l\'ora del telefono e riprova';
+  if(msg.includes('AAL2 required'))             return 'Per questa operazione serve un accesso fatto col codice di verifica: esci, rientra col codice e riprova';
   return msg;
 }
 
@@ -4577,7 +4775,7 @@ function showPage(id){
   if(id==='piani') renderPiani();
   if(id==='dashboard'){ renderDashboard(); updateStats(); renderPending(); }
   if(id==='statistiche') renderStatistiche();
-  if(id==='impostazioni') renderImpostazioni();
+  if(id==='impostazioni'){ renderImpostazioni(); mfaRenderStato(); }
   if(id==='manutenzione-archivio') renderArchivioPage();
   if(id==='promemoria') promRenderPagina();
 }
