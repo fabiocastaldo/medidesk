@@ -735,7 +735,7 @@ html.th-page, html.th-page body{background:var(--brand-deep);overscroll-behavior
 .pwd-strength-bar{height:4px;background:var(--border);border-radius:2px;margin:8px 0 3px}
 #pwd-strength-fill{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
 #pwd-strength-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;min-height:15px;margin-bottom:5px}
-#pwd-strength-fill-r{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
+#pwd-strength-fill-r,#pwd-strength-fill-s{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
 #pwd-strength-label-r{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;min-height:15px;margin-bottom:5px}
 .pwd-criteria{margin:0;padding:0;list-style:none}
 .pwd-criteria li{font-size:12px;color:var(--ink3);padding:2px 0;transition:color .15s}
@@ -780,6 +780,15 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 /* ── NOTIFICATION TOGGLES ── */
 .notif-toggle-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .notif-toggle-row:last-child{border-bottom:none}
+.sec-corso-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.sec-corso-parte{grid-column:1/-1;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:600;margin-top:6px}
+.sec-mod{display:flex;gap:12px;padding:14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface2);opacity:.85}
+.sec-mod-n{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.sec-mod-body{min-width:0}
+.sec-mod-t{font-weight:600;font-size:14px;margin-bottom:2px}
+.sec-mod-s{font-size:12px;color:var(--ink3);line-height:1.4}
+.sec-mod-meta{display:flex;gap:10px;font-size:11px;color:var(--ink3);margin-top:8px}
+.sec-mod-stato{color:var(--warm);font-weight:600}
 .notif-toggle-info{flex:1}
 .notif-toggle-label,.notif-toggle-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
 .notif-toggle-desc{font-size:12px;color:var(--ink3);line-height:1.4}
@@ -800,7 +809,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .giornata-row span{flex:1;color:var(--ink2)}
 
 /* ── HOME PUBBLICA ── */
-#view-home{display:none;flex-direction:column;min-height:100dvh;background:var(--paper);font-family:'DM Sans',Arial,sans-serif}
+#view-home{display:none;flex-direction:column;overflow-anchor:none;min-height:100dvh;background:var(--paper);font-family:'DM Sans',Arial,sans-serif}
 .home-top{position:relative;flex-shrink:0;display:flex;flex-direction:column;min-height:100dvh;color:#fff;background:radial-gradient(130% 100% at 80% -10%,color-mix(in srgb,var(--brand-bright) 70%,transparent),transparent 62%),linear-gradient(225deg,var(--brand-bright) 0%,var(--brand-mid) 45%,var(--brand-deep) 100%)}
 .home-top::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(240deg,rgba(255,255,255,.22),rgba(255,255,255,.04) 40%,transparent 75%)}
 .home-top>*{position:relative;z-index:1}
@@ -1484,6 +1493,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
   <symbol id="ic-sparkles" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></symbol>
   <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
   <symbol id="ic-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1.5"/></symbol>
   <symbol id="ic-menu" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
 </svg>
 <div id="view-app" class="app" style="display:none">
@@ -1501,6 +1511,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('piani')"><span class="icon"><svg class="ic"><use href="#ic-file"/></svg></span><span>Piani</span></div>
       <div class="nav-item" onclick="showPage('statistiche')"><span class="icon"><svg class="ic"><use href="#ic-stats"/></svg></span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon"><svg class="ic"><use href="#ic-settings"/></svg></span><span>Impostazioni</span></div>
+      <div class="nav-item" onclick="showPage('sicurezza')"><span class="icon"><svg class="ic"><use href="#ic-lock"/></svg></span><span>Sicurezza</span></div>
       <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon"><svg class="ic"><use href="#ic-archive"/></svg></span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px"><svg class="ic" style="color:#f59e0b"><use href="#ic-alert"/></svg></span></span></div>
     </nav>
     <div class="sidebar-bottom">
@@ -2241,6 +2252,21 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div></div>
       </div>
 
+      <div style="margin-bottom:24px;padding-top:8px;border-top:1px solid var(--border)">
+        <div class="section-title" style="color:var(--warm)">Zona pericolosa</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">L'eliminazione dell'account è irreversibile dopo 30 giorni di grace period.</p>
+          <button class="btn btn-secondary" style="color:var(--warm);border-color:var(--warm)" onclick="openDeleteAccountModal()">Elimina account</button>
+        </div></div>
+      </div>
+
+    </div>
+
+    <div id="page-sicurezza" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Sicurezza</div><div class="page-subtitle">Accesso, password, sessioni e formazione</div></div>
+      </div>
+
       <div style="margin-bottom:24px">
         <div class="section-title">Verifica in due passaggi</div>
         <div class="card"><div class="card-body">
@@ -2264,11 +2290,54 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div></div>
       </div>
 
-      <div style="margin-bottom:24px;padding-top:8px;border-top:1px solid var(--border)">
-        <div class="section-title" style="color:var(--warm)">Zona pericolosa</div>
+      <div style="margin-bottom:24px">
+        <div class="section-title">Password</div>
         <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">L'eliminazione dell'account è irreversibile dopo 30 giorni di grace period.</p>
-          <button class="btn btn-secondary" style="color:var(--warm);border-color:var(--warm)" onclick="openDeleteAccountModal()">Elimina account</button>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Ti raccomandiamo di cambiare la password periodicamente e di sceglierne una lunga e diversa da quelle che usi altrove: un gestore di password la ricorda per te. Per cambiarla serve la password attuale.</p>
+          <div style="max-width:420px">
+            <div class="auth-field">
+              <label>Account</label>
+              <input type="email" id="sec-pwd-email" autocomplete="username" readonly style="background:var(--surface2);color:var(--ink2)">
+            </div>
+            <div class="auth-field">
+              <label>Password attuale</label>
+              <div class="auth-pwd-wrap"><input type="password" id="sec-pwd-attuale" placeholder="••••••••" autocomplete="current-password"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
+            </div>
+            <div class="auth-field">
+              <label>Nuova password</label>
+              <div class="auth-pwd-wrap"><input type="password" id="sec-pwd" placeholder="••••••••" autocomplete="new-password" minlength="8" oninput="updatePasswordStrengthSec()"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
+              <div class="pwd-strength-bar"><div id="pwd-strength-fill-s"></div></div>
+              <div id="pwd-strength-label-s"></div>
+              <ul class="pwd-criteria">
+                <li id="crit-s-len">Almeno 8 caratteri</li>
+                <li id="crit-s-upper">Almeno una lettera maiuscola</li>
+                <li id="crit-s-lower">Almeno una lettera minuscola</li>
+                <li id="crit-s-num">Almeno un numero</li>
+                <li id="crit-s-special">Almeno un carattere speciale (!@#$%...)</li>
+              </ul>
+            </div>
+            <div class="auth-field">
+              <label>Conferma password</label>
+              <div class="auth-pwd-wrap"><input type="password" id="sec-pwd-confirm" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')cambiaPassword(document.getElementById('sec-pwd-btn'))"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
+            </div>
+            <button class="btn btn-primary" id="sec-pwd-btn" onclick="cambiaPassword(this)">Cambia password</button>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div class="section-title">Sessioni</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">L'accesso resta aperto sul dispositivo finché non premi «Esci». Se hai lasciato il gestionale aperto su un computer che non controlli più, o hai il dubbio che qualcuno conosca la tua password, chiudi tutte le sessioni: dovrai rientrare ovunque, anche qui.</p>
+          <button class="btn btn-secondary" id="sec-esci-tutti-btn" onclick="esciDaTutti(this)">Esci da tutti i dispositivi</button>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div class="section-title">Formazione sulla sicurezza</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Un percorso breve, tre minuti a modulo, per sapere cosa fa Delphi~Med per i tuoi dati e cosa dipende da te. Ogni modulo parte da una scena di studio e finisce con tre domande. La spunta di lettura resta nel tuo account: vale come evidenza di formazione del titolare.</p>
+          <div class="sec-corso-grid" id="sec-corso"></div>
         </div></div>
       </div>
 
@@ -2298,6 +2367,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <button class="mnu-item" onclick="showPage('profilo')"><span class="mnu-ico"><svg class="ic"><use href="#ic-user"/></svg></span><span class="mnu-lbl">Profilo</span></button>
           <button class="mnu-item" onclick="showPage('piani')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Piani</span></button>
           <button class="mnu-item" onclick="showPage('impostazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-settings"/></svg></span><span class="mnu-lbl">Impostazioni</span></button>
+          <button class="mnu-item" onclick="showPage('sicurezza')"><span class="mnu-ico"><svg class="ic"><use href="#ic-lock"/></svg></span><span class="mnu-lbl">Sicurezza</span></button>
           <button class="mnu-item mnu-logout" id="mobile-logout-btn" onclick="signOut()"><span class="mnu-ico"><svg class="ic"><use href="#ic-logout"/></svg></span><span class="mnu-lbl">Esci</span></button>
         </div>
       </div>
@@ -3604,6 +3674,118 @@ async function mfaRimuovi(factorId){
   }
 }
 
+// ── SICUREZZA: password, sessioni, corso ──
+function _pwdCriteri(pwd){
+  return {
+    len:     pwd.length >= 8,
+    upper:   /[A-Z]/.test(pwd),
+    lower:   /[a-z]/.test(pwd),
+    num:     /[0-9]/.test(pwd),
+    special: /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(pwd)
+  };
+}
+function updatePasswordStrengthSec(){
+  const pwd = document.getElementById('sec-pwd')?.value || '';
+  const criteria = _pwdCriteri(pwd);
+  Object.keys(criteria).forEach(k => {
+    const el = document.getElementById('crit-s-' + k);
+    if(el) el.classList.toggle('met', criteria[k]);
+  });
+  const met   = Object.values(criteria).filter(Boolean).length;
+  const fill  = document.getElementById('pwd-strength-fill-s');
+  const label = document.getElementById('pwd-strength-label-s');
+  if(!pwd.length){
+    if(fill)  { fill.style.width = '0'; fill.style.background = ''; }
+    if(label) { label.textContent = ''; label.style.color = ''; }
+    return;
+  }
+  const levels = [
+    { max: 2, w: '25%',  color: '#ef4444', text: 'Debole' },
+    { max: 4, w: '60%',  color: '#f59e0b', text: 'Media'  },
+    { max: 5, w: '100%', color: '#22c55e', text: 'Forte'  }
+  ];
+  const lvl = levels.find(l => met <= l.max);
+  if(fill)  { fill.style.width = lvl.w; fill.style.background = lvl.color; }
+  if(label) { label.textContent = lvl.text; label.style.color = lvl.color; }
+}
+async function cambiaPassword(btn){
+  if(!isOnline()){ showToast('Connessione richiesta per cambiare password'); return; }
+  const attuale = document.getElementById('sec-pwd-attuale').value;
+  const pwd     = document.getElementById('sec-pwd').value;
+  const confirm = document.getElementById('sec-pwd-confirm').value;
+  if(!attuale){ showToast('Inserisci la password attuale'); return; }
+  if(pwd !== confirm){ showToast('Le password non coincidono'); return; }
+  const c = _pwdCriteri(pwd);
+  if(!Object.values(c).every(Boolean)){ showToast('La password non soddisfa tutti i criteri richiesti'); return; }
+  if(attuale === pwd){ showToast('La nuova password deve essere diversa da quella attuale'); return; }
+  await salvaUnaVolta('cambia-password', btn, async () => {
+    // La password attuale si verifica con un accesso su un client separato, che non tocca la sessione aperta
+    const { data: ud } = await supabaseClient.auth.getUser();
+    const email = ud && ud.user && ud.user.email;
+    if(!email){ showToast('Sessione non valida: esci e rientra'); return; }
+    const tmp = supabase.createClient(supabaseClient.supabaseUrl, supabaseClient.supabaseKey, { auth: { persistSession:false, autoRefreshToken:false, detectSessionInUrl:false, storageKey:'dm-verifica-password' } });
+    const { error: eV } = await tmp.auth.signInWithPassword({ email, password: attuale });
+    if(eV){
+      showToast(/Invalid login credentials/i.test(eV.message || '') ? 'Password attuale non corretta' : erroreLeggibile('Verifica non riuscita', eV));
+      return;
+    }
+    try{ await tmp.auth.signOut({ scope: 'local' }); }catch(_){ }
+    const { error } = await supabaseClient.auth.updateUser({ password: pwd });
+    if(error){ showToast(erroreLeggibile('Password non cambiata', error)); return; }
+    document.getElementById('sec-pwd-attuale').value = '';
+    document.getElementById('sec-pwd').value = '';
+    document.getElementById('sec-pwd-confirm').value = '';
+    updatePasswordStrengthSec();
+    showToast('Password cambiata ✓');
+    auditLog('password_cambiata', 'medico', S.medicoId, {});
+  });
+}
+async function esciDaTutti(btn){
+  if(!isOnline()){ showToast('Connessione richiesta'); return; }
+  const ok = await confermaModale('Chiudere l\'accesso su tutti i dispositivi? Dovrai rientrare con la password anche qui.', { titolo:'Esci da tutti i dispositivi', ok:'Esci ovunque', annulla:'Annulla' });
+  if(!ok) return;
+  if(btn) btn.disabled = true;
+  try{
+    await auditLog('logout_tutti_dispositivi', 'medico', S.medicoId, {});
+    const { error } = await supabaseClient.auth.signOut({ scope: 'global' });
+    if(error) throw error;
+    // onAuthStateChange (SIGNED_OUT) gestirà il cambio di vista
+  }catch(e){
+    showToast(erroreLeggibile('Uscita non riuscita', e));
+    if(btn) btn.disabled = false;
+  }
+}
+async function secRenderAccount(){
+  // Il campo Account, con autocomplete="username", dice al gestore di password del browser quale nome utente abbinare alla password
+  const el = document.getElementById('sec-pwd-email'); if(!el) return;
+  try{ const { data } = await supabaseClient.auth.getUser(); el.value = (data && data.user && data.user.email) || ''; }catch(_){ el.value = ''; }
+}
+const SEC_CORSO_MODULI = [
+  { parte:'A', n:1,  titolo:'Chi vede cosa',                     sotto:'Medico, segreteria, paziente dal link, Delphi~Med: chi legge cosa, cosa è cifrato' },
+  { parte:'A', n:2,  titolo:'Il tuo account è la porta',         sotto:'Verifica in due passaggi, telefono perso, «Esci», gestionale aperto in sala d\'attesa' },
+  { parte:'A', n:3,  titolo:'Consenso al trattamento',           sotto:'Informativa e consenso, comunicazioni e revoca, minori, cosa scrivere in cartella' },
+  { parte:'A', n:4,  titolo:'Conservazione e archiviazione',     sotto:'Dieci anni e soglia, backup ZIP, eliminazione account, richieste dei pazienti, 72 ore' },
+  { parte:'B', n:5,  titolo:'Phishing, smishing, vishing, quishing', sotto:'Nessuna urgenza legittima chiede codici o password' },
+  { parte:'B', n:6,  titolo:'Password',                          sotto:'Lunghezza prima della complessità, gestore, una per servizio' },
+  { parte:'B', n:7,  titolo:'Password condivise',                sotto:'L\'account «che usano tutti», le credenziali al collega per le ferie, il post-it' },
+  { parte:'B', n:8,  titolo:'Dispositivi',                       sotto:'Aggiornamenti, blocco schermo, telefono personale, wifi pubblico' },
+  { parte:'B', n:9,  titolo:'Social media e messaggistica',      sotto:'Referti su WhatsApp, pazienti su Instagram, gruppi di reparto' },
+  { parte:'B', n:10, titolo:'Ingegneria sociale in studio',      sotto:'Il finto tecnico, il finto paziente, il familiare al telefono' },
+  { parte:'B', n:11, titolo:'Quando qualcosa è andato storto',   sotto:'I segni, i primi tre gesti, chi chiamare, cosa non cancellare' }
+];
+function secRenderCorso(){
+  const g = document.getElementById('sec-corso'); if(!g) return;
+  const parti = { A:'Delphi~Med e i tuoi dati', B:'Cybersicurezza per chi cura' };
+  let html = '';
+  ['A','B'].forEach(pt => {
+    html += `<div class="sec-corso-parte">Parte ${pt} · ${escapeHtml(parti[pt])}</div>`;
+    SEC_CORSO_MODULI.filter(m => m.parte === pt).forEach(m => {
+      html += `<div class="sec-mod" aria-disabled="true"><div class="sec-mod-n">${m.n}</div><div class="sec-mod-body"><div class="sec-mod-t">${escapeHtml(m.titolo)}</div><div class="sec-mod-s">${escapeHtml(m.sotto)}</div><div class="sec-mod-meta"><span>3 minuti</span><span class="sec-mod-stato">In preparazione</span></div></div></div>`;
+    });
+  });
+  g.innerHTML = html;
+}
+
 async function resetPassword(){
   const email = document.getElementById('auth-reset-email').value.trim();
   if(!email){ showAuthMsg('Inserisci la tua email', 'error'); return; }
@@ -3895,6 +4077,10 @@ function showAuthView(){
   document.getElementById('view-auth').style.display    = 'none';
   document.getElementById('view-app').style.display     = 'none';
   document.getElementById('view-booking').style.display = 'none';
+  // La home riparte dall'alto: dopo «Esci» resterebbe lo scroll della pagina lasciata nel gestionale.
+  // Subito, al frame successivo e dopo il primo layout: il cambio di vista sposta contenuto sopra il viewport e il browser tende a riancorare lo scroll.
+  const _top = () => { try{ window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }catch(_){ } };
+  _top(); requestAnimationFrame(_top); setTimeout(_top, 60);
 }
 
 const ABP=[
@@ -4759,13 +4945,13 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','promemoria','comunicazioni','centri','prestazioni','profilo','piani','statistiche','impostazioni','manutenzione-archivio'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','promemoria','comunicazioni','centri','prestazioni','profilo','piani','statistiche','impostazioni','sicurezza','manutenzione-archivio'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
   });
   // Sync bottom nav
-  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','manutenzione-archivio','centri'];
+  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','sicurezza','manutenzione-archivio','centri'];
   const bnKey = _menuPages.includes(id) ? 'menu' : id;
   const bnItem = document.querySelector(`.bottom-nav-item[data-page="${bnKey}"]`);
   if(bnItem) bnItem.classList.add('active');
@@ -4780,7 +4966,8 @@ function showPage(id){
   if(id==='piani') renderPiani();
   if(id==='dashboard'){ renderDashboard(); updateStats(); renderPending(); }
   if(id==='statistiche') renderStatistiche();
-  if(id==='impostazioni'){ renderImpostazioni(); mfaRenderStato(); }
+  if(id==='impostazioni') renderImpostazioni();
+  if(id==='sicurezza'){ mfaRenderStato(); secRenderAccount(); secRenderCorso(); }
   if(id==='manutenzione-archivio') renderArchivioPage();
   if(id==='promemoria') promRenderPagina();
 }
