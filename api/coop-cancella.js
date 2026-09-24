@@ -1,5 +1,6 @@
 // api/coop-cancella.js
 import { avvisaListaAttesa } from '../lib/waitlist.js';
+import { richiediAal2Secco } from '../lib/aal-guard.js';
 // Roadmap plancia voce 1 — ciclo di vita appuntamento dalla plancia (tappa 1: cancellazione).
 // La segreteria della cooperativa identifica l'occupante di uno slot (lookup) e
 // cancella l'appuntamento (cancel) sui sede-centri coop. Perimetro SEMPRE
@@ -56,12 +57,18 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,cooperativa_id,cooperative(id,stato)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,cooperativa_id,cooperative(mfa_obbligatoria,id,stato)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
   if (!seg || seg.stato !== 'attiva' || !seg.cooperative || seg.cooperative.stato !== 'attiva') {
     return res.status(403).json({ error: 'Account non abilitato' });
+  }
+  // T-15 ciclo 2: se l'amministratore ha reso obbligatoria la verifica in due passaggi,
+  // ogni chiamata della segreteria deve portare un token al secondo livello.
+  if (seg.cooperative.mfa_obbligatoria === true) {
+    const aalKo = richiediAal2Secco(jwt);
+    if (aalKo) return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
 
   const sb = (path, init = {}) => fetch(`${supabaseUrl}/rest/v1/${path}`, {

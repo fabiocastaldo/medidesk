@@ -4,6 +4,7 @@
 // all'approvazione dell'account. Il gate reale e' il possesso di subscriptions.stripe_customer_id.
 // Famiglia carve-out: non consuma il motore premium, mai gateato.
 import Stripe from 'stripe';
+import { richiediAal2 } from '../lib/aal-guard.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -31,6 +32,10 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Token non valido o scaduto' });
   }
   const userData = await userRes.json().catch(() => null);
+  const aalKo = richiediAal2(jwt, userData);
+  if (aalKo) {
+    return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
+  }
   if (!userData?.id) {
     return res.status(401).json({ error: 'Utente non riconosciuto' });
   }

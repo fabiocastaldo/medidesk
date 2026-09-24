@@ -17,6 +17,7 @@
  */
 
 import { Resend } from 'resend';
+import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 import { revocaLink, consensoLink } from '../lib/consenso-token.js';
 import { buildICS } from '../lib/ics-builder.js';
@@ -74,6 +75,8 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
     return { ok: false, status: 401, error: 'Token non valido o scaduto' };
   }
   const userData = await userRes.json().catch(() => null);
+  const aalKo = richiediAal2(jwt, userData);
+  if (aalKo) return { ok: false, status: aalKo.status, error: aalKo.error, code: aalKo.code };
   if (!userData?.id) {
     return { ok: false, status: 401, error: 'Utente non riconosciuto' };
   }
@@ -415,14 +418,23 @@ const VALID_TIPI = new Set([
   'account_eliminazione', 'notifica_prenotazione_coop',
   'conferma_prenotazione_segreteria', 'notifica_medico_prenotazione',
   'notifica_medico_cancellazione', 'notifica_medico_appuntamento',
-  'spostamento_paziente', 'avviso_lista_attesa'
+  'spostamento_paziente', 'avviso_lista_attesa', 'avviso_sicurezza'
 ]);
 
 const PATH1_TIPI = new Set([
   'notifica_medico_appuntamento', 'spostamento_paziente',
   'conferma_appt_medico', 'richiesta_consenso_fascicolo', 'cancellazione_paziente', 'notifica_centro_evento',
-  'chiusura_studio_centro', 'chiusura_annullata_centro', 'account_eliminazione'
+  'chiusura_studio_centro', 'chiusura_annullata_centro', 'account_eliminazione', 'avviso_sicurezza'
 ]);
+
+// T-15 ciclo 2: avvisi di sicurezza al medico stesso (le email GoTrue dei fattori restano spente:
+// questo e' il canale italiano, con audit). Testi per evento.
+const AVVISI_SICUREZZA = {
+  mfa_attivata:            { titolo: 'Verifica in due passaggi attivata',   testo: 'un nuovo dispositivo di verifica in due passaggi &egrave; stato registrato sul tuo account.' },
+  mfa_dispositivo_rimosso: { titolo: 'Dispositivo di verifica rimosso',      testo: 'un dispositivo di verifica in due passaggi &egrave; stato rimosso dal tuo account.' },
+  password_cambiata:       { titolo: 'Password cambiata',                   testo: 'la password del tuo account Delphi~Med &egrave; stata cambiata.' },
+  logout_tutti_dispositivi:{ titolo: 'Uscita da tutti i dispositivi',       testo: 'tutte le sessioni aperte del tuo account sono state chiuse.' }
+};
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -463,7 +475,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Autenticazione richiesta' });
     }
     const auth = await checkMedicoAuth(authHeader.slice(7), supabaseUrl, anonKey, serviceKey);
-    if (!auth.ok) return res.status(auth.status).json({ error: auth.error });
+    if (!auth.ok) return res.status(auth.status).json(auth.code ? { error: auth.error, code: auth.code } : { error: auth.error });
     authCtx = { medicoId: auth.medicoId, userId: auth.userId, userEmail: auth.userEmail, medicoNome: auth.medicoNome, authMode: 'jwt_medico' };
 
   } else if (tipo === 'conferma_appt_anon') {
@@ -493,7 +505,7 @@ export default async function handler(req, res) {
 
   // ── Per-tipo: lookup DB + costruzione payload email ───────────────────────────
 
-  let to, subject, html, replyTo, medicoIdAudit, targetType, targetId, icsAttachment;
+  let to, subject, html, replyTo, medicoIdAudit, targetType, targetId, icsAttachment, tipoAudit = tipo;
   let consApptCtx = null; // se valorizzato, dopo l'invio parte la richiesta di consenso comunicazioni (una tantum)
 
   if (tipo === 'conferma_appt_anon') {
@@ -814,6 +826,18 @@ export default async function handler(req, res) {
     targetType    = 'centro';
     targetId      = chiusura_id;
 
+  } else if (tipo === 'avviso_sicurezza') {
+    const evento = typeof body.evento === 'string' ? body.evento : '';
+    const av = AVVISI_SICUREZZA[evento];
+    if (!av) return res.status(400).json({ error: 'Evento non valido' });
+    to            = authCtx.userEmail;
+    subject       = 'Delphi~Med — ' + av.titolo;
+    html          = buildHtmlAvvisoSicurezza({ medico_nome: esc(authCtx.medicoNome), titolo: av.titolo, testo: av.testo, quando: new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) });
+    replyTo       = null;
+    medicoIdAudit = authCtx.medicoId;
+    targetType    = 'account';
+    targetId      = authCtx.medicoId;
+    tipoAudit     = 'avviso_sicurezza:' + evento;
   } else if (tipo === 'account_eliminazione') {
     to            = authCtx.userEmail;
     subject       = 'Account Delphi⁠~Med — eliminazione programmata';
@@ -850,7 +874,7 @@ export default async function handler(req, res) {
 
   // ── Audit log (soft-fail) ─────────────────────────────────────────────────────
 
-  await auditLog(base, dbHeaders, medicoIdAudit, tipo, targetType, targetId, authCtx.authMode, to, resendId);
+  await auditLog(base, dbHeaders, medicoIdAudit, tipoAudit, targetType, targetId, authCtx.authMode, to, resendId);
 
   // ── Richiesta consenso comunicazioni (soft-fail, una tantum per medico+email) ──
   if (consApptCtx) {
@@ -1151,6 +1175,16 @@ function buildHtmlChiusuraAnnullata({ data_inizio_fmt, data_fine_fmt, etichetta,
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 24px;">il medico <strong>${medico_nome}</strong> ha annullato la chiusura dello studio${etichetta ? ` (<em>${etichetta}</em>)` : ''} ${periodo} che vi era stata comunicata.</p>` +
     noteBox('Lo studio resta aperto secondo i turni abituali: le date tornano prenotabili.') +
     `<p style="font-size:13px;color:#888;margin:0;">Per informazioni contattare direttamente il medico.</p>`;
+  return emailShell(body);
+}
+
+function buildHtmlAvvisoSicurezza({ medico_nome, titolo, testo, quando }) {
+  const body =
+    emailTitle(titolo) +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${medico_nome}</strong>,</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">il ${quando} ${testo}</p>` +
+    noteBox('Se non sei stato tu, cambia subito la password dalla pagina Sicurezza del gestionale e scrivi a <a href="mailto:support@delphi-med.com" style="color:#dc2626;">support@delphi-med.com</a>.', { tone: 'danger' }) +
+    `<p style="font-size:13px;color:#888;margin:0;">Questo avviso viene inviato a ogni cambiamento delle impostazioni di sicurezza del tuo account.</p>`;
   return emailShell(body);
 }
 

@@ -11,6 +11,8 @@
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+import { richiediAal2Secco } from '../lib/aal-guard.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -41,12 +43,18 @@ export default async function handler(req, res) {
 
   const srvHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
   const segRes = await fetch(
-    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,ruolo,cooperativa_id,cooperative(id,nome,stato,intestazione_legale)`,
+    `${supabaseUrl}/rest/v1/segreterie?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,ruolo,cooperativa_id,cooperative(mfa_obbligatoria,id,nome,stato,intestazione_legale)`,
     { headers: srvHeaders }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
   if (!seg || seg.stato !== 'attiva' || !seg.cooperative || seg.cooperative.stato !== 'attiva') {
     return res.status(403).json({ error: 'Account non abilitato' });
+  }
+  // T-15 ciclo 2: se l'amministratore ha reso obbligatoria la verifica in due passaggi,
+  // ogni chiamata della segreteria deve portare un token al secondo livello.
+  if (seg.cooperative.mfa_obbligatoria === true) {
+    const aalKo = richiediAal2Secco(jwt);
+    if (aalKo) return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
   }
   if (seg.ruolo !== 'admin') {
     return res.status(403).json({ error: 'Operazione riservata all\'amministratore' });
@@ -138,6 +146,38 @@ export default async function handler(req, res) {
     if (!r) return res.status(404).json({ error: 'Operatore non trovato' });
     await scriviLog(r.id, attiva ? 'riattivata' : 'sospesa', `operatore ${r.nome} ${r.cognome || ''} <${r.email || ''}>`);
     return res.status(200).json({ ok: true, operatore: { id: r.id, nome: r.nome, cognome: r.cognome || '', email: r.email, ruolo: r.ruolo, stato: r.stato, dal: r.created_at, primo_accesso_effettuato: !!r.user_id } });
+  }
+
+  // T-15 ciclo 2, procedura "telefono perso" per la segreteria: l'amministratore azzera i
+  // dispositivi di verifica di un operatore della propria organizzazione (admin API GoTrue,
+  // service_role). L'operatore al prossimo accesso trova la schermata di attivazione (se la
+  // regola e' accesa) o entra con il solo codice via email. Traccia in audit_log.
+  if (azione === 'azzera_mfa') {
+    const targetId = typeof b.segreteria_id === 'string' ? b.segreteria_id : '';
+    if (!UUID_RE.test(targetId)) return res.status(400).json({ error: 'Parametro segreteria_id non valido' });
+    const opRes = await fetch(
+      `${supabaseUrl}/rest/v1/segreterie?id=eq.${encodeURIComponent(targetId)}&cooperativa_id=eq.${encodeURIComponent(coopId)}&ruolo=eq.operatore&select=id,nome,cognome,email,user_id`,
+      { headers: srvHeaders }
+    ).catch(() => null);
+    const op = (opRes && opRes.ok) ? (await opRes.json().catch(() => []))?.[0] : null;
+    if (!op) return res.status(404).json({ error: 'Operatore non trovato' });
+    if (!op.user_id) return res.status(409).json({ error: 'L\'operatore non ha ancora fatto il primo accesso' });
+    const lstRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(op.user_id)}/factors`, { headers: srvHeaders }).catch(() => null);
+    const fattori = (lstRes && lstRes.ok) ? await lstRes.json().catch(() => []) : null;
+    if (!Array.isArray(fattori)) return res.status(500).json({ error: 'Lettura dei dispositivi non riuscita' });
+    let rimossi = 0;
+    for (const fz of fattori) {
+      if (!fz || !fz.id) continue;
+      const delRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(op.user_id)}/factors/${encodeURIComponent(fz.id)}`, { method: 'DELETE', headers: srvHeaders }).catch(() => null);
+      if (delRes && delRes.ok) rimossi++;
+    }
+    if (rimossi !== fattori.length) return res.status(500).json({ error: 'Rimozione dei dispositivi non riuscita', rimossi, totale: fattori.length });
+    await fetch(`${supabaseUrl}/rest/v1/audit_log`, {
+      method: 'POST', headers: { ...jsonHeaders, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ medico_id: null, action: 'mfa_azzerata_da_admin', target_type: 'segreteria', target_id: String(op.id),
+        details: { rimossi, cooperativa_id: coopId, eseguita_da: seg.id, user_id: userData.id, operatore: op.email || '', auth_mode: 'jwt_segreteria' } })
+    }).catch(e => console.error('[coop-operatori] audit:', e.message));
+    return res.status(200).json({ ok: true, rimossi });
   }
 
   return res.status(400).json({ error: 'Azione non valida' });
