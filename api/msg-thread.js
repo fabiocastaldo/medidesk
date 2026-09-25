@@ -73,8 +73,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const supabaseUrl  = process.env.SUPABASE_URL;
-  const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey      = process.env.SUPABASE_ANON_KEY;
+  const serviceKey   = process.env.SUPABASE_SECRET_KEY;
+  const anonKey      = process.env.SUPABASE_PUBLISHABLE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!supabaseUrl || !serviceKey || !anonKey || !resendApiKey) {
     console.error('[msg-thread] env vars mancanti');

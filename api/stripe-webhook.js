@@ -25,8 +25,8 @@ async function applySubscription(sub) {
 
   const base = `${process.env.SUPABASE_URL}/rest/v1`;
   const sHeaders = {
-    'apikey':        process.env.SUPABASE_SERVICE_ROLE_KEY,
-    'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+    'apikey':        process.env.SUPABASE_SECRET_KEY,
+    'Authorization': `Bearer ${process.env.SUPABASE_SECRET_KEY}`,
     'Content-Type':  'application/json',
     'Prefer':        'resolution=merge-duplicates,return=minimal'
   };
@@ -41,8 +41,8 @@ async function applySubscription(sub) {
       `${base}/subscriptions?medico_id=eq.${encodeURIComponent(medicoId)}&select=stripe_subscription_id,status`,
       {
         headers: {
-          'apikey':        process.env.SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+          'apikey':        process.env.SUPABASE_SECRET_KEY,
+          'Authorization': `Bearer ${process.env.SUPABASE_SECRET_KEY}`
         }
       }
     );

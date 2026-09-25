@@ -16,8 +16,8 @@ export default async function handler(req, res) {
   const jwt = authHeader.slice(7);
 
   const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey     = process.env.SUPABASE_ANON_KEY;
+  const serviceKey  = process.env.SUPABASE_SECRET_KEY;
+  const anonKey     = process.env.SUPABASE_PUBLISHABLE_KEY;
   const keyId       = process.env.KMS_KEY_ID;
   if (!supabaseUrl || !serviceKey || !anonKey || !keyId) {
     return res.status(500).json({ error: 'Configurazione server mancante' });

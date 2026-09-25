@@ -166,10 +166,11 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const supabaseUrl  = process.env.SUPABASE_URL;
-  const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey      = process.env.SUPABASE_ANON_KEY;
+  const serviceKey   = process.env.SUPABASE_SECRET_KEY;
+  const anonKey      = process.env.SUPABASE_PUBLISHABLE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !serviceKey || !anonKey || !resendApiKey) {
+  const consensoSecret = process.env.CONSENSO_TOKEN_SECRET; // HMAC dei link consenso/revoca (s52): separato dalla chiave del DB
+  if (!supabaseUrl || !serviceKey || !anonKey || !resendApiKey || !consensoSecret) {
     console.error('[invia-cluster] env vars mancanti');
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }
@@ -187,7 +188,7 @@ export default async function handler(req, res) {
   // Il consenso si PRESTA solo in fase di prenotazione online personale: qui vive
   // soltanto la revoca (e la sua pagina), che deve funzionare sempre.
   if (action === 'leggi_consenso' || action === 'conferma_consenso' || action === 'revoca_consenso') {
-    const payload = readPayload(serviceKey, body.token);
+    const payload = readPayload(consensoSecret, body.token);
     const okR = payload && payload.a === 'r' && (payload.p || (payload.e && payload.m));
     const okC = payload && payload.a === 'c' && (payload.ap || payload.p);
     if (!okR && !okC) return res.status(401).json({ error: 'link_non_valido' });
@@ -335,8 +336,8 @@ export default async function handler(req, res) {
     for (const p of dest) {
       try {
         const linkRevoca = p.id
-          ? revocaLink(host, serviceKey, { pazienteId: p.id })
-          : revocaLink(host, serviceKey, { email: p.email, medicoId: medico.id });
+          ? revocaLink(host, consensoSecret, { pazienteId: p.id })
+          : revocaLink(host, consensoSecret, { email: p.email, medicoId: medico.id });
         const corpoHtml = esc(corpo).replace(/\r?\n/g, '<br>');
         const corpoMail =
           emailTitle(`Una comunicazione da ${esc(medicoNome)}`) +

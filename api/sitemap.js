@@ -3,7 +3,7 @@ const CANONICAL_BASE = 'https://www.delphi-med.com';
 
 export default async function handler(req, res) {
   const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
+  const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   let rows = [];
   try {
     const r = await fetch(`${url}/rest/v1/rpc/get_sitemap_medici`, {

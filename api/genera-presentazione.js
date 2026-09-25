@@ -22,7 +22,7 @@ function checkInMemoryRateLimit(ip) {
 
 async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SECRET_KEY;
   if (!url || !key) return true;
   try {
     const res = await fetch(`${url}/rest/v1/rpc/check_rate_limit`, {
@@ -49,8 +49,8 @@ export default async function handler(req, res) {
   const jwt = authHeader.slice(7);
 
   const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey     = process.env.SUPABASE_ANON_KEY;
+  const serviceKey  = process.env.SUPABASE_SECRET_KEY;
+  const anonKey     = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !serviceKey || !anonKey) {
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }

@@ -8,7 +8,7 @@ const esc = (s) => String(s == null ? '' : s)
 
 export default async function handler(req, res) {
   const url = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
+  const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   const slug = String((req.query && req.query.slug) || '').trim().toLowerCase();
 
   // shell statica, deployment-agnostica (niente fs): la rotta /medidesk.html serve il file reale
