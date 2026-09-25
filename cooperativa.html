@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Delphi~Med — Plancia cooperative</title>
+<title>Delphi~Med — Plancia organizzazioni</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Montserrat:wght@700&display=swap" rel="stylesheet">
@@ -122,13 +122,13 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .stat-hint{font-size:12.5px;color:var(--ink3);margin:0 0 12px}
 .stat-filtri{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;background:var(--paper);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:18px}
 .stat-filtri .field{margin:0;min-width:150px;flex:1}
-.stat-filtri select,.stat-filtri input[type=date],.stat-filtri input[type=month]{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:13.5px;color:var(--ink);background:#fff}
+.stat-filtri select,.stat-filtri input[type=date],.stat-filtri input[type=month]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:13.5px;color:var(--ink);background:#fff}
 .stat-filtri select:focus-visible,.stat-filtri input[type=date]:focus-visible,.stat-filtri input[type=month]:focus-visible{outline:2px solid var(--brand-bright);outline-offset:1px;border-color:var(--brand-mid)}
 .stat-filtri .btn{width:auto;flex:none}
 .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
-.kpi-tile{background:linear-gradient(160deg,#fff 0%,var(--paper) 100%);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow-soft)}
-.kpi-tile .kn{font-family:'DM Serif Display',serif;font-size:28px;color:var(--brand-deep);line-height:1.1}
-.kpi-tile .kl{font-size:11.5px;color:var(--ink3);margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
+.kpi-tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:var(--shadow-soft);display:flex;flex-direction:column-reverse;justify-content:flex-end}
+.kpi-tile .kn{font-family:'DM Serif Display',serif;font-size:36px;color:var(--ink);line-height:1.1;margin:4px 0}
+.kpi-tile .kl{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
 .barrow{display:grid;grid-template-columns:minmax(120px,32%) 1fr 52px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13.5px}
 .barrow:last-child{border-bottom:0}
 .barrow .bl{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -240,13 +240,16 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 @media (max-width:840px){.tile-grid{grid-template-columns:repeat(2,1fr)}.hero{flex-direction:column;align-items:flex-start}.hero-next{align-items:flex-start;text-align:left}}
 .toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
 .toolbar .field{margin-bottom:0;min-width:130px}
-.toolbar .btn{width:auto;margin:0;padding:11px 18px}
+.toolbar .btn{width:auto;margin:0}
 .search{padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:14px;min-width:240px}
 .search:focus-visible{outline:2px solid var(--brand-bright);outline-offset:1px}
-.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
-.tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border)}
-.tbl td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
-.tbl tr:hover td{background:var(--paper)}
+/* tabelle: stessa grammatica delle liste del gestionale (.paz-table) */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.tbl th{text-align:left;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);padding:12px 14px;border-bottom:2px solid var(--border);background:var(--surface2)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:nth-child(even) td{background:var(--surface2)}
+.tbl tbody tr:hover td{background:var(--brand-soft)}
 .contact{display:inline-flex;align-items:center;gap:5px;color:var(--ink);text-decoration:none;margin-right:14px;white-space:nowrap}
 .contact svg{width:13px;height:13px;stroke:var(--ink3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
 .contact:hover{color:var(--brand-mid)}
@@ -327,6 +330,11 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 #view-login .brandpane{flex:none;width:340px;padding:48px 40px;justify-content:center;background:radial-gradient(120% 80% at 85% -10%,rgba(255,255,255,.18),transparent 60%),linear-gradient(160deg,var(--brand-mid),var(--brand-deep))}
 #view-login .brandpane ul{margin-top:32px;gap:18px}#view-login .brandpane li{transition:opacity .45s ease;opacity:.92}#view-login .brandpane .payoff{opacity:.85;font-size:14px;color:#fff}
 #view-login .cardpane{flex:1;padding:40px 36px;background:#fff}#view-login .card{max-width:none;border:none;box-shadow:none;padding:0;border-radius:0}
+#view-login .field input,#view-login .field select{padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px}
+#view-login .field input:focus-visible{outline:none;border-color:var(--brand-mid)}
+#view-login .card .btn{padding:13px;font-size:15px;font-weight:600;border-radius:10px;margin-top:4px}
+#view-login .login-mode{font-family:inherit;font-size:14px;font-weight:500;color:var(--ink3);border-radius:8px;padding:9px}
+#view-login .login-mode.active{color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.1)}
 #view-login .login-foot{position:absolute;bottom:20px;left:0;right:0;text-align:center;font-size:12px}#view-login .login-foot a{color:rgba(255,255,255,.85);text-decoration:underline}
 @media (min-width:841px){#view-login .login-shell{display:flex;width:100%;max-width:860px;border-radius:20px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.25)}}
 @media (max-width:840px){#view-login .login-shell{width:100%;max-width:400px}#view-login .cardpane{border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.25);padding:28px 20px}#view-login .card-logo .mark{color:var(--ink)}}
@@ -402,7 +410,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
   <div class="cardpane">
     <div class="card">
       <div class="card-logo"><div class="mark">Delphi~Med</div><div class="payoff">La regia dell'organizzazione</div></div>
-      <div id="login-modes" style="display:flex;gap:6px;margin:14px 0 16px;background:#eef2f1;border-radius:10px;padding:4px">
+      <div id="login-modes" style="display:flex;gap:4px;margin:14px 0 28px;background:var(--surface2);border-radius:10px;padding:4px">
         <button type="button" class="login-mode active" id="mode-admin" onclick="setLoginMode('admin')">Amministratore</button>
         <button type="button" class="login-mode" id="mode-seg" onclick="setLoginMode('seg')">Segreteria</button>
       </div>
@@ -498,7 +506,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <div id="login-msg" class="hidden"></div>
       <span class="helplink">La tua organizzazione non è ancora attiva?
-        <a href="#" onclick="openHomeContact(event,'Attivazione cooperativa Delphi~Med')">Richiedi l'attivazione</a>
+        <a href="#" onclick="openHomeContact(event,'Attivazione organizzazione Delphi~Med')">Richiedi l'attivazione</a>
       </span>
     </div>
   </div>
@@ -516,7 +524,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         Se rappresenti un'organizzazione — cooperativa, poliambulatorio o centro medico — richiedi l'attivazione.</p>
       <button class="btn" onclick="doLogout()">Esci e torna all'accesso</button>
       <span class="helplink">
-        <a href="#" onclick="openHomeContact(event,'Attivazione cooperativa Delphi~Med')">Richiedi l'attivazione</a>
+        <a href="#" onclick="openHomeContact(event,'Attivazione organizzazione Delphi~Med')">Richiedi l'attivazione</a>
       </span>
     </div>
   </div>
@@ -1805,7 +1813,7 @@ function togglePwEye(btn){
 }
 function openHomeContact(ev,subject){
   if(ev&&ev.preventDefault)ev.preventDefault();
-  document.getElementById('hc-mailto').href='mailto:info@delphi-med.com?subject='+encodeURIComponent(subject||'Attivazione cooperativa Delphi~Med');
+  document.getElementById('hc-mailto').href='mailto:info@delphi-med.com?subject='+encodeURIComponent(subject||'Attivazione organizzazione Delphi~Med');
   document.getElementById('hc-copy').textContent='Copia indirizzo';
   document.getElementById('hc-ov').classList.add('on');
 }
