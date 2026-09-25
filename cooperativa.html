@@ -304,6 +304,15 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 .hc-mailto{display:block;margin-top:12px;font-size:13px;color:var(--ink2);text-decoration:underline}
 .hc-mailto:hover{color:var(--brand-deep)}
 .hc-x{position:absolute;top:6px;right:10px;background:none;border:none;color:var(--ink3);font-size:24px;line-height:1;cursor:pointer;padding:4px}
+/* modale di conferma/avviso/inserimento della plancia (al posto di confirm/alert/prompt nativi) */
+.cf-modal{text-align:left}
+.cf-modal p{white-space:pre-line}
+.cf-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:14px;margin:0 0 16px;color:var(--ink)}
+.cf-input:focus-visible{outline:2px solid var(--brand-bright);outline-offset:1px;border-color:var(--brand-mid)}
+.cf-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.cf-actions .btn{width:auto;margin:0;padding:10px 18px}
+.cf-actions .btn.danger{background:#8C2F22;border-color:#8C2F22}
+.cf-actions .btn.danger:hover{background:#6E2419;border-color:#6E2419}
 .hc-x:hover{color:var(--ink)}
 .pwd-strength-bar{height:4px;background:var(--border);border-radius:2px;margin:10px 0 4px}
 #rec-strength-fill{height:100%;border-radius:2px;width:0;transition:width .25s,background .25s}
@@ -467,6 +476,19 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     <div class="hc-mail" id="hc-mail">info@delphi-med.com</div>
     <button class="btn" id="hc-copy" onclick="copyHomeContact()" style="margin:0">Copia indirizzo</button>
     <a class="hc-mailto" id="hc-mailto" href="mailto:info@delphi-med.com">Oppure apri nel tuo client di posta</a>
+  </div>
+</div>
+
+<div class="hc-ov" id="cf-ov" style="z-index:400" onclick="if(event.target===this)_cfChiudi(null)">
+  <div class="hc-modal cf-modal" role="dialog" aria-modal="true" aria-labelledby="cf-titolo">
+    <button class="hc-x" aria-label="Chiudi" onclick="_cfChiudi(null)">&times;</button>
+    <h3 id="cf-titolo">Conferma</h3>
+    <p id="cf-testo"></p>
+    <input class="cf-input" id="cf-input" type="text" style="display:none" onkeydown="if(event.key==='Enter'){event.preventDefault();_cfChiudi(true)}">
+    <div class="cf-actions">
+      <button class="btn btn-ghost" id="cf-annulla" onclick="_cfChiudi(false)">Annulla</button>
+      <button class="btn" id="cf-ok" onclick="_cfChiudi(true)">Conferma</button>
+    </div>
   </div>
 </div>
 
@@ -1314,7 +1336,7 @@ function _csvCell(v){
 
 function exportStatCSV(){
   if(!_statLast || !_statLast.body){
-    alert('Applica prima i filtri: nessun dato da esportare.');
+    avvisoModale('Applica prima i filtri: nessun dato da esportare.', { titolo:'Nessun dato' });
     return;
   }
   const b = _statLast.body;
@@ -1435,7 +1457,7 @@ async function setModelloSede(sedeId, modello){
     if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
     loadCompensi();
   } catch(e) {
-    alert('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'));
+    avvisoModale('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'), { titolo:'Salvataggio non riuscito' });
     renderModelloSedi();
   }
 }
@@ -1497,7 +1519,7 @@ async function setRegola(medicoId, sedeId){
     if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
     loadCompensi();
   } catch(e) {
-    alert('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'));
+    avvisoModale('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'), { titolo:'Salvataggio non riuscito' });
     renderRegole();
   }
 }
@@ -1506,7 +1528,7 @@ async function setRegolaTutti(sedeId){
   const tipo = (document.getElementById('regt-' + sedeId + '-tipo') || {}).value || 'percentuale';
   const raw = (document.getElementById('regt-' + sedeId + '-val') || {}).value;
   const valore = (raw === '' || raw == null) ? null : (isNaN(parseFloat(raw)) ? null : parseFloat(raw));
-  if(valore == null && !confirm('Valore vuoto: rimuovere la regola per TUTTI i medici della sede?')) return;
+  if(valore == null && !(await confermaModale('Valore vuoto: rimuovere la regola per TUTTI i medici della sede?', { titolo:'Rimuovere la regola', ok:'Rimuovi', pericolo:true }))) return;
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-compensi', {
@@ -1518,7 +1540,7 @@ async function setRegolaTutti(sedeId){
     if(!res.ok || !body || !body.ok) throw new Error((body && body.error) || 'salvataggio');
     loadCompensi();
   } catch(e) {
-    alert('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'));
+    avvisoModale('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'), { titolo:'Salvataggio non riuscito' });
   }
 }
 
@@ -1599,14 +1621,14 @@ async function setLiquidato(medicoId, sedeId, raw){
     if(r) r.liquidato = importo;
     renderCompTbl();
   } catch(e) {
-    alert('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'));
+    avvisoModale('Salvataggio non riuscito: ' + (e && e.message ? e.message : 'riprova'), { titolo:'Salvataggio non riuscito' });
     renderCompTbl();
   }
 }
 
 function exportCompensiCSV(){
   if(!_cmpLast || !_cmpLast.body){
-    alert('Carica prima un mese: nessun dato da esportare.');
+    avvisoModale('Carica prima un mese: nessun dato da esportare.', { titolo:'Nessun dato' });
     return;
   }
   const b = _cmpLast.body;
@@ -1656,6 +1678,38 @@ function openHomeContact(ev,subject){
   document.getElementById('hc-copy').textContent='Copia indirizzo';
   document.getElementById('hc-ov').classList.add('on');
 }
+// ── Modale della plancia al posto di confirm/alert/prompt nativi (stile Delphi~Med) ──
+// confermaModale(testo, {titolo, ok, annulla, pericolo}) → Promise<bool>; avvisoModale(testo, {titolo}) → Promise<true>;
+// promptModale(testo, {titolo, valore, ok}) → Promise<string|null>. Esc, ✕ e clic fuori = annulla (null per il prompt).
+let _cfResolve = null, _cfModo = 'conferma';
+function _cfApri(modo, testo, opts){
+  opts = opts || {}; _cfModo = modo;
+  return new Promise(function(res){
+    if(_cfResolve){ const prev = _cfResolve; _cfResolve = null; prev(modo === 'prompt' ? null : false); }
+    _cfResolve = res;
+    document.getElementById('cf-titolo').textContent = opts.titolo || (modo === 'avviso' ? 'Attenzione' : 'Conferma');
+    document.getElementById('cf-testo').textContent = testo || '';
+    const inp = document.getElementById('cf-input');
+    inp.style.display = modo === 'prompt' ? '' : 'none'; inp.value = modo === 'prompt' ? String(opts.valore || '') : '';
+    const ok = document.getElementById('cf-ok'); ok.textContent = opts.ok || (modo === 'avviso' ? 'Ok' : 'Conferma');
+    ok.classList.toggle('danger', !!opts.pericolo);
+    const an = document.getElementById('cf-annulla'); an.textContent = opts.annulla || 'Annulla'; an.style.display = modo === 'avviso' ? 'none' : '';
+    document.getElementById('cf-ov').classList.add('on');
+    document.addEventListener('keydown', _cfTasto);
+    setTimeout(function(){ (modo === 'prompt' ? inp : ok).focus(); if(modo === 'prompt') inp.select(); }, 30);
+  });
+}
+function _cfTasto(ev){ if(ev.key === 'Escape'){ ev.preventDefault(); _cfChiudi(null); } }
+function _cfChiudi(esito){
+  document.getElementById('cf-ov').classList.remove('on');
+  document.removeEventListener('keydown', _cfTasto);
+  const r = _cfResolve; _cfResolve = null; if(!r) return;
+  if(_cfModo === 'prompt') r(esito === true ? document.getElementById('cf-input').value : null);
+  else r(esito === true);
+}
+function confermaModale(testo, opts){ return _cfApri('conferma', testo, opts); }
+function avvisoModale(testo, opts){ return _cfApri('avviso', testo, opts); }
+function promptModale(testo, opts){ return _cfApri('prompt', testo, opts); }
 function closeHomeContact(){document.getElementById('hc-ov').classList.remove('on');}
 function copyHomeContact(){
   const b=document.getElementById('hc-copy');
@@ -1868,7 +1922,7 @@ async function statoOperatore(id, attiva){
 }
 
 async function azzeraMfaOperatore(id){
-  if(!confirm('Rimuovere tutti i dispositivi di verifica in due passaggi di questo operatore? Al prossimo accesso dovrà registrarne uno nuovo (se la regola dell\'organizzazione è accesa). Farlo solo dopo aver verificato di persona chi lo chiede.')) return;
+  if(!(await confermaModale('Rimuovere tutti i dispositivi di verifica in due passaggi di questo operatore? Al prossimo accesso dovrà registrarne uno nuovo (se la regola dell\'organizzazione è accesa). Farlo solo dopo aver verificato di persona chi lo chiede.', { titolo:'Azzera verifica', ok:'Azzera', pericolo:true }))) return;
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-operatori', {
@@ -1902,7 +1956,7 @@ function _opEsteso(o){ return [o.nome, o.cognome].filter(Boolean).join(' '); }
 function _opNomi(){ const m = {}; ((_operatori || {}).autorizzati || []).forEach(o => { m[o.id] = _opEsteso(o); }); return m; }
 
 function exportRegistroCSV(){
-  if(!_operatori){ alert('Apri prima l\'elenco (tab Preferenze).'); return; }
+  if(!_operatori){ avvisoModale('Apri prima l\'elenco (tab Preferenze).'); return; }
   const nomi = _opNomi();
   const righe = [];
   righe.push(['Registro delle persone autorizzate al trattamento', (_operatori.cooperativa || {}).intestazione_legale || (_operatori.cooperativa || {}).nome || '', new Date().toLocaleDateString('it-IT')].map(_csvCell).join(';'));
@@ -1927,7 +1981,7 @@ function _pdfNuovaRiga(doc, y, step){
 }
 
 function exportRegistroPDF(){
-  if(!_operatori){ alert('Apri prima l\'elenco (tab Preferenze).'); return; }
+  if(!_operatori){ avvisoModale('Apri prima l\'elenco (tab Preferenze).'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const nomi = _opNomi();
@@ -1951,7 +2005,7 @@ function exportRegistroPDF(){
 
 function letteraNomina(id){
   const o = ((_operatori || {}).autorizzati || []).find(x => String(x.id) === String(id));
-  if(!o){ alert('Operatore non trovato: ricarica l\'elenco.'); return; }
+  if(!o){ avvisoModale('Operatore non trovato: ricarica l\'elenco.'); return; }
   const coop = ((_operatori || {}).cooperativa || {});
   const coopNome = coop.intestazione_legale || (coop.nome ? (coop.nome + ' (dati legali da completare: ______________________________________)') : 'l\'organizzazione');
   const { jsPDF } = window.jspdf;
@@ -3066,7 +3120,7 @@ function _turnoInfo(turnoId){
 }
 async function eliminaTurno(turnoId, forza){
   const { medico, quando } = _turnoInfo(turnoId);
-  if(!forza && !window.confirm('Eliminare il turno di ' + medico + (quando ? ' (' + quando + ')' : '') + '?')) return;
+  if(!forza && !(await confermaModale('Eliminare il turno di ' + medico + (quando ? ' (' + quando + ')' : '') + '?', { titolo:'Elimina turno', ok:'Elimina', pericolo:true }))) return;
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-turni', {
@@ -3076,7 +3130,7 @@ async function eliminaTurno(turnoId, forza){
     });
     const body = await res.json().catch(() => ({}));
     if(res.status === 409 && body.visite){
-      if(window.confirm('Attenzione: il turno di ' + medico + ' (' + quando + ') ha ' + body.visite + ' visite pianificate. Eliminarlo comunque? Le visite già prese NON verranno cancellate.')){
+      if(await confermaModale('Attenzione: il turno di ' + medico + ' (' + quando + ') ha ' + body.visite + ' visite pianificate. Eliminarlo comunque? Le visite già prese NON verranno cancellate.', { titolo:'Turno con visite', ok:'Elimina comunque', pericolo:true })){
         return eliminaTurno(turnoId, true);
       }
       return;
@@ -3097,7 +3151,7 @@ function _servizioNome(servizioId){
   return s ? String(s.nome||'') : '';
 }
 async function rinominaServizio(servizioId){
-  const nome = window.prompt('Nuovo nome del servizio:', _servizioNome(servizioId));
+  const nome = await promptModale('Nuovo nome del servizio:', { titolo:'Rinomina servizio', valore:_servizioNome(servizioId), ok:'Rinomina' });
   if(nome === null) return;
   const pulito = capitalizeWords(nome.trim());
   if(!pulito){ setBoxMsg('servizio-msg', 'Il nome del servizio è obbligatorio.', 'err'); return; }
@@ -3106,7 +3160,7 @@ async function rinominaServizio(servizioId){
 
 async function eliminaServizio(servizioId){
   const nome = _servizioNome(servizioId) || 'questo servizio';
-  if(!window.confirm('Eliminare il servizio "' + nome + '"? Le associazioni con i medici verranno rimosse.')) return;
+  if(!(await confermaModale('Eliminare il servizio «' + nome + '»? Le associazioni con i medici verranno rimosse.', { titolo:'Elimina servizio', ok:'Elimina', pericolo:true }))) return;
   await _serviziCall({ action: 'elimina', servizio_id: servizioId }, 'Servizio eliminato.');
 }
 
@@ -3397,7 +3451,7 @@ async function mfaRimuovi(factorId){
       }
     }catch(_){ }
   }
-  if(!confirm('Senza questo dispositivo la verifica potrebbe non essere più richiesta e basteranno le credenziali per entrare. Rimuoverlo?')) return;
+  if(!(await confermaModale('Senza questo dispositivo la verifica potrebbe non essere più richiesta e basteranno le credenziali per entrare. Rimuoverlo?', { titolo:'Rimuovi dispositivo', ok:'Rimuovi', pericolo:true }))) return;
   try{
     const { error } = await sb.auth.mfa.unenroll({ factorId });
     if(error){ setBoxMsg('sic-mfa-msg', _mfaErr(error.message), 'err'); return; }
@@ -3488,7 +3542,7 @@ async function sicCambiaPassword(){
   }finally{ btn.disabled = false; _sicPwdInCorso = false; }
 }
 async function sicEsciDaTutti(){
-  if(!confirm('Chiudere l\'accesso su tutti i dispositivi? Dovrai rientrare anche qui.')) return;
+  if(!(await confermaModale('Chiudere l\'accesso su tutti i dispositivi? Dovrai rientrare anche qui.', { titolo:'Esci da tutti i dispositivi', ok:'Esci ovunque' }))) return;
   const btn = document.getElementById('sic-esci-tutti-btn'); btn.disabled = true;
   try{
     await _auditCoop('logout_tutti_dispositivi', 'segreteria', null, {});
