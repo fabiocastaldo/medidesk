@@ -3527,15 +3527,8 @@ async function signIn(){
     if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
     if(!data?.session){ showAuthMsg('Conferma prima la tua email, poi riprova.', 'error'); return; }
 
-    const userId = data.session.user.id;
-    const { data: medicoRow } = await supabaseClient
-      .from('medici').select('stato').eq('user_id', userId).maybeSingle();
-    if(medicoRow?.stato === 'in_attesa'){
-      await supabaseClient.auth.signOut();
-      showAuthMsg('Il tuo account è in attesa di approvazione. Ti contatteremo via email.', 'error');
-      return;
-    }
-
+    // Il controllo «in attesa di approvazione» vive in entraSeApprovato (unico ingresso, s52):
+    // qui arrivava dopo l'evento SIGNED_IN, che apriva già la dashboard.
     console.log('[Delphi~Med] signIn: successo');
     entraOMfa(data.session);
   } catch(e) {
@@ -3595,9 +3588,38 @@ function entraOMfa(session){
     _apriMfaSetup();
     return;
   }
-  showAppView();
+  entraSeApprovato(session);
 }
 const MFA_OBBLIGATORIA_MEDICO = false;
+
+// Cancello di approvazione (s52): prima di aprire il gestionale si legge lo stato del medico.
+// Sta qui, nell'unico ingresso, e non in signIn: l'evento SIGNED_IN (e INITIAL_SESSION al
+// ricaricamento) chiama entraOMfa prima che signIn abbia letto lo stato, e la dashboard di un
+// account non ancora approvato compariva per un istante. La lettura parte fuori dalla callback di
+// onAuthStateChange (setTimeout), dove l'SDK tiene il lock di auth. Nel frattempo resta la vista
+// corrente (login). Se la lettura fallisce si entra come prima: gli endpoint pretendono comunque
+// stato=approvato lato server.
+let _verificaApprovazioneInCorso = false;
+function entraSeApprovato(session){
+  if(!isOnline() || !session || !session.user || _bootstrapDone){ showAppView(); return; }
+  if(_verificaApprovazioneInCorso) return;
+  _verificaApprovazioneInCorso = true;
+  setTimeout(async () => {
+    try {
+      const { data: row, error } = await supabaseClient
+        .from('medici').select('stato').eq('user_id', session.user.id).maybeSingle();
+      if(!error && row && row.stato === 'in_attesa'){
+        await supabaseClient.auth.signOut();
+        showLoginView('login');
+        showAuthMsg('Il tuo account è in attesa di approvazione. Ti contatteremo via email.', 'error');
+        return;
+      }
+      showAppView();
+    } finally {
+      _verificaApprovazioneInCorso = false;
+    }
+  }, 0);
+}
 // Promemoria per chi non ha ancora un dispositivo: banner in Dashboard e pallino sulla voce
 // Sicurezza; sparisce da solo appena un dispositivo e' registrato. «Più tardi» lo nasconde
 // per questa sessione del browser (torna al prossimo accesso).
