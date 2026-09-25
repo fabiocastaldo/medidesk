@@ -17,9 +17,9 @@ async function sotto(supabaseUrl, key, endpoint, chiave, max, finestra) {
       headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({ p_endpoint: endpoint, p_ip: chiave, p_max_count: max, p_window_seconds: finestra })
     });
-    if (!r.ok) return true;
+    if (!r.ok) return false; // fail-closed: contatore non disponibile = richiesta respinta
     return (await r.json()) === true;
-  } catch { return true; }
+  } catch { return false; } // fail-closed (piano privacy riga 67)
 }
 
 export default async function handler(req, res) {

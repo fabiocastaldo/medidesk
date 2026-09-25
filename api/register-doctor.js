@@ -14,7 +14,7 @@ const LEGAL_DOCS = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Rate limit: 5 registrazioni/ora per IP (anti-spam abuse), contatore DB condiviso
-// fra le istanze (RPC check_rate_limit, chiave 'ip:<ip>'); fail-open se il DB non risponde.
+// fra le istanze (RPC check_rate_limit, chiave 'ip:<ip>'); fail-closed se il DB non risponde (26/09/2026).
 // ─────────────────────────────────────────────────────────────────────────────
 const REG_RATE_LIMIT = 5;
 const REG_RATE_WINDOW_S = 3600;
@@ -22,16 +22,16 @@ const REG_RATE_WINDOW_S = 3600;
 async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !key) return true;
+  if (!url || !key) return false; // fail-closed
   try {
     const res = await fetch(`${url}/rest/v1/rpc/check_rate_limit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({ p_endpoint: endpoint, p_ip: ip, p_max_count: max, p_window_seconds: windowSeconds })
     });
-    if (!res.ok) return true;
+    if (!res.ok) return false; // fail-closed: contatore non disponibile = richiesta respinta
     return (await res.json()) === true;
-  } catch { return true; }
+  } catch { return false; } // fail-closed (piano privacy riga 67)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

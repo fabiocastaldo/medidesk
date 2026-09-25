@@ -36,16 +36,16 @@ function checkInMemoryRateLimit(ip) {
 async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !key) return true;
+  if (!url || !key) return false; // fail-closed
   try {
     const res = await fetch(`${url}/rest/v1/rpc/check_rate_limit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({ p_endpoint: endpoint, p_ip: ip, p_max_count: max, p_window_seconds: windowSeconds })
     });
-    if (!res.ok) return true;
+    if (!res.ok) return false; // fail-closed: contatore non disponibile = richiesta respinta
     return (await res.json()) === true;
-  } catch { return true; }
+  } catch { return false; } // fail-closed (piano privacy riga 67)
 }
 
 const LOOKUP_FIELDS = 'id,medico_id,centro_id,nome_paziente,cognome_paziente,email_paziente,data,ora,tipo_visita,cancelled';
