@@ -59,7 +59,7 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 
 /* ── plancia con sidebar ── */
 .plancia{min-height:100vh;display:flex;align-items:stretch}
-.side{width:230px;flex-shrink:0;display:flex;flex-direction:column;color:#fff;
+.side{width:230px;flex-shrink:0;display:flex;flex-direction:column;color:#fff;position:sticky;top:0;height:100vh;align-self:flex-start;
   background:linear-gradient(200deg,var(--brand-mid) 0%,var(--brand-deep) 70%)}
 .side .mark{font-family:'DM Serif Display',serif;font-size:21px;padding:20px 18px 4px}
 .side .payoff{font-size:11.5px;color:var(--brand-soft);padding:0 18px 16px}
@@ -170,7 +170,7 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .slot-closed{display:inline-block;font-size:12.5px;color:#B5544B;font-weight:600;margin:4px 0}
 @media (max-width:840px){
   .plancia{flex-direction:column}
-  .side{width:100%}
+  .side{width:100%;position:static;height:auto}
   .side nav{flex-direction:row;flex-wrap:wrap;padding:4px 8px}
   .sitem,.sgroup{width:auto}
   .sitem.sub{padding-left:12px}
