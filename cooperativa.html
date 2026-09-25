@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Delphi~Med — Plancia cooperative</title>
+<title>Delphi~Med — Plancia organizzazioni</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Montserrat:wght@700&display=swap" rel="stylesheet">
@@ -506,7 +506,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
       <div id="login-msg" class="hidden"></div>
       <span class="helplink">La tua organizzazione non è ancora attiva?
-        <a href="#" onclick="openHomeContact(event,'Attivazione cooperativa Delphi~Med')">Richiedi l'attivazione</a>
+        <a href="#" onclick="openHomeContact(event,'Attivazione organizzazione Delphi~Med')">Richiedi l'attivazione</a>
       </span>
     </div>
   </div>
@@ -524,7 +524,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
         Se rappresenti un'organizzazione — cooperativa, poliambulatorio o centro medico — richiedi l'attivazione.</p>
       <button class="btn" onclick="doLogout()">Esci e torna all'accesso</button>
       <span class="helplink">
-        <a href="#" onclick="openHomeContact(event,'Attivazione cooperativa Delphi~Med')">Richiedi l'attivazione</a>
+        <a href="#" onclick="openHomeContact(event,'Attivazione organizzazione Delphi~Med')">Richiedi l'attivazione</a>
       </span>
     </div>
   </div>
@@ -1813,7 +1813,7 @@ function togglePwEye(btn){
 }
 function openHomeContact(ev,subject){
   if(ev&&ev.preventDefault)ev.preventDefault();
-  document.getElementById('hc-mailto').href='mailto:info@delphi-med.com?subject='+encodeURIComponent(subject||'Attivazione cooperativa Delphi~Med');
+  document.getElementById('hc-mailto').href='mailto:info@delphi-med.com?subject='+encodeURIComponent(subject||'Attivazione organizzazione Delphi~Med');
   document.getElementById('hc-copy').textContent='Copia indirizzo';
   document.getElementById('hc-ov').classList.add('on');
 }
