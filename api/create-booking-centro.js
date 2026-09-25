@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { verificaSlot } from '../lib/slot-guard.js';
 import { verificaTipo } from '../lib/tipo-guard.js';
+import { validaPrenotazione, controllaCodice } from '../lib/prenotazione-pr22.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 60;
@@ -43,7 +44,7 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey  = process.env.SUPABASE_SECRET_KEY;
-  if (!supabaseUrl || !serviceKey) {
+  if (!supabaseUrl || !serviceKey || !process.env.CONSENSO_TOKEN_SECRET) {
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }
 
@@ -59,20 +60,21 @@ export default async function handler(req, res) {
   const token = clean(b.booking_token, 64);
   if (!token) return res.status(400).json({ error: 'Token mancante' });
 
-  const nome    = clean(b.nome, 80);
-  const cognome = clean(b.cognome, 80);
-  const email   = clean(b.email, 160);
-  const tel     = clean(b.tel, 40);
+  // Prenotazione rev 2.2 (s53): dal link del centro si prenota sempre per un'altra persona.
+  const vp = validaPrenotazione(b, { centroMode: true });
+  if (!vp.ok) return res.status(vp.status).json({ error: vp.error });
+  const campi = vp.campi;
   const tipo    = clean(b.tipo, 120);
   const categoria = ['prima_visita','controllo'].includes(b.categoria) ? b.categoria : null;
   const area    = clean(b.area, 120);
   const data    = clean(b.data, 10);
   const ora     = clean(b.ora, 5);
-  if (!nome || !cognome) return res.status(400).json({ error: 'Nome e cognome obbligatori' });
-  if (/[<>]/.test(nome + cognome)) return res.status(400).json({ error: 'Nome e cognome non possono contenere i caratteri < e >' });
-  if (!email || !isEmail(email)) return res.status(400).json({ error: 'Email non valida' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return res.status(400).json({ error: 'Data non valida' });
   if (!/^\d{2}:\d{2}$/.test(ora)) return res.status(400).json({ error: 'Ora non valida' });
+  {
+    const vc = await controllaCodice({ supabaseUrl, serviceKey, secret: process.env.CONSENSO_TOKEN_SECRET, sfida: b.sfida, codice: b.codice, email: campi.email_paziente });
+    if (!vc.ok) return res.status(vc.status).json({ error: vc.error });
+  }
 
   const sb = (path, init = {}) => fetch(`${supabaseUrl}/rest/v1/${path}`, {
     ...init,
@@ -116,19 +118,13 @@ export default async function handler(req, res) {
         medico_id: medicoId,
         centro_id: centroId,
         data, ora,
-        nome_paziente: nome,
-        cognome_paziente: cognome,
-        telefono_paziente: tel || null,
-        email_paziente: email,
+        ...campi,
         tipo_visita: tipo || null,
         categoria,
         area_tematica: area || null,
         source: 'paziente',
         cancellation_token: cancellationToken,
-        consenso_base_at: consentTs,
-        consenso_health_at: consentTs,
-        consenso_versione: 'cons-pc-1',
-        per_conto: true,
+        dichiarazione_at: consentTs,
         da_centro: true
       })
     });
