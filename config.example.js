@@ -7,5 +7,6 @@ window.SUPABASE_CONFIG = {
 
 // Su Vercel, aggiungi le seguenti variabili d'ambiente nel pannello del progetto:
 //   SUPABASE_URL        = https://YOUR_PROJECT.supabase.co
-//   SUPABASE_ANON_KEY   = sb_publishable_YOUR_KEY
+//   SUPABASE_PUBLISHABLE_KEY = sb_publishable_YOUR_KEY
+//   SUPABASE_SECRET_KEY      = sb_secret_YOUR_KEY   (solo server, mai nel client)
 //   ANTHROPIC_API_KEY   = sk-ant-your-key-here

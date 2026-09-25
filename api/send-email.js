@@ -442,10 +442,11 @@ export default async function handler(req, res) {
   }
 
   const supabaseUrl  = process.env.SUPABASE_URL;
-  const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey      = process.env.SUPABASE_ANON_KEY;
+  const serviceKey   = process.env.SUPABASE_SECRET_KEY;
+  const anonKey      = process.env.SUPABASE_PUBLISHABLE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !serviceKey || !anonKey || !resendApiKey) {
+  const consensoSecret = process.env.CONSENSO_TOKEN_SECRET; // HMAC dei link consenso/revoca (s52): separato dalla chiave del DB
+  if (!supabaseUrl || !serviceKey || !anonKey || !resendApiKey || !consensoSecret) {
     console.error('[send-email] env vars mancanti');
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }
@@ -515,7 +516,7 @@ export default async function handler(req, res) {
     to            = appt.emailPaziente;
     subject       = `Conferma appuntamento con ${appt.medicoNome}`;
     const consFooter = appt.consensoComunicazioniAt
-      ? `Hai acconsentito a ricevere comunicazioni proattive dal medico. Non le desideri? <a href="${revocaLink(icsHost, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId })}" style="color:#888;">Revoca qui il consenso</a> &middot; Delphi~Med`
+      ? `Hai acconsentito a ricevere comunicazioni proattive dal medico. Non le desideri? <a href="${revocaLink(icsHost, consensoSecret, { email: appt.emailPaziente, medicoId: appt.medicoId })}" style="color:#888;">Revoca qui il consenso</a> &middot; Delphi~Med`
       : undefined;
     html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost, footer_note: consFooter });
     // Richiesta consenso automatica SOLO fuori dal flusso pubblico: online personale ha la casella,
@@ -571,7 +572,7 @@ export default async function handler(req, res) {
     const paz = pr && pr.ok ? (await pr.json())[0] : null;
     if (!paz) return res.status(404).json({ error: 'not_found' });
     if (!paz.email) return res.status(200).json({ ok: true, skipped: 'email_mancante' });
-    const esitoCons = await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, serviceKey, appt: {
+    const esitoCons = await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, consensoSecret, appt: {
       pazienteId: paz.id, medicoId: authCtx.medicoId, medicoNome: authCtx.medicoNome, emailPaziente: paz.email
     } });
     // Audit SOLO se la mail e' partita davvero: una richiesta saltata (una tantum) non e' un invio.
@@ -878,7 +879,7 @@ export default async function handler(req, res) {
 
   // ── Richiesta consenso comunicazioni (soft-fail, una tantum per medico+email) ──
   if (consApptCtx) {
-    const esitoApp = await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, serviceKey, appt: consApptCtx });
+    const esitoApp = await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, consensoSecret, appt: consApptCtx });
     // Traccia solo gli invii veri, col loro resend_id (una richiesta saltata non e' un invio).
     if (esitoApp.sent) {
       await auditLog(base, dbHeaders, consApptCtx.medicoId || medicoIdAudit, 'richiesta_consenso_appuntamento', 'appuntamento', consApptCtx.apptId, authCtx.authMode, consApptCtx.emailPaziente, esitoApp.resendId);
@@ -895,7 +896,7 @@ export default async function handler(req, res) {
 // Se la richiesta e' gia' partita da un appuntamento, non rimanda nulla ma porta il suo
 // richiesto_at sul fascicolo senza stato, cosi' la card Consensi dice il vero.
 // Ritorna { sent: true, resendId } oppure { sent: false, reason }.
-async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey, appt }) {
+async function maybeRichiestaConsenso({ base, headers, resend, host, consensoSecret, appt }) {
   try {
     if (!appt?.emailPaziente || !appt.medicoId || (!appt.apptId && !appt.pazienteId)) return { sent: false, reason: 'dati_mancanti' };
     const e = encodeURIComponent(appt.emailPaziente);
@@ -919,8 +920,8 @@ async function maybeRichiestaConsenso({ base, headers, resend, host, serviceKey,
       return { sent: false, reason: giaRichiesto ? 'gia_richiesto' : 'consenso_da_appuntamento' };
     }
 
-    const link = consensoLink(host, serviceKey, appt.apptId ? { apptId: appt.apptId } : { pazienteId: appt.pazienteId });
-    const linkNega = revocaLink(host, serviceKey, { email: appt.emailPaziente, medicoId: appt.medicoId });
+    const link = consensoLink(host, consensoSecret, appt.apptId ? { apptId: appt.apptId } : { pazienteId: appt.pazienteId });
+    const linkNega = revocaLink(host, consensoSecret, { email: appt.emailPaziente, medicoId: appt.medicoId });
     const corpoMail =
       emailTitle('Richiesta di consenso alle comunicazioni') +
       `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">${esc(appt.medicoNome)} ti chiede il consenso a ricevere via email <strong>comunicazioni proattive</strong>: promemoria di prevenzione, richiami, avvisi organizzativi.</p>` +

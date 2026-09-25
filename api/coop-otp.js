@@ -15,7 +15,7 @@ const RATE_WINDOW_S = 3600;
 // le istanze serverless; fail-open se il DB non risponde, come negli altri endpoint.
 async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SECRET_KEY;
   if (!url || !key) return true;
   try {
     const res = await fetch(`${url}/rest/v1/rpc/check_rate_limit`, {
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   }
 
   const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey  = process.env.SUPABASE_SECRET_KEY;
   if (!supabaseUrl || !serviceKey) {
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }
