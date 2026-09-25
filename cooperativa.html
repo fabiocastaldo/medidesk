@@ -59,16 +59,29 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 
 /* ── plancia con sidebar ── */
 .plancia{min-height:100vh;display:flex;align-items:stretch}
-.side{width:230px;flex-shrink:0;display:flex;flex-direction:column;color:#fff;
+.side{width:230px;flex-shrink:0;display:flex;flex-direction:column;color:#fff;position:sticky;top:0;height:100vh;align-self:flex-start;
   background:linear-gradient(200deg,var(--brand-mid) 0%,var(--brand-deep) 70%)}
 .side .mark{font-family:'DM Serif Display',serif;font-size:21px;padding:20px 18px 4px}
 .side .payoff{font-size:11.5px;color:var(--brand-soft);padding:0 18px 16px}
-.side nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:6px 10px;overflow-y:auto}
+.side nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:6px 10px;overflow-y:auto;scrollbar-width:thin}
 .sitem{display:block;width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.88);
   font-family:inherit;font-size:13.5px;font-weight:500;padding:10px 12px;border-radius:8px;cursor:pointer}
 .sitem:hover{background:rgba(255,255,255,.1)}
 .sitem.active{background:rgba(255,255,255,.16);color:#fff;font-weight:700}
 .sitem.sub{padding-left:26px;font-size:13px}
+/* finestre basse: menu compatto, cosi' la barra fissa non ha uno scorrimento interno */
+@media (min-width:841px) and (max-height:720px){.sitem{padding:6px 12px}.side .mark{padding:14px 18px 2px}.side .payoff{padding-bottom:10px}}
+.sitem .sec-dot{display:none;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-left:8px;vertical-align:middle}
+.sitem.sec-attenzione .sec-dot{display:inline-block}
+.sec-promemoria{display:none;align-items:flex-start;gap:14px;background:var(--surface);border:1px solid var(--brand-mid);border-left:4px solid var(--brand-mid);border-radius:var(--r);padding:14px 16px;margin-bottom:16px}
+.sec-promemoria.on{display:flex}
+.sec-promemoria .sec-pm-ico{flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:var(--brand-mid);color:#fff;display:flex;align-items:center;justify-content:center}
+.sec-promemoria .sec-pm-ico svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sec-promemoria .sec-pm-body{flex:1;min-width:0}
+.sec-promemoria .sec-pm-title{font-weight:600;font-size:14px;margin-bottom:4px}
+.sec-promemoria .sec-pm-text{font-size:13px;color:var(--ink2);line-height:1.55}
+.sec-promemoria .sec-pm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sec-promemoria .btn{width:auto;margin-top:0;padding:9px 16px}
 .sgroup{display:block;width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.7);
   font-family:inherit;font-size:13.5px;font-weight:600;padding:10px 12px;cursor:pointer}
 .sgroup:hover{color:#fff}
@@ -159,7 +172,7 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .slot-closed{display:inline-block;font-size:12.5px;color:#B5544B;font-weight:600;margin:4px 0}
 @media (max-width:840px){
   .plancia{flex-direction:column}
-  .side{width:100%}
+  .side{width:100%;position:static;height:auto}
   .side nav{flex-direction:row;flex-wrap:wrap;padding:4px 8px}
   .sitem,.sgroup{width:auto}
   .sitem.sub{padding-left:12px}
@@ -211,7 +224,10 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .toggle-switch input:checked~.toggle-slider::after{transform:translateX(18px)}
 .pref-row{display:flex;align-items:flex-start;gap:14px;max-width:680px}
 .pref-row + .pref-row{margin-top:18px}
-.sic-block{margin-bottom:26px}
+#tab-sicurezza.card-lite{background:transparent;border:none;box-shadow:none;padding:0}
+.sic-block{margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow-soft)}
+.sic-ambito{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--brand-mid);background:var(--brand-soft);border-radius:99px;padding:3px 10px;margin-bottom:8px}
+.sic-ambito.org{color:#7A5A12;background:#FBEFD2}
 .sic-block h2{font-size:16px;color:var(--brand-mid);margin-bottom:8px}
 .sic-block p.sub{margin:0 0 12px}
 .sic-block .btn{width:auto;margin-top:8px;padding:10px 18px}
@@ -475,7 +491,7 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       <button class="sitem" id="tabbtn-compensi" onclick="switchTab('compensi')">Compensi</button>
       <button class="sitem" id="tabbtn-agenda" onclick="switchTab('agenda')">Agenda medico</button>
       <button class="sitem" id="tabbtn-preferenze" onclick="switchTab('preferenze')">Preferenze</button>
-      <button class="sitem" id="tabbtn-sicurezza" onclick="switchTab('sicurezza')">Sicurezza</button>
+      <button class="sitem" id="tabbtn-sicurezza" onclick="switchTab('sicurezza')">Sicurezza<span class="sec-dot" title="Verifica in due passaggi da attivare"></span></button>
     </nav>
     <div class="side-foot">
       <div class="who" id="plancia-who"></div>
@@ -483,6 +499,18 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
     </div>
   </aside>
   <div class="plancia-body">
+
+    <div class="sec-promemoria" id="sec-promemoria">
+      <div class="sec-pm-ico"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+      <div class="sec-pm-body">
+        <div class="sec-pm-title">Proteggi i dati dei pazienti con la verifica in due passaggi</div>
+        <div class="sec-pm-text">Funziona come il codice dell'app della banca: un'app gratuita sul telefono ti mostra un numero a 6 cifre da inserire quando entri. Se qualcuno ti ruba le credenziali, senza il tuo telefono non apre nulla. Servono due minuti, una volta sola.</div>
+        <div class="sec-pm-actions">
+          <button class="btn" onclick="secVaiAttivazione()">Attiva ora</button>
+          <button class="btn btn-ghost" onclick="secRimandaPromemoria()">Più tardi</button>
+        </div>
+      </div>
+    </div>
 
     <div class="sec-head">
       <div>
@@ -817,7 +845,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
     <section id="tab-sicurezza" class="card-lite hidden">
       <div class="sic-block">
-        <h2>Verifica in due passaggi</h2>
+        <span class="sic-ambito">Il tuo account</span>
+        <h2>La tua verifica in due passaggi</h2>
         <p class="sub">Dalla plancia si leggono nomi e appuntamenti dei pazienti di tutti i medici dell'organizzazione: chi entra col tuo accesso li vede tutti. <strong>Ti raccomandiamo di attivare la verifica in due passaggi</strong>: oltre alla password o al codice via email, a ogni nuovo accesso ti verrà chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password). Assicurati che l'app abbia il backup attivo, oppure registra qui un secondo dispositivo con una chiave a sé: così un telefono perso non ti chiude fuori.</p>
         <div id="sic-mfa-stato" style="font-size:13px;margin-bottom:4px">Caricamento…</div>
         <div id="sic-mfa-fattori"></div>
@@ -839,7 +868,9 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
 
       <div class="sic-block" id="sic-admin-block" style="display:none">
+        <span class="sic-ambito org">Tutta l'organizzazione · solo amministratore</span>
         <h2>Regola dell'organizzazione</h2>
+        <p class="sub">Questa regola non attiva nulla sul tuo account: stabilisce che ogni operatore di questa organizzazione, te compreso, debba avere un dispositivo registrato. L'ordine giusto è <strong>prima</strong> attivare la tua verifica nella card qui sopra, <strong>poi</strong> accendere la regola: chi non ha ancora un dispositivo lo registrerà al suo prossimo accesso.</p>
         <div class="pref-row">
           <label class="toggle-switch"><input type="checkbox" id="pref-mfa" onchange="setPrefMfa(this.checked)"><span class="toggle-slider"></span></label>
           <span>
@@ -2862,6 +2893,7 @@ async function enterPlancia(){
       '· medici:', _plancia.medici.length, '· codici attivi:', _plancia.codici_attivi.length);
     show('view-plancia');
     renderPlancia();
+    secPromemoriaMfa();
   } catch(e){
     console.error('[Plancia] enterPlancia:', e.message);
     show('view-plancia');
@@ -3224,6 +3256,32 @@ async function mfaLoginAnnulla(ev){
   setLoginMode('admin');
 }
 let _mfaEnrollId = null;
+// Promemoria per chi non ha ancora un dispositivo: banner in testa alla plancia e pallino sulla voce
+// Sicurezza (operatori e amministratore, a regola dell'organizzazione spenta: con la regola accesa
+// chi arriva qui ha gia' un dispositivo e il banner resta spento da solo). «Più tardi» lo nasconde
+// per questa sessione del browser; sparisce appena un dispositivo e' registrato.
+let _secAutoAttiva = false;
+async function secPromemoriaMfa(){
+  let manca = false;
+  try{
+    const { data: lf } = await sb.auth.mfa.listFactors();
+    manca = !(lf && Array.isArray(lf.totp) && lf.totp.length > 0);
+  }catch(_){ manca = false; }
+  const banner = document.getElementById('sec-promemoria');
+  const rimandato = (()=>{ try{ return sessionStorage.getItem('dm-coop-sec-promemoria') === 'no'; }catch(_){ return false; } })();
+  if(banner) banner.classList.toggle('on', manca && !rimandato);
+  const nav = document.getElementById('tabbtn-sicurezza'); if(nav) nav.classList.toggle('sec-attenzione', manca);
+  return manca;
+}
+function secRimandaPromemoria(){
+  try{ sessionStorage.setItem('dm-coop-sec-promemoria', 'no'); }catch(_){ }
+  const banner = document.getElementById('sec-promemoria'); if(banner) banner.classList.remove('on');
+}
+function secVaiAttivazione(){
+  // apre la tab Sicurezza; sicRender avvia l'attivazione (QR) appena ha letto i fattori
+  _secAutoAttiva = true;
+  switchTab('sicurezza');
+}
 async function sicRender(){
   const admin = _plancia && _plancia.ruolo === 'admin';
   // L'interruttore dell'organizzazione e la password solo per l'amministratore: gli operatori entrano col codice via email
@@ -3234,7 +3292,12 @@ async function sicRender(){
   if(pmf) pmf.checked = !!(_plancia && _plancia.cooperativa && _plancia.cooperativa.mfa_obbligatoria);
   try{ const { data } = await sb.auth.getUser(); document.getElementById('sic-pwd-email').value = (data && data.user && data.user.email) || ''; }catch(_){ }
   sicRenderCorso();
-  mfaRenderStato();
+  await mfaRenderStato();
+  if(_secAutoAttiva){
+    _secAutoAttiva = false;
+    const b = document.getElementById('sic-attiva-btn');
+    if(b && b.style.display !== 'none' && !_mfaEnrollId) mfaAvviaAttivazione();
+  }
 }
 async function mfaRenderStato(){
   const st = document.getElementById('sic-mfa-stato'); if(!st) return;
@@ -3309,7 +3372,7 @@ async function mfaConfermaAttivazione(){
     document.getElementById('sic-mfa-azioni').style.display = '';
     setBoxMsg('sic-mfa-msg', 'Verifica in due passaggi attivata.', 'info');
     _auditCoop('mfa_fattore_aggiunto', 'segreteria', null, { factor_id: idAttivato });
-    mfaRenderStato();
+    mfaRenderStato(); secPromemoriaMfa();
   }catch(e){
     console.error('[Plancia] mfaConfermaAttivazione:', e.message);
     setBoxMsg('sic-mfa-msg', 'Attivazione non confermata. Riprova.', 'err');
@@ -3340,7 +3403,7 @@ async function mfaRimuovi(factorId){
     if(error){ setBoxMsg('sic-mfa-msg', _mfaErr(error.message), 'err'); return; }
     setBoxMsg('sic-mfa-msg', 'Dispositivo rimosso.', 'info');
     _auditCoop('mfa_fattore_rimosso', 'segreteria', null, { factor_id: factorId });
-    mfaRenderStato();
+    mfaRenderStato(); secPromemoriaMfa();
   }catch(e){
     console.error('[Plancia] mfaRimuovi:', e.message);
     setBoxMsg('sic-mfa-msg', 'Rimozione non riuscita. Riprova.', 'err');
@@ -3348,6 +3411,16 @@ async function mfaRimuovi(factorId){
 }
 async function setPrefMfa(valore){
   try{
+    if(valore){
+      // chi accende la regola deve gia' avere un dispositivo: altrimenti la plancia si chiude subito anche per lui
+      let propri = 0;
+      try{ const { data: lf } = await sb.auth.mfa.listFactors(); propri = (lf && Array.isArray(lf.totp)) ? lf.totp.length : 0; }catch(_){ }
+      if(propri === 0){
+        document.getElementById('pref-mfa').checked = false;
+        setBoxMsg('sic-pref-msg', 'Prima attiva la tua verifica in due passaggi nella card qui sopra: con la regola accesa e nessun dispositivo registrato la plancia si chiuderebbe subito anche per te.', 'err');
+        return;
+      }
+    }
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-preferenze', {
       method: 'POST',
