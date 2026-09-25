@@ -23,16 +23,16 @@ function checkInMemoryRateLimit(ip) {
 async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !key) return true;
+  if (!url || !key) return null; // contatore non disponibile
   try {
     const res = await fetch(`${url}/rest/v1/rpc/check_rate_limit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({ p_endpoint: endpoint, p_ip: ip, p_max_count: max, p_window_seconds: windowSeconds })
     });
-    if (!res.ok) return true;
+    if (!res.ok) return null; // contatore non disponibile
     return (await res.json()) === true;
-  } catch { return true; }
+  } catch { return null; }
 }
 
 // ── Registry tool v1: ogni tool qui dichiarato ha un esecutore client in medidesk.html (assert nel gate) ──
@@ -359,7 +359,7 @@ export default async function handler(req, res) {
   }
 
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=stato,specializzazione,piano,created_at`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&select=id,stato,specializzazione,piano,created_at`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) {
@@ -374,10 +374,17 @@ export default async function handler(req, res) {
   }
 
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  if (!checkInMemoryRateLimit(ip)) {
+  // Quote AI per medico, non per rete: la chiave segue l'account (piano privacy riga 68)
+  const quotaKey = `medico:${medicoData[0].id}`;
+  if (!checkInMemoryRateLimit(quotaKey)) {
     return res.status(429).json({ error: "Troppe richieste. Riprova tra un'ora." });
   }
-  if (!(await checkSupabaseRateLimit(ip, 'assistant', RATE_LIMIT, 3600))) {
+  const quota = await checkSupabaseRateLimit(quotaKey, 'assistant', RATE_LIMIT, 3600);
+  if (quota === null) {
+    // fail-closed: senza contatore la funzione AI non parte (piano privacy riga 68)
+    return res.status(503).json({ error: 'Servizio momentaneamente non disponibile. Riprova tra poco.', code: 'QUOTA_NON_VERIFICABILE' });
+  }
+  if (!quota) {
     return res.status(429).json({ error: "Troppe richieste. Riprova tra un'ora." });
   }
 

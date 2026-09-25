@@ -23,16 +23,16 @@ function checkInMemoryRateLimit(ip) {
 async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !key) return true;
+  if (!url || !key) return null; // contatore non disponibile
   try {
     const res = await fetch(`${url}/rest/v1/rpc/check_rate_limit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({ p_endpoint: endpoint, p_ip: ip, p_max_count: max, p_window_seconds: windowSeconds })
     });
-    if (!res.ok) return true;
+    if (!res.ok) return null; // contatore non disponibile
     return (await res.json()) === true;
-  } catch { return true; }
+  } catch { return null; }
 }
 
 const PROMPT_TEMPLATE = `Sei un estrattore di liste di appuntamenti da agende mediche italiane. Ricevi un'immagine, screenshot, PDF o testo che rappresenta la lista di appuntamenti di una giornata in un centro medico. Estrai in JSON.
@@ -122,10 +122,17 @@ export default async function handler(req, res) {
     : '(nessuna prestazione a catalogo)';
 
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  if (!checkInMemoryRateLimit(ip)) {
+  // Quote AI per medico, non per rete: la chiave segue l'account (piano privacy riga 68)
+  const quotaKey = `medico:${medicoData[0].id}`;
+  if (!checkInMemoryRateLimit(quotaKey)) {
     return res.status(429).json({ error: "Troppe richieste. Riprova tra un'ora." });
   }
-  if (!(await checkSupabaseRateLimit(ip, 'import-agenda', RATE_LIMIT, 3600))) {
+  const quota = await checkSupabaseRateLimit(quotaKey, 'import-agenda', RATE_LIMIT, 3600);
+  if (quota === null) {
+    // fail-closed: senza contatore la funzione AI non parte (piano privacy riga 68)
+    return res.status(503).json({ error: 'Servizio momentaneamente non disponibile. Riprova tra poco.', code: 'QUOTA_NON_VERIFICABILE' });
+  }
+  if (!quota) {
     return res.status(429).json({ error: "Troppe richieste. Riprova tra un'ora." });
   }
 
