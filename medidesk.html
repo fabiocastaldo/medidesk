@@ -2493,20 +2493,55 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <div class="booking-step" id="bk-step-4">
           <button class="booking-back" onclick="bkStep(3)">← Indietro</button>
           <div class="step-label">4 / 4 — I tuoi dati</div>
-          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;background:var(--surface2);padding:12px 14px;border-radius:8px;margin-bottom:14px;font-size:13px">
-            <input type="checkbox" id="bk-per-conto" style="margin-top:3px;flex-shrink:0" onchange="bkTogglePerConto()">
-            <span><strong>Prenotazione per conto terzi</strong></span>
-          </label>
-          <div id="bk-perconto-hint" style="display:none;font-size:12px;color:var(--ink2);margin:-6px 0 14px;padding:0 2px">I dati richiesti sono quelli dell'interessato; la conferma sarà inviata alla <strong>sua</strong> email.</div>
+          <div class="form-group" id="bk-perchi-row">
+            <label class="form-label">Per chi prenoti?</label>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:4px 0">
+              <label style="display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer"><input type="radio" name="bk-perchi" value="me" checked onchange="bkTogglePerConto()"> Per me</label>
+              <label style="display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer"><input type="radio" name="bk-perchi" value="altro" onchange="bkTogglePerConto()"> Per un'altra persona</label>
+            </div>
+          </div>
           <div class="confirm-box" id="bk-confirm-summary"></div>
+          <div class="form-label" id="bk-tit-paziente" style="display:none;margin:4px 0 8px;font-weight:600">Dati del paziente</div>
           <div class="form-row">
-            <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="bk-nome" placeholder="Mario"></div>
-            <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="bk-cognome" placeholder="Rossi"></div>
+            <div class="form-group"><label class="form-label">Nome *</label><input class="form-input" id="bk-nome" placeholder="Mario" autocomplete="given-name"></div>
+            <div class="form-group"><label class="form-label">Cognome *</label><input class="form-input" id="bk-cognome" placeholder="Rossi" autocomplete="family-name"></div>
           </div>
+          <div class="form-group"><label class="form-label">Data di nascita *</label><input class="form-input" id="bk-nascita" type="date" onchange="bkAggiornaTerzi()"></div>
+          <div id="bk-box-interessato" style="display:none">
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Email del paziente (facoltativa)</label><input class="form-input" id="bk-email-int" type="email" placeholder="per avvisarlo della prenotazione"></div>
+              <div class="form-group"><label class="form-label">Ripeti l'email del paziente</label><input class="form-input" id="bk-email-int2" type="email"></div>
+            </div>
+            <div style="font-size:12px;color:var(--ink2);margin:-6px 0 14px">Se la indichi, il paziente riceve un solo avviso che hai prenotato per lui. Non viene inviata per i minori e per chi è sotto tutela.</div>
+          </div>
+          <div id="bk-box-prenotante" style="display:none">
+            <div class="form-label" style="margin:4px 0 8px;font-weight:600">I tuoi dati</div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Il tuo nome *</label><input class="form-input" id="bk-pren-nome" autocomplete="given-name"></div>
+              <div class="form-group"><label class="form-label">Il tuo cognome *</label><input class="form-input" id="bk-pren-cognome" autocomplete="family-name"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Il tuo rapporto con il paziente *</label>
+              <select class="form-select" id="bk-ruolo" onchange="bkAggiornaTerzi()">
+                <option value="">Seleziona…</option>
+                <option value="genitore">Genitore</option>
+                <option value="figlio">Figlio o figlia</option>
+                <option value="coniuge">Coniuge, unito civilmente o convivente</option>
+                <option value="fratello">Fratello o sorella</option>
+                <option value="altro_familiare">Altro familiare</option>
+                <option value="tutore">Tutore o amministratore di sostegno</option>
+                <option value="incaricato">Persona incaricata dal paziente (non familiare)</option>
+              </select>
+              <div id="bk-ruolo-hint" style="display:none;font-size:12px;color:var(--ink2);margin-top:6px">Il paziente è minorenne: può prenotare un genitore o il tutore.</div>
+            </div>
+          </div>
+          <div class="form-label" id="bk-tit-recapiti" style="display:none;margin:4px 0 8px;font-weight:600">I tuoi recapiti</div>
           <div class="form-row">
-            <div class="form-group"><label class="form-label">Telefono</label><input class="form-input" id="bk-tel" placeholder="+39 333 0000000"></div>
-            <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="bk-email" type="email" placeholder="mario@email.it"></div>
+            <div class="form-group"><label class="form-label">Telefono *</label><input class="form-input" id="bk-tel" type="tel" placeholder="+39 333 0000000" autocomplete="tel"></div>
+            <div class="form-group"><label class="form-label">Email *</label><input class="form-input" id="bk-email" type="email" placeholder="mario@email.it" autocomplete="email"></div>
           </div>
+          <div class="form-group"><label class="form-label">Ripeti l'email *</label><input class="form-input" id="bk-email2" type="email" autocomplete="off"></div>
+          <div style="font-size:12px;color:var(--ink2);margin:-6px 0 14px">Ti invieremo un codice a questo indirizzo per confermare la prenotazione; conferma e promemoria arriveranno qui.</div>
           <div class="form-group">
             <label class="form-label">Tipo visita / motivo</label>
             <select class="form-select" id="bk-tipo" onchange="bkUpdatePrezzo()"></select>
@@ -2525,17 +2560,9 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           </div>
           <div class="consent-box" style="background:var(--surface2);padding:14px;border-radius:8px;margin:16px 0;font-size:13px">
             <p style="margin:0 0 10px 0"><strong>Informativa breve</strong></p>
-            <p id="bk-info-intro" style="margin:0 0 8px 0">I dati che inserisci (nome, cognome, email, telefono) sono trattati per conto del <strong>medico presso cui prenoti</strong>, titolare del trattamento — con Delphi~Med quale responsabile del trattamento — per gestire la tua prenotazione: registrazione dell'appuntamento, email di conferma con il link per la cancellazione e promemoria prima della visita, inviati al recapito indicato.</p>
-            <p style="margin:0 0 8px 0">Il tipo di visita e l'area tematica possono costituire <strong>dati relativi alla salute</strong> (art. 9 GDPR) e richiedono il tuo consenso esplicito.</p>
+            <p id="bk-info-intro" style="margin:0 0 8px 0"></p>
             <p style="margin:0 0 12px 0;font-size:12px;color:var(--ink2)">Titolare del trattamento di tutti i dati — di prenotazione e <strong>sanitari</strong> (anamnesi, note cliniche, referti e la documentazione della visita) — è <strong>il medico</strong>, per il quale Delphi~Med opera come responsabile del trattamento. <a href="/privacy-policy" target="_blank" rel="noopener" style="color:var(--accent)">Informativa completa</a></p>
-            <label id="bk-row-base" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer">
-              <input type="checkbox" id="bk-consent-base" style="margin-top:3px;flex-shrink:0">
-              <span id="bk-consent-base-label">Ho letto l'informativa e acconsento al trattamento dei miei dati per la finalità di prenotazione (art. 6 GDPR).</span>
-            </label>
-            <label id="bk-row-health" style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-              <input type="checkbox" id="bk-consent-health" style="margin-top:3px;flex-shrink:0">
-              <span id="bk-consent-health-label">Acconsento al trattamento del tipo di visita e dell'area tematica come dati relativi alla salute (art. 9 GDPR).</span>
-            </label>
+            <p id="bk-dich-self" style="margin:0 0 8px 0;font-size:12px;color:var(--ink2)">Confermando dichiari di prenotare per te stesso/a e di aver preso visione dell'informativa.</p>
             <label id="bk-row-comm" style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;cursor:pointer">
               <input type="checkbox" id="bk-consent-comm" style="margin-top:3px;flex-shrink:0">
               <span id="bk-consent-comm-label"><strong>Facoltativo:</strong> acconsento a ricevere via email dal medico comunicazioni proattive (promemoria di prevenzione, richiami, avvisi organizzativi). Revocabile in ogni momento dal link in calce a ogni comunicazione.</span>
@@ -2543,9 +2570,15 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div id="bk-auth-terzi" style="display:none;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-left:3px solid var(--accent);border-radius:6px;padding:12px 14px;margin-top:4px">
               <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                 <input type="checkbox" id="bk-consent-terzi" style="margin-top:3px;flex-shrink:0">
-                <span>Dichiaro di essere autorizzato/a a effettuare la prenotazione per conto della persona interessata e a fornire i relativi dati personali, inclusi quelli relativi alla salute, oppure di agire in qualità di legale rappresentante, ai sensi degli artt. 6 e 9 del GDPR.</span>
+                <span id="bk-dich-terzi">Dichiaro di prenotare in qualità di <strong id="bk-dich-ruolo">…</strong> e di essere autorizzato/a dalla persona interessata, o di rappresentarla legalmente, a comunicare i suoi dati al medico per questa prenotazione.</span>
               </label>
             </div>
+          </div>
+
+          <div id="bk-box-codice" style="display:none;background:var(--surface2);padding:14px;border-radius:8px;margin:0 0 16px;font-size:13px">
+            <p style="margin:0 0 8px 0">Ti abbiamo inviato un codice di 6 cifre a <strong id="bk-codice-email"></strong>. Inseriscilo qui per confermare la prenotazione.</p>
+            <input class="form-input" id="bk-codice" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456" style="letter-spacing:6px;font-size:18px;text-align:center;max-width:200px">
+            <div style="margin-top:8px"><a href="#" onclick="bkReinviaCodice();return false" style="color:var(--accent);font-size:12px">Non è arrivato? Invia un nuovo codice</a></div>
           </div>
 
           <button class="btn btn-primary" id="bk-confirm-btn" style="width:100%;padding:13px" onclick="confirmBooking()">Conferma prenotazione</button>
@@ -4645,6 +4678,11 @@ async function loadAppuntamentiFromDB(user){
         source:      a.source || 'medico',
         per_conto:   a.per_conto || false,
         da_centro:   a.da_centro || false,
+        dataNascita:       a.data_nascita_paziente || '',
+        prenotanteNome:    a.prenotante_nome || '',
+        prenotanteCognome: a.prenotante_cognome || '',
+        prenotanteRuolo:   a.prenotante_ruolo || '',
+        emailInteressato:  a.email_interessato || '',
         seen:        a.seen || false,
         cancelled:   a.cancelled === true,
         erogata:     a.erogata === true,
@@ -4717,6 +4755,11 @@ function startRealtimeChannel(){
         source:     r.source || 'paziente',
         per_conto:  r.per_conto || false,
         da_centro:  r.da_centro || false,
+        dataNascita:       r.data_nascita_paziente || '',
+        prenotanteNome:    r.prenotante_nome || '',
+        prenotanteCognome: r.prenotante_cognome || '',
+        prenotanteRuolo:   r.prenotante_ruolo || '',
+        emailInteressato:  r.email_interessato || '',
         seen:       r.seen || false,
         cancelled:   r.cancelled === true,
         erogata:     r.erogata === true,
@@ -4753,6 +4796,11 @@ function startRealtimeChannel(){
       local.centroNome = _centro ? _centro.nome : '';
       local.source     = r.source || 'paziente';
       local.per_conto  = r.per_conto || false;
+      local.dataNascita       = r.data_nascita_paziente || '';
+      local.prenotanteNome    = r.prenotante_nome || '';
+      local.prenotanteCognome = r.prenotante_cognome || '';
+      local.prenotanteRuolo   = r.prenotante_ruolo || '';
+      local.emailInteressato  = r.email_interessato || '';
       local.da_centro  = r.da_centro || false;
       local.seen       = r.seen || false;
       local.cancelled   = r.cancelled === true;
@@ -5175,9 +5223,22 @@ function _levenshtein(x,y){
   return prev[y.length];
 }
 function _quasiUguale(a,b){ if(!a||!b||a===b) return false; const lim=Math.min(a.length,b.length)<=4?1:2; return _levenshtein(a,b)<=lim; }
+// rev 2.2 (s53): nelle prenotazioni per altri email e telefono dell'appuntamento sono di chi
+// ha prenotato: non vanno usati per riconoscere o riempire il fascicolo del paziente.
+const APPT_RUOLI_LBL={ genitore:'genitore', figlio:'figlio/a', coniuge:'coniuge o convivente', fratello:'fratello o sorella', altro_familiare:'altro familiare', tutore:'tutore o amministratore di sostegno', incaricato:'persona incaricata', operatore_struttura:'operatore della struttura' };
+function apptDaTerzi(a){ return !!(a && a.per_conto && a.prenotanteRuolo); }
+function apptPrenotatoDa(a){
+  if(!apptDaTerzi(a)) return '';
+  return ((a.prenotanteNome||'')+' '+(a.prenotanteCognome||'')).trim()+' ('+(APPT_RUOLI_LBL[a.prenotanteRuolo]||a.prenotanteRuolo)+')';
+}
+function contattiPazienteDaAppt(a){
+  if(apptDaTerzi(a)) return { email: a.emailInteressato||'', tel: '' };
+  return { email: a.email||'', tel: a.tel||'' };
+}
 function _candidatiFascicolo(a){
   const n=String(a.nome||'').toLowerCase().trim(), c=String(a.cognome||'').toLowerCase().trim();
-  const e=String(a.email||'').toLowerCase().trim(), t=String(a.tel||'').replace(/\D/g,'');
+  const _k=contattiPazienteDaAppt(a);
+  const e=String(_k.email||'').toLowerCase().trim(), t=String(_k.tel||'').replace(/\D/g,'');
   const out=[];
   (S.pazienti||[]).forEach(function(p){
     const pn=String(p.nome||'').toLowerCase().trim(), pc=String(p.cognome||'').toLowerCase().trim();
@@ -5222,7 +5283,7 @@ function scegliFascicoloAppt(a, cands){
     });
     const nb=document.getElementById('omonimi-nuovo');
     nb.innerHTML='<div class="omonimi-nuovo-box"><div class="form-label">'+(cands.length?'Nessuno di questi: nuovo fascicolo per '+chi:'Data di nascita di '+chi)+'</div>'
-      +'<div class="omonimi-nuovo-row"><input class="form-input" id="omonimi-nascita" placeholder="Data di nascita (GGMMAAAA)" autocomplete="off" style="flex:1">'
+      +'<div class="omonimi-nuovo-row"><input class="form-input" id="omonimi-nascita" placeholder="Data di nascita (GGMMAAAA)" autocomplete="off" style="flex:1" value="'+escapeAttr(a.dataNascita?isoToIt(a.dataNascita):'')+'">'
       +'<button class="btn btn-primary" id="omonimi-crea" type="button">Crea fascicolo</button></div></div>';
     const inp=document.getElementById('omonimi-nascita'), btn=document.getElementById('omonimi-crea');
     const crea=function(){
@@ -5258,7 +5319,7 @@ async function _fascicoloDaAppt(a){
   const cands=_candidatiFascicolo(a);
   let paz=null, nuovo=false;
   if(cands.length && cands.every(function(c){ return c.esatto; })){
-    paz = cands.length===1 ? cands[0].p : await scegliPazienteOmonimo(cands.map(function(c){ return c.p; }), {email:a.email, tel:a.tel});
+    paz = cands.length===1 ? cands[0].p : await scegliPazienteOmonimo(cands.map(function(c){ return c.p; }), contattiPazienteDaAppt(a));
     if(!paz) return null;
   } else {
     const r=await scegliFascicoloAppt(a, cands);
@@ -5268,11 +5329,12 @@ async function _fascicoloDaAppt(a){
       if(!(isOnline() && S.medicoId)){ showToast('Fascicolo non creato: serve la connessione'); return null; }
       try{
         const { data: newPaz, error } = await supabaseClient.from('pazienti')
-          .insert({ medico_id:S.medicoId, nome:a.nome, cognome:a.cognome, data_nascita:r.nascitaIso, telefono:a.tel||null, email:a.email||null })
+          .insert({ medico_id:S.medicoId, nome:a.nome, cognome:a.cognome, data_nascita:r.nascitaIso, telefono:contattiPazienteDaAppt(a).tel||null, email:contattiPazienteDaAppt(a).email||null })
           .select('id').single();
         if(error) throw error;
-        paz={ id:newPaz.id, nome:a.nome, cognome:a.cognome, nascita:r.nascita, tel:a.tel||'', email:a.email||'', visite:[] };
-        if(a.email) pazRichiestaConsensoFascicolo(newPaz.id);
+        const _kp=contattiPazienteDaAppt(a);
+        paz={ id:newPaz.id, nome:a.nome, cognome:a.cognome, nascita:r.nascita, tel:_kp.tel||'', email:_kp.email||'', visite:[] };
+        if(_kp.email) pazRichiestaConsensoFascicolo(newPaz.id);
       }catch(e){ console.error('[Delphi~Med] fascicolo da appuntamento:', e.message); showToast(erroreLeggibile('Fascicolo non creato', e)); return null; }
       S.pazienti.unshift(paz);
       save();
@@ -8156,7 +8218,7 @@ function showApptDetail(id){
       <div class="field-row"><span class="field-key">Note</span><span class="field-val">${escapeHtml(a.note||'—')}</span></div>
       ${a.tel?`<div class="field-row"><span class="field-key">Telefono</span><span class="field-val">${escapeHtml(a.tel)}</span></div>`:''}
       ${a.email?`<div class="field-row"><span class="field-key">Email</span><span class="field-val">${escapeHtml(a.email)}</span></div>`:''}
-      ${a.da_centro?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-center"/></svg>Da segreteria</span></div>`:a.per_conto?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-globe"/></svg>Per conto di</span></div>`:a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-globe"/></svg>Prenotazione online</span></div>`:''}
+      ${a.da_centro?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-center"/></svg>Da segreteria</span></div>`:a.per_conto?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-globe"/></svg>${apptDaTerzi(a)?'Prenotato da terzi: '+escapeHtml(apptPrenotatoDa(a)):'Per conto di'}</span></div>`:a.source==='paziente'?`<div class="field-row"><span class="field-key">Origine</span><span class="field-val"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-globe"/></svg>Prenotazione online</span></div>`:''}
       ${centro&&centro.email?`<div class="field-row"><span class="field-key">Email centro</span><span class="field-val">${escapeHtml(centro.email)}</span></div>`:''}
       ${a.cancelled?`<div class="field-row"><span class="field-key">Cancellato il</span><span class="field-val">${a.cancelledAt?new Date(a.cancelledAt).toLocaleDateString('it-IT'):'—'}</span></div>`:''}
       ${a.cancelled?`<div style="margin-top:10px;font-size:13px;color:var(--accent)">Slot nuovamente disponibile</div>`:''}
@@ -9917,7 +9979,7 @@ function renderDashboard(){
       const c=S.centri.find(x=>String(x.id)===String(a.centroId));
       return `<div class="appt-card" style="border-radius:0;border:none;border-bottom:1px solid var(--border)" onclick="showApptDetail('${a.id}')">
         <div class="appt-time">${a.ora}</div>
-        <div class="appt-info"><div class="appt-patient">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}</div><div class="appt-detail">${escapeHtml(a.tipo||'Visita')}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}${a.erogata===true?' · <span style="color:#16a34a">erogata</span>':''}</div></div>
+        <div class="appt-info"><div class="appt-patient">${escapeHtml(a.cognome)} ${escapeHtml(a.nome)}${a.per_conto&&a.source==='paziente'?` <span title="${escapeAttr(apptPrenotatoDa(a)||'Prenotato da terzi')}" style="display:inline-block;font-size:11px;font-weight:500;padding:1px 7px;border-radius:10px;background:#F59E0B22;color:#B45309;vertical-align:.1em">Prenotato da terzi</span>`:''}</div><div class="appt-detail">${escapeHtml(a.tipo||'Visita')}${a.source==='paziente'?' · <svg class="ic" style="vertical-align:-.1em"><use href="#ic-globe"/></svg>':''}${a.erogata===true?' · <span style="color:#16a34a">erogata</span>':''}</div></div>
         ${c?`<div class="appt-centro" style="background:${c.colore}22;color:${c.colore}">${escapeHtml(c.nome)}</div>`:''}
         <div class="appt-actions" onclick="event.stopPropagation()">
           <button class="paz-act paz-act-erog${a.erogata===true?' is-erogata':''}" onclick="toggleErogata('${a.id}',{silent:true})">${a.erogata===true?'Erogata \u2713':'Segna come erogata'}</button>
@@ -10752,14 +10814,14 @@ async function bkInit(){
         populateTipiVisitaSelects(bk.centroId);
         const _now = new Date();
         bk.calYear = _now.getFullYear(); bk.calMonth = _now.getMonth();
-        const _toggleLabel = document.getElementById('bk-per-conto')?.closest('label');
-        if(_toggleLabel) _toggleLabel.style.display = 'none';
-        const _percontoHint = document.getElementById('bk-perconto-hint');
-        if(_percontoHint) _percontoHint.style.display = 'none';
-        const _perContoEl = document.getElementById('bk-per-conto');
-        if(_perContoEl) _perContoEl.checked = true;
+        // rev 2.2 (s53): dal link del centro si prenota sempre per un'altra persona
+        const _perchiRow = document.getElementById('bk-perchi-row');
+        if(_perchiRow) _perchiRow.style.display = 'none';
+        const _ruoloSel = document.getElementById('bk-ruolo');
+        if(_ruoloSel && !_ruoloSel.querySelector('option[value="operatore_struttura"]')){
+          const _o=document.createElement('option'); _o.value='operatore_struttura'; _o.textContent='Operatore della struttura'; _ruoloSel.appendChild(_o);
+        }
         bkTogglePerConto();
-        if(_toggleLabel) _toggleLabel.style.display = 'none';
         bkStep(2);
         renderBkCal();
         const _backBtn = document.querySelector('#bk-step-2 .booking-back');
@@ -10886,6 +10948,7 @@ if(!window._aboutClampBound){
 function bkStep(n){
   document.querySelectorAll('.booking-step').forEach(s=>s.classList.remove('active'));
   document.getElementById('bk-step-'+n).classList.add('active');
+  if(n===4){ const nas=document.getElementById('bk-nascita'); if(nas) nas.max=new Date().toLocaleDateString('en-CA'); bkTogglePerConto(); }
 }
 
 function renderBkCentri(){
@@ -11007,28 +11070,46 @@ function generateCancellationToken(){
   return crypto.randomUUID();
 }
 
+// Prenotazione rev 2.2 (s53): «Per me» / «Per un'altra persona». Dal link del centro sempre per altri.
+function bkPerConto(){
+  if(bk.centroMode) return true;
+  return (document.querySelector('input[name="bk-perchi"]:checked')||{}).value==='altro';
+}
+function bkEta(iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return null;
+  const [y,m,d]=iso.split('-').map(Number); const t=new Date();
+  let e=t.getFullYear()-y; if((t.getMonth()+1)<m || ((t.getMonth()+1)===m && t.getDate()<d)) e--;
+  return e;
+}
+const BK_RUOLI_LBL={ genitore:'genitore', figlio:'figlio/a', coniuge:'coniuge o convivente', fratello:'fratello o sorella', altro_familiare:'familiare', tutore:'tutore o amministratore di sostegno', incaricato:'persona incaricata', operatore_struttura:'operatore della struttura' };
+function bkAggiornaTerzi(){
+  const on=bkPerConto();
+  const e=bkEta(document.getElementById('bk-nascita')?.value);
+  const minore=e!==null && e<18;
+  const ruolo=document.getElementById('bk-ruolo')?.value||'';
+  const hint=document.getElementById('bk-ruolo-hint'); if(hint) hint.style.display=(on&&minore)?'block':'none';
+  const boxInt=document.getElementById('bk-box-interessato');
+  if(boxInt) boxInt.style.display=(on && !minore && ruolo!=='tutore')?'block':'none';
+  const dr=document.getElementById('bk-dich-ruolo'); if(dr) dr.textContent=BK_RUOLI_LBL[ruolo]||'…';
+}
 function bkTogglePerConto(){
-  const on = document.getElementById('bk-per-conto')?.checked;
-  const hint   = document.getElementById('bk-perconto-hint');
-  const intro  = document.getElementById('bk-info-intro');
-  const rowBase   = document.getElementById('bk-row-base');
-  const rowHealth = document.getElementById('bk-row-health');
-  const auth      = document.getElementById('bk-auth-terzi');
-  if(hint)      hint.style.display      = on ? 'block' : 'none';
-  if(rowBase)   rowBase.style.display   = on ? 'none'  : 'flex';
-  if(rowHealth) rowHealth.style.display = on ? 'none'  : 'flex';
-  const rowComm = document.getElementById('bk-row-comm');
-  if(rowComm) rowComm.style.display = on ? 'none' : 'flex';
-  if(auth)      auth.style.display      = on ? 'block' : 'none';
+  const on = bkPerConto();
+  const show=(id,v)=>{ const el=document.getElementById(id); if(el) el.style.display=v; };
+  show('bk-tit-paziente', on?'block':'none');
+  show('bk-box-prenotante', on?'block':'none');
+  show('bk-tit-recapiti', on?'block':'none');
+  show('bk-row-comm', on?'none':'flex');
+  show('bk-dich-self', on?'none':'block');
+  show('bk-auth-terzi', on?'block':'none');
+  const intro=document.getElementById('bk-info-intro');
   if(on){
-    if(intro) intro.innerHTML = 'I dati che inserisci sono della persona che riceverà la visita (l\'interessato) e sono trattati per conto del <strong>medico presso cui prenoti</strong>, titolare del trattamento — con Delphi~Med quale responsabile del trattamento — per gestire la sua prenotazione: l\'email di conferma e i promemoria sono inviati al recapito indicato. Non sono raccolti dati identificativi di chi effettua la prenotazione.';
-    const cb=document.getElementById('bk-consent-base');   if(cb) cb.checked=false;
-    const ch=document.getElementById('bk-consent-health'); if(ch) ch.checked=false;
-    const cc=document.getElementById('bk-consent-comm');   if(cc) cc.checked=false;
+    if(intro) intro.innerHTML = 'I dati del paziente e i tuoi sono trattati per conto del <strong>medico presso cui prenoti</strong>, titolare del trattamento — con Delphi~Med quale responsabile del trattamento — per gestire la prenotazione: conferma, link di cancellazione e promemoria arrivano ai <strong>tuoi</strong> recapiti. Il tipo di visita e il motivo sono usati solo per organizzare l\'appuntamento.';
+    const cc=document.getElementById('bk-consent-comm'); if(cc) cc.checked=false;
   } else {
-    if(intro) intro.innerHTML = 'I dati che inserisci (nome, cognome, email, telefono) sono trattati per conto del <strong>medico presso cui prenoti</strong>, titolare del trattamento — con Delphi~Med quale responsabile del trattamento — per gestire la tua prenotazione: registrazione dell\'appuntamento, email di conferma con il link per la cancellazione e promemoria prima della visita, inviati al recapito indicato.';
-    const ct=document.getElementById('bk-consent-terzi');  if(ct) ct.checked=false;
+    if(intro) intro.innerHTML = 'I dati che inserisci sono trattati per conto del <strong>medico presso cui prenoti</strong>, titolare del trattamento — con Delphi~Med quale responsabile del trattamento — per gestire la tua prenotazione: registrazione dell\'appuntamento, email di conferma con il link per la cancellazione e promemoria prima della visita. Il tipo di visita e il motivo sono usati solo per organizzare l\'appuntamento.';
+    const ct=document.getElementById('bk-consent-terzi'); if(ct) ct.checked=false;
   }
+  bkAggiornaTerzi();
 }
 
 // Registro versioni consenso: AUTORITA legale del testo accettato.
@@ -11051,24 +11132,71 @@ const CONSENSI = {
     }
   }
 };
-const consensoVersioneCorrente = (perConto) => perConto ? 'cons-pc-1' : 'cons-pp-1';
+// rev 2.2 (s53): richieste di prenotazione, non consensi. Versione decisa dal server
+// (lib/prenotazione-pr22.js); qui il testo mostrato, per il registro documentale.
+CONSENSI['PR-SELF-2.2'] = { tipo: 'presa_visione', art6: false, art9: false, dal: '2026-09',
+  testi: { self: "Confermando dichiari di prenotare per te stesso/a e di aver preso visione dell'informativa." } };
+CONSENSI['PR-OTHER-2.2'] = { tipo: 'dichiarazione_prenotante', art6: false, art9: false, dal: '2026-09',
+  testi: { terzi: "Dichiaro di prenotare in qualità di [rapporto] e di essere autorizzato/a dalla persona interessata, o di rappresentarla legalmente, a comunicare i suoi dati al medico per questa prenotazione." } };
+let _bkSfida=null, _bkSfidaEmail=null;
+async function bkInviaCodice(email){
+  const r=await fetch('/api/verifica-email',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ email }) });
+  const out=await r.json().catch(()=>({}));
+  if(!r.ok || !out.sfida) throw new Error(out.error || 'Invio del codice non riuscito, riprova');
+  _bkSfida=out.sfida; _bkSfidaEmail=email.toLowerCase();
+  const ce=document.getElementById('bk-codice-email'); if(ce) ce.textContent=email;
+  const box=document.getElementById('bk-box-codice'); if(box) box.style.display='block';
+  const ci=document.getElementById('bk-codice'); if(ci){ ci.value=''; ci.focus(); }
+  const btn=document.getElementById('bk-confirm-btn'); if(btn) btn.textContent='Verifica il codice e conferma';
+}
+async function bkReinviaCodice(){
+  const email=(document.getElementById('bk-email')?.value||'').trim();
+  if(!email) return;
+  try{ await bkInviaCodice(email); showToast('Nuovo codice inviato'); }catch(e){ showToast(e.message); }
+}
+const BK_ERR={ codice_errato:'Il codice non è corretto: controlla e riprova', codice_scaduto:'Il codice è scaduto: chiedine uno nuovo', email_diversa:'L\'email è cambiata: chiedi un nuovo codice', troppi_tentativi:'Troppi tentativi con questo codice: chiedine uno nuovo', verifica_mancante:'Serve il codice di verifica', minore_senza_tutore:'Il paziente è minorenne: la prenotazione va fatta da un genitore o dal tutore («Per un\'altra persona»)', minore_ruolo:'Il paziente è minorenne: può prenotare un genitore o il tutore' };
 
 async function confirmBooking(){
-  const nome=capitalizeName(document.getElementById('bk-nome').value.trim());
-  const cognome=capitalizeName(document.getElementById('bk-cognome').value.trim());
-  if(!nome||!cognome){ showToast('Inserisci nome e cognome'); return; }
-  const emailVal=document.getElementById('bk-email').value.trim();
-  if(!emailVal){ showToast('Inserisci la tua email per ricevere la conferma'); return; }
-  const perConto = bk.centroMode ? true : (document.getElementById('bk-per-conto')?.checked || false);
+  const _v=(id)=>(document.getElementById(id)?.value||'').trim();
+  const nome=capitalizeName(_v('bk-nome'));
+  const cognome=capitalizeName(_v('bk-cognome'));
+  if(!nome||!cognome){ showToast('Inserisci nome e cognome del paziente'); return; }
+  const nascita=_v('bk-nascita');
+  const _eta=bkEta(nascita);
+  if(_eta===null || _eta<0 || _eta>125){ showToast('Inserisci la data di nascita del paziente'); return; }
+  const perConto = bkPerConto();
+  if(!perConto && _eta<18){ showToast(BK_ERR.minore_senza_tutore, 5000); return; }
+  const emailVal=_v('bk-email');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)){ showToast('Inserisci un\'email valida'); return; }
+  if(emailVal.toLowerCase()!==_v('bk-email2').toLowerCase()){ showToast('Le due email non coincidono'); return; }
+  if(_v('bk-tel').replace(/\D/g,'').length<6){ showToast('Inserisci il numero di telefono'); return; }
+  let pren=null, emailInt='';
   if(perConto){
-    if(!document.getElementById('bk-consent-terzi')?.checked){ showToast('Per procedere devi fornire la dichiarazione di autorizzazione'); return; }
-  } else {
-    const consentBase = document.getElementById('bk-consent-base')?.checked;
-    const consentHealth = document.getElementById('bk-consent-health')?.checked;
-    if(!consentBase || !consentHealth){ showToast('Per procedere è necessario fornire entrambi i consensi'); return; }
+    pren={ nome:capitalizeName(_v('bk-pren-nome')), cognome:capitalizeName(_v('bk-pren-cognome')), ruolo:_v('bk-ruolo') };
+    if(!pren.nome||!pren.cognome){ showToast('Inserisci il tuo nome e cognome'); return; }
+    if(!pren.ruolo){ showToast('Indica il tuo rapporto con il paziente'); return; }
+    if(_eta<18 && !['genitore','tutore','operatore_struttura'].includes(pren.ruolo)){ showToast(BK_ERR.minore_ruolo, 5000); return; }
+    if(!document.getElementById('bk-consent-terzi')?.checked){ showToast('Per procedere devi fornire la dichiarazione'); return; }
+    if(document.getElementById('bk-box-interessato')?.style.display!=='none'){
+      emailInt=_v('bk-email-int');
+      if(emailInt && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInt)){ showToast('L\'email del paziente non è valida'); return; }
+      if(emailInt.toLowerCase()!==_v('bk-email-int2').toLowerCase()){ showToast('Le due email del paziente non coincidono'); return; }
+    }
   }
   const _tipoSel = document.getElementById('bk-tipo').value.trim();
   if(!_tipoSel){ showToast('Seleziona il tipo di visita'); return; }
+  // verifica dell'email: primo clic → codice; secondo clic → prenotazione con codice
+  const _codice=_v('bk-codice').replace(/\D/g,'');
+  if(!_bkSfida || _bkSfidaEmail!==emailVal.toLowerCase() || !_codice){
+    if(_bkSfida && _bkSfidaEmail===emailVal.toLowerCase() && !_codice){ showToast('Inserisci il codice che ti abbiamo inviato'); return; }
+    const btn0=document.getElementById('bk-confirm-btn'); if(btn0){ btn0.disabled=true; btn0.textContent='Invio del codice…'; }
+    try{ await bkInviaCodice(emailVal); showToast('Ti abbiamo inviato un codice via email'); }
+    catch(e){ showToast(e.message); if(btn0) btn0.textContent='Conferma prenotazione'; }
+    finally{ if(btn0) btn0.disabled=false; }
+    return;
+  }
+  const _pr22={ data_nascita:nascita, per_conto:perConto, sfida:_bkSfida, codice:_codice,
+    ...(perConto?{ prenotante_nome:pren.nome, prenotante_cognome:pren.cognome, prenotante_ruolo:pren.ruolo, dichiarazione:true, email_interessato:emailInt||null }:{}) };
   const consentTs = new Date().toISOString();
   const cancellationToken = generateCancellationToken();
   const appt={
@@ -11081,7 +11209,9 @@ async function confirmBooking(){
     note:'',
     data:bk.dateStr, ora:bk.ora,
     centroId:bk.centroId, source:'paziente', seen:false,
-    cancellationToken, cancelled:false, da_centro:!!bk.centroMode
+    cancellationToken, cancelled:false, da_centro:!!bk.centroMode,
+    per_conto: perConto, dataNascita: nascita,
+    prenotanteNome: pren?pren.nome:'', prenotanteCognome: pren?pren.cognome:'', prenotanteRuolo: pren?pren.ruolo:'', emailInteressato: emailInt||''
   };
   console.log('[Booking] supabaseClient:', !!supabaseClient);
   console.log('[Booking] medico_id:', bk.medicoId);
@@ -11098,7 +11228,8 @@ async function confirmBooking(){
             nome, cognome,
             email: appt.email, tel: appt.tel,
             tipo: appt.tipo, area: appt.area, categoria: appt.categoria,
-            data: bk.dateStr, ora: bk.ora
+            data: bk.dateStr, ora: bk.ora,
+            ..._pr22
           })
         });
         const _out = await _r.json().catch(()=>({}));
@@ -11106,7 +11237,7 @@ async function confirmBooking(){
           const err = new Error('Questo orario è appena stato prenotato. Ti riportiamo alla scelta dello slot.');
           err.isSlotTaken = true; throw err;
         }
-        if(!_r.ok || !_out.ok){ throw new Error(_out.error || 'Servizio temporaneamente non disponibile, riprova tra qualche minuto'); }
+        if(!_r.ok || !_out.ok){ const _e=new Error(BK_ERR[_out.error] || _out.error || 'Servizio temporaneamente non disponibile, riprova tra qualche minuto'); _e.codiceErr=_out.error; throw _e; }
         appt.id = _out.appt_id;
       } else {
       const fetchPromise = fetch('/api/create-booking', {
@@ -11119,8 +11250,7 @@ async function confirmBooking(){
           tipo: appt.tipo, area: appt.area, categoria: appt.categoria,
           note: appt.note,
           data: bk.dateStr, ora: bk.ora,
-          per_conto: perConto,
-          consenso_versione: consensoVersioneCorrente(perConto),
+          ..._pr22,
           consenso_comunicazioni: !perConto && !bk.centroMode && (document.getElementById('bk-consent-comm')?.checked || false)
         })
       });
@@ -11134,13 +11264,14 @@ async function confirmBooking(){
         err.isSlotTaken = true;
         throw err;
       }
-      if(!_r.ok || !_out.ok){ throw new Error(_out.error || 'Servizio temporaneamente non disponibile, riprova tra qualche minuto'); }
+      if(!_r.ok || !_out.ok){ const _e=new Error(BK_ERR[_out.error] || _out.error || 'Servizio temporaneamente non disponibile, riprova tra qualche minuto'); _e.codiceErr=_out.error; throw _e; }
       appt.id = _out.appt_id;
       console.log('[Booking] INSERT OK, id:', appt.id);
       }
     } catch(e){
       console.error('[Delphi~Med] confirmBooking INSERT:', e.message);
-      if(btn){ btn.disabled = false; btn.textContent = 'Conferma prenotazione'; }
+      if(['codice_scaduto','email_diversa','troppi_tentativi','verifica_mancante'].includes(e.codiceErr)){ _bkSfida=null; const _bx=document.getElementById('bk-box-codice'); if(_bx) _bx.style.display='none'; }
+      if(btn){ btn.disabled = false; btn.textContent = _bkSfida ? 'Verifica il codice e conferma' : 'Conferma prenotazione'; }
       if(e.isSlotTaken){
         bk.slotOccupati = bk.slotOccupati || [];
         bk.slotOccupati.push({ centroId: bk.centroId, data: bk.dateStr, ora: bk.ora });
@@ -11158,6 +11289,8 @@ async function confirmBooking(){
     }
   }
   _bkLastAppt = appt;
+  _bkSfida=null; _bkSfidaEmail=null;
+  { const _bx=document.getElementById('bk-box-codice'); if(_bx) _bx.style.display='none'; const _b=document.getElementById('bk-confirm-btn'); if(_b){ _b.disabled=false; _b.textContent='Conferma prenotazione'; } }
   bk._centroData = S.centri.find(c=>String(c.id)===String(bk.centroId))||null;
   S.appuntamenti.push(appt);
   bk.slotOccupati = (bk.slotOccupati||[]);
@@ -11971,8 +12104,9 @@ function _pazCardHTML(r){
 async function _riversaContatti(paz, a){
   if(!paz||!a) return;
   const upd={};
-  if(!paz.tel && a.tel){ paz.tel=a.tel; upd.telefono=a.tel; }
-  if(!paz.email && a.email){ paz.email=a.email; upd.email=a.email; }
+  const _k=contattiPazienteDaAppt(a);
+  if(!paz.tel && _k.tel){ paz.tel=_k.tel; upd.telefono=_k.tel; }
+  if(!paz.email && _k.email){ paz.email=_k.email; upd.email=_k.email; }
   if(!Object.keys(upd).length) return;
   save();
   if(isOnline() && typeof paz.id==='string'){

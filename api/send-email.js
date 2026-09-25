@@ -21,6 +21,7 @@ import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 import { revocaLink, consensoLink } from '../lib/consenso-token.js';
 import { buildICS } from '../lib/ics-builder.js';
+import { RUOLI } from '../lib/prenotazione-pr22.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -300,6 +301,13 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     daCentro:          appt.da_centro === true,
     perConto:          appt.per_conto === true,
     pazienteNome:      [appt.nome_paziente, appt.cognome_paziente].filter(Boolean).join(' '),
+    // rev 2.2 (s53): chi ha prenotato per un'altra persona e l'eventuale email del paziente
+    prenotanteNome:    [appt.prenotante_nome, appt.prenotante_cognome].filter(Boolean).join(' '),
+    prenotanteRuolo:   appt.prenotante_ruolo || null,
+    prenotatoDa:       appt.prenotante_ruolo && RUOLI[appt.prenotante_ruolo]
+                         ? `${[appt.prenotante_nome, appt.prenotante_cognome].filter(Boolean).join(' ')} (${RUOLI[appt.prenotante_ruolo].etichetta})`
+                         : null,
+    emailInteressato:  appt.email_interessato || null,
     data:              appt.data,
     ora:               (appt.ora || '').substring(0, 5),
     tipoVisita:        _composeTipo(appt.tipo_visita, appt.categoria),
@@ -518,7 +526,8 @@ export default async function handler(req, res) {
     const consFooter = appt.consensoComunicazioniAt
       ? `Hai acconsentito a ricevere comunicazioni proattive dal medico. Non le desideri? <a href="${revocaLink(icsHost, consensoSecret, { email: appt.emailPaziente, medicoId: appt.medicoId })}" style="color:#888;">Revoca qui il consenso</a> &middot; Delphi~Med`
       : undefined;
-    html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost, footer_note: consFooter });
+    html          = buildHtml({ paziente_nome: esc(appt.pazienteNome), medico_nome: esc(appt.medicoNome), centro_nome: esc(appt.centroNome), dataFmt: esc(dataFmt), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita) || '&mdash;', codice_cancellazione: esc(appt.cancellationToken), data_raw: appt.data, appt_id: appt.apptId, centro_indirizzo: appt.centroIndirizzo, ics_host: icsHost, footer_note: consFooter, prenotante_nome: appt.prenotatoDa ? esc(appt.prenotanteNome) : null });
+    if (appt.prenotatoDa) subject = `Conferma della prenotazione per ${appt.pazienteNome} con ${appt.medicoNome}`;
     // Richiesta consenso automatica SOLO fuori dal flusso pubblico: online personale ha la casella,
     // online per conto terzi resta escluso (la casella puo' essere del terzo).
     if (appt.daCentro === true || appt.source !== 'paziente') consApptCtx = appt;
@@ -542,7 +551,8 @@ export default async function handler(req, res) {
           ora: esc(appt.ora),
           tipo_visita: esc(appt.tipoVisita),
           medico_nome: esc(appt.medicoNome),
-          centro_nome: esc(appt.centroNome)
+          centro_nome: esc(appt.centroNome),
+          prenotato_da: appt.prenotatoDa ? esc(appt.prenotatoDa) : null
         });
         const centroPayload = {
           from: 'noreply@delphi-med.com',
@@ -560,6 +570,28 @@ export default async function handler(req, res) {
         }
       } catch (e) {
         console.error('[send-email] notifica centro anon exception:', e.message);
+      }
+    }
+
+    // rev 2.2 (s53): avviso una tantum al paziente quando qualcun altro ha prenotato per lui
+    // (informazione per la raccolta indiretta, art. 14). Solo se c'e' email_interessato:
+    // create-booking la azzera per minori, tutela e indirizzo uguale a quello di chi prenota.
+    // Il token email e' monouso, quindi l'avviso parte una volta sola. Best-effort.
+    if (appt.prenotatoDa && appt.emailInteressato) {
+      try {
+        const ruolo = RUOLI[appt.prenotanteRuolo];
+        const htmlInt = buildHtmlAvvisoInteressato({
+          paziente_nome: esc(appt.pazienteNome), prenotante_nome: esc(appt.prenotanteNome),
+          rapporto: esc(ruolo ? ruolo.perIlPaziente : ''), medico_nome: esc(appt.medicoNome),
+          centro_nome: esc(appt.centroNome), data_fmt: esc(dataFmt), ora: esc(appt.ora)
+        });
+        const pIntr = { from: 'noreply@delphi-med.com', to: [appt.emailInteressato], subject: `${appt.prenotanteNome} ha prenotato per te un appuntamento`, html: htmlInt };
+        if (appt.medicoEmail) pIntr.reply_to = appt.medicoEmail;
+        const { data: iData, error: iErr } = await resend.emails.send(pIntr);
+        if (iErr) console.error('[send-email] avviso interessato error:', iErr.message);
+        else await auditLog(base, dbHeaders, appt.apptMedicoId, 'avviso_interessato', 'appuntamento', authCtx.apptIdFromToken, 'email_token', appt.emailInteressato, iData?.id);
+      } catch (e) {
+        console.error('[send-email] avviso interessato exception:', e.message);
       }
     }
 
@@ -654,7 +686,7 @@ export default async function handler(req, res) {
     const eventoM = tipo === 'notifica_medico_prenotazione' ? 'prenotazione' : 'cancellazione';
     to            = appt.medicoEmail;
     subject       = (eventoM === 'prenotazione' ? 'Nuova prenotazione — ' : 'Prenotazione cancellata — ') + `${appt.pazienteNome}, ${dataFmtM}`;
-    html          = buildHtmlNotificaMedicoEvento({ evento: eventoM, medico_nome: esc(appt.medicoNome), paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtM), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_nome: esc(appt.centroNome) });
+    html          = buildHtmlNotificaMedicoEvento({ evento: eventoM, medico_nome: esc(appt.medicoNome), paziente_nome: esc(appt.pazienteNome), data_fmt: esc(dataFmtM), ora: esc(appt.ora), tipo_visita: esc(appt.tipoVisita), centro_nome: esc(appt.centroNome), prenotato_da: appt.prenotatoDa ? esc(appt.prenotatoDa) : null });
     medicoIdAudit = appt.apptMedicoId;
     targetType    = 'appuntamento';
     targetId      = body.appt_id;
@@ -1003,7 +1035,7 @@ function buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_
   return { googleUrl, icsUrl };
 }
 
-function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione, data_raw, appt_id, centro_indirizzo, ics_host, footer_note }) {
+function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo_visita, codice_cancellazione, data_raw, appt_id, centro_indirizzo, ics_host, footer_note, prenotante_nome }) {
   const cancelUrl = 'https://delphi-med.com/?cancel=' + encodeURIComponent(codice_cancellazione);
   const anticipaUrl = 'https://delphi-med.com/?anticipa=' + encodeURIComponent(codice_cancellazione);
   const { googleUrl, icsUrl } = buildCalendarUrls({ data_raw, ora, centro_nome, centro_indirizzo, appt_id, codice_cancellazione, ics_host });
@@ -1018,9 +1050,13 @@ function buildHtml({ paziente_nome, medico_nome, centro_nome, dataFmt, ora, tipo
     : '';
   const body =
     emailTitle('Appuntamento confermato') +
-    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 18px;">Gentile <strong>${paziente_nome}</strong>,</p>` +
-    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">La tua prenotazione con <strong>${medArt(medico_nome)}</strong> &egrave; confermata.<br>Di seguito il riepilogo del tuo appuntamento.</p>` +
+    (prenotante_nome
+      ? `<p style="font-size:16px;color:#1a1a1a;margin:0 0 18px;">Gentile <strong>${prenotante_nome}</strong>,</p>` +
+        `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">La prenotazione che hai effettuato per <strong>${paziente_nome}</strong> con <strong>${medArt(medico_nome)}</strong> &egrave; confermata.<br>Di seguito il riepilogo dell&rsquo;appuntamento: promemoria e comunicazioni arriveranno a questo indirizzo.</p>`
+      : `<p style="font-size:16px;color:#1a1a1a;margin:0 0 18px;">Gentile <strong>${paziente_nome}</strong>,</p>` +
+        `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 28px;">La tua prenotazione con <strong>${medArt(medico_nome)}</strong> &egrave; confermata.<br>Di seguito il riepilogo del tuo appuntamento.</p>`) +
     detailCard(
+      (prenotante_nome ? detailRow('Paziente', paziente_nome) : '') +
       detailRow('Centro medico', centro_nome) +
       detailRow('Data', dataFmt) +
       detailRow('Ora', ora) +
@@ -1061,7 +1097,7 @@ function buildHtmlSpostamentoPaziente({ paziente_nome, medico_nome, centro_nome,
   return emailShell(body);
 }
 
-function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_visita, medico_nome, centro_nome }) {
+function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_visita, medico_nome, centro_nome, prenotato_da }) {
   const LABELS = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento', spostamento: 'Spostamento appuntamento' };
   const INTRO  = {
     nuova_prenotazione: `&Egrave; appena arrivata una nuova prenotazione online per ${medArt(medico_nome)}. Vi giriamo i dettagli per la vostra agenda.`,
@@ -1073,6 +1109,7 @@ function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_vi
   const intro = INTRO[evento] || `Vi inoltriamo un aggiornamento relativo all&apos;agenda ${medDi(medico_nome)}.`;
   const rows =
     detailRow('Paziente', paziente_nome) +
+    (prenotato_da ? detailRow('Prenotato da terzi', prenotato_da) : '') +
     detailRow('Medico', medico_nome) +
     detailRow('Data', data_fmt) +
     detailRow('Ora', ora, { last: !tipo_visita }) +
@@ -1085,7 +1122,7 @@ function buildHtmlNotificaCentro({ evento, paziente_nome, data_fmt, ora, tipo_vi
   return emailShell(body);
 }
 
-function buildHtmlNotificaMedicoEvento({ evento, medico_nome, paziente_nome, data_fmt, ora, tipo_visita, centro_nome }) {
+function buildHtmlNotificaMedicoEvento({ evento, medico_nome, paziente_nome, data_fmt, ora, tipo_visita, centro_nome, prenotato_da }) {
   const TITOLI = { prenotazione: 'Nuova prenotazione online', cancellazione: 'Prenotazione cancellata dal paziente', appuntamento: 'Appuntamento registrato' };
   const INTRI = {
     prenotazione: 'un paziente ha prenotato una visita dalla Sua pagina pubblica. Di seguito i dettagli.',
@@ -1094,6 +1131,7 @@ function buildHtmlNotificaMedicoEvento({ evento, medico_nome, paziente_nome, dat
   };
   const rows =
     detailRow('Paziente', paziente_nome) +
+    (prenotato_da ? detailRow('Prenotato da terzi', prenotato_da) : '') +
     (centro_nome ? detailRow('Centro', centro_nome) : '') +
     detailRow('Data', data_fmt) +
     detailRow('Ora', ora, { last: !tipo_visita }) +
@@ -1103,6 +1141,22 @@ function buildHtmlNotificaMedicoEvento({ evento, medico_nome, paziente_nome, dat
     `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${medico_nome || 'Dottore'},<br>${INTRI[evento] || ''}</p>` +
     detailCard(rows) +
     `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">Puoi gestire queste notifiche dalle Impostazioni del tuo profilo.</p>`;
+  return emailShell(body);
+}
+
+// rev 2.2 (s53): avviso al paziente quando un'altra persona ha prenotato per lui.
+// Minimo indispensabile (relazione BPM § 5.5): niente tipo di visita ne' categoria.
+function buildHtmlAvvisoInteressato({ paziente_nome, prenotante_nome, rapporto, medico_nome, centro_nome, data_fmt, ora }) {
+  const body =
+    emailTitle('Una prenotazione a tuo nome') +
+    `<p style="margin:0 0 24px;color:#333;font-size:15px;line-height:1.55;">Gentile ${paziente_nome},<br><strong>${prenotante_nome}</strong>${rapporto ? ', ' + rapporto + ',' : ''} ha prenotato per te un appuntamento ${medDi(medico_nome)}.</p>` +
+    detailCard(
+      detailRow('Data', data_fmt) +
+      detailRow('Ora', ora, { last: !centro_nome }) +
+      (centro_nome ? detailRow('Centro', centro_nome, { last: true }) : '')
+    ) +
+    `<p style="margin:0 0 12px;color:#333;font-size:14px;line-height:1.55;">Conferme e promemoria arriveranno a chi ha prenotato. I tuoi dati sono trattati dal medico, titolare del trattamento, per gestire questo appuntamento; Delphi~Med opera per suo conto.</p>` +
+    `<p style="margin:0;color:#333;font-size:14px;line-height:1.55;">Se non eri al corrente di questa prenotazione, contatta lo studio del medico.</p>`;
   return emailShell(body);
 }
 
