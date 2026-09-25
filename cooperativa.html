@@ -1101,7 +1101,8 @@ async function initSupabase(){
     if(!res.ok) throw new Error('config non disponibile');
     const cfg = await res.json();
     if(!cfg || !cfg.url || !cfg.anonKey) throw new Error('config incompleta');
-    sb = supabase.createClient(cfg.url, cfg.anonKey);
+    // Nessuna risposta del database resta nella cache su disco del browser (dispositivi condivisi)
+    sb = supabase.createClient(cfg.url, cfg.anonKey, { global: { fetch: (u, o) => fetch(u, Object.assign({}, o, { cache: 'no-store' })) } });
     console.log('[Plancia] Supabase connesso');
     return true;
   } catch(e){

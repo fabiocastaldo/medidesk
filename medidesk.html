@@ -3417,7 +3417,8 @@ let supabaseClient = null;
 function _initSupabaseWithConfig(cfg){
   try {
     if(cfg && cfg.url && !cfg.url.includes('YOUR_PROJECT') && !cfg.url.includes('INSERIRE_QUI')){
-      supabaseClient = supabase.createClient(cfg.url, cfg.anonKey);
+      // Nessuna risposta del database resta nella cache su disco del browser (dispositivi condivisi)
+      supabaseClient = supabase.createClient(cfg.url, cfg.anonKey, { global: { fetch: (u, o) => fetch(u, Object.assign({}, o, { cache: 'no-store' })) } });
       console.log('[Delphi~Med] Supabase connesso:', cfg.url);
     } else {
       console.warn('[Delphi~Med] Credenziali non valide — modalità offline (localStorage)');
