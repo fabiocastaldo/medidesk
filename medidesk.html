@@ -2562,7 +2562,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <p style="margin:0 0 10px 0"><strong>Informativa breve</strong></p>
             <p id="bk-info-intro" style="margin:0 0 8px 0"></p>
             <p style="margin:0 0 12px 0;font-size:12px;color:var(--ink2)">Titolare del trattamento di tutti i dati — di prenotazione e <strong>sanitari</strong> (anamnesi, note cliniche, referti e la documentazione della visita) — è <strong>il medico</strong>, per il quale Delphi~Med opera come responsabile del trattamento. <a href="/privacy-policy" target="_blank" rel="noopener" style="color:var(--accent)">Informativa completa</a></p>
-            <p id="bk-dich-self" style="margin:0 0 8px 0;font-size:12px;color:var(--ink2)">Confermando dichiari di prenotare per te stesso/a e di aver preso visione dell'informativa.</p>
+            <p id="bk-dich-self" style="margin:0 0 8px 0;font-size:12px;color:var(--ink2)">Premendo «Conferma prenotazione» dichiari: <em id="bk-dich-self-testo"></em></p>
             <label id="bk-row-comm" style="display:flex;align-items:flex-start;gap:8px;margin-top:8px;cursor:pointer">
               <input type="checkbox" id="bk-consent-comm" style="margin-top:3px;flex-shrink:0">
               <span id="bk-consent-comm-label"><strong>Facoltativo:</strong> acconsento a ricevere via email dal medico comunicazioni proattive (promemoria di prevenzione, richiami, avvisi organizzativi). Revocabile in ogni momento dal link in calce a ogni comunicazione.</span>
@@ -2570,7 +2570,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <div id="bk-auth-terzi" style="display:none;background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-left:3px solid var(--accent);border-radius:6px;padding:12px 14px;margin-top:4px">
               <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer">
                 <input type="checkbox" id="bk-consent-terzi" style="margin-top:3px;flex-shrink:0">
-                <span id="bk-dich-terzi">Dichiaro di prenotare in qualità di <strong id="bk-dich-ruolo">…</strong> e di essere autorizzato/a dalla persona interessata, o di rappresentarla legalmente, a comunicare i suoi dati al medico per questa prenotazione.</span>
+                <span id="bk-dich-terzi"></span>
               </label>
             </div>
           </div>
@@ -11090,9 +11090,33 @@ function bkAggiornaTerzi(){
   const hint=document.getElementById('bk-ruolo-hint'); if(hint) hint.style.display=(on&&minore)?'block':'none';
   const boxInt=document.getElementById('bk-box-interessato');
   if(boxInt) boxInt.style.display=(on && !minore && ruolo!=='tutore')?'block':'none';
-  const dr=document.getElementById('bk-dich-ruolo'); if(dr) dr.textContent=BK_RUOLI_LBL[ruolo]||'…';
+  // Testi rev 2.2 dello Studio (Informativa pazienti, allegato operativo; A03), compilati con i dati del form.
+  // Scostamento dichiarato: «versione 2.2» omesso finché l'informativa 2.2 non è pubblicata.
+  const val=id=>(document.getElementById(id)?.value||'').trim();
+  const medico=(document.getElementById('bk-doctor-name')?.textContent||'').trim()||'[medico]';
+  const st=document.getElementById('bk-dich-self-testo');
+  if(st) st.textContent='«Ho ricevuto l\'informativa del medico '+medico+' e richiedo la prenotazione della prestazione indicata. Confermo la correttezza dei dati e del recapito forniti.»';
+  const dt=document.getElementById('bk-dich-terzi');
+  if(dt){
+    const paz=(val('bk-nome')+' '+val('bk-cognome')).trim()||'[paziente]';
+    const pren=(val('bk-pren-nome')+' '+val('bk-pren-cognome')).trim()||'[nome e cognome]';
+    const email=val('bk-email')||'[email]', tel=val('bk-tel')||'[telefono]';
+    const q=ruolo? bkQualita(ruolo, minore)+(ruolo!=='tutore'&&ruolo!=='operatore_struttura'&&!(ruolo==='genitore'&&minore)?' ('+(BK_RUOLI_LBL[ruolo]||ruolo)+')':'') : '[qualità]';
+    dt.textContent='Richiedo la prenotazione per '+paz+', nella qualità di '+q+'. I miei dati identificativi e di contatto sono '+pren+', '+email+', '+tel+'. Dichiaro che la richiesta rientra nei miei poteri e fornisco le informazioni necessarie alla relativa verifica. Il recapito legittimato a ricevere le comunicazioni è '+email+', intestato a '+pren+'.';
+  }
+}
+// Qualità giuridica (A03): la parentela non rende rappresentante legale.
+function bkQualita(ruolo, minore){
+  if(ruolo==='genitore' && minore) return 'genitore esercente la responsabilità';
+  if(ruolo==='tutore') return 'tutore o altro rappresentante con poteri pertinenti';
+  if(ruolo==='operatore_struttura') return 'delegato alla prenotazione (operatore della struttura)';
+  return 'delegato alla prenotazione';
 }
 function bkTogglePerConto(){
+  ['bk-nome','bk-cognome','bk-pren-nome','bk-pren-cognome','bk-email','bk-tel','bk-nascita'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el && !el.dataset.pr22){ el.addEventListener('input', bkAggiornaTerzi); el.dataset.pr22='1'; }
+  });
   const on = bkPerConto();
   const show=(id,v)=>{ const el=document.getElementById(id); if(el) el.style.display=v; };
   show('bk-tit-paziente', on?'block':'none');
@@ -11135,9 +11159,11 @@ const CONSENSI = {
 // rev 2.2 (s53): richieste di prenotazione, non consensi. Versione decisa dal server
 // (lib/prenotazione-pr22.js); qui il testo mostrato, per il registro documentale.
 CONSENSI['PR-SELF-2.2'] = { tipo: 'presa_visione', art6: false, art9: false, dal: '2026-09',
-  testi: { self: "Confermando dichiari di prenotare per te stesso/a e di aver preso visione dell'informativa." } };
+  testi: { self: "Ho ricevuto l'informativa del medico [NOME] e richiedo la prenotazione della prestazione indicata. Confermo la correttezza dei dati e del recapito forniti." },
+  nota: "Testo dello Studio (rev 2.2) senza «versione 2.2» finché l'informativa 2.2 non è pubblicata; azione positiva: pulsante Conferma prenotazione." };
 CONSENSI['PR-OTHER-2.2'] = { tipo: 'dichiarazione_prenotante', art6: false, art9: false, dal: '2026-09',
-  testi: { terzi: "Dichiaro di prenotare in qualità di [rapporto] e di essere autorizzato/a dalla persona interessata, o di rappresentarla legalmente, a comunicare i suoi dati al medico per questa prenotazione." } };
+  testi: { terzi: "Richiedo la prenotazione per [PAZIENTE], nella qualità di [DELEGATO ALLA PRENOTAZIONE / GENITORE ESERCENTE LA RESPONSABILITA' / TUTORE O ALTRO RAPPRESENTANTE CON POTERI PERTINENTI]. I miei dati identificativi e di contatto sono [DATI]. Dichiaro che la richiesta rientra nei miei poteri e fornisco le informazioni necessarie alla relativa verifica. Il recapito legittimato a ricevere le comunicazioni è [RECAPITO E TITOLARE DEL RECAPITO]." },
+  nota: "Testo dello Studio (rev 2.2); qualità ricavata dal rapporto con il paziente e dall'età (bkQualita); azione positiva: casella + pulsante." };
 let _bkSfida=null, _bkSfidaEmail=null;
 async function bkInviaCodice(email){
   const r=await fetch('/api/verifica-email',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ email }) });
