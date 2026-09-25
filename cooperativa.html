@@ -224,7 +224,10 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
 .toggle-switch input:checked~.toggle-slider::after{transform:translateX(18px)}
 .pref-row{display:flex;align-items:flex-start;gap:14px;max-width:680px}
 .pref-row + .pref-row{margin-top:18px}
-.sic-block{margin-bottom:26px}
+#tab-sicurezza.card-lite{background:transparent;border:none;box-shadow:none;padding:0}
+.sic-block{margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow-soft)}
+.sic-ambito{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--brand-mid);background:var(--brand-soft);border-radius:99px;padding:3px 10px;margin-bottom:8px}
+.sic-ambito.org{color:#7A5A12;background:#FBEFD2}
 .sic-block h2{font-size:16px;color:var(--brand-mid);margin-bottom:8px}
 .sic-block p.sub{margin:0 0 12px}
 .sic-block .btn{width:auto;margin-top:8px;padding:10px 18px}
@@ -842,7 +845,8 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
 
     <section id="tab-sicurezza" class="card-lite hidden">
       <div class="sic-block">
-        <h2>Verifica in due passaggi</h2>
+        <span class="sic-ambito">Il tuo account</span>
+        <h2>La tua verifica in due passaggi</h2>
         <p class="sub">Dalla plancia si leggono nomi e appuntamenti dei pazienti di tutti i medici dell'organizzazione: chi entra col tuo accesso li vede tutti. <strong>Ti raccomandiamo di attivare la verifica in due passaggi</strong>: oltre alla password o al codice via email, a ogni nuovo accesso ti verrà chiesto un codice a 6 cifre generato da un'app di autenticazione (Google Authenticator, Microsoft Authenticator o il tuo gestore di password). Assicurati che l'app abbia il backup attivo, oppure registra qui un secondo dispositivo con una chiave a sé: così un telefono perso non ti chiude fuori.</p>
         <div id="sic-mfa-stato" style="font-size:13px;margin-bottom:4px">Caricamento…</div>
         <div id="sic-mfa-fattori"></div>
@@ -864,7 +868,9 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
       </div>
 
       <div class="sic-block" id="sic-admin-block" style="display:none">
+        <span class="sic-ambito org">Tutta l'organizzazione · solo amministratore</span>
         <h2>Regola dell'organizzazione</h2>
+        <p class="sub">Questa regola non attiva nulla sul tuo account: stabilisce che ogni operatore di questa organizzazione, te compreso, debba avere un dispositivo registrato. L'ordine giusto è <strong>prima</strong> attivare la tua verifica nella card qui sopra, <strong>poi</strong> accendere la regola: chi non ha ancora un dispositivo lo registrerà al suo prossimo accesso.</p>
         <div class="pref-row">
           <label class="toggle-switch"><input type="checkbox" id="pref-mfa" onchange="setPrefMfa(this.checked)"><span class="toggle-slider"></span></label>
           <span>
@@ -3405,6 +3411,16 @@ async function mfaRimuovi(factorId){
 }
 async function setPrefMfa(valore){
   try{
+    if(valore){
+      // chi accende la regola deve gia' avere un dispositivo: altrimenti la plancia si chiude subito anche per lui
+      let propri = 0;
+      try{ const { data: lf } = await sb.auth.mfa.listFactors(); propri = (lf && Array.isArray(lf.totp)) ? lf.totp.length : 0; }catch(_){ }
+      if(propri === 0){
+        document.getElementById('pref-mfa').checked = false;
+        setBoxMsg('sic-pref-msg', 'Prima attiva la tua verifica in due passaggi nella card qui sopra: con la regola accesa e nessun dispositivo registrato la plancia si chiuderebbe subito anche per te.', 'err');
+        return;
+      }
+    }
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch('/api/coop-preferenze', {
       method: 'POST',
