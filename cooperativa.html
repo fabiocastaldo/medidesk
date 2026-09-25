@@ -3692,6 +3692,8 @@ async function sicEsciDaTutti(){
     _loginBlocks('login-admin-block');
     setLoginMode('admin');
     show('view-login');
+    // Uscita: la pagina si ricarica da zero, così i dati dell'organizzazione in memoria e nel DOM non restano nella scheda (dispositivi condivisi)
+    try{ location.replace(location.pathname); }catch(_){ }
   }catch(e){
     console.error('[Plancia] sicEsciDaTutti:', e.message);
     setBoxMsg('sic-sess-msg', 'Uscita non riuscita. Riprova.', 'err');
@@ -3727,6 +3729,8 @@ async function doLogout(){
   try { await sb.auth.signOut(); } catch(e){ console.warn('[Plancia] logout:', e.message); }
   setMsg('');
   show('view-login');
+  // Uscita: la pagina si ricarica da zero, così i dati dell'organizzazione in memoria e nel DOM non restano nella scheda (dispositivi condivisi)
+  try{ location.replace(location.pathname); }catch(_){ }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
