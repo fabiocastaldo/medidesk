@@ -11101,7 +11101,7 @@ function bkAggiornaTerzi(){
     const paz=(val('bk-nome')+' '+val('bk-cognome')).trim()||'[paziente]';
     const pren=(val('bk-pren-nome')+' '+val('bk-pren-cognome')).trim()||'[nome e cognome]';
     const email=val('bk-email')||'[email]', tel=val('bk-tel')||'[telefono]';
-    const q=ruolo? bkQualita(ruolo, minore)+(ruolo!=='tutore'&&ruolo!=='operatore_struttura'?' ('+(BK_RUOLI_LBL[ruolo]||ruolo)+')':'') : '[qualità]';
+    const q=ruolo? bkQualita(ruolo, minore)+(ruolo!=='tutore'&&ruolo!=='operatore_struttura'&&!(ruolo==='genitore'&&minore)?' ('+(BK_RUOLI_LBL[ruolo]||ruolo)+')':'') : '[qualità]';
     dt.textContent='Richiedo la prenotazione per '+paz+', nella qualità di '+q+'. I miei dati identificativi e di contatto sono '+pren+', '+email+', '+tel+'. Dichiaro che la richiesta rientra nei miei poteri e fornisco le informazioni necessarie alla relativa verifica. Il recapito legittimato a ricevere le comunicazioni è '+email+', intestato a '+pren+'.';
   }
 }
