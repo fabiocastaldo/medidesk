@@ -63,7 +63,9 @@ body{font-family:'DM Sans',Arial,sans-serif;color:var(--ink);background:var(--pa
   background:linear-gradient(200deg,var(--brand-mid) 0%,var(--brand-deep) 70%)}
 .side .mark{font-family:'DM Serif Display',serif;font-size:21px;padding:20px 18px 4px}
 .side .payoff{font-size:11.5px;color:var(--brand-soft);padding:0 18px 16px}
-.side nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:6px 10px;overflow-y:auto}
+.side nav{flex:1;display:flex;flex-direction:column;gap:2px;padding:6px 10px;overflow-y:auto;scrollbar-width:thin}
+/* finestre basse: menu compatto, cosi' la barra fissa non ha uno scorrimento interno */
+@media (min-width:841px) and (max-height:720px){.sitem{padding:6px 12px}.side .mark{padding:14px 18px 2px}.side .payoff{padding-bottom:10px}}
 .sitem{display:block;width:100%;text-align:left;background:none;border:none;color:rgba(255,255,255,.88);
   font-family:inherit;font-size:13.5px;font-weight:500;padding:10px 12px;border-radius:8px;cursor:pointer}
 .sitem:hover{background:rgba(255,255,255,.1)}
