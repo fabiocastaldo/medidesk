@@ -3417,7 +3417,8 @@ let supabaseClient = null;
 function _initSupabaseWithConfig(cfg){
   try {
     if(cfg && cfg.url && !cfg.url.includes('YOUR_PROJECT') && !cfg.url.includes('INSERIRE_QUI')){
-      supabaseClient = supabase.createClient(cfg.url, cfg.anonKey);
+      // Nessuna risposta del database resta nella cache su disco del browser (dispositivi condivisi)
+      supabaseClient = supabase.createClient(cfg.url, cfg.anonKey, { global: { fetch: (u, o) => fetch(u, Object.assign({}, o, { cache: 'no-store' })) } });
       console.log('[Delphi~Med] Supabase connesso:', cfg.url);
     } else {
       console.warn('[Delphi~Med] Credenziali non valide — modalità offline (localStorage)');
@@ -4126,6 +4127,7 @@ function checkSession(){
       }
       entraOMfa(session);
     } else if(event === 'SIGNED_OUT'){
+      const _eraDentro = _bootstrapDone;
       _appInitialized = false;
       _bootstrapDone = false;
       stopDashboardPolling();
@@ -4136,6 +4138,8 @@ function checkSession(){
         document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(n=>n.classList.remove('active'));
       }catch(_){ }
       showAuthView();
+      // Gestionale aperto: la pagina si ricarica da zero, così dati dei pazienti in memoria e nel DOM non restano nella scheda (dispositivi condivisi)
+      if(_eraDentro){ try{ location.replace('/'); }catch(_){ } }
     }
   });
 }

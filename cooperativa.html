@@ -1101,7 +1101,8 @@ async function initSupabase(){
     if(!res.ok) throw new Error('config non disponibile');
     const cfg = await res.json();
     if(!cfg || !cfg.url || !cfg.anonKey) throw new Error('config incompleta');
-    sb = supabase.createClient(cfg.url, cfg.anonKey);
+    // Nessuna risposta del database resta nella cache su disco del browser (dispositivi condivisi)
+    sb = supabase.createClient(cfg.url, cfg.anonKey, { global: { fetch: (u, o) => fetch(u, Object.assign({}, o, { cache: 'no-store' })) } });
     console.log('[Plancia] Supabase connesso');
     return true;
   } catch(e){
@@ -3691,6 +3692,8 @@ async function sicEsciDaTutti(){
     _loginBlocks('login-admin-block');
     setLoginMode('admin');
     show('view-login');
+    // Uscita: la pagina si ricarica da zero, così i dati dell'organizzazione in memoria e nel DOM non restano nella scheda (dispositivi condivisi)
+    try{ location.replace(location.pathname); }catch(_){ }
   }catch(e){
     console.error('[Plancia] sicEsciDaTutti:', e.message);
     setBoxMsg('sic-sess-msg', 'Uscita non riuscita. Riprova.', 'err');
@@ -3726,6 +3729,8 @@ async function doLogout(){
   try { await sb.auth.signOut(); } catch(e){ console.warn('[Plancia] logout:', e.message); }
   setMsg('');
   show('view-login');
+  // Uscita: la pagina si ricarica da zero, così i dati dell'organizzazione in memoria e nel DOM non restano nella scheda (dispositivi condivisi)
+  try{ location.replace(location.pathname); }catch(_){ }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
