@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
-import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
+import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton, esc as escShell } from '../lib/email-shell.js';
+import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
@@ -195,6 +196,11 @@ export default async function handler(req, res) {
   await checkTurniScadenza(base, headers, resend, runErrors);
   // 5. Reminder Free Trial in scadenza
   await checkTrialScadenza(base, headers, resend, runErrors);
+  // 5-bis. Eliminazioni account programmate scadute (s52): file, utente Auth e cascata sul database
+  const eliminazioni = await eseguiEliminazioniAccount({
+    supabaseUrl, supabaseKey, stripeKey: process.env.STRIPE_SECRET_KEY, resend,
+    shell: { emailShell, emailTitle, esc: escShell }, runErrors
+  });
 
   // 6. Alert admin: UNA sola email aggregata se restano errori dopo il retry.
   // Copre tutti i rami (promemoria, turni, trial). Niente retry sull'alert
@@ -225,7 +231,7 @@ export default async function handler(req, res) {
     else console.error('[send-reminders] pulizia promemoria:', pr.status);
   } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti });
+  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
