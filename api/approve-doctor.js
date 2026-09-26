@@ -136,10 +136,10 @@ ${msg ? `<div class="msg">${esc(msg)}</div>` : ''}
 <input type="hidden" name="token" value="${esc(token)}">
 <div class="radio"><input type="radio" id="e1" name="esito" value="trovato" required><label for="e1" style="margin:0">Iscritto all'albo: nome, cognome e Ordine coincidono</label></div>
 <div class="radio"><input type="radio" id="e2" name="esito" value="non_trovato"><label for="e2" style="margin:0">Non trovato o dati diversi (il medico resta in attesa)</label></div>
-<label for="ord">Ordine trovato sull'albo <span class="nota">(dichiarato: ${esc(m.provincia_ordine || '—')})</span></label><input type="text" id="ord" name="ordine" maxlength="80">
+<label for="ord">Ordine trovato sull'albo <span class="nota">(precompilato con il dichiarato: correggi se diverso)</span></label><input type="text" id="ord" name="ordine" maxlength="80" value="${esc(m.provincia_ordine)}">
 <h2>2. Indice INI-PEC (facoltativo)</h2>
 <p>Su <a href="${INIPEC_URL}" target="_blank" rel="noopener noreferrer">inipec.gov.it</a> → «Professionisti», cerca il medico: riporta il numero d'iscrizione e la PEC. All'attivazione gli manderemo un avviso alla PEC. Se non c'è, lascia vuoto.</p>
-<label for="num">Numero d'iscrizione trovato su INI-PEC <span class="nota">(dichiarato: ${esc(m.numero_iscrizione_ordine || '—')})</span></label><input type="text" id="num" name="numero" maxlength="50">
+<label for="num">Numero d'iscrizione trovato su INI-PEC <span class="nota">(precompilato con il dichiarato: correggi se diverso)</span></label><input type="text" id="num" name="numero" maxlength="50" value="${esc(m.numero_iscrizione_ordine)}">
 <label for="pec">PEC trovata</label><input type="email" id="pec" name="pec" maxlength="254" placeholder="nome.cognome@pec.omceo…">
 <p class="nota">Data, ora e casella a cui è stato consegnato questo link (${CASELLA_GESTORE}) le registra il sistema. La verifica resta nella traccia di audit.</p>
 <button type="submit">Registra la verifica</button>
@@ -230,10 +230,11 @@ export default async function handler(req, res) {
   if (!esito) return res.status(400).send(paginaVerifica(token, m, 'Indica l\'esito della verifica sull\'albo.'));
   if (esito === 'trovato' && !ordine) return res.status(400).send(paginaVerifica(token, m, 'Riporta l\'Ordine trovato sull\'albo.'));
   if (pec && !isEmail(pec)) return res.status(400).send(paginaVerifica(token, m, 'La PEC indicata non è un indirizzo valido.'));
-  const verifica = { fonte: 'Albo unico FNOMCeO', url: ALBO_URL, esito, ordine_trovato: ordine || null,
+  const positivo = esito === 'trovato';
+  const verifica = { fonte: 'Albo unico FNOMCeO', url: ALBO_URL, esito, ordine_trovato: positivo ? (ordine || null) : null,
     ordine_dichiarato: m.provincia_ordine || null,
-    fonte_numero_pec: (numero || pec) ? 'INI-PEC' : null, numero_trovato: numero || null,
-    numero_dichiarato: m.numero_iscrizione_ordine || null, pec_inipec: pec || null,
+    fonte_numero_pec: positivo && (numero || pec) ? 'INI-PEC' : null, numero_trovato: positivo ? (numero || null) : null,
+    numero_dichiarato: m.numero_iscrizione_ordine || null, pec_inipec: positivo ? (pec || null) : null,
     link_consegnato_a: CASELLA_GESTORE, verificato_at: new Date().toISOString() };
 
   if (esito === 'non_trovato') {
