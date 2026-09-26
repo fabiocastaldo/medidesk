@@ -11,12 +11,12 @@ import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verific
 //      nascono utente e profilo e parte la mail di approvazione al gestore.
 // Consenso commerciale: facoltativo, mai preselezionato, non condiziona la registrazione; il testo
 // sotto è quello mostrato nel form (stesso testo carattere per carattere) e il suo hash va
-// nell'evidenza. Si revoca da Impostazioni (sezione Comunicazioni commerciali).
+// nell'evidenza. Si revoca scrivendo al recapito privacy o, ad account attivo, da Impostazioni (sezione «Novità e comunicazioni commerciali»).
 // ─────────────────────────────────────────────────────────────────────────────
 const SCOPO_REG = 'reg-medico-v1';
 const CONSENSO_COMMERCIALE = {
-  versione: 'cc-2026-09-26',
-  testo: 'Acconsento a ricevere da Delphi~Med comunicazioni commerciali e informative su nuove funzioni, offerte e iniziative del servizio, via email o telefono. Il consenso è facoltativo, non influisce sulla registrazione e posso revocarlo in ogni momento da Impostazioni o scrivendo a privacy@delphi-med.com.'
+  versione: 'cc-1',
+  testo: 'Acconsento a ricevere da Delphi~Med informazioni su nuove funzioni e iniziative del servizio e comunicazioni commerciali, via email o telefono. Il consenso è facoltativo, non influisce sulla registrazione e posso revocarlo in ogni momento scrivendo a privacy@delphi-med.com o, ad account attivo, da Impostazioni → «Novità e comunicazioni commerciali».'
 };
 const hashTesto = (t) => crypto.createHash('sha256').update(t, 'utf8').digest('hex');
 // Telefono: cifre con eventuale + iniziale, 8-15 cifre dopo aver tolto spazi, punti, trattini e parentesi.

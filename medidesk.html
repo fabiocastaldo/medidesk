@@ -1430,7 +1430,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </label>
         <label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;font-weight:400;line-height:1.5;cursor:pointer;margin-top:10px;text-transform:none;letter-spacing:0">
           <input type="checkbox" id="reg-consenso-commerciale" style="margin:3px 0 0;flex:none;width:15px;height:15px;accent-color:var(--accent)">
-          <span id="reg-consenso-commerciale-testo">Acconsento a ricevere da Delphi~Med comunicazioni commerciali e informative su nuove funzioni, offerte e iniziative del servizio, via email o telefono. Il consenso è facoltativo, non influisce sulla registrazione e posso revocarlo in ogni momento da Impostazioni o scrivendo a privacy@delphi-med.com.</span>
+          <span id="reg-consenso-commerciale-testo">Acconsento a ricevere da Delphi~Med informazioni su nuove funzioni e iniziative del servizio e comunicazioni commerciali, via email o telefono. Il consenso è facoltativo, non influisce sulla registrazione e posso revocarlo in ogni momento scrivendo a privacy@delphi-med.com o, ad account attivo, da Impostazioni → «Novità e comunicazioni commerciali».</span>
         </label>
       </div>
       <div class="auth-field" id="reg-codice-box" style="display:none;margin-top:14px">
@@ -2259,12 +2259,12 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       </div>
 
       <div style="margin-bottom:24px">
-        <div class="section-title">Comunicazioni commerciali</div>
+        <div class="section-title">Novità e comunicazioni commerciali</div>
         <div class="card"><div class="card-body">
           <div class="notif-toggle-row">
             <div class="notif-toggle-info">
-              <div class="notif-toggle-label">Ricevi comunicazioni commerciali da Delphi~Med</div>
-              <div class="notif-toggle-desc">Novità, offerte e iniziative del servizio via email o telefono. Facoltativo: puoi dare o revocare il consenso in ogni momento, senza effetti sull'uso del gestionale.</div>
+              <div class="notif-toggle-label">Ricevi novità e comunicazioni commerciali da Delphi~Med</div>
+              <div class="notif-toggle-desc">Nuove funzioni e iniziative del servizio, e comunicazioni commerciali, via email o telefono. Facoltativo: puoi dare o revocare il consenso in ogni momento, senza effetti sull'uso del gestionale. Le comunicazioni tecniche necessarie al servizio (sicurezza, modifiche ai Termini, interruzioni) arrivano comunque.</div>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="imp-consenso-commerciale"><span class="toggle-slider"></span></label>
           </div>
@@ -12379,9 +12379,9 @@ async function saveImpostazione(toggleId){
         .eq('id', S.medicoId);
       if(error) throw error;
       if(m.col === 'consenso_commerciale'){
-        // Traccia del consenso dato o revocato (piano privacy riga 27; testo cc-2026-09-26)
+        // Traccia del consenso dato o revocato (piano privacy riga 27; testo cc-1)
         try{ await supabaseClient.rpc('log_audit', { p_action: newVal ? 'consenso_commerciale_dato' : 'consenso_commerciale_revocato',
-          p_target_type:'medico', p_target_id:null, p_details:{ versione:'cc-2026-09-26', origine:'impostazioni' } }); }catch(_){ }
+          p_target_type:'medico', p_target_id:null, p_details:{ versione:'cc-1', origine:'impostazioni' } }); }catch(_){ }
       }
       showToast('✓ Salvato');
     } catch(e){
