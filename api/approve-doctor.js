@@ -131,19 +131,29 @@ button{margin-top:22px;width:100%;padding:12px;border:0;border-radius:10px;backg
 ${msg ? `<div class="msg">${esc(msg)}</div>` : ''}
 <table>${r('Nome e cognome', [m.nome, m.cognome].filter(Boolean).join(' '))}${r('Email (verificata con codice)', m.email)}${r('Telefono', m.telefono_registrazione)}${r('N° iscrizione dichiarato', m.numero_iscrizione_ordine)}${r('Ordine (provincia) dichiarato', m.provincia_ordine)}${r('Specializzazione', m.specializzazione)}${r('Registrato il', m.created_at ? new Date(m.created_at).toLocaleString('it-IT', { timeZone: 'Europe/Rome' }) : '')}</table>
 <h2>1. Albo unico FNOMCeO</h2>
-<p>Apri <a href="${ALBO_URL}" target="_blank" rel="noopener noreferrer">albounico.fnomceo.it</a>, cerca <strong>${esc([m.nome, m.cognome].filter(Boolean).join(' '))}</strong> e controlla che nome, cognome e Ordine coincidano.</p>
+<p>Apri <a href="${ALBO_URL}" target="_blank" rel="noopener noreferrer">albounico.fnomceo.it</a>, cerca <strong>${esc([m.nome, m.cognome].filter(Boolean).join(' '))}</strong> e confronta con i dati sopra.</p>
 <form method="POST" action="/api/approve-doctor">
 <input type="hidden" name="token" value="${esc(token)}">
-<div class="radio"><input type="radio" id="e1" name="esito" value="trovato" required><label for="e1" style="margin:0">Iscritto all'albo: nome, cognome e Ordine coincidono</label></div>
-<div class="radio"><input type="radio" id="e2" name="esito" value="non_trovato"><label for="e2" style="margin:0">Non trovato o dati diversi (il medico resta in attesa)</label></div>
-<label for="ord">Ordine trovato sull'albo <span class="nota">(precompilato con il dichiarato: correggi se diverso)</span></label><input type="text" id="ord" name="ordine" maxlength="80" value="${esc(m.provincia_ordine)}">
+<div class="radio"><input type="radio" id="e1" name="esito" value="trovato" required><label for="e1" style="margin:0">Coincide: nome, cognome e Ordine (${esc(m.provincia_ordine || '—')}) risultano all'albo</label></div>
+<div class="radio"><input type="radio" id="e2" name="esito" value="non_trovato"><label for="e2" style="margin:0">Non coincide o non trovato: il medico riceve una mail di esito negativo e resta in attesa</label></div>
 <h2>2. Indice INI-PEC (facoltativo)</h2>
-<p>Su <a href="${INIPEC_URL}" target="_blank" rel="noopener noreferrer">inipec.gov.it</a> → «Professionisti», cerca il medico: riporta il numero d'iscrizione e la PEC. All'attivazione gli manderemo un avviso alla PEC. Se non c'è, lascia vuoto.</p>
-<label for="num">Numero d'iscrizione trovato su INI-PEC <span class="nota">(precompilato con il dichiarato: correggi se diverso)</span></label><input type="text" id="num" name="numero" maxlength="50" value="${esc(m.numero_iscrizione_ordine)}">
+<p>Su <a href="${INIPEC_URL}" target="_blank" rel="noopener noreferrer">inipec.gov.it</a> → «Professionisti», cerca il medico. All'attivazione gli manderemo un avviso alla PEC. Se non c'è, lascia vuoto.</p>
+<div class="radio"><input type="checkbox" id="nc" name="numero_coincide" value="si"><label for="nc" style="margin:0">Il numero d'iscrizione su INI-PEC coincide con il dichiarato (${esc(m.numero_iscrizione_ordine || '—')})</label></div>
 <label for="pec">PEC trovata</label><input type="email" id="pec" name="pec" maxlength="254" placeholder="nome.cognome@pec.omceo…">
 <p class="nota">Data, ora e casella a cui è stato consegnato questo link (${CASELLA_GESTORE}) le registra il sistema. La verifica resta nella traccia di audit.</p>
 <button type="submit">Registra la verifica</button>
 </form></div></body></html>`;
+}
+
+const SUPPORTO = 'supporto@delphi-med.com';
+function buildEsitoNegativo({ nome, cognome }) {
+  const n = esc([nome, cognome].filter(Boolean).join(' ')) || 'Dottore/ssa';
+  return emailShell(
+    emailTitle('Registrazione non completata') +
+    `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${n}</strong>,</p>` +
+    `<p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 16px;">la tua richiesta di registrazione a Delphi~Med non &egrave; andata a buon fine a valle dei controlli sui dati di iscrizione all&rsquo;Ordine.</p>` +
+    `<p style="font-size:15px;color:#444;line-height:1.7;margin:0;">Per chiarimenti o per completare la registrazione scrivi a <a href="mailto:${SUPPORTO}" style="color:#15487F;">${SUPPORTO}</a>.</p>`
+  );
 }
 
 function buildAvvisoPec({ nome, cognome, numero, ordine, email }) {
@@ -224,24 +234,36 @@ export default async function handler(req, res) {
 
   // POST: esito della verifica
   const esito = body.esito === 'trovato' ? 'trovato' : body.esito === 'non_trovato' ? 'non_trovato' : null;
-  const numero = String(body.numero || '').trim().slice(0, 50);
-  const ordine = String(body.ordine || '').trim().slice(0, 80);
+  const numeroCoincide = body.numero_coincide === 'si';
   const pec = String(body.pec || '').trim().toLowerCase().slice(0, 254);
   if (!esito) return res.status(400).send(paginaVerifica(token, m, 'Indica l\'esito della verifica sull\'albo.'));
-  if (esito === 'trovato' && !ordine) return res.status(400).send(paginaVerifica(token, m, 'Riporta l\'Ordine trovato sull\'albo.'));
   if (pec && !isEmail(pec)) return res.status(400).send(paginaVerifica(token, m, 'La PEC indicata non è un indirizzo valido.'));
   const positivo = esito === 'trovato';
-  const verifica = { fonte: 'Albo unico FNOMCeO', url: ALBO_URL, esito, ordine_trovato: positivo ? (ordine || null) : null,
-    ordine_dichiarato: m.provincia_ordine || null,
-    fonte_numero_pec: positivo && (numero || pec) ? 'INI-PEC' : null, numero_trovato: positivo ? (numero || null) : null,
-    numero_dichiarato: m.numero_iscrizione_ordine || null, pec_inipec: positivo ? (pec || null) : null,
+  const verifica = { fonte: 'Albo unico FNOMCeO', url: ALBO_URL, esito,
+    nome_dichiarato: [m.nome, m.cognome].filter(Boolean).join(' '), ordine_dichiarato: m.provincia_ordine || null,
+    numero_dichiarato: m.numero_iscrizione_ordine || null,
+    fonte_numero_pec: positivo && (numeroCoincide || pec) ? 'INI-PEC' : null,
+    numero_inipec: positivo ? (numeroCoincide ? 'coincide' : 'non verificato') : null,
+    pec_inipec: positivo ? (pec || null) : null,
     link_consegnato_a: CASELLA_GESTORE, verificato_at: new Date().toISOString() };
 
   if (esito === 'non_trovato') {
     try { await audit(env, m.id, 'verifica_qualifica_negativa', verifica); }
     catch (e) { console.error('[approve-doctor] audit negativo:', e.message); return res.status(500).send(htmlPage('Errore database', 'Verifica non registrata: riprova.', false)); }
+    let mailEsito = 'non_inviata';
+    if (resendApiKey && m.email) {
+      try {
+        const { error } = await new Resend(resendApiKey).emails.send({ from: 'noreply@delphi-med.com', to: [m.email],
+          subject: 'Registrazione a Delphi~Med non completata', html: buildEsitoNegativo({ nome: m.nome, cognome: m.cognome }) });
+        mailEsito = error ? 'errore_invio' : 'inviata';
+        if (error) console.error('[approve-doctor] mail esito negativo:', error.message);
+      } catch (e) { mailEsito = 'errore_invio'; console.error('[approve-doctor] mail esito negativo:', e.message); }
+    }
+    try { await audit(env, m.id, 'esito_negativo_comunicato', { mail: mailEsito, link_consegnato_a: CASELLA_GESTORE }); }
+    catch (e) { console.error('[approve-doctor] audit comunicazione:', e.message); }
+    const txt = mailEsito === 'inviata' ? 'Al medico è stata inviata la mail di esito negativo.' : 'La mail di esito negativo al medico NON è partita: contattalo tu.';
     return res.status(200).send(htmlPage('Verifica registrata: non approvato',
-      'L\'esito negativo è registrato. Il medico resta in attesa e il link resta valido se vuoi ripetere la verifica.', false));
+      `L'esito negativo è registrato e il medico resta in attesa. ${esc(txt)} Il link resta valido se dopo il contatto vuoi ripetere la verifica.`, false));
   }
 
   // Esito positivo: prima la traccia (senza traccia niente approvazione), poi token e stato
@@ -273,7 +295,7 @@ export default async function handler(req, res) {
       try {
         const { error } = await resend.emails.send({ from: 'noreply@delphi-med.com', to: [pec],
           subject: 'Attivazione di un account Delphi~Med a tuo nome',
-          html: buildAvvisoPec({ nome: m.nome, cognome: m.cognome, numero, ordine, email: m.email }) });
+          html: buildAvvisoPec({ nome: m.nome, cognome: m.cognome, numero: m.numero_iscrizione_ordine, ordine: m.provincia_ordine, email: m.email }) });
         pecEsito = error ? 'errore_invio' : 'inviato';
         if (error) console.error('[approve-doctor] avviso PEC:', error.message);
       } catch (e) { pecEsito = 'errore_invio'; console.error('[approve-doctor] avviso PEC:', e.message); }
