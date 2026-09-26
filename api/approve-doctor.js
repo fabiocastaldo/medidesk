@@ -145,7 +145,7 @@ ${msg ? `<div class="msg">${esc(msg)}</div>` : ''}
 </form></div></body></html>`;
 }
 
-const SUPPORTO = 'supporto@delphi-med.com';
+const SUPPORTO = 'support@delphi-med.com';
 function buildEsitoNegativo({ nome, cognome }) {
   const n = esc([nome, cognome].filter(Boolean).join(' ')) || 'Dottore/ssa';
   return emailShell(
