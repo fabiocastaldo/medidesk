@@ -1293,6 +1293,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <input type="text" id="reg-cognome" placeholder="Rossi" autocomplete="family-name" required onblur="this.value=capitalizeWords(this.value.trim())">
       </div>
       <div class="auth-field">
+        <label>Telefono</label>
+        <input type="tel" id="reg-telefono" placeholder="333 1234567" autocomplete="tel" required>
+      </div>
+      <div class="auth-field">
         <label>Specializzazione</label>
         <select id="reg-specializzazione" required>
           <option value="">— seleziona —</option>
@@ -1424,8 +1428,17 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <input type="checkbox" id="reg-accetta-dpa" style="margin:3px 0 0;flex:none;width:15px;height:15px;accent-color:var(--accent)">
           <span>Ho letto e accetto l'<a href="/dpa" target="_blank" rel="noopener" onclick="event.stopPropagation()">Accordo sul trattamento dei dati (DPA)</a>, che disciplina il trattamento dei dati dei miei pazienti da parte di Delphi~Med per mio conto.</span>
         </label>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;font-weight:400;line-height:1.5;cursor:pointer;margin-top:10px;text-transform:none;letter-spacing:0">
+          <input type="checkbox" id="reg-consenso-commerciale" style="margin:3px 0 0;flex:none;width:15px;height:15px;accent-color:var(--accent)">
+          <span id="reg-consenso-commerciale-testo">Acconsento a ricevere da Delphi~Med comunicazioni commerciali e informative su nuove funzioni, offerte e iniziative del servizio, via email o telefono. Il consenso è facoltativo, non influisce sulla registrazione e posso revocarlo in ogni momento da Impostazioni o scrivendo a privacy@delphi-med.com.</span>
+        </label>
       </div>
-      <button class="auth-btn" id="auth-reg-btn" onclick="signUp()">Crea account</button>
+      <div class="auth-field" id="reg-codice-box" style="display:none;margin-top:14px">
+        <label>Codice di verifica</label>
+        <input type="text" id="reg-codice" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 cifre" onkeydown="if(event.key==='Enter')signUp()">
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5">Ti abbiamo scritto all'indirizzo indicato: inserisci il codice di 6 cifre (vale 10 minuti). <button type="button" class="auth-link" style="display:inline;padding:0;margin:0" onclick="regInviaCodice()">Invia un nuovo codice</button></div>
+      </div>
+      <button class="auth-btn" id="auth-reg-btn" onclick="signUp()">Invia il codice di verifica</button>
       <p class="auth-legal">Registrandoti dichiari inoltre di aver preso visione dell'<a href="/privacy-medici" target="_blank" rel="noopener">informativa privacy per i medici</a>, che descrive il trattamento dei tuoi dati di account (fondato sul contratto: non richiede un consenso). L'elenco dei fornitori di cui ci avvaliamo è pubblicato nella pagina <a href="/sub-responsabili" target="_blank" rel="noopener">Sub-responsabili del trattamento</a>.</p>
       </div><!-- /reg-form-content -->
       <div id="reg-success-box" style="display:none">
@@ -2241,6 +2254,19 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
               <div class="notif-toggle-desc">Area di redazione referto con ausilio AI nelle visite del fascicolo.</div>
             </div>
             <label class="toggle-switch"><input type="checkbox" id="imp-refertazione"><span class="toggle-slider"></span></label>
+          </div>
+        </div></div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div class="section-title">Comunicazioni commerciali</div>
+        <div class="card"><div class="card-body">
+          <div class="notif-toggle-row">
+            <div class="notif-toggle-info">
+              <div class="notif-toggle-label">Ricevi comunicazioni commerciali da Delphi~Med</div>
+              <div class="notif-toggle-desc">Novità, offerte e iniziative del servizio via email o telefono. Facoltativo: puoi dare o revocare il consenso in ogni momento, senza effetti sull'uso del gestionale.</div>
+            </div>
+            <label class="toggle-switch"><input type="checkbox" id="imp-consenso-commerciale"><span class="toggle-slider"></span></label>
           </div>
         </div></div>
       </div>
@@ -3492,44 +3518,92 @@ function todayLocalISO(){
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
+// Registrazione in due passi (s55, piano privacy riga 27): prima il codice all'email, poi l'account.
+// La sfida firmata vale per l'email a cui è stato mandato il codice; se l'email cambia si riparte.
+let _regSfida = null, _regSfidaEmail = null;
+function regLeggiCampi(){
+  return {
+    email:            document.getElementById('auth-reg-email').value.trim(),
+    password:         document.getElementById('auth-reg-password').value,
+    confirm:          document.getElementById('auth-reg-confirm').value,
+    nome:             capitalizeWords(document.getElementById('reg-nome').value.trim()),
+    cognome:          capitalizeWords(document.getElementById('reg-cognome').value.trim()),
+    telefono:         document.getElementById('reg-telefono').value.trim(),
+    ordineNumero:     document.getElementById('reg-ordine-numero').value.trim(),
+    ordineProvincia:  document.getElementById('reg-ordine-provincia').value,
+    specializzazione: document.getElementById('reg-specializzazione').value,
+    accettaTos:       document.getElementById('reg-accetta-tos').checked,
+    accettaDpa:       document.getElementById('reg-accetta-dpa').checked,
+    consensoCommerciale: document.getElementById('reg-consenso-commerciale').checked
+  };
+}
+function regValida(f){
+  if(!f.email || !f.password || !f.nome || !f.cognome || !f.telefono || !f.ordineNumero || !f.ordineProvincia || !f.specializzazione){
+    showAuthMsg('Compila tutti i campi obbligatori', 'error'); return false;
+  }
+  if(!/^\+?[0-9]{8,15}$/.test(f.telefono.replace(/[\s.\-()\/]/g, ''))){
+    showAuthMsg('Numero di telefono non valido: solo cifre, con eventuale prefisso internazionale', 'error'); return false;
+  }
+  if(!f.accettaTos || !f.accettaDpa){
+    showAuthMsg('Per creare l\'account devi accettare i Termini di servizio e l\'Accordo sul trattamento dei dati (DPA)', 'error'); return false;
+  }
+  const pwdOk = f.password.length >= 8 && /[A-Z]/.test(f.password) && /[a-z]/.test(f.password) &&
+                /[0-9]/.test(f.password) && /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(f.password);
+  if(!pwdOk){ showAuthMsg('La password non soddisfa tutti i criteri richiesti', 'error'); return false; }
+  if(f.password !== f.confirm){ showAuthMsg('Le password non coincidono', 'error'); return false; }
+  return true;
+}
+async function regInviaCodice(){
+  const f = regLeggiCampi();
+  if(!regValida(f)) return;
+  setAuthLoading(true);
+  try {
+    const res = await fetch('/api/register-doctor', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ azione: 'codice', email: f.email })
+    });
+    const data = await res.json().catch(() => ({}));
+    setAuthLoading(false);
+    if(!res.ok || !data.sfida){ showAuthMsg(data.error || 'Invio del codice non riuscito, riprova', 'error'); return; }
+    _regSfida = data.sfida; _regSfidaEmail = f.email.toLowerCase();
+    document.getElementById('reg-codice-box').style.display = 'block';
+    document.getElementById('reg-codice').value = '';
+    document.getElementById('reg-codice').focus();
+    document.getElementById('auth-reg-btn').textContent = 'Conferma e crea account';
+    showAuthMsg('Codice inviato a ' + f.email + '. Controlla anche la posta indesiderata.', 'success');
+  } catch(e){
+    setAuthLoading(false);
+    showAuthMsg('Errore di rete: ' + e.message, 'error');
+  }
+}
 async function signUp(){
-  const email           = document.getElementById('auth-reg-email').value.trim();
-  const password        = document.getElementById('auth-reg-password').value;
-  const confirm         = document.getElementById('auth-reg-confirm').value;
-  const nome            = capitalizeWords(document.getElementById('reg-nome').value.trim());
-  const cognome         = capitalizeWords(document.getElementById('reg-cognome').value.trim());
-  const ordineNumero    = document.getElementById('reg-ordine-numero').value.trim();
-  const ordineProvincia  = document.getElementById('reg-ordine-provincia').value;
-  const specializzazione = document.getElementById('reg-specializzazione').value;
-  const accettaTos       = document.getElementById('reg-accetta-tos').checked;
-  const accettaDpa       = document.getElementById('reg-accetta-dpa').checked;
-
-  if(!email || !password || !nome || !cognome || !ordineNumero || !ordineProvincia || !specializzazione){
-    showAuthMsg('Compila tutti i campi obbligatori', 'error'); return;
-  }
-  if(!accettaTos || !accettaDpa){
-    showAuthMsg('Per creare l\'account devi accettare i Termini di servizio e l\'Accordo sul trattamento dei dati (DPA)', 'error'); return;
-  }
-  const pwdOk = password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) &&
-                /[0-9]/.test(password) && /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(password);
-  if(!pwdOk){ showAuthMsg('La password non soddisfa tutti i criteri richiesti', 'error'); return; }
-  if(password !== confirm){ showAuthMsg('Le password non coincidono', 'error'); return; }
-
+  const f = regLeggiCampi();
+  if(!_regSfida || _regSfidaEmail !== f.email.toLowerCase()){ _regSfida = null; return regInviaCodice(); }
+  if(!regValida(f)) return;
+  const codice = document.getElementById('reg-codice').value.replace(/\D/g, '');
+  if(codice.length !== 6){ showAuthMsg('Inserisci il codice di 6 cifre ricevuto via email', 'error'); return; }
   setAuthLoading(true);
   try {
     const res = await fetch('/api/register-doctor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, nome, cognome, ordineNumero, ordineProvincia, specializzazione, accettaTos, accettaDpa })
+      body: JSON.stringify({ email: f.email, password: f.password, nome: f.nome, cognome: f.cognome, telefono: f.telefono,
+        ordineNumero: f.ordineNumero, ordineProvincia: f.ordineProvincia, specializzazione: f.specializzazione,
+        accettaTos: f.accettaTos, accettaDpa: f.accettaDpa, consensoCommerciale: f.consensoCommerciale,
+        sfida: _regSfida, codice })
     });
     const data = await res.json().catch(() => ({}));
 
     if(!res.ok){
       setAuthLoading(false);
+      if(['codice_scaduto','email_diversa','sfida_non_valida','tentativi'].includes(data.motivo)){
+        _regSfida = null;
+        document.getElementById('auth-reg-btn').textContent = 'Invia il codice di verifica';
+      }
       if(res.status === 409){
         showAuthMsg('Email già registrata. Usa un altro indirizzo o accedi.', 'error');
       } else if(res.status === 429){
-        showAuthMsg('Troppi tentativi. Riprova tra un\'ora.', 'error');
+        showAuthMsg(data.error || 'Troppi tentativi. Riprova tra un\'ora.', 'error');
       } else if(res.status === 400){
         showAuthMsg(data.error || 'Dati non validi', 'error');
       } else {
@@ -3539,6 +3613,7 @@ async function signUp(){
     }
 
     setAuthLoading(false);
+    _regSfida = null;
     document.getElementById('reg-form-content').style.display = 'none';
     document.getElementById('reg-success-box').style.display  = 'block';
     clearAuthMsg();
@@ -4471,6 +4546,7 @@ async function loadMedicoFromDB(user){
       S.settings.mostraTelefonoPazienti = data.mostra_telefono_pazienti !== false;
       S.settings.mostraTariffePazienti  = data.mostra_tariffe_pazienti  === true;
       S.settings.refertazioneAttiva     = data.refertazione_attiva      !== false;
+      S.settings.consensoCommerciale    = data.consenso_commerciale     === true;
       S.settings.linkedin    = data.linkedin           || '';
       S.settings.instagram   = data.instagram          || '';
       S.settings.youtube     = data.youtube            || '';
@@ -12255,6 +12331,7 @@ function renderImpostazioni(){
   chk('imp-mostra-telefono', S.settings.mostraTelefonoPazienti !== false);
   chk('imp-mostra-tariffe',  S.settings.mostraTariffePazienti  === true);
   chk('imp-refertazione',    S.settings.refertazioneAttiva     !== false);
+  chk('imp-consenso-commerciale', S.settings.consensoCommerciale === true);
   const curSkin = localStorage.getItem('skin') || 'marine';
   document.querySelectorAll('.skin-swatch').forEach(b => b.classList.toggle('is-active', b.dataset.skin === curSkin));
   const sogliaEl = document.getElementById('setting-soglia-anni');
@@ -12279,7 +12356,8 @@ async function saveImpostazione(toggleId){
     'imp-mostra-email':    { key: 'mostraEmailPazienti',    col: 'mostra_email_pazienti' },
     'imp-mostra-telefono': { key: 'mostraTelefonoPazienti', col: 'mostra_telefono_pazienti' },
     'imp-mostra-tariffe':  { key: 'mostraTariffePazienti',  col: 'mostra_tariffe_pazienti' },
-    'imp-refertazione':    { key: 'refertazioneAttiva',     col: 'refertazione_attiva' }
+    'imp-refertazione':    { key: 'refertazioneAttiva',     col: 'refertazione_attiva' },
+    'imp-consenso-commerciale': { key: 'consensoCommerciale', col: 'consenso_commerciale' }
   };
   const m = mapping[toggleId];
   if(!m){ console.warn('[Delphi~Med] saveImpostazione: toggle sconosciuto', toggleId); return; }
@@ -12294,10 +12372,17 @@ async function saveImpostazione(toggleId){
   if(m.key === 'mostraPrenotazioniAttesa'){ renderPending(); }
   if(isOnline() && S.medicoId){
     try {
+      const upd = { [m.col]: newVal };
+      if(m.col === 'consenso_commerciale') upd.consenso_commerciale_at = new Date().toISOString();
       const { error } = await supabaseClient.from('medici')
-        .update({ [m.col]: newVal })
+        .update(upd)
         .eq('id', S.medicoId);
       if(error) throw error;
+      if(m.col === 'consenso_commerciale'){
+        // Traccia del consenso dato o revocato (piano privacy riga 27; testo cc-2026-09-26)
+        try{ await supabaseClient.rpc('log_audit', { p_action: newVal ? 'consenso_commerciale_dato' : 'consenso_commerciale_revocato',
+          p_target_type:'medico', p_target_id:null, p_details:{ versione:'cc-2026-09-26', origine:'impostazioni' } }); }catch(_){ }
+      }
       showToast('✓ Salvato');
     } catch(e){
       console.error('[Delphi~Med] saveImpostazione:', e.message);
