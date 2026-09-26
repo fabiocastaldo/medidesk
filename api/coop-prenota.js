@@ -94,6 +94,14 @@ export default async function handler(req, res) {
   if (!centro) {
     return res.status(404).json({ error: 'Centro non collegato all\'organizzazione' });
   }
+  // Solo un medico approvato riceve prenotazioni (sospeso o in attesa: no).
+  const medRes = await fetch(
+    `${supabaseUrl}/rest/v1/medici?id=eq.${encodeURIComponent(medicoId)}&stato=eq.approvato&select=id`,
+    { headers: srvHeaders }
+  ).catch(() => null);
+  if (!medRes || !medRes.ok) return res.status(502).json({ error: 'Verifica medico fallita' });
+  const medOk = (await medRes.json().catch(() => []))?.[0];
+  if (!medOk) return res.status(403).json({ error: 'Il medico non accetta prenotazioni' });
 
   // Gate di copertura: stesso arbitro del booking pubblico (lib/slot-guard.js):
   // turno attivo (giorno, dal/al, frequenza, griglia) OPPURE giornata singola

@@ -110,6 +110,16 @@ export default async function handler(req, res) {
     }
   } catch { return res.status(502).json({ error: 'Verifica fallita' }); }
 
+  // 1-bis) Solo un medico approvato riceve prenotazioni (sospeso o in attesa: no).
+  try {
+    const r = await sb(`medici?id=eq.${encodeURIComponent(medicoId)}&stato=eq.approvato&select=id&limit=1`);
+    if (!r.ok) return res.status(502).json({ error: 'Verifica fallita' });
+    const rows = await r.json().catch(() => []);
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(403).json({ error: 'Il medico non accetta prenotazioni online' });
+    }
+  } catch { return res.status(502).json({ error: 'Verifica fallita' }); }
+
   // 1-ter) Gate prestazione: il tipo deve essere nel catalogo del medico e non escluso per il centro
   {
     const vt = await verificaTipo({ sb, medicoId, centroId, tipo });
