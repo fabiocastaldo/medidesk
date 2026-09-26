@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { timingSafeEqual } from 'crypto';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton, esc as escShell } from '../lib/email-shell.js';
 import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
+import { eseguiConservazione } from '../lib/conservazione.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
@@ -220,6 +221,10 @@ export default async function handler(req, res) {
     supabaseUrl, supabaseKey, stripeKey: process.env.STRIPE_SECRET_KEY, resend,
     shell: { emailShell, emailTitle, esc: escShell }, runErrors
   });
+  // 5-ter. Conservazione eseguibile (s55): tempi della Policy di conservazione rev2.3 (lib/conservazione.js)
+  // Primo giro in simulazione (conta e traccia senza cancellare); l'esecuzione si accende su mandato del gestore.
+  const CONSERVAZIONE_ESEGUI = false;
+  const conservazione = await eseguiConservazione({ supabaseUrl, supabaseKey, runErrors, dryRun: !CONSERVAZIONE_ESEGUI });
 
   // 6. Alert admin: UNA sola email aggregata se restano errori dopo il retry.
   // Copre tutti i rami (promemoria, turni, trial). Niente retry sull'alert
@@ -250,7 +255,7 @@ export default async function handler(req, res) {
     else console.error('[send-reminders] pulizia promemoria:', pr.status);
   } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni });
+  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, conservazione });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
