@@ -136,10 +136,12 @@ ${msg ? `<div class="msg">${esc(msg)}</div>` : ''}${conferma ? `<div class="avvi
 <form method="POST" action="/api/approve-doctor">
 <input type="hidden" name="token" value="${esc(token)}">
 <div class="radio"><input type="radio" id="e1" name="esito" value="trovato" required${conferma ? ' checked' : ''}><label for="e1" style="margin:0">Coincide: nome, cognome e Ordine (${esc(m.provincia_ordine || '—')}) risultano all'albo</label></div>
-<div class="radio"><input type="radio" id="e2" name="esito" value="non_trovato"><label for="e2" style="margin:0">Non coincide o non trovato: il medico riceve una mail di esito negativo e resta in attesa</label></div>
+<div class="radio"><input type="radio" id="e2" name="esito" value="non_trovato"><label for="e2" style="margin:0">Non coincide o non trovato</label></div>
 <h2>2. Indice INI-PEC</h2>
-<p>Su <a href="${INIPEC_URL}" target="_blank" rel="noopener noreferrer">inipec.gov.it</a> → «Professionisti», cerca il medico e confronta il numero d'iscrizione (obbligatorio per approvare). La PEC è facoltativa: se c'è, all'attivazione gli manderemo lì un avviso.</p>
-<div class="radio"><input type="checkbox" id="nc" name="numero_coincide" value="si"${numeroSpuntato ? ' checked' : ''}><label for="nc" style="margin:0">Il numero d'iscrizione su INI-PEC coincide con il dichiarato (${esc(m.numero_iscrizione_ordine || '—')}) — obbligatorio per approvare</label></div>
+<p>Su <a href="${INIPEC_URL}" target="_blank" rel="noopener noreferrer">inipec.gov.it</a> → «Professionisti», cerca il medico e confronta il numero d'iscrizione. La PEC è facoltativa: se c'è, all'attivazione gli manderemo lì un avviso.</p>
+<div class="radio"><input type="radio" id="n1" name="numero_esito" value="coincide" required${numeroSpuntato ? ' checked' : ''}><label for="n1" style="margin:0">Coincide: il numero d'iscrizione (${esc(m.numero_iscrizione_ordine || '—')}) risulta su INI-PEC</label></div>
+<div class="radio"><input type="radio" id="n2" name="numero_esito" value="non_coincide"><label for="n2" style="margin:0">Non coincide o non trovato</label></div>
+<p class="nota">Si approva solo se entrambi i controlli coincidono; altrimenti il medico riceve una mail di esito negativo e resta in attesa.</p>
 <label for="pec">PEC trovata (facoltativa)</label><input type="email" id="pec" name="pec" maxlength="254" placeholder="nome.cognome@pec.omceo…">
 <p class="nota">Data, ora e casella a cui è stato consegnato questo link (${CASELLA_GESTORE}) le registra il sistema. La verifica resta nella traccia di audit.</p>
 ${conferma ? '<input type="hidden" name="conferma_senza_pec" value="si">' : ''}<button type="submit">${conferma ? 'Approva senza PEC' : 'Registra la verifica'}</button>
@@ -235,28 +237,26 @@ export default async function handler(req, res) {
 
   // POST: esito della verifica
   const esito = body.esito === 'trovato' ? 'trovato' : body.esito === 'non_trovato' ? 'non_trovato' : null;
-  const numeroCoincide = body.numero_coincide === 'si';
+  const numeroEsito = body.numero_esito === 'coincide' ? 'coincide' : body.numero_esito === 'non_coincide' ? 'non_coincide' : null;
+  const numeroCoincide = numeroEsito === 'coincide';
   const pec = String(body.pec || '').trim().toLowerCase().slice(0, 254);
-  if (!esito) return res.status(400).send(paginaVerifica(token, m, 'Indica l\'esito della verifica sull\'albo.'));
+  if (!esito || !numeroEsito) return res.status(400).send(paginaVerifica(token, m, 'Indica l\'esito di entrambi i controlli: Albo unico e INI-PEC.'));
   if (pec && !isEmail(pec)) return res.status(400).send(paginaVerifica(token, m, 'La PEC indicata non è un indirizzo valido.'));
-  // Il numero su INI-PEC è obbligatorio per approvare; la PEC no, ma senza PEC serve una conferma esplicita
-  if (esito === 'trovato' && !numeroCoincide) {
-    return res.status(400).send(paginaVerifica(token, m, 'Per approvare conferma che il numero d\'iscrizione su INI-PEC coincide con il dichiarato. Se non coincide, scegli «Non coincide».'));
-  }
-  if (esito === 'trovato' && !pec && body.conferma_senza_pec !== 'si') {
+  // Si approva solo se entrambi i controlli coincidono; senza PEC serve una conferma esplicita
+  const positivoTot = esito === 'trovato' && numeroCoincide;
+  if (positivoTot && !pec && body.conferma_senza_pec !== 'si') {
     return res.status(200).send(paginaVerifica(token, m, null,
       'Stai approvando senza PEC: il medico non riceverà l\'avviso di attivazione alla casella del suo Ordine.', true));
   }
-  const positivo = esito === 'trovato';
-  const verifica = { fonte: 'Albo unico FNOMCeO', url: ALBO_URL, esito,
+  const positivo = positivoTot;
+  const verifica = { fonte: 'Albo unico FNOMCeO', url: ALBO_URL, esito: positivo ? 'trovato' : 'non_trovato', albo: esito, numero_inipec: numeroEsito,
     nome_dichiarato: [m.nome, m.cognome].filter(Boolean).join(' '), ordine_dichiarato: m.provincia_ordine || null,
     numero_dichiarato: m.numero_iscrizione_ordine || null,
     fonte_numero_pec: positivo ? 'INI-PEC' : null,
-    numero_inipec: positivo ? 'coincide' : null,
     pec_inipec: positivo ? (pec || null) : null,
     link_consegnato_a: CASELLA_GESTORE, verificato_at: new Date().toISOString() };
 
-  if (esito === 'non_trovato') {
+  if (!positivo) {
     try { await audit(env, m.id, 'verifica_qualifica_negativa', verifica); }
     catch (e) { console.error('[approve-doctor] audit negativo:', e.message); return res.status(500).send(htmlPage('Errore database', 'Verifica non registrata: riprova.', false)); }
     let mailEsito = 'non_inviata';
