@@ -222,8 +222,9 @@ export default async function handler(req, res) {
     shell: { emailShell, emailTitle, esc: escShell }, runErrors
   });
   // 5-ter. Conservazione eseguibile (s55): tempi della Policy di conservazione rev2.3 (lib/conservazione.js)
-  // Primo giro in simulazione (conta e traccia senza cancellare); l'esecuzione si accende su mandato del gestore.
-  const CONSERVAZIONE_ESEGUI = false;
+  // Esecuzione accesa su mandato del gestore (26/09/2026, dopo il giro in simulazione delle 17:00 UTC con conteggi
+  // identici agli attesi). Per tornare in simulazione: false.
+  const CONSERVAZIONE_ESEGUI = true;
   const conservazione = await eseguiConservazione({ supabaseUrl, supabaseKey, runErrors, dryRun: !CONSERVAZIONE_ESEGUI });
 
   // 6. Alert admin: UNA sola email aggregata se restano errori dopo il retry.
