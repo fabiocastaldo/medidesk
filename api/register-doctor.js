@@ -398,7 +398,7 @@ function buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordin
     emailTitle('Nuova richiesta di registrazione') +
     `<p style="font-size:15px;color:#333;margin:0 0 24px;">Un nuovo medico ha richiesto l&rsquo;accesso a Delphi~Med.</p>` +
     detailCard(rows) +
-    ctaButton(approveLink, 'Approva medico') +
-    `<p style="font-size:12px;color:#888;text-align:center;line-height:1.5;margin:0;">Link di approvazione valido per 7 giorni. Dopo l&rsquo;uso, il token verr&agrave; invalidato.</p>`;
+    ctaButton(approveLink, 'Verifica e approva') +
+    `<p style="font-size:12px;color:#888;text-align:center;line-height:1.5;margin:0;">Il link apre la pagina di verifica sull&rsquo;Albo unico FNOMCeO: l&rsquo;approvazione avviene solo dopo aver registrato l&rsquo;esito. Valido 7 giorni, un solo uso.</p>`;
   return emailShell(body);
 }
