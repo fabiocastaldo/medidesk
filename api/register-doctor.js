@@ -355,7 +355,11 @@ export default async function handler(req, res) {
   // ───────────────────────────────────────────────────────────────────────────
   // STEP 5: invia email di notifica admin con link di approvazione
   // ───────────────────────────────────────────────────────────────────────────
-  const approveLink = `https://delphi-med.com/api/approve-doctor?token=${encodeURIComponent(jwtToken)}`;
+  // Sulle anteprime Vercel il link punta all'anteprima stessa (collaudo del flusso senza toccare la
+  // produzione); altrove sempre al dominio canonico.
+  const hostReq = String(req.headers['x-forwarded-host'] || req.headers.host || '').toLowerCase();
+  const origine = /^medidesk-[a-z0-9-]+-fabio-castaldo-s-projects\.vercel\.app$/.test(hostReq) ? `https://${hostReq}` : 'https://delphi-med.com';
+  const approveLink = `${origine}/api/approve-doctor?token=${encodeURIComponent(jwtToken)}`;
   const adminEmail = 'fb.castaldo@gmail.com';
 
   try {
