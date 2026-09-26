@@ -360,7 +360,7 @@ export default async function handler(req, res) {
   const hostReq = String(req.headers['x-forwarded-host'] || req.headers.host || '').toLowerCase();
   const origine = /^medidesk-[a-z0-9-]+-fabio-castaldo-s-projects\.vercel\.app$/.test(hostReq) ? `https://${hostReq}` : 'https://delphi-med.com';
   const approveLink = `${origine}/api/approve-doctor?token=${encodeURIComponent(jwtToken)}`;
-  const adminEmail = 'fb.castaldo@gmail.com';
+  const adminEmail = 'fb.castaldo@gmail.com'; // deve coincidere con CASELLA_GESTORE in approve-doctor.js
 
   try {
     const resend = new Resend(resendApiKey);
