@@ -124,13 +124,15 @@ export default async function handler(req, res) {
     }
 
     const mediciMap = {};
+    let mediciLetti = false;
     if (medicoIds.length) {
       try {
         const r = await fetch(
-          `${base}/medici?id=in.(${medicoIds.join(',')})&select=id,titolo,nome,cognome,email`,
+          `${base}/medici?id=in.(${medicoIds.join(',')})&select=id,titolo,nome,cognome,email,stato`,
           { headers }
         );
         const rows = await r.json();
+        if (r.ok && Array.isArray(rows)) mediciLetti = true;
         rows.forEach(m => { mediciMap[m.id] = m; });
       } catch (e) { console.error('[send-reminders] query medici:', e.message); }
     }
@@ -139,6 +141,9 @@ export default async function handler(req, res) {
     for (const appt of appointments) {
       const centro = centriMap[appt.centro_id] || {};
       const medico = mediciMap[appt.medico_id] || {};
+      // Medico sospeso (o in attesa): nessun promemoria a suo nome. Se la lettura dei medici
+      // e' fallita si resta sul comportamento di prima (promemoria con «il medico»).
+      if (mediciLetti && medico.stato !== 'approvato') continue;
 
       const medicoNome    = [medico.titolo, medico.nome, medico.cognome].filter(Boolean).join(' ') || 'il medico';
       const pazienteNome  = [appt.nome_paziente, appt.cognome_paziente].filter(Boolean).join(' ');

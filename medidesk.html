@@ -3642,10 +3642,14 @@ function entraSeApprovato(session){
     try {
       const { data: row, error } = await supabaseClient
         .from('medici').select('stato').eq('user_id', session.user.id).maybeSingle();
-      if(!error && row && row.stato === 'in_attesa'){
+      if(!error && row && row.stato !== 'approvato'){
+        // Solo gli account approvati entrano: in attesa di approvazione oppure sospesi dal
+        // gestore (il DB non restituisce comunque nulla a chi non e' approvato: get_medico_id).
         await supabaseClient.auth.signOut();
         showLoginView('login');
-        showAuthMsg('Il tuo account è in attesa di approvazione. Ti contatteremo via email.', 'error');
+        showAuthMsg(row.stato === 'in_attesa'
+          ? 'Il tuo account è in attesa di approvazione. Ti contatteremo via email.'
+          : 'Il tuo account è sospeso. Per informazioni scrivi a support@delphi-med.com.', 'error');
         return;
       }
       showAppView();
