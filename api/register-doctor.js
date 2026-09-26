@@ -1,6 +1,29 @@
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
+import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Registrazione verificata (s55, 26/09/2026, piano privacy riga 27):
+//   1. POST { azione:'codice', email } → codice di 6 cifre via email + "sfida" firmata (scopo
+//      'reg-medico-v1': un codice di prenotazione non vale qui). Nessuna riga in DB.
+//   2. POST con tutti i dati + telefono (obbligatorio) + sfida + codice → solo con codice valido
+//      nascono utente e profilo e parte la mail di approvazione al gestore.
+// Consenso commerciale: facoltativo, mai preselezionato, non condiziona la registrazione; il testo
+// sotto è quello mostrato nel form (stesso testo carattere per carattere) e il suo hash va
+// nell'evidenza. Si revoca scrivendo al recapito privacy o, ad account attivo, da Impostazioni (sezione «Novità e comunicazioni commerciali»).
+// ─────────────────────────────────────────────────────────────────────────────
+const SCOPO_REG = 'reg-medico-v1';
+const CONSENSO_COMMERCIALE = {
+  versione: 'cc-1',
+  testo: 'Acconsento a ricevere da Delphi~Med informazioni su nuove funzioni e iniziative del servizio e comunicazioni commerciali, via email o telefono. Il consenso è facoltativo, non influisce sulla registrazione e posso revocarlo in ogni momento scrivendo a privacy@delphi-med.com o, ad account attivo, da Impostazioni → «Novità e comunicazioni commerciali».'
+};
+const hashTesto = (t) => crypto.createHash('sha256').update(t, 'utf8').digest('hex');
+// Telefono: cifre con eventuale + iniziale, 8-15 cifre dopo aver tolto spazi, punti, trattini e parentesi.
+function normTelefono(t) {
+  const s = String(t || '').replace(/[\s.\-()\/]/g, '');
+  return /^\+?[0-9]{8,15}$/.test(s) ? s : null;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Testi legali canonici: versione + SHA-256 del file pubblicato.
@@ -91,9 +114,40 @@ export default async function handler(req, res) {
   const serviceKey = process.env.SUPABASE_SECRET_KEY;
   const approveSecret = process.env.APPROVE_TOKEN_SECRET;
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !serviceKey || !approveSecret || !resendApiKey) {
+  const codiceSecret = process.env.CONSENSO_TOKEN_SECRET;
+  if (!supabaseUrl || !serviceKey || !approveSecret || !resendApiKey || !codiceSecret) {
     console.error('[register-doctor] env vars mancanti');
     return res.status(500).json({ error: 'Configurazione server incompleta' });
+  }
+
+  // Passo 1: invio del codice di verifica (limiti propri, prima del limite sulle registrazioni)
+  if ((req.body || {}).azione === 'codice') {
+    const emailC = normEmail((req.body || {}).email).slice(0, 254);
+    if (!isValidEmail(emailC)) return res.status(400).json({ error: 'Email non valida' });
+    const ipC = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+    const eh = crypto.createHash('sha256').update(emailC).digest('hex').slice(0, 24);
+    if (!(await checkSupabaseRateLimit(`ip:${ipC}`, 'register-codice', 10, 3600)) ||
+        !(await checkSupabaseRateLimit(`e:${eh}`, 'register-codice', 5, 3600))) {
+      return res.status(429).json({ error: 'Troppe richieste di codice. Riprova tra qualche minuto.' });
+    }
+    const { codice, sfida } = creaSfida(codiceSecret, emailC, SCOPO_REG);
+    const htmlC = emailShell(
+      emailTitle('Conferma il tuo indirizzo email') +
+      `<p style="font-size:15px;color:#333;line-height:1.6;margin:0 0 20px;">Usa questo codice per completare la registrazione a Delphi~Med:</p>` +
+      `<div style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0B2B4D;text-align:center;margin:0 0 20px;">${codice}</div>` +
+      `<p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Il codice vale 10 minuti. Se non hai chiesto tu di registrarti, ignora questa email: nessun account verr&agrave; creato.</p>`
+    );
+    try {
+      const { error } = await new Resend(resendApiKey).emails.send({
+        from: 'noreply@delphi-med.com', to: [emailC],
+        subject: `${codice} è il tuo codice di registrazione Delphi~Med`, html: htmlC
+      });
+      if (error) { console.error('[register-doctor] codice resend:', error.message); return res.status(502).json({ error: 'Invio del codice non riuscito, riprova' }); }
+    } catch (e) {
+      console.error('[register-doctor] codice resend:', e.message);
+      return res.status(502).json({ error: 'Invio del codice non riuscito, riprova' });
+    }
+    return res.status(200).json({ ok: true, sfida });
   }
 
   // Rate limit per IP
@@ -114,6 +168,10 @@ export default async function handler(req, res) {
   const specializzazione = String(body.specializzazione || '').trim();
   const accettaTos = body.accettaTos === true;
   const accettaDpa = body.accettaDpa === true;
+  const telefono = normTelefono(body.telefono);
+  const consensoCommerciale = body.consensoCommerciale === true;
+  const sfida = typeof body.sfida === 'string' ? body.sfida : '';
+  const codice = String(body.codice || '');
 
   if (!accettaTos || !accettaDpa) {
     return res.status(400).json({ error: 'Per creare l\'account devi accettare i Termini di servizio e l\'Accordo sul trattamento dei dati (DPA)' });
@@ -133,6 +191,22 @@ export default async function handler(req, res) {
   if (!isNonEmptyString(specializzazione, 200)) {
     return res.status(400).json({ error: 'Specializzazione obbligatoria' });
   }
+  if (!telefono) {
+    return res.status(400).json({ error: 'Numero di telefono obbligatorio (solo cifre, eventuale prefisso internazionale)' });
+  }
+  // Codice di verifica dell'email: tentativi limitati per sfida, poi verifica della firma
+  const nonce = nonceSfida(sfida);
+  if (!nonce) return res.status(400).json({ error: 'Richiedi il codice di verifica', motivo: 'sfida_non_valida' });
+  if (!(await checkSupabaseRateLimit(`n:${nonce}`, 'register-tentativi', 5, 900))) {
+    return res.status(429).json({ error: 'Troppi tentativi con questo codice. Richiedine uno nuovo.', motivo: 'tentativi' });
+  }
+  const vc = verificaCodice(codiceSecret, sfida, codice, email, SCOPO_REG);
+  if (!vc.ok) {
+    const msg = { codice_errato: 'Codice non corretto', codice_scaduto: 'Codice scaduto: richiedine uno nuovo',
+                  email_diversa: 'L\'email è cambiata dopo l\'invio del codice: richiedine uno nuovo',
+                  sfida_non_valida: 'Richiedi il codice di verifica' }[vc.motivo] || 'Codice non valido';
+    return res.status(400).json({ error: msg, motivo: vc.motivo });
+  }
 
   const base = `${supabaseUrl}/rest/v1`;
   const authBase = `${supabaseUrl}/auth/v1`;
@@ -143,7 +217,7 @@ export default async function handler(req, res) {
   };
 
   // ───────────────────────────────────────────────────────────────────────────
-  // STEP 1: crea utente in Supabase Auth (email_confirm: true salta verifica)
+  // STEP 1: crea utente in Supabase Auth (email_confirm: true: l'email è già verificata col codice)
   // ───────────────────────────────────────────────────────────────────────────
   let userId;
   try {
@@ -190,6 +264,9 @@ export default async function handler(req, res) {
         numero_iscrizione_ordine: ordineNumero,
         provincia_ordine: ordineProvincia,
         specializzazione,
+        telefono_registrazione: telefono,
+        consenso_commerciale: consensoCommerciale,
+        consenso_commerciale_at: consensoCommerciale ? new Date().toISOString() : null,
         stato: 'in_attesa'
       })
     });
@@ -218,11 +295,14 @@ export default async function handler(req, res) {
       headers: { ...headers, 'Prefer': 'return=representation' },
       body: JSON.stringify([
         { medico_id: medicoId, email, documento: 'tos', versione: LEGAL_DOCS.tos.versione, hash_testo: LEGAL_DOCS.tos.hash },
-        { medico_id: medicoId, email, documento: 'dpa', versione: LEGAL_DOCS.dpa.versione, hash_testo: LEGAL_DOCS.dpa.hash }
+        { medico_id: medicoId, email, documento: 'dpa', versione: LEGAL_DOCS.dpa.versione, hash_testo: LEGAL_DOCS.dpa.hash },
+        ...(consensoCommerciale ? [{ medico_id: medicoId, email, documento: 'consenso_commerciale',
+            versione: CONSENSO_COMMERCIALE.versione, hash_testo: hashTesto(CONSENSO_COMMERCIALE.testo) }] : [])
       ])
     });
     const accRows = accRes.ok ? await accRes.json().catch(() => []) : [];
-    if (!accRes.ok || !Array.isArray(accRows) || accRows.length !== 2) {
+    const attese = consensoCommerciale ? 3 : 2;
+    if (!accRes.ok || !Array.isArray(accRows) || accRows.length !== attese) {
       const errText = !accRes.ok ? await accRes.text().catch(() => '') : `rows=${accRows.length}`;
       console.error('[register-doctor] insert accettazioni_legali failed:', accRes.status, errText);
       // Rollback: senza evidenza dell'accettazione l'account non nasce
@@ -275,8 +355,12 @@ export default async function handler(req, res) {
   // ───────────────────────────────────────────────────────────────────────────
   // STEP 5: invia email di notifica admin con link di approvazione
   // ───────────────────────────────────────────────────────────────────────────
-  const approveLink = `https://delphi-med.com/api/approve-doctor?token=${encodeURIComponent(jwtToken)}`;
-  const adminEmail = 'fb.castaldo@gmail.com';
+  // Sulle anteprime Vercel il link punta all'anteprima stessa (collaudo del flusso senza toccare la
+  // produzione); altrove sempre al dominio canonico.
+  const hostReq = String(req.headers['x-forwarded-host'] || req.headers.host || '').toLowerCase();
+  const origine = /^medidesk-[a-z0-9-]+-fabio-castaldo-s-projects\.vercel\.app$/.test(hostReq) ? `https://${hostReq}` : 'https://delphi-med.com';
+  const approveLink = `${origine}/api/approve-doctor?token=${encodeURIComponent(jwtToken)}`;
+  const adminEmail = 'fb.castaldo@gmail.com'; // deve coincidere con CASELLA_GESTORE in approve-doctor.js
 
   try {
     const resend = new Resend(resendApiKey);
@@ -287,6 +371,7 @@ export default async function handler(req, res) {
       html: buildAdminRegistrationEmail({
         nome: esc(nome), cognome: esc(cognome), email: esc(email),
         ordineNumero: esc(ordineNumero), ordineProvincia: esc(ordineProvincia),
+        telefono: esc(telefono), consensoCommerciale,
         approveLink
       })
     });
@@ -305,17 +390,19 @@ export default async function handler(req, res) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Template email admin (unica implementazione: il frontend non ne ha una copia)
 // ─────────────────────────────────────────────────────────────────────────────
-function buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordineProvincia, approveLink }) {
+function buildAdminRegistrationEmail({ nome, cognome, email, ordineNumero, ordineProvincia, telefono, consensoCommerciale, approveLink }) {
   const rows =
     detailRow('Nome e cognome', `${nome} ${cognome}`) +
-    detailRow('Email', email) +
+    detailRow('Email (verificata con codice)', email) +
+    detailRow('Telefono', telefono) +
     detailRow('N&deg; iscrizione ordine', ordineNumero) +
-    detailRow('Provincia ordine', ordineProvincia, { last: true });
+    detailRow('Provincia ordine', ordineProvincia) +
+    detailRow('Comunicazioni commerciali', consensoCommerciale ? 'consenso dato' : 'nessun consenso', { last: true });
   const body =
     emailTitle('Nuova richiesta di registrazione') +
     `<p style="font-size:15px;color:#333;margin:0 0 24px;">Un nuovo medico ha richiesto l&rsquo;accesso a Delphi~Med.</p>` +
     detailCard(rows) +
-    ctaButton(approveLink, 'Approva medico') +
-    `<p style="font-size:12px;color:#888;text-align:center;line-height:1.5;margin:0;">Link di approvazione valido per 7 giorni. Dopo l&rsquo;uso, il token verr&agrave; invalidato.</p>`;
+    ctaButton(approveLink, 'Verifica e approva') +
+    `<p style="font-size:12px;color:#888;text-align:center;line-height:1.5;margin:0;">Il link apre la pagina di verifica sull&rsquo;Albo unico FNOMCeO: l&rsquo;approvazione avviene solo dopo aver registrato l&rsquo;esito. Valido 7 giorni, un solo uso.</p>`;
   return emailShell(body);
 }
