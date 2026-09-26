@@ -109,7 +109,7 @@ const INIPEC_URL = 'https://www.inipec.gov.it/';
 const CASELLA_GESTORE = 'fb.castaldo@gmail.com';
 const isEmail = (x) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x) && x.length <= 254;
 
-function paginaVerifica(token, m, msg, conferma, numeroSpuntato) {
+function paginaVerifica(token, m, msg) {
   const r = (k, v) => `<tr><th>${k}</th><td>${esc(v || '—')}</td></tr>`;
   return `<!DOCTYPE html>
 <html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -126,25 +126,25 @@ label{display:block;font-size:14px;margin:10px 0 4px}input[type=text],input[type
 button{margin-top:22px;width:100%;padding:12px;border:0;border-radius:10px;background:#0B2B4D;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
 .msg{background:#fdecea;color:#c0392b;padding:10px 12px;border-radius:8px;font-size:14px;margin-bottom:12px}
 .nota{font-size:12px;color:#777}
-.avviso{background:#fff4e0;color:#8a5300;padding:12px 14px;border-radius:8px;font-size:14px;line-height:1.5;margin-bottom:12px}
 </style></head><body><div class="card">
 <div class="logo">Delphi~Med</div><h1>Verifica e approvazione del medico</h1>
-${msg ? `<div class="msg">${esc(msg)}</div>` : ''}${conferma ? `<div class="avviso"><strong>Confermi l'approvazione?</strong><br>${esc(conferma)}<br>Se sì, premi di nuovo «Approva senza PEC»; altrimenti completa i campi qui sotto.</div>` : ''}
+${msg ? `<div class="msg">${esc(msg)}</div>` : ''}
 <table>${r('Nome e cognome', [m.nome, m.cognome].filter(Boolean).join(' '))}${r('Email (verificata con codice)', m.email)}${r('Telefono', m.telefono_registrazione)}${r('N° iscrizione dichiarato', m.numero_iscrizione_ordine)}${r('Ordine (provincia) dichiarato', m.provincia_ordine)}${r('Specializzazione', m.specializzazione)}${r('Registrato il', m.created_at ? new Date(m.created_at).toLocaleString('it-IT', { timeZone: 'Europe/Rome' }) : '')}</table>
 <h2>1. Albo unico FNOMCeO</h2>
 <p>Apri <a href="${ALBO_URL}" target="_blank" rel="noopener noreferrer">albounico.fnomceo.it</a>, cerca <strong>${esc([m.nome, m.cognome].filter(Boolean).join(' '))}</strong> e confronta con i dati sopra.</p>
 <form method="POST" action="/api/approve-doctor">
 <input type="hidden" name="token" value="${esc(token)}">
-<div class="radio"><input type="radio" id="e1" name="esito" value="trovato" required${conferma ? ' checked' : ''}><label for="e1" style="margin:0">Coincide: nome, cognome e Ordine (${esc(m.provincia_ordine || '—')}) risultano all'albo</label></div>
+<div class="radio"><input type="radio" id="e1" name="esito" value="trovato" required><label for="e1" style="margin:0">Coincide: nome, cognome e Ordine (${esc(m.provincia_ordine || '—')}) risultano all'albo</label></div>
 <div class="radio"><input type="radio" id="e2" name="esito" value="non_trovato"><label for="e2" style="margin:0">Non coincide o non trovato</label></div>
 <h2>2. Indice INI-PEC</h2>
-<p>Su <a href="${INIPEC_URL}" target="_blank" rel="noopener noreferrer">inipec.gov.it</a> → «Professionisti», cerca il medico e confronta il numero d'iscrizione. La PEC è facoltativa: se c'è, all'attivazione gli manderemo lì un avviso.</p>
-<div class="radio"><input type="radio" id="n1" name="numero_esito" value="coincide" required${numeroSpuntato ? ' checked' : ''}><label for="n1" style="margin:0">Coincide: il numero d'iscrizione (${esc(m.numero_iscrizione_ordine || '—')}) risulta su INI-PEC</label></div>
+<p>Su <a href="${INIPEC_URL}" target="_blank" rel="noopener noreferrer">inipec.gov.it</a> → «Professionisti», cerca il medico, confronta il numero d'iscrizione e copia la PEC: all'attivazione gli manderemo lì un avviso. Se la PEC non è presente, spunta «PEC non disponibile»: è l'unico caso in cui si approva senza, e resta documentato.</p>
+<div class="radio"><input type="radio" id="n1" name="numero_esito" value="coincide" required><label for="n1" style="margin:0">Coincide: il numero d'iscrizione (${esc(m.numero_iscrizione_ordine || '—')}) risulta su INI-PEC</label></div>
 <div class="radio"><input type="radio" id="n2" name="numero_esito" value="non_coincide"><label for="n2" style="margin:0">Non coincide o non trovato</label></div>
 <p class="nota">Si approva solo se entrambi i controlli coincidono; altrimenti il medico riceve una mail di esito negativo e resta in attesa.</p>
-<label for="pec">PEC trovata (facoltativa)</label><input type="email" id="pec" name="pec" maxlength="254" placeholder="nome.cognome@pec.omceo…">
+<label for="pec">PEC trovata su INI-PEC</label><input type="email" id="pec" name="pec" maxlength="254" placeholder="nome.cognome@pec.omceo…">
+<div class="radio"><input type="checkbox" id="pnd" name="pec_non_disponibile" value="si"><label for="pnd" style="margin:0">PEC non disponibile su INI-PEC</label></div>
 <p class="nota">Data, ora e casella a cui è stato consegnato questo link (${CASELLA_GESTORE}) le registra il sistema. La verifica resta nella traccia di audit.</p>
-${conferma ? '<input type="hidden" name="conferma_senza_pec" value="si">' : ''}<button type="submit">${conferma ? 'Approva senza PEC' : 'Registra la verifica'}</button>
+<button type="submit">Registra la verifica</button>
 </form></div></body></html>`;
 }
 
@@ -242,11 +242,14 @@ export default async function handler(req, res) {
   const pec = String(body.pec || '').trim().toLowerCase().slice(0, 254);
   if (!esito || !numeroEsito) return res.status(400).send(paginaVerifica(token, m, 'Indica l\'esito di entrambi i controlli: Albo unico e INI-PEC.'));
   if (pec && !isEmail(pec)) return res.status(400).send(paginaVerifica(token, m, 'La PEC indicata non è un indirizzo valido.'));
-  // Si approva solo se entrambi i controlli coincidono; senza PEC serve una conferma esplicita
+  // Si approva solo se entrambi i controlli coincidono e la PEC è indicata, oppure dichiarata non disponibile
+  const pecNonDisponibile = body.pec_non_disponibile === 'si';
   const positivoTot = esito === 'trovato' && numeroCoincide;
-  if (positivoTot && !pec && body.conferma_senza_pec !== 'si') {
-    return res.status(200).send(paginaVerifica(token, m, null,
-      'Stai approvando senza PEC: il medico non riceverà l\'avviso di attivazione alla casella del suo Ordine.', true));
+  if (positivoTot && !pec && !pecNonDisponibile) {
+    return res.status(400).send(paginaVerifica(token, m, 'Inserisci la PEC trovata su INI-PEC oppure spunta «PEC non disponibile».'));
+  }
+  if (positivoTot && pec && pecNonDisponibile) {
+    return res.status(400).send(paginaVerifica(token, m, 'Hai indicato una PEC e spuntato «PEC non disponibile»: scegli una delle due.'));
   }
   const positivo = positivoTot;
   const verifica = { fonte: 'Albo unico FNOMCeO', url: ALBO_URL, esito: positivo ? 'trovato' : 'non_trovato', albo: esito, numero_inipec: numeroEsito,
@@ -254,6 +257,7 @@ export default async function handler(req, res) {
     numero_dichiarato: m.numero_iscrizione_ordine || null,
     fonte_numero_pec: positivo ? 'INI-PEC' : null,
     pec_inipec: positivo ? (pec || null) : null,
+    pec_non_disponibile: positivo ? pecNonDisponibile : null,
     link_consegnato_a: CASELLA_GESTORE, verificato_at: new Date().toISOString() };
 
   if (!positivo) {
