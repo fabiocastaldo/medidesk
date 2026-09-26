@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { timingSafeEqual } from 'crypto';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton, esc as escShell } from '../lib/email-shell.js';
 import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
@@ -38,7 +39,20 @@ async function sendSmsWithRetry(args) {
   return r;
 }
 
+// Confronto a tempo costante del segreto del cron (piano privacy riga 72).
+function segretoCronValido(header, cronSecret) {
+  const atteso = Buffer.from(`Bearer ${cronSecret}`, 'utf8');
+  const ricevuto = Buffer.from(typeof header === 'string' ? header : '', 'utf8');
+  if (ricevuto.length !== atteso.length) return false;
+  return timingSafeEqual(ricevuto, atteso);
+}
+
 export default async function handler(req, res) {
+  // Vercel Cron chiama in GET: ogni altro metodo e' rifiutato prima di tutto.
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
   // Auth: CRON_SECRET obbligatorio. Vercel Cron lo inietta automaticamente
   // come header Authorization: Bearer <CRON_SECRET> nelle chiamate scheduled.
   const cronSecret = process.env.CRON_SECRET;
@@ -46,7 +60,7 @@ export default async function handler(req, res) {
     console.error('[send-reminders] CRON_SECRET non configurato');
     return res.status(500).json({ error: 'Server misconfiguration' });
   }
-  if (req.headers['authorization'] !== `Bearer ${cronSecret}`) {
+  if (!segretoCronValido(req.headers['authorization'], cronSecret)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
