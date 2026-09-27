@@ -3402,7 +3402,7 @@ async function mfaSetupConferma(){
     const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: _mfaSetupId, code });
     if(error){ setMsg(_mfaErr(error.message), 'err'); return; }
     const id = _mfaSetupId; _mfaSetupId = null;
-    await _auditCoop('mfa_fattore_aggiunto', 'segreteria', null, { factor_id: id, obbligatoria: true });
+    // traccia mfa_fattore_aggiunto scritta dal DB (trigger su auth.mfa_factors, riga 29)
     enterPlancia();
   }catch(e){
     console.error('[Plancia] mfaSetupConferma:', e.message);
@@ -3563,7 +3563,7 @@ async function mfaConfermaAttivazione(){
     document.getElementById('sic-mfa-enroll').classList.add('hidden');
     document.getElementById('sic-mfa-azioni').style.display = '';
     setBoxMsg('sic-mfa-msg', 'Verifica in due passaggi attivata.', 'info');
-    _auditCoop('mfa_fattore_aggiunto', 'segreteria', null, { factor_id: idAttivato });
+    // traccia mfa_fattore_aggiunto scritta dal DB (trigger su auth.mfa_factors, riga 29)
     mfaRenderStato(); secPromemoriaMfa();
   }catch(e){
     console.error('[Plancia] mfaConfermaAttivazione:', e.message);
@@ -3594,7 +3594,7 @@ async function mfaRimuovi(factorId){
     const { error } = await sb.auth.mfa.unenroll({ factorId });
     if(error){ setBoxMsg('sic-mfa-msg', _mfaErr(error.message), 'err'); return; }
     setBoxMsg('sic-mfa-msg', 'Dispositivo rimosso.', 'info');
-    _auditCoop('mfa_fattore_rimosso', 'segreteria', null, { factor_id: factorId });
+    // traccia mfa_fattore_rimosso scritta dal DB (trigger su auth.mfa_factors, riga 29)
     mfaRenderStato(); secPromemoriaMfa();
   }catch(e){
     console.error('[Plancia] mfaRimuovi:', e.message);
@@ -3673,7 +3673,7 @@ async function sicCambiaPassword(){
     ['sic-pwd-attuale','sic-pwd','sic-pwd2'].forEach(id => document.getElementById(id).value = '');
     updateSicStrength();
     setBoxMsg('sic-pwd-msg', 'Password cambiata.', 'info');
-    _auditCoop('password_cambiata', 'segreteria', null, {});
+    // traccia password_modificata scritta dal DB (trigger su auth.users, riga 29)
   }catch(e){
     console.error('[Plancia] sicCambiaPassword:', e.message);
     setBoxMsg('sic-pwd-msg', 'Password non cambiata. Riprova.', 'err');

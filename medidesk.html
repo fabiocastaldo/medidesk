@@ -3805,8 +3805,7 @@ async function mfaSetupConferma(){
     const { error } = await supabaseClient.auth.mfa.challengeAndVerify({ factorId: _mfaSetupId, code });
     if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
     const id = _mfaSetupId; _mfaSetupId = null;
-    // la sessione e' ora aal2: l'audit passa dalla RPC (il medico e' risolto da auth.uid())
-    try{ await supabaseClient.rpc('log_audit', { p_action:'mfa_fattore_aggiunto', p_target_type:'medico', p_target_id:null, p_details:{ factor_id:id, obbligatoria:true } }); }catch(_){ }
+    // traccia mfa_fattore_aggiunto scritta dal DB (trigger su auth.mfa_factors, riga 29), non dal browser
     avvisoSicurezza('mfa_attivata');
     clearAuthMsg();
     document.getElementById('auth-tabs').style.display = '';
@@ -3933,7 +3932,7 @@ async function mfaConfermaAttivazione(){
     document.getElementById('mfa-enroll').style.display = 'none';
     document.getElementById('mfa-azioni').style.display = '';
     showToast('Verifica in due passaggi attivata ✓');
-    auditLog('mfa_fattore_aggiunto', 'medico', S.medicoId, { factor_id: id });
+    // traccia mfa_fattore_aggiunto scritta dal DB (trigger su auth.mfa_factors, riga 29)
     avvisoSicurezza('mfa_attivata');
     mfaRenderStato(); secPromemoriaMfa();
   }catch(e){
@@ -3954,7 +3953,7 @@ async function mfaRimuovi(factorId){
     const { error } = await supabaseClient.auth.mfa.unenroll({ factorId });
     if(error){ showToast(translateAuthError(error.message)); return; }
     showToast('Dispositivo rimosso');
-    auditLog('mfa_fattore_rimosso', 'medico', S.medicoId, { factor_id: factorId });
+    // traccia mfa_fattore_rimosso scritta dal DB (trigger su auth.mfa_factors, riga 29)
     avvisoSicurezza('mfa_dispositivo_rimosso');
     mfaRenderStato(); secPromemoriaMfa();
   }catch(e){
@@ -4025,7 +4024,7 @@ async function cambiaPassword(btn){
     document.getElementById('sec-pwd-confirm').value = '';
     updatePasswordStrengthSec();
     showToast('Password cambiata ✓');
-    auditLog('password_cambiata', 'medico', S.medicoId, {});
+    // traccia password_modificata scritta dal DB (trigger su auth.users, riga 29)
     avvisoSicurezza('password_cambiata');
   });
 }
@@ -4156,10 +4155,7 @@ async function saveNewPassword(){
       if(btn) btn.disabled = false;
       return;
     }
-    try {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if(user) await auditLog('password_recovery_completata', 'medico', user.id, {});
-    } catch(_){}
+    // traccia password_modificata scritta dal DB (trigger su auth.users, riga 29)
     showToast('Password aggiornata con successo!');
     document.getElementById('auth-tabs').style.display = '';
     _inPasswordRecovery = false;
@@ -9355,7 +9351,8 @@ async function confirmDeletePaziente(id, exported){
   const paz = S.pazienti.find(p => String(p.id) === String(id));
   if(!paz) return;
   const nVisite = (paz.visite || []).length;
-  await auditLog('paziente_eliminato', 'paziente', id, { nome: paz.nome, cognome: paz.cognome, n_visite: nVisite, esportato: !!exported });
+  // paziente_eliminato lo scrive il DB (trigger su pazienti, senza dati personali); qui solo la scelta di esportazione
+  await auditLog('paziente_eliminazione_confermata', 'paziente', id, { n_visite: nVisite, esportato: !!exported });
   if(!isOnline()){
     S.pazienti = S.pazienti.filter(p => String(p.id) !== String(id));
     save(); renderPazienti(); updateStats();

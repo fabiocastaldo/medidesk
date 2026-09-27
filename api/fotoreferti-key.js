@@ -113,6 +113,19 @@ export default async function handler(req, res) {
       dek = Buffer.from(dec.Plaintext).toString('base64');
     }
 
+    // Traccia della consegna della chiave dei referti (piano privacy riga 29): chi, quando, per quale
+    // medico, nessun contenuto. Fail-closed: senza traccia la chiave non esce.
+    const au = await fetch(`${supabaseUrl}/rest/v1/audit_log`, {
+      method: 'POST',
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ medico_id: medicoId, action: 'referti_chiave_consegnata', target_type: 'medico', target_id: medicoId,
+        details: { generata: !medico.referti_dek, user_id: userData.id } })
+    }).catch(() => null);
+    if (!au || !au.ok) {
+      console.error('[fotoreferti-key] audit non scritto', au && au.status);
+      return res.status(500).json({ error: 'Si è verificato un errore. Riprova.' });
+    }
+
     return res.status(200).json({ dek });
   } catch (err) {
     console.error('fotoreferti-key error:', err);

@@ -463,7 +463,7 @@ async function checkTrialScadenza(base, headers, resend, runErrors) {
 
 async function auditLogCron(base, headers, medicoId, action, targetType, targetId, details) {
   try {
-    await fetch(`${base}/audit_log`, {
+    const r = await fetch(`${base}/audit_log`, {
       method:  'POST',
       headers: { ...headers, 'Prefer': 'return=minimal' },
       body:    JSON.stringify({
@@ -474,6 +474,7 @@ async function auditLogCron(base, headers, medicoId, action, targetType, targetI
         details:     details || {}
       })
     });
+    if (!r.ok) console.error('[turni-scadenza] auditLog rifiutato:', r.status, action);
   } catch (e) {
     console.error('[turni-scadenza] auditLog failed:', e.message);
   }
