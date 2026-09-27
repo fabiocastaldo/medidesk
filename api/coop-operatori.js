@@ -177,7 +177,8 @@ export default async function handler(req, res) {
       method: 'POST', headers: { ...jsonHeaders, 'Prefer': 'return=minimal' },
       body: JSON.stringify({ medico_id: null, action: 'mfa_azzerata_da_admin', target_type: 'segreteria', target_id: String(op.id),
         details: { rimossi, cooperativa_id: coopId, eseguita_da: seg.id, user_id: userData.id, operatore: op.email || '', auth_mode: 'jwt_segreteria' } })
-    }).catch(e => console.error('[coop-operatori] audit:', e.message));
+    }).then(r => { if (!r.ok) console.error('[coop-operatori] audit non scritto', r.status); })
+      .catch(e => console.error('[coop-operatori] audit:', e.message));
     return res.status(200).json({ ok: true, rimossi });
   }
 

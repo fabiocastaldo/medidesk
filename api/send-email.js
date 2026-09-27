@@ -47,7 +47,7 @@ function formatDateIt(dateStr) {
 
 async function auditLog(base, headers, medicoId, tipo, targetType, targetId, authMode, to, resendId) {
   try {
-    await fetch(`${base}/audit_log`, {
+    const r = await fetch(`${base}/audit_log`, {
       method: 'POST',
       headers: { ...headers, 'Prefer': 'return=minimal' },
       body: JSON.stringify({
@@ -58,6 +58,7 @@ async function auditLog(base, headers, medicoId, tipo, targetType, targetId, aut
         details:     { tipo, auth_mode: authMode, to, resend_id: resendId }
       })
     });
+    if (!r.ok) console.error('[send-email] auditLog rifiutato:', r.status, tipo);
   } catch (e) {
     console.error('[send-email] auditLog failed:', e.message);
   }
