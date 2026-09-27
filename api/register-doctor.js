@@ -30,9 +30,13 @@ function normTelefono(t) {
 // INVARIANTE: ogni modifica a dpa.html o termini-di-servizio.html richiede
 // l'aggiornamento di versione e hash qui (sha256sum <file>).
 // ─────────────────────────────────────────────────────────────────────────────
+// 27/09/2026 (s56): hash riallineati ai file serviti. Il commit 22d8695 (26/09) aveva cambiato solo il
+// <link> dei caratteri (Google Fonts -> /vendor/) senza aggiornare gli hash: testo legale identico,
+// quindi versione invariata. Hash precedenti (file fino al 26/09 06:41 UTC): tos 3a26b732..., dpa 036b2632...
+// Gate di ciclo: sha256sum termini-di-servizio.html dpa.html deve coincidere con questi valori.
 const LEGAL_DOCS = {
-  tos: { versione: 'tos-0.2', hash: '3a26b7320f3f8d5ef170b756743711458cd023487ee7e3b64461ba53e5c0a8c2' },
-  dpa: { versione: 'dpa-0.2', hash: '036b2632e9a7d091b48066dd49799b4473efdb268f0be9946af9c55e0444bffb' }
+  tos: { versione: 'tos-0.2', hash: '08ecfbc8b6e9b170451d48d7733ba16291138a41ad1e854763a7bc66a4423786' },
+  dpa: { versione: 'dpa-0.2', hash: '104d7931cc8c93eedfb5c0c24c59c0dcd7facf4808ffcbe68609933ca8fc3dd4' }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
