@@ -12706,6 +12706,8 @@ function esportaDati(){
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showToast('Backup scaricato ✓');
+    // Traccia dichiarata dal browser (fonte client, non probatoria): conteggi, nessun dato (riga 29)
+    auditLog('dati_esportati', 'medico', S.medicoId, { formato: 'json', n_pazienti: (S.pazienti||[]).length, n_appuntamenti: (S.appuntamenti||[]).length });
   } catch(e){
     console.error('[Delphi~Med] esportaDati:', e.message);
     showToast(erroreLeggibile('Esportazione non riuscita', e));
