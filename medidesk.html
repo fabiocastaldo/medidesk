@@ -5237,6 +5237,8 @@ function load(){
     console.log('[Delphi~Med] cleaning legacy localStorage');
     localStorage.removeItem('medidesk_v2');
   }
+  // chiave di una migrazione di maggio 2026, non più letta (censimento A05, 27/09/2026)
+  try{ localStorage.removeItem('visite_migrated'); }catch(e){}
   localStorage.removeItem('medidesk_apikey');
 })();
 
