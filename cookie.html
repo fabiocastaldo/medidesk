@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cookie e strumenti del sito — Delphi Med</title>
+  <link href="/vendor/fonts/fonts-legali.css" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;padding:0;background:#f0f4f8;font-family:'DM Sans',Arial,sans-serif;color:#1a1a1a}
+    header{position:relative;padding:14px 32px;display:flex;align-items:center;background:radial-gradient(130% 100% at 80% -10%,rgba(47,116,199,.7),transparent 62%),linear-gradient(225deg,#2F74C7 0%,#15487F 45%,#0B2B4D 100%)}
+    header::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(240deg,rgba(255,255,255,.22),rgba(255,255,255,.04) 40%,transparent 75%)}
+    .home-logo-wrap{position:relative;z-index:1;display:flex;flex-direction:column;line-height:1.2;text-decoration:none}
+    .home-logo{color:#fff;font-size:24px;font-weight:700;font-family:'Montserrat',sans-serif;letter-spacing:-.2px}
+    .home-logo-payoff{color:rgba(255,255,255,.72);font-size:11.5px;font-weight:400;margin-top:4px;letter-spacing:.3px;font-family:'DM Sans',Arial,sans-serif}
+    .container{max-width:760px;margin:48px auto;padding:0 24px 80px}
+    h1{font-size:28px;font-weight:700;color:#15487F;margin:0 0 8px}
+    .subtitle{font-size:14px;color:#888;margin:0 0 40px}
+    h2{font-size:18px;font-weight:700;color:#1a1a1a;margin:32px 0 10px}
+    p{font-size:15px;line-height:1.8;color:#444;margin:0 0 16px}
+    ul{font-size:15px;line-height:1.8;color:#444;margin:0 0 16px;padding-left:24px}
+    .card{background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 16px rgba(0,0,0,.06)}
+    table{width:100%;border-collapse:collapse;margin:0 0 20px;font-size:14px;line-height:1.6;color:#444}
+    th,td{border:1px solid #e3e8ef;padding:10px 12px;text-align:left;vertical-align:top}
+    th{background:#f5f8fb;color:#1a1a1a;font-weight:700}
+    .tab-wrap{overflow-x:auto}
+    code{font-size:13px;background:#f5f8fb;padding:1px 5px;border-radius:4px;word-break:break-all}
+    .nota{font-size:13px;color:#777}
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="home-logo-wrap">
+      <span class="home-logo">Delphi~Med</span>
+      <span class="home-logo-payoff">Il tuo medico, al tuo fianco</span>
+    </a>
+  </header>
+  <div class="container">
+    <div class="card">
+      <h1>Informativa sugli strumenti del sito (cookie e memoria del dispositivo)</h1>
+      <p class="subtitle">Versione 2.3 del 27 settembre 2026</p>
+      <p>Sito e servizio: www.delphi-med.com, cioè il sito pubblico, le pagine dei medici e dei centri, il gestionale del medico e la plancia delle organizzazioni. Titolare per le finalità proprie del sito: Delphi-Med S.r.l. (in costituzione); sede legale, codice fiscale/partita IVA e PEC saranno pubblicati alla costituzione della società. Contatto: <a href="mailto:privacy@delphi-med.com" style="color:#15487F">privacy@delphi-med.com</a>. Per i dati dei pazienti trattati per conto del medico si applica anche l'informativa del rispettivo Titolare. Data di aggiornamento dell'inventario: 27/09/2026.</p>
+      <h2>1. Quali strumenti sono utilizzati</h2>
+      <p>Il sito non usa cookie. Utilizza soltanto strumenti di memorizzazione del dispositivo (memoria locale e memoria di sessione del browser) necessari alle funzioni che richiedi. Gli strumenti effettivamente presenti, con funzione, soggetto, durata e necessità, sono identificati nella tabella seguente. L'accesso a un servizio esterno può inoltre comportare comunicazione di dati tecnici: tali destinatari e finalità sono indicati nell'informativa e nell'elenco dei fornitori.</p>
+      <div class="tab-wrap"><table>
+        <tr><th>Nome e soggetto</th><th>Finalità e dati</th><th>Durata e necessità</th></tr>
+        <tr><td><code>sb-ijdvozurgrsqunxgwdil-auth-token</code><br>memoria locale, prima parte</td><td>Sessione di accesso al gestionale del medico e alla plancia delle organizzazioni (token di autenticazione del servizio). Presente solo dopo l'accesso.</td><td>Fino all'uscita o alla scadenza della sessione (8 ore di inattività, 7 giorni in tutto); rimossa all'uscita. Strettamente necessario.</td></tr>
+        <tr><td><code>medidesk_ui</code><br>memoria locale, prima parte</td><td>Preferenze di visualizzazione del gestionale: vista dell'agenda, giorno selezionato, ultima pagina aperta. Nessun dato personale.</td><td>Finché non viene cancellata dal browser. Necessario alla funzione richiesta.</td></tr>
+        <tr><td><code>skin</code><br>memoria locale, prima parte</td><td>Tema di colore scelto dal medico. Nessun dato personale.</td><td>Finché non viene cancellata dal browser. Necessario alla funzione richiesta.</td></tr>
+        <tr><td><code>archivio_banner_dismissed_at</code><br>memoria locale, prima parte</td><td>Data in cui il medico ha chiuso l'avviso sull'archivio, per non riproporlo. Nessun dato personale.</td><td>Finché non viene cancellata dal browser. Necessario alla funzione richiesta.</td></tr>
+        <tr><td><code>pf_token</code><br>memoria locale, prima parte</td><td>Pagine pubbliche di prenotazione: collegamento del dispositivo al tuo elenco di prenotazioni. Su un dispositivo condiviso chi usa lo stesso browser può vedere presso quali studi hai prenotato: in quel caso cancellalo dalle impostazioni del browser.</td><td>Finché non viene cancellato dal browser. Necessario alla funzione richiesta.</td></tr>
+        <tr><td><code>dm-sec-promemoria</code>, <code>dm-coop-sec-promemoria</code><br>memoria di sessione, prima parte</td><td>Ricorda che il promemoria sulla verifica in due passaggi è già stato mostrato nella scheda aperta.</td><td>Fino alla chiusura della scheda. Necessario alla funzione richiesta.</td></tr>
+        <tr><td>Cookie</td><td>Il sito non scrive cookie.</td><td>—</td></tr>
+        <tr><td>Risorse esterne</td><td>Caratteri e librerie sono serviti da delphi-med.com. L'unica origine esterna è il database del servizio (Supabase, regione UE), contattato per le funzioni che richiedi. Nessuno strumento pubblicitario o di analisi. Il pagamento dell'abbonamento del medico, quando attivo, si svolge sulle pagine di Stripe, con i suoi strumenti e la sua informativa.</td><td>—</td></tr>
+      </table></div>
+      <h2>2. Strumenti necessari e strumenti facoltativi</h2>
+      <p>Gli strumenti strettamente necessari alla trasmissione della comunicazione o al servizio espressamente richiesto possono operare senza consenso ai sensi dell'art. 122 del Codice privacy, entro tale necessità. Non sono utilizzati per finalità ulteriori incompatibili. Il blocco degli strumenti necessari può impedire alcune funzioni richieste.</p>
+      <p>Il sito non utilizza strumenti non strettamente necessari: nessun tracciamento pubblicitario o analitico. Se in futuro ne fossero introdotti, resterebbero bloccati fino al consenso, rifiutabili senza perdere le funzioni essenziali; la sola prosecuzione della navigazione o lo scorrimento della pagina non varrebbero come consenso.</p>
+      <h2>3. Gestione delle scelte e diritti</h2>
+      <p>Poiché l'inventario verificato contiene soltanto strumenti strettamente necessari, non viene richiesto un consenso tramite banner.</p>
+      <p>Le impostazioni del browser consentono di eliminare o bloccare cookie e memoria locale; alcune funzioni, incluso l'accesso autenticato, possono richiedere una nuova autenticazione. Per i dati personali eventualmente trattati puoi esercitare i diritti previsti dal GDPR al recapito indicato e proporre reclamo al Garante. Finalità, destinatari, trasferimenti e conservazione dei dati personali sono precisati nelle informative applicabili: <a href="/privacy-policy" style="color:#15487F">pazienti</a> e <a href="/privacy-medici" style="color:#15487F">medici</a>.</p>
+      <p class="nota">Riferimenti: art. 122 d.lgs. 196/2003; artt. 5, 6, 7, 12-13 e 25 GDPR; Garante per la protezione dei dati personali, Linee guida cookie e altri strumenti di tracciamento del 10 giugno 2021, doc. web 9677876.</p>
+    </div>
+  </div>
+</body>
+</html>
