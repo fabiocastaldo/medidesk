@@ -121,6 +121,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .sec-promemoria .sec-pm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .nav-item .sec-dot{display:none;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-left:auto}
 .nav-item.sec-attenzione .sec-dot{display:inline-block}
+.nav-item.ass-nuova .sec-dot{display:inline-block;background:#dc2626}
+.ass-testa{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;margin-bottom:10px}
+.ass-testa span{font-size:12px;color:var(--ink3)}
+.ass-riga{display:flex;justify-content:flex-start;margin-bottom:8px}.ass-riga.mia{justify-content:flex-end}
+.ass-bolla{max-width:85%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;background:var(--surface2);border:1px solid var(--border)}
+.ass-riga.mia .ass-bolla{background:var(--brand-soft)}
+.ass-meta{font-size:11px;color:var(--ink3);margin-top:4px;text-align:right}
+.ass-ta{width:100%;box-sizing:border-box;margin-top:8px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;font-size:13px;background:var(--surface);color:var(--ink)}
+.av-in{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.95);font-size:15px;font-family:inherit;color:#1a1a1a;margin-top:6px}
+.av-lbl{display:block;color:#fff;font-size:13px;margin-top:14px}
 .dash-avatar{width:52px;height:52px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-family:var(--font-sans);font-weight:600;font-size:17px;color:#fff;letter-spacing:.5px;background:linear-gradient(135deg,var(--brand-mid),var(--brand-deep));box-shadow:var(--shadow-soft)}
 .dash-hello{font-family:var(--font-serif);font-style:italic;font-size:16px;color:var(--ink2);line-height:1.1}
 .dash-name{font-family:var(--font-serif);font-size:26px;color:var(--ink);letter-spacing:-.3px;line-height:1.15}
@@ -1554,6 +1564,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div class="nav-item" onclick="showPage('statistiche')"><span class="icon"><svg class="ic"><use href="#ic-stats"/></svg></span><span>Statistiche</span></div>
       <div class="nav-item" onclick="showPage('impostazioni')"><span class="icon"><svg class="ic"><use href="#ic-settings"/></svg></span><span>Impostazioni</span></div>
       <div class="nav-item" id="nav-sicurezza" onclick="showPage('sicurezza')"><span class="icon"><svg class="ic"><use href="#ic-lock"/></svg></span><span>Sicurezza</span><span class="sec-dot" title="Verifica in due passaggi da attivare"></span></div>
+      <div class="nav-item" id="nav-assistenza" onclick="showPage('assistenza')"><span class="icon"><svg class="ic"><use href="#ic-message"/></svg></span><span>Assistenza</span><span class="sec-dot" title="Nuova risposta dall'assistenza"></span></div>
       <div class="nav-item" onclick="showPage('manutenzione-archivio')"><span class="icon"><svg class="ic"><use href="#ic-archive"/></svg></span><span>Archivio <span id="archivio-badge" style="display:none;font-size:11px"><svg class="ic" style="color:#f59e0b"><use href="#ic-alert"/></svg></span></span></div>
     </nav>
     <div class="sidebar-bottom">
@@ -2336,7 +2347,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div style="margin-bottom:24px">
         <div class="section-title">Verifica in due passaggi</div>
         <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">I fascicoli dei tuoi pazienti sono dati sanitari: chi entra col tuo account li legge tutti e ne decifra i referti. Con la sola password basta un'email di phishing o una password riusata su un altro sito. <strong>Ti chiediamo di attivare la verifica in due passaggi.</strong> Funziona come il codice dell'app della banca: un'app gratuita sul telefono (Google Authenticator o Microsoft Authenticator, dagli store; oppure il tuo gestore di password) ti mostra un numero a 6 cifre che inserisci dopo la password, solo quando entri da un nuovo dispositivo. Senza il tuo telefono, una password rubata non apre nulla: da quel momento il gestionale e i referti si aprono solo col codice. Servono due minuti: premi «Attiva verifica in due passaggi», inquadra il quadrato con l'app e copia il primo numero che compare. Consiglio: attiva il backup dell'app, oppure registra qui un secondo dispositivo con una chiave a sé, così un telefono perso non ti chiude fuori. Se hai perso l'unico telefono, scrivi a support@delphi-med.com: dopo una verifica della tua identità azzeriamo la registrazione e al rientro la rifai da capo.</p>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">I fascicoli dei tuoi pazienti sono dati sanitari: chi entra col tuo account li legge tutti e ne decifra i referti. Con la sola password basta un'email di phishing o una password riusata su un altro sito. <strong>Ti chiediamo di attivare la verifica in due passaggi.</strong> Funziona come il codice dell'app della banca: un'app gratuita sul telefono (Google Authenticator o Microsoft Authenticator, dagli store; oppure il tuo gestore di password) ti mostra un numero a 6 cifre che inserisci dopo la password, solo quando entri da un nuovo dispositivo. Senza il tuo telefono, una password rubata non apre nulla: da quel momento il gestionale e i referti si aprono solo col codice. Servono due minuti: premi «Attiva verifica in due passaggi», inquadra il quadrato con l'app e copia il primo numero che compare. Consiglio: attiva il backup dell'app, oppure registra qui un secondo dispositivo con una chiave a sé, così un telefono perso non ti chiude fuori. Se hai perso l'unico telefono, apri una richiesta dalla pagina <a href="/assistenza" target="_blank" rel="noopener">Assistenza</a> (non serve entrare nel gestionale): dopo una verifica della tua identità azzeriamo la registrazione e al rientro la rifai da capo.</p>
           <div id="mfa-stato" style="font-size:13px;margin-bottom:4px">Caricamento…</div>
           <div id="mfa-fattori"></div>
           <div id="mfa-enroll" style="display:none;margin-top:12px">
@@ -2409,6 +2420,34 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 
     </div>
 
+    <!-- ASSISTENZA (s57): conversazioni con il supporto di Delphi~Med -->
+    <div id="page-assistenza" class="page">
+      <div class="page-header">
+        <div><div class="page-title">Assistenza</div><div class="page-subtitle">Scrivi al supporto di Delphi~Med: la conversazione resta qui</div></div>
+      </div>
+      <div style="margin-bottom:24px">
+        <div class="section-title">Nuova richiesta</div>
+        <div class="card"><div class="card-body">
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Scegli il motivo e scrivi il messaggio. La risposta arriva in questa pagina: ti avvisiamo con un pallino sulla voce «Assistenza» e con un'email che non contiene il testo. Non scrivere qui dati dei pazienti.</p>
+          <select id="ass-motivo" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px">
+            <option value="">Motivo…</option>
+            <option value="accesso">Non riesco ad accedere</option>
+            <option value="verifica_due_passaggi">Verifica in due passaggi / telefono perso</option>
+            <option value="registrazione">Registrazione</option>
+            <option value="sicurezza">Sospetto accesso non mio</option>
+            <option value="altro">Altro</option>
+          </select>
+          <textarea id="ass-testo" rows="4" maxlength="4000" placeholder="Scrivi qui la tua richiesta…" class="ass-ta"></textarea>
+          <div style="text-align:right;margin-top:10px"><button class="btn btn-primary" onclick="assApri(this)">Invia richiesta</button></div>
+        </div></div>
+      </div>
+      <div style="margin-bottom:24px">
+        <div class="section-title">Le tue richieste</div>
+        <div id="ass-elenco"></div>
+        <p style="font-size:12px;color:var(--ink3);margin-top:6px">Le conversazioni sono chiuse dal supporto, oppure da sole dopo 30 giorni senza messaggi, e sono cancellate automaticamente 12 mesi dopo la chiusura.</p>
+      </div>
+    </div>
+
     <!-- MENU (mobile) -->
     <div id="page-menu" class="page">
       <div class="page-header">
@@ -2434,6 +2473,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           <button class="mnu-item" onclick="showPage('piani')"><span class="mnu-ico"><svg class="ic"><use href="#ic-file"/></svg></span><span class="mnu-lbl">Piani</span></button>
           <button class="mnu-item" onclick="showPage('impostazioni')"><span class="mnu-ico"><svg class="ic"><use href="#ic-settings"/></svg></span><span class="mnu-lbl">Impostazioni</span></button>
           <button class="mnu-item" onclick="showPage('sicurezza')"><span class="mnu-ico"><svg class="ic"><use href="#ic-lock"/></svg></span><span class="mnu-lbl">Sicurezza</span></button>
+          <button class="mnu-item" onclick="showPage('assistenza')"><span class="mnu-ico"><svg class="ic"><use href="#ic-message"/></svg></span><span class="mnu-lbl">Assistenza</span></button>
           <button class="mnu-item mnu-logout" id="mobile-logout-btn" onclick="signOut()"><span class="mnu-ico"><svg class="ic"><use href="#ic-logout"/></svg></span><span class="mnu-lbl">Esci</span></button>
         </div>
       </div>
@@ -2680,6 +2720,52 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         </div>
         <div id="cons-body" style="max-width:520px;margin:16px auto 0;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:14px;line-height:1.55"></div>
         <div id="cons-actions" style="max-width:520px;margin:14px auto 0;text-align:center"></div>
+      </div>
+    </div>
+
+<!-- ══════════════ ASSISTENZA PUBBLICA (/assistenza) E LINK (/a/<token>) — s57 ══════════════ -->
+    <div id="view-assistenza" style="display:none">
+      <div class="booking-wrap">
+        <div class="home-logo-wrap" style="align-items:center;text-align:center;margin-bottom:20px"><span class="home-logo">Delphi~Med</span></div>
+        <div style="text-align:center;margin-bottom:6px">
+          <div id="av-titolo" style="font-size:22px;font-weight:700;color:#fff">Assistenza</div>
+          <div id="av-sub" style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px">Per i medici e le organizzazioni che usano Delphi~Med</div>
+        </div>
+        <div id="av-form" style="display:none;max-width:520px;margin:18px auto 0">
+          <div style="color:rgba(255,255,255,.85);font-size:14px;line-height:1.5">Usa questa pagina se non riesci a entrare nel gestionale (telefono perso, account sospeso, registrazione non completata) o se temi che qualcuno sia entrato al posto tuo. Se sei già dentro, usa la voce «Assistenza» del gestionale. Se sei un paziente, per appuntamenti e referti contatta il tuo medico.</div>
+          <label class="av-lbl" for="av-email">La tua email</label>
+          <input type="email" id="av-email" class="av-in" maxlength="254" autocomplete="email">
+          <div style="margin-top:12px"><button class="btn btn-primary" type="button" onclick="avCodice(this)">Inviami il codice</button></div>
+          <div id="av-msg" style="display:none;font-size:13px;margin-top:10px"></div>
+          <div id="av-passo2" style="display:none">
+            <label class="av-lbl" for="av-codice">Codice ricevuto via email</label>
+            <input type="text" id="av-codice" class="av-in" inputmode="numeric" autocomplete="one-time-code" maxlength="6" style="max-width:160px">
+            <label class="av-lbl" for="av-motivo">Motivo</label>
+            <select id="av-motivo" class="av-in">
+              <option value="">Scegli…</option>
+              <option value="accesso">Non riesco ad accedere</option>
+              <option value="verifica_due_passaggi">Verifica in due passaggi / telefono perso</option>
+              <option value="sospensione">Account sospeso</option>
+              <option value="registrazione">Registrazione</option>
+              <option value="sicurezza">Sospetto accesso non mio</option>
+              <option value="altro">Altro</option>
+            </select>
+            <label class="av-lbl" for="av-testo">Messaggio</label>
+            <textarea id="av-testo" class="av-in" rows="5" maxlength="4000" placeholder="Descrivi il problema. Non scrivere dati dei pazienti."></textarea>
+            <div style="margin-top:12px"><button class="btn btn-primary" type="button" onclick="avInvia(this)">Invia richiesta</button></div>
+            <div id="av-msg2" style="display:none;font-size:13px;margin-top:10px"></div>
+          </div>
+          <div style="color:rgba(255,255,255,.6);font-size:12px;line-height:1.5;margin-top:18px">L'email serve solo a inviarti il codice e il link della conversazione, che non contiene il testo. La conversazione resta nel servizio ed è cancellata automaticamente 12 mesi dopo la chiusura.</div>
+        </div>
+        <div id="av-conv" style="display:none;max-width:520px;margin:16px auto 0">
+          <div id="av-lista"></div>
+          <div id="av-err" style="display:none;text-align:center;font-size:14px;margin:18px 0"></div>
+          <div id="av-reply" style="display:none;margin-top:14px">
+            <textarea id="av-text" class="av-in" rows="4" maxlength="4000" placeholder="Scrivi qui il tuo messaggio…"></textarea>
+            <div style="text-align:right;margin-top:8px"><button class="btn btn-primary" type="button" onclick="avScrivi(this)">Invia</button></div>
+          </div>
+          <div id="av-chiudi-box" style="display:none;text-align:center;margin-top:22px"><button class="btn btn-secondary" type="button" onclick="avChiudi(this)">Chiudi conversazione</button></div>
+        </div>
       </div>
     </div>
 
@@ -3725,7 +3811,7 @@ function entraSeApprovato(session){
         showLoginView('login');
         showAuthMsg(row.stato === 'in_attesa'
           ? 'Il tuo account è in attesa di approvazione. Ti contatteremo via email.'
-          : 'Il tuo account è sospeso. Per informazioni scrivi a support@delphi-med.com.', 'error');
+          : 'Il tuo account è sospeso. Per informazioni apri una richiesta da www.delphi-med.com/assistenza.', 'error');
         return;
       }
       showAppView();
@@ -4489,6 +4575,7 @@ async function showAppView(){
   startRealtimeChannel();
   await checkTrialExpiry();
   secPromemoriaMfa();
+  assPromemoria();
 }
 
 async function ensureMedicoRecord(user){
@@ -5181,6 +5268,8 @@ function checkView(){
     showBookingView();
   } else if(location.pathname.startsWith('/t/')){
     showThreadView();
+  } else if(location.pathname.startsWith('/a/') || location.pathname === '/assistenza'){
+    showAssistenzaView();
   } else if(location.pathname.startsWith('/p/')){
     showPortfolioView();
   } else {
@@ -5253,13 +5342,13 @@ function showPage(id){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.bottom-nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  ['dashboard','agenda','pazienti','promemoria','comunicazioni','centri','prestazioni','profilo','piani','statistiche','impostazioni','sicurezza','manutenzione-archivio'].forEach((p,i)=>{
+  ['dashboard','agenda','pazienti','promemoria','comunicazioni','centri','prestazioni','profilo','piani','statistiche','impostazioni','sicurezza','assistenza','manutenzione-archivio'].forEach((p,i)=>{
     if(p===id){
       document.querySelectorAll('.nav-item')[i].classList.add('active');
     }
   });
   // Sync bottom nav
-  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','sicurezza','manutenzione-archivio','centri'];
+  const _menuPages = ['profilo','piani','statistiche','prestazioni','impostazioni','sicurezza','assistenza','manutenzione-archivio','centri'];
   const bnKey = _menuPages.includes(id) ? 'menu' : id;
   const bnItem = document.querySelector(`.bottom-nav-item[data-page="${bnKey}"]`);
   if(bnItem) bnItem.classList.add('active');
@@ -5276,6 +5365,7 @@ function showPage(id){
   if(id==='statistiche') renderStatistiche();
   if(id==='impostazioni') renderImpostazioni();
   if(id==='sicurezza'){ mfaRenderStato(); secRenderAccount(); secRenderCorso(); }
+  if(id==='assistenza') assRender();
   if(id==='manutenzione-archivio') renderArchivioPage();
   if(id==='promemoria') promRenderPagina();
 }
@@ -10621,6 +10711,141 @@ function showBookingView(){
   bkInit();
 }
 
+// ── Assistenza Delphi~Med nel gestionale (s57) ──────────────────────────────
+async function assApi(payload){
+  const _jwt=await getAuthJwt();
+  const res=await fetch('/api/assistenza',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify(payload)});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(j.error||'Operazione non riuscita');
+  return j;
+}
+function _assBolle(msgs, mioLato){
+  return (msgs||[]).map(m=>{ const mine=m.direzione===mioLato;
+    return '<div class="ass-riga'+(mine?' mia':'')+'"><div class="ass-bolla">'+escapeHtml(m.corpo)
+      +'<div class="ass-meta">'+(mine?'Tu':'Assistenza Delphi~Med')+' · '+thFmt(m.created_at)+'</div></div></div>'; }).join('');
+}
+function assSegnaNuove(n){ const nav=document.getElementById('nav-assistenza'); if(nav) nav.classList.toggle('ass-nuova', n>0); }
+async function assPromemoria(){ try{ const j=await assApi({azione:'elenco'}); assSegnaNuove(j.non_letti||0); }catch(_){} }
+async function assRender(){
+  const box=document.getElementById('ass-elenco'); if(!box) return;
+  box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Caricamento…</div>';
+  let j;
+  try{ j=await assApi({azione:'elenco', segna_letti:true}); }
+  catch(e){ box.innerHTML='<div style="font-size:13px;color:#dc2626">'+escapeHtml(erroreLeggibile('Richieste non caricate', e))+'</div>'; return; }
+  assSegnaNuove(0);
+  const conv=j.conversazioni||[];
+  if(!conv.length){ box.innerHTML='<div style="font-size:13px;color:var(--ink3)">Nessuna richiesta finora.</div>'; return; }
+  box.innerHTML=conv.map(c=>{ const id=escapeHtml(c.id);
+    return '<div class="card" style="margin-bottom:14px"><div class="card-body">'
+      +'<div class="ass-testa"><strong>'+escapeHtml(c.motivo_testo)+'</strong><span>'+(c.chiusa_at?'Chiusa il '+thFmt(c.chiusa_at).slice(0,10):'Aperta')+' · dal '+thFmt(c.created_at).slice(0,10)+'</span></div>'
+      +_assBolle(c.messaggi,'richiedente')
+      +(c.chiusa_at
+        ?'<div style="font-size:13px;color:var(--ink3);margin-top:8px">Conversazione chiusa. Per un nuovo problema apri una nuova richiesta.</div>'
+        :'<textarea id="ass-r-'+id+'" rows="3" maxlength="4000" placeholder="Scrivi qui…" class="ass-ta"></textarea><div style="text-align:right;margin-top:8px"><button class="btn btn-primary btn-sm" onclick="assScrivi(\''+id+'\',this)">Invia</button></div>')
+      +'</div></div>'; }).join('');
+}
+async function assApri(btn){
+  const sel=document.getElementById('ass-motivo'), ta=document.getElementById('ass-testo');
+  const motivo=sel.value, testo=(ta.value||'').trim();
+  if(!motivo){ showToast('Scegli il motivo della richiesta'); return; }
+  if(!testo){ showToast('Scrivi il messaggio'); return; }
+  await salvaUnaVolta('ass-apri', btn, async()=>{
+    try{ await assApi({azione:'apri', motivo, corpo:testo}); ta.value=''; sel.value=''; showToast('Richiesta inviata ✓'); await assRender(); }
+    catch(e){ showToast(erroreLeggibile('Richiesta non inviata', e)); }
+  });
+}
+async function assScrivi(id, btn){
+  const ta=document.getElementById('ass-r-'+id); const testo=((ta&&ta.value)||'').trim(); if(!testo) return;
+  await salvaUnaVolta('ass-scrivi-'+id, btn, async()=>{
+    try{ await assApi({azione:'scrivi', conversazione_id:id, corpo:testo}); showToast('Messaggio inviato ✓'); await assRender(); }
+    catch(e){ showToast(erroreLeggibile('Messaggio non inviato', e)); }
+  });
+}
+
+// ── Assistenza senza login: pagina pubblica (/assistenza) e link (/a/<token>) — s57 ──
+let _avToken=null, _avSfida=null;
+function showAssistenzaView(){
+  ['view-home','view-app','view-booking','view-portfolio','view-thread'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const v=document.getElementById('view-assistenza'); if(v) v.style.display='block';
+  document.documentElement.classList.add('th-page');
+  if(!document.head.querySelector('meta[name="robots"]')){
+    document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex">');
+  }
+  const m=location.pathname.match(/^\/a\/([^\/?#]+)/);
+  if(m){ _avToken=decodeURIComponent(m[1]); avLeggi(); }
+  else document.getElementById('av-form').style.display='block';
+}
+async function avPost(p){
+  const r=await fetch('/api/assistenza',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){ const e=new Error(j.error||'Operazione non riuscita, riprova'); e.status=r.status; throw e; }
+  return j;
+}
+function avMsg(id, testo, ok){ const e=document.getElementById(id); if(!e) return; e.textContent=testo||''; e.style.display=testo?'block':'none'; e.style.color=ok?'#b7f5c8':'#ffb4b4'; }
+async function avCodice(btn){
+  const email=document.getElementById('av-email').value.trim();
+  if(!email){ avMsg('av-msg','Inserisci la tua email.'); return; }
+  btn.disabled=true;
+  try{ const j=await avPost({azione:'codice', email}); _avSfida=j.sfida; document.getElementById('av-passo2').style.display='block'; avMsg('av-msg','Ti abbiamo inviato un codice a '+email+': vale 10 minuti.', true); }
+  catch(e){ avMsg('av-msg', e.message); }
+  btn.disabled=false;
+}
+async function avInvia(btn){
+  const email=document.getElementById('av-email').value.trim();
+  const codice=document.getElementById('av-codice').value.trim();
+  const motivo=document.getElementById('av-motivo').value;
+  const corpo=document.getElementById('av-testo').value.trim();
+  if(!_avSfida){ avMsg('av-msg2','Richiedi prima il codice.'); return; }
+  if(!/^\d{6}$/.test(codice)){ avMsg('av-msg2','Inserisci il codice di 6 cifre.'); return; }
+  if(!motivo){ avMsg('av-msg2','Scegli il motivo.'); return; }
+  if(!corpo){ avMsg('av-msg2','Scrivi il messaggio.'); return; }
+  btn.disabled=true;
+  try{
+    await avPost({azione:'apri_pubblica', email, sfida:_avSfida, codice, motivo, corpo});
+    document.getElementById('av-form').innerHTML='<div style="color:#fff;font-size:15px;line-height:1.55;text-align:center;margin-top:10px">Richiesta inviata. Ti abbiamo mandato per email il link della conversazione: da lì leggerai la risposta e potrai aggiungere messaggi.</div>';
+  }catch(e){ avMsg('av-msg2', e.message); btn.disabled=false; }
+}
+async function avLeggi(){
+  document.getElementById('av-conv').style.display='block';
+  let j;
+  try{ j=await avPost({azione:'leggi_token', token:_avToken}); }
+  catch(e){
+    document.getElementById('av-lista').innerHTML='';
+    document.getElementById('av-reply').style.display='none';
+    document.getElementById('av-chiudi-box').style.display='none';
+    avMsg('av-err', e.status===401 ? 'Questo link non è più valido.' : e.message); return;
+  }
+  const c=j.conversazione||{}, gestore=j.ruolo==='gestore', mio=gestore?'gestore':'richiedente';
+  document.getElementById('av-titolo').textContent=c.motivo||'Assistenza';
+  let sub=(c.chiusa?'Conversazione chiusa':'Conversazione aperta')+' · dal '+thFmt(c.created_at).slice(0,10);
+  if(gestore) sub+=' · '+(c.origine==='gestionale'?'dal gestionale':'dalla pagina pubblica')+' · '+(c.email||'')+(c.medico?' · '+c.medico.nome+' ('+c.medico.stato+')':'');
+  document.getElementById('av-sub').textContent=sub;
+  const L=j.messaggi||[];
+  document.getElementById('av-lista').innerHTML=L.map(x=>{ const mine=x.direzione===mio;
+    return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin-bottom:10px">'
+      +'<div style="max-width:85%;padding:10px 13px;border-radius:12px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word;color:#fff;background:'+(mine?'rgba(13,148,201,.35)':'rgba(255,255,255,.12)')+'">'
+      +escapeHtml(x.corpo)
+      +'<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:5px;text-align:right">'+(mine?'Tu':(gestore?'Richiedente':'Assistenza Delphi~Med'))+' · '+thFmt(x.created_at)+'</div>'
+      +'</div></div>'; }).join('');
+  document.getElementById('av-reply').style.display=c.chiusa?'none':'block';
+  document.getElementById('av-chiudi-box').style.display=(gestore && !c.chiusa)?'block':'none';
+  avMsg('av-err', c.chiusa ? 'La conversazione è chiusa.' : '', true);
+}
+async function avScrivi(btn){
+  const ta=document.getElementById('av-text'); const corpo=(ta.value||'').trim(); if(!corpo) return;
+  btn.disabled=true;
+  try{ await avPost({azione:'scrivi_token', token:_avToken, corpo}); ta.value=''; await avLeggi(); }
+  catch(e){ avMsg('av-err', e.message); }
+  btn.disabled=false;
+}
+async function avChiudi(btn){
+  const ok=await confermaModale('Chiudere la conversazione? Tutti i link inviati smettono di funzionare e non si potrà più scrivere.', { titolo:'Chiudi conversazione', ok:'Chiudi', annulla:'Annulla' });
+  if(!ok) return;
+  btn.disabled=true;
+  try{ await avPost({azione:'chiudi_token', token:_avToken}); await avLeggi(); }
+  catch(e){ avMsg('av-err', e.message); btn.disabled=false; }
+}
+
 // ── Thread paziente senza login (/t/<token>) — s11 ──────────────────────────
 function showThreadView(){
   ['view-home','view-app','view-booking','view-portfolio'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
@@ -11611,6 +11836,19 @@ async function loadAnticipaPage(){
       +'<strong>'+escapeHtml(appt.cognome_paziente)+' '+escapeHtml(appt.nome_paziente)+'</strong><br>'
       +d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' alle '+escapeHtml(appt.ora)+'<br>'
       +escapeHtml(appt.tipo_visita||'Visita')+'</div>';
+    // s57 (piano privacy riga 42): passata la data dell'appuntamento la lista non avvisa più
+    // (lib/waitlist.js avvisa solo per slot anteriori all'appuntamento): la pagina lo dice.
+    const _apptTs=new Date(appt.data+'T'+(appt.ora||'00:00')+':00');
+    if(!Number.isNaN(_apptTs.getTime()) && _apptTs<=new Date()){
+      content.innerHTML=`
+        <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--ink3)"><use href="#ic-calendar"/></svg></div>
+        <h2>Iscrizione conclusa</h2>
+        ${cardAppt}
+        <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+          La data del tuo appuntamento è passata: la lista d'attesa non ti invierà più avvisi.
+        </p>`;
+      return;
+    }
     if(payload.iscritto){
       content.innerHTML=`
         <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:#22c55e"><use href="#ic-check"/></svg></div>
@@ -11618,6 +11856,7 @@ async function loadAnticipaPage(){
         ${cardAppt}
         <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
           Riceverai un'email se si libera una data più vicina per questo appuntamento.
+          L'iscrizione vale fino al giorno del tuo appuntamento.
         </p>
         <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="waitlistUnsubscribe()">Annulla iscrizione</button>`;
     } else {
@@ -11628,6 +11867,7 @@ async function loadAnticipaPage(){
         <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
           Se un altro paziente cancella un appuntamento prima della tua data, riceverai un'email:
           la prenotazione del nuovo orario resta libera, vale l'ordine di arrivo.
+          L'iscrizione vale fino al giorno del tuo appuntamento.
         </p>
         <label style="display:flex;align-items:flex-start;gap:10px;text-align:left;font-size:13px;color:var(--ink2);line-height:1.5;margin:16px 0;cursor:pointer">
           <input type="checkbox" id="wl-consenso" style="margin-top:2px">
@@ -12575,7 +12815,7 @@ ${refertiErrors > 0 ? `<div class="warn"><strong>Attenzione</strong>: ${refertiE
 <p>Lo <code>snapshot.json</code> è progettato per essere reimportabile in una futura versione di Delphi~Med. Tienilo insieme alla cartella <code>referti/</code> per ripristinare l'archivio completo.</p>
 <hr style="margin-top:40px">
 <p style="font-size:12px;color:#888">Delphi~Med — Agenda digitale per medici specialisti.<br>
-Per supporto: support@delphi-med.com</p>
+Per assistenza: voce «Assistenza» del gestionale Delphi~Med.</p>
 </body>
 </html>`;
   root.file('LEGGIMI.html', leggimi);
