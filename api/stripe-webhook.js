@@ -92,6 +92,15 @@ async function applySubscription(sub) {
     })
   });
   if (!r2.ok) throw new Error(`patch medici ${r2.status}: ${await r2.text().catch(() => '')}`);
+  // Traccia del cambio di abbonamento (piano privacy riga 29): stato e piano, niente importi né dati di pagamento.
+  const ra = await fetch(`${base}/audit_log`, {
+    method: 'POST',
+    headers: { 'apikey': process.env.SUPABASE_SECRET_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SECRET_KEY}`,
+               'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ medico_id: medicoId, action: 'abbonamento_aggiornato', target_type: 'abbonamento', target_id: sub.id,
+      details: { status: sub.status || null, piano: pianoEff, fonte: 'webhook' } })
+  }).catch(e => { console.error('[stripe-webhook] audit:', e.message); return null; });
+  if (ra && !ra.ok) console.error('[stripe-webhook] audit non scritto', ra.status);
 }
 
 async function readRawBody(req) {
@@ -119,7 +128,7 @@ export default async function handler(req, res) {
     event = stripe.webhooks.constructEvent(rawBody, sig, whSecret);
   } catch (err) {
     console.error('[stripe-webhook] firma non valida:', err.message);
-    return res.status(400).send(`Webhook signature error: ${err.message}`);
+    return res.status(400).send('Webhook signature error');
   }
 
   try {
