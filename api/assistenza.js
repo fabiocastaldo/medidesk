@@ -23,6 +23,7 @@ import { Resend } from 'resend';
 import { createHash, randomBytes } from 'crypto';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
+import { emailShell, emailTitle, ctaButton } from '../lib/email-shell.js';
 
 const SCOPO = 'assistenza-v1';
 const MAX_CORPO = 4000;
@@ -41,17 +42,13 @@ const isEmail = (e) => /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(e) && e.length <=
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function shell(titolo, corpoHtml) {
-  return `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a1a">
-  <div style="font-size:18px;font-weight:700;margin-bottom:12px">Delphi~Med</div>
-  <div style="font-size:17px;font-weight:600;margin-bottom:10px">${esc(titolo)}</div>
-  ${corpoHtml}
-  <div style="font-size:12px;color:#888;margin-top:22px;line-height:1.5">Il testo della conversazione non viene mai inviato per email: resta nel servizio. Il link è personale, non inoltrarlo.</div>
-</div>`;
+// Veste grafica comune a tutte le mail di Delphi~Med (lib/email-shell.js).
+const para = (html) => `<p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 16px;">${html}</p>`;
+const nota = (html) => `<p style="font-size:13px;color:#555;line-height:1.6;margin:0;">${html}</p>`;
+const NOTA_TESTO = 'Il testo della conversazione non viene mai inviato per email: resta nel servizio. Il link &egrave; personale, non inoltrarlo.';
+function mail(titolo, corpoHtml, link, etichetta) {
+  return emailShell(emailTitle(esc(titolo)) + corpoHtml + (link ? ctaButton(esc(link), esc(etichetta)) : '') + nota(NOTA_TESTO));
 }
-const bottone = (link, etichetta) => `<div style="margin:22px 0"><a href="${esc(link)}" style="display:inline-block;background:#0D5C8C;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">${esc(etichetta)}</a></div>
-  <div style="font-size:13px;color:#555;line-height:1.5">Se il pulsante non funziona, copia questo indirizzo nel browser:<br>${esc(link)}</div>`;
-const para = (t) => `<div style="font-size:15px;line-height:1.55">${t}</div>`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -122,8 +119,8 @@ export default async function handler(req, res) {
     const token = await nuovoToken(conv.id, 'gestore');
     const titolo = tipo === 'apertura' ? 'Nuova richiesta di assistenza' : 'Nuovo messaggio nella richiesta di assistenza';
     await invia(gestoreTo, `${titolo} — ${MOTIVI[conv.motivo] || 'Assistenza'}`,
-      shell(titolo, para(`Motivo: ${esc(MOTIVI[conv.motivo] || conv.motivo)}. Origine: ${conv.origine === 'gestionale' ? 'gestionale del medico' : 'pagina pubblica'}.`)
-        + bottone(`https://${host}/a/${token}`, 'Apri la conversazione')),
+      mail(titolo, para(`Motivo: <strong>${esc(MOTIVI[conv.motivo] || conv.motivo)}</strong>. Origine: ${conv.origine === 'gestionale' ? 'gestionale del medico' : 'pagina pubblica'}.`),
+        `https://${host}/a/${token}`, 'Apri la conversazione'),
       conv.id, `assistenza_${tipo}_gestore`, conv.medico_id);
   }
 
@@ -131,15 +128,15 @@ export default async function handler(req, res) {
   async function avvisaRichiedente(conv) {
     if (conv.origine === 'gestionale') {
       await invia(conv.email, 'Hai una risposta dall\'assistenza Delphi~Med',
-        shell('Hai una risposta dall\'assistenza',
-          para('Per leggerla entra in Delphi~Med e apri la voce «Assistenza» del gestionale.')
-          + bottone(`https://${host}/`, 'Entra in Delphi~Med')),
+        mail('Hai una risposta dall\'assistenza',
+          para('Per leggerla entra in Delphi~Med e apri la voce &laquo;Assistenza&raquo; del gestionale.'),
+          `https://${host}/`, 'Entra in Delphi~Med'),
         conv.id, 'assistenza_risposta_medico', conv.medico_id);
     } else {
       const token = await nuovoToken(conv.id, 'richiedente');
       await invia(conv.email, 'Hai una risposta dall\'assistenza Delphi~Med',
-        shell('Hai una risposta dall\'assistenza', para('Per leggerla e rispondere apri il link qui sotto.')
-          + bottone(`https://${host}/a/${token}`, 'Apri la conversazione')),
+        mail('Hai una risposta dall\'assistenza', para('Per leggerla e rispondere apri il link qui sotto.'),
+          `https://${host}/a/${token}`, 'Apri la conversazione'),
         conv.id, 'assistenza_risposta_richiedente', conv.medico_id);
     }
   }
@@ -273,9 +270,10 @@ export default async function handler(req, res) {
       const { codice, sfida } = creaSfida(secret, email, SCOPO);
       const { error } = await resend.emails.send({
         from: 'noreply@delphi-med.com', to: [email], subject: `${codice} è il tuo codice per l'assistenza Delphi~Med`,
-        html: shell('Conferma il tuo indirizzo email', para('Usa questo codice per inviare la tua richiesta di assistenza:')
-          + `<div style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0B2B4D;text-align:center;margin:18px 0">${codice}</div>`
-          + para('Il codice vale 10 minuti. Se non hai chiesto tu assistenza, ignora questa email.'))
+        html: emailShell(emailTitle('Conferma il tuo indirizzo email')
+          + `<p style="font-size:15px;color:#333;line-height:1.6;margin:0 0 20px;">Usa questo codice per inviare la tua richiesta di assistenza:</p>`
+          + `<div style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0B2B4D;text-align:center;margin:0 0 20px;">${codice}</div>`
+          + nota('Il codice vale 10 minuti. Se non hai chiesto tu assistenza, ignora questa email.'))
       });
       if (error) { console.error('[assistenza] codice resend:', error.message); return res.status(502).json({ error: 'Invio del codice non riuscito, riprova' }); }
       return res.status(200).json({ ok: true, sfida });
@@ -298,8 +296,8 @@ export default async function handler(req, res) {
       // Il richiedente riceve subito il suo link: può aggiungere messaggi e leggere la risposta.
       const token = await nuovoToken(conv.id, 'richiedente');
       await invia(email, 'Abbiamo ricevuto la tua richiesta — Assistenza Delphi~Med',
-        shell('Abbiamo ricevuto la tua richiesta', para('Ti risponderemo nella conversazione: riceverai un avviso via email a ogni risposta. Da questo link puoi anche aggiungere messaggi.')
-          + bottone(`https://${host}/a/${token}`, 'Apri la conversazione')),
+        mail('Abbiamo ricevuto la tua richiesta', para('Ti risponderemo nella conversazione: riceverai un avviso via email a ogni risposta. Da questo link puoi anche aggiungere messaggi.'),
+          `https://${host}/a/${token}`, 'Apri la conversazione'),
         conv.id, 'assistenza_ricevuta', medicoId);
       return res.status(200).json({ ok: true });
     }
