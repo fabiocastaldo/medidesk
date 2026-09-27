@@ -148,14 +148,14 @@ ${msg ? `<div class="msg">${esc(msg)}</div>` : ''}
 </form></div></body></html>`;
 }
 
-const SUPPORTO = 'support@delphi-med.com';
+const ASSISTENZA = 'https://www.delphi-med.com/assistenza';
 function buildEsitoNegativo({ nome, cognome }) {
   const n = esc([nome, cognome].filter(Boolean).join(' ')) || 'Dottore/ssa';
   return emailShell(
     emailTitle('Registrazione non completata') +
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${n}</strong>,</p>` +
     `<p style="font-size:15px;color:#444;line-height:1.7;margin:0 0 16px;">la tua richiesta di registrazione a Delphi~Med non &egrave; andata a buon fine a valle dei controlli sui dati di iscrizione all&rsquo;Ordine.</p>` +
-    `<p style="font-size:15px;color:#444;line-height:1.7;margin:0;">Per chiarimenti o per completare la registrazione scrivi a <a href="mailto:${SUPPORTO}" style="color:#15487F;">${SUPPORTO}</a>.</p>`
+    `<p style="font-size:15px;color:#444;line-height:1.7;margin:0;">Per chiarimenti o per completare la registrazione apri una richiesta dalla pagina <a href="${ASSISTENZA}" style="color:#15487F;">Assistenza di Delphi~Med</a>.</p>`
   );
 }
 
