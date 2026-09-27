@@ -11834,6 +11834,19 @@ async function loadAnticipaPage(){
       +'<strong>'+escapeHtml(appt.cognome_paziente)+' '+escapeHtml(appt.nome_paziente)+'</strong><br>'
       +d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' alle '+escapeHtml(appt.ora)+'<br>'
       +escapeHtml(appt.tipo_visita||'Visita')+'</div>';
+    // s57 (piano privacy riga 42): passata la data dell'appuntamento la lista non avvisa più
+    // (lib/waitlist.js avvisa solo per slot anteriori all'appuntamento): la pagina lo dice.
+    const _apptTs=new Date(appt.data+'T'+(appt.ora||'00:00')+':00');
+    if(!Number.isNaN(_apptTs.getTime()) && _apptTs<=new Date()){
+      content.innerHTML=`
+        <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:var(--ink3)"><use href="#ic-calendar"/></svg></div>
+        <h2>Iscrizione conclusa</h2>
+        ${cardAppt}
+        <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
+          La data del tuo appuntamento è passata: la lista d'attesa non ti invierà più avvisi.
+        </p>`;
+      return;
+    }
     if(payload.iscritto){
       content.innerHTML=`
         <div style="margin-bottom:16px"><svg class="ic" style="width:56px;height:56px;color:#22c55e"><use href="#ic-check"/></svg></div>
@@ -11841,6 +11854,7 @@ async function loadAnticipaPage(){
         ${cardAppt}
         <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
           Riceverai un'email se si libera una data più vicina per questo appuntamento.
+          L'iscrizione vale fino al giorno del tuo appuntamento.
         </p>
         <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="waitlistUnsubscribe()">Annulla iscrizione</button>`;
     } else {
@@ -11851,6 +11865,7 @@ async function loadAnticipaPage(){
         <p style="font-size:14px;color:var(--ink2);line-height:1.6;margin:16px 0">
           Se un altro paziente cancella un appuntamento prima della tua data, riceverai un'email:
           la prenotazione del nuovo orario resta libera, vale l'ordine di arrivo.
+          L'iscrizione vale fino al giorno del tuo appuntamento.
         </p>
         <label style="display:flex;align-items:flex-start;gap:10px;text-align:left;font-size:13px;color:var(--ink2);line-height:1.5;margin:16px 0;cursor:pointer">
           <input type="checkbox" id="wl-consenso" style="margin-top:2px">
