@@ -5631,6 +5631,7 @@ function confermaModale(testo, opts){
   });
 }
 function openModal(id){
+  if(id==='modal-nuova-visita' && _provaScadutaAvviso()) return;
   try {
     const m = document.getElementById(id);
     if(!m){ showToast('Errore: modal non trovato'); return; }
@@ -9081,13 +9082,18 @@ async function _getRefertiKey(){
   return _refertiKey;
 }
 
-// s59: a prova scaduta la chiave resta disponibile per leggere ed esportare (uscita), i nuovi salvataggi cifrati no.
-function _bloccoProvaScaduta(){
-  if(!_trialExpired) return;
+// s59: a prova scaduta la chiave resta disponibile per leggere ed esportare (uscita), le nuove visite e i referti no.
+// Il controllo sta all'apertura di ogni punto di scrittura (il medico non scrive una visita per poi perderla);
+// _bloccoProvaScaduta resta come ultima difesa al momento della cifratura.
+function _provaScadutaAvviso(){
+  if(!_trialExpired) return false;
   document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
-  showToast('Il periodo di prova è terminato — scegli un piano per continuare a usare tutte le funzionalità', 4000);
+  showToast('Il periodo di prova è terminato: puoi consultare ed esportare i tuoi dati, ma per registrare nuove visite o referti scegli un piano', 5000);
   showPage('piani');
-  throw new Error('TRIAL_EXPIRED');
+  return true;
+}
+function _bloccoProvaScaduta(){
+  if(_provaScadutaAvviso()) throw new Error('TRIAL_EXPIRED');
 }
 
 async function _encryptReferto(file){
@@ -9227,6 +9233,7 @@ async function openFotoRefertoByVisita(pazId, visitaId){
 }
 
 function openVisitaForPaziente(pazId){
+  if(_provaScadutaAvviso()) return;
   document.getElementById('visita-modal-title').textContent = 'Nuova visita';
   V.selectedPazienteId = null;
   V.isNewPaziente = false;
@@ -9274,6 +9281,7 @@ function _initPazienteModal(paz){
 function toggleRefertoEdit(pid, vid){
   pid=String(pid); vid=String(vid);
   if(S.settings.refertazioneAttiva===false) return;
+  if(!_refEdit.has(pid+'-'+vid) && _provaScadutaAvviso()) return;
   const k=pid+'-'+vid;
   if(_refEdit.has(k)){ _refEdit.delete(k); _refDrafts.delete(k); } else _refEdit.add(k);
   const paz=S.pazienti.find(p=>String(p.id)===pid); if(!paz) return;
@@ -9800,6 +9808,7 @@ async function sintetizzaReferti(pazId){
 var V = { selectedPazienteId:null, selectedApptId:null, isNewPaziente:false, refertoFiles:[], _previewUrls:[] };
 
 function openModalVisita(){
+  if(_provaScadutaAvviso()) return;
   V.selectedPazienteId = null;
   V.isNewPaziente = false;
   document.getElementById('visita-modal-title').textContent='Nuova visita';
@@ -9876,6 +9885,7 @@ function renderVisitaSearchResults(){
 }
 
 async function visitaSelectFromAppt(apptId){
+  if(_provaScadutaAvviso()) return;
   const a = S.appuntamenti.find(x=>String(x.id)===String(apptId));
   if(!a) return;
   if(!(a.nome||a.cognome)){ showToast('Appuntamento senza nome del paziente'); closeModal('modal-nuova-visita'); return; }
@@ -12522,6 +12532,7 @@ async function _ensurePazienteDaAppt(a){
 }
 
 async function caricaVisitaDaAppt(apptId){
+  if(_provaScadutaAvviso()) return;
   V.selectedPazienteId=null;
   V.isNewPaziente=false;
   const t=document.getElementById('visita-modal-title'); if(t) t.textContent='Nuova visita';
@@ -15185,6 +15196,7 @@ const AST_REGISTRY = {
   },
 
   async carica_visita(inp){
+    if(_trialExpired) return { errore:'periodo di prova terminato: si possono consultare ed esportare i dati, non registrare nuove visite; il medico deve scegliere un piano in Piani' };
     if(inp.appuntamento_id){ await caricaVisitaDaAppt(inp.appuntamento_id); return { ok:true, nota:'caricamento visita aperto, agganciato all\u2019appuntamento' }; }
     if(inp.paziente_id){
       const p=(S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id));
