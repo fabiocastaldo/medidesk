@@ -4,6 +4,7 @@ import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton, esc 
 import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
 import { eseguiConservazione } from '../lib/conservazione.js';
 import { eseguiUscita } from '../lib/uscita.js';
+import { eseguiRegistro } from '../lib/registro-amministratori.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
@@ -233,6 +234,9 @@ export default async function handler(req, res) {
   // identici agli attesi). Per tornare in simulazione: false.
   const CONSERVAZIONE_ESEGUI = true;
   const conservazione = await eseguiConservazione({ supabaseUrl, supabaseKey, runErrors, dryRun: !CONSERVAZIONE_ESEGUI });
+  // 5-quater. Registro degli accessi degli amministratori (s60): export giornaliero dei log pgaudit verso il bucket S3
+  // con Object Lock (lib/registro-amministratori.js)
+  const registro = await eseguiRegistro({ supabaseUrl, supabaseKey, runErrors });
 
   // 6. Alert admin: UNA sola email aggregata se restano errori dopo il retry.
   // Copre tutti i rami (promemoria, turni, trial). Niente retry sull'alert
@@ -263,7 +267,7 @@ export default async function handler(req, res) {
     else console.error('[send-reminders] pulizia promemoria:', pr.status);
   } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, conservazione });
+  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, conservazione, registro });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
