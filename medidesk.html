@@ -809,6 +809,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 .sec-mod-s{font-size:12px;color:var(--ink3);line-height:1.4}
 .sec-mod-meta{display:flex;gap:10px;font-size:11px;color:var(--ink3);margin-top:8px}
 .sec-mod-stato{color:var(--warm);font-weight:600}
+.sec-mod-pronto{opacity:1;background:var(--surface)}
+.sec-mod-aperto{grid-column:1/-1}
+.sec-mod-stato-ok{color:var(--accent)}
+.sec-mod-testo p{font-size:13px;line-height:1.6;color:var(--ink2);margin:10px 0 0}
+.sec-mod-leggi{margin-top:10px}
 .notif-toggle-info{flex:1}
 .notif-toggle-label,.notif-toggle-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
 .notif-toggle-desc{font-size:12px;color:var(--ink3);line-height:1.4}
@@ -2413,7 +2418,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <div style="margin-bottom:24px">
         <div class="section-title">Formazione sulla sicurezza</div>
         <div class="card"><div class="card-body">
-          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Un percorso breve, tre minuti a modulo, per sapere cosa fa Delphi~Med per i tuoi dati e cosa dipende da te. Ogni modulo parte da una scena di studio e finisce con tre domande. La spunta di lettura resta nel tuo account: vale come evidenza di formazione del titolare.</p>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:14px">Un percorso breve per sapere cosa fa Delphi~Med per i tuoi dati e cosa dipende da te. I moduli si aprono man mano che sono pronti; quelli ancora «In preparazione» non sono cliccabili.</p>
           <div class="sec-corso-grid" id="sec-corso"></div>
         </div></div>
       </div>
@@ -4139,7 +4144,8 @@ const SEC_CORSO_MODULI = [
   { parte:'A', n:1,  titolo:'Chi vede cosa',                     sotto:'Medico, segreteria, paziente dal link, Delphi~Med: chi legge cosa, cosa è cifrato' },
   { parte:'A', n:2,  titolo:'Il tuo account è la porta',         sotto:'Verifica in due passaggi, telefono perso, «Esci», gestionale aperto in sala d\'attesa' },
   { parte:'A', n:3,  titolo:'Consenso al trattamento',           sotto:'Informativa e consenso, comunicazioni e revoca, minori, cosa scrivere in cartella' },
-  { parte:'A', n:4,  titolo:'Conservazione e archiviazione',     sotto:'Dieci anni e soglia, backup ZIP, eliminazione account, richieste dei pazienti, 72 ore' },
+  { parte:'A', n:4,  titolo:'Conservazione dei dati clinici',    sotto:'Per quanto tempo si conservano e chi lo decide', minuti:1,
+    testo:['Per quanto tempo conservare i dati clinici lo stabiliscono la legge e le regole della tua professione, e possono cambiare nel tempo o secondo il contesto in cui lavori. Per questo Delphi~Med non cancella da sé la documentazione clinica: in Impostazioni → Conservazione dati clinici scegli dopo quanti anni dall\'ultima visita vuoi essere avvisato, da 1 a 50 anni, con 10 come valore predefinito. Quando delle visite superano la soglia, lo vedi sull\'Archivio e ti proponiamo di verificarle. La decisione di cancellarle resta tua. Se cambi la soglia, ricordati di aggiornare anche la durata indicata ai tuoi pazienti.'] },
   { parte:'B', n:5,  titolo:'Phishing, smishing, vishing, quishing', sotto:'Nessuna urgenza legittima chiede codici o password' },
   { parte:'B', n:6,  titolo:'Password',                          sotto:'Lunghezza prima della complessità, gestore, una per servizio' },
   { parte:'B', n:7,  titolo:'Password condivise',                sotto:'L\'account «che usano tutti», le credenziali al collega per le ferie, il post-it' },
@@ -4155,10 +4161,23 @@ function secRenderCorso(){
   ['A','B'].forEach(pt => {
     html += `<div class="sec-corso-parte">Parte ${pt} · ${escapeHtml(parti[pt])}</div>`;
     SEC_CORSO_MODULI.filter(m => m.parte === pt).forEach(m => {
+      if(m.testo){
+        const min = m.minuti || 3;
+        html += `<div class="sec-mod sec-mod-pronto"><div class="sec-mod-n">${m.n}</div><div class="sec-mod-body"><div class="sec-mod-t">${escapeHtml(m.titolo)}</div><div class="sec-mod-s">${escapeHtml(m.sotto)}</div><div class="sec-mod-meta"><span>${min} ${min===1?'minuto':'minuti'}</span><span class="sec-mod-stato sec-mod-stato-ok">Da leggere</span></div><div class="sec-mod-testo" id="sec-mod-testo-${m.n}" hidden>${m.testo.map(p=>`<p>${escapeHtml(p)}</p>`).join('')}</div><button type="button" class="btn btn-secondary btn-sm sec-mod-leggi" aria-expanded="false" aria-controls="sec-mod-testo-${m.n}" onclick="secApriModulo(${m.n}, this)">Leggi</button></div></div>`;
+        return;
+      }
       html += `<div class="sec-mod" aria-disabled="true"><div class="sec-mod-n">${m.n}</div><div class="sec-mod-body"><div class="sec-mod-t">${escapeHtml(m.titolo)}</div><div class="sec-mod-s">${escapeHtml(m.sotto)}</div><div class="sec-mod-meta"><span>3 minuti</span><span class="sec-mod-stato">In preparazione</span></div></div></div>`;
     });
   });
   g.innerHTML = html;
+}
+function secApriModulo(n, btn){
+  const box = document.getElementById('sec-mod-testo-' + n); if(!box || !btn) return;
+  const apri = box.hidden;
+  box.hidden = !apri;
+  btn.textContent = apri ? 'Chiudi' : 'Leggi';
+  btn.setAttribute('aria-expanded', apri ? 'true' : 'false');
+  const card = btn.closest('.sec-mod'); if(card) card.classList.toggle('sec-mod-aperto', apri);
 }
 
 async function resetPassword(){
