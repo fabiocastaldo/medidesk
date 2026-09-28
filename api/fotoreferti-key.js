@@ -1,6 +1,5 @@
 import { KMSClient, GenerateDataKeyCommand, DecryptCommand } from '@aws-sdk/client-kms';
 import { richiediAal2 } from '../lib/aal-guard.js';
-import { trialExpired } from '../lib/trial-gate.js';
 
 const kms = new KMSClient({ region: process.env.AWS_REGION || 'eu-central-1' });
 
@@ -49,9 +48,9 @@ export default async function handler(req, res) {
   if (!medicoData?.[0] || medicoData[0].stato !== 'approvato') {
     return res.status(403).json({ error: 'Account non autorizzato' });
   }
-  if (trialExpired(medicoData[0].piano, medicoData[0].created_at)) {
-    return res.status(403).json({ error: 'Periodo di prova scaduto', code: 'TRIAL_EXPIRED' });
-  }
+  // s59: nessun blocco di fine prova sulla chiave. Alla cessazione il medico deve poter leggere ed esportare in chiaro
+  // i propri dati clinici fino alla cancellazione (DPA art. 9, Policy di conservazione § 4: esportazione leggibile,
+  // non soltanto file cifrati). Il blocco dei nuovi salvataggi cifrati a prova scaduta è nel gestionale.
   const medico = medicoData[0];
   const medicoId = String(medico.id);
 
