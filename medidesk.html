@@ -9644,16 +9644,20 @@ async function _fpVisite(p){
   return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-function _storiaBoxHTML(pazId, testo, titolo, extraHtml){
-  return `<div class="storia-box"><div class="section-title" style="margin:0 0 12px">${titolo}</div>${extraHtml||''}<div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button><button class="btn btn-sm btn-secondary" style="color:#b3261e" onclick="eliminaSintesi('${pazId}')">Elimina</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
+function _storiaBoxHTML(pazId, testo, titolo, extraHtml, opts){
+  // opts.adottabile: sintesi appena generata, non ancora nel fascicolo (si salva solo con l'adozione del medico)
+  const _ad=!!(opts&&opts.adottabile);
+  return `<div class="storia-box"><div class="section-title" style="margin:0 0 12px">${titolo}</div>${extraHtml||''}<div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">${_ad?`<button class="btn btn-sm btn-primary btn-adotta-sintesi" onclick="adottaSintesi('${pazId}')">Adotta e salva nel fascicolo</button>`:''}<button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button>${_ad?`<button class="btn btn-sm btn-secondary" onclick="scartaSintesi('${pazId}')">Scarta</button>`:`<button class="btn btn-sm btn-secondary" style="color:#b3261e" onclick="eliminaSintesi('${pazId}')">Elimina</button>`}</div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
 }
 
-async function _salvaSintesi(p, testo, fonte){
+async function _salvaSintesi(p, testo, fonte, generataIl, fp){
+  // Chiamata SOLO da adottaSintesi: la sintesi entra nel fascicolo quando il medico la adotta (decisione 28/09/2026).
+  // La traccia la scrive il trigger trg_audit_pazienti (paziente_modificato, campi sintesi_*), lato server.
   try{
-    const fp=await _fpVisite(p);
+    if(!fp) fp=await _fpVisite(p);
     const enc=await _encryptText(testo);
-    const generataIl=new Date().toISOString();
-    const meta={fonte, fp};
+    if(!generataIl) generataIl=new Date().toISOString();
+    const meta={fonte, fp, adottata_il:new Date().toISOString()};
     const { data, error } = await supabaseClient.from('pazienti')
       .update({ sintesi_clinica: enc, sintesi_generata_il: generataIl, sintesi_meta: meta })
       .eq('id', p.id).select('id');
@@ -9661,11 +9665,33 @@ async function _salvaSintesi(p, testo, fonte){
     if(!data || !data.length) throw new Error('nessuna riga aggiornata');
     p.sintesiEnc=enc; p.sintesiGenerataIl=generataIl; p.sintesiMeta=meta;
     save();
-    showToast('Sintesi salvata nel fascicolo ✓');
+    showToast('Sintesi adottata e salvata nel fascicolo ✓');
+    return true;
   } catch(e){
     console.warn('[Delphi~Med] salvataggio sintesi fallito:', e.message);
     showToast(erroreLeggibile('Sintesi non salvata', e));
+    return false;
   }
+}
+
+async function adottaSintesi(pazId){
+  const p=S.pazienti.find(x=>String(x.id)===String(pazId)); if(!p) return;
+  const container=document.getElementById('storia-container-'+pazId); if(!container) return;
+  const _st=container.querySelector('.storia-testo');
+  const testo=(_st&&_st.dataset.md)||'';
+  if(!testo){ showToast('Nessuna sintesi da adottare'); return; }
+  if(!isOnline()){ showToast('Operazione disponibile solo online'); return; }
+  if(p.sintesiEnc && !(await confermaModale('Nel fascicolo c\u2019è già una sintesi adottata: vuoi sostituirla con questa?', { titolo:'Sostituisci sintesi', ok:'Sostituisci' }))) return;
+  const btn=container.querySelector('.btn-adotta-sintesi'); if(btn) btn.disabled=true;
+  const ok=await _salvaSintesi(p, testo, container.dataset.fonte||'note', container.dataset.generataIl||null, container.dataset.fp||null);
+  if(ok){ container.innerHTML=''; delete container.dataset.fonte; delete container.dataset.generataIl; delete container.dataset.fp; await _renderSintesiSalvata(pazId); }
+  else if(btn) btn.disabled=false;
+}
+
+function scartaSintesi(pazId){
+  const container=document.getElementById('storia-container-'+pazId); if(!container) return;
+  container.innerHTML=''; delete container.dataset.fonte; delete container.dataset.generataIl; delete container.dataset.fp;
+  _renderSintesiSalvata(pazId);
 }
 
 async function _renderSintesiSalvata(pazId){
@@ -9681,7 +9707,8 @@ async function _renderSintesiSalvata(pazId){
     const dataStr=p.sintesiGenerataIl?new Date(p.sintesiGenerataIl).toLocaleDateString('it-IT'):'';
     const fpNow=await _fpVisite(p);
     const stale=!p.sintesiMeta || p.sintesiMeta.fp!==fpNow;
-    const extra=`<div style="font-size:12px;color:var(--ink3);margin:0 0 10px">Generata il ${escapeHtml(dataStr)}${stale?' — <span style="color:var(--warm);font-weight:600">non aggiornata alle ultime modifiche del fascicolo</span>':''}</div>`;
+    const adStr=(p.sintesiMeta&&p.sintesiMeta.adottata_il)?new Date(p.sintesiMeta.adottata_il).toLocaleDateString('it-IT'):'';
+    const extra=`<div style="font-size:12px;color:var(--ink3);margin:0 0 10px">Generata il ${escapeHtml(dataStr)}${adStr?' \u00b7 adottata il '+escapeHtml(adStr):''}${stale?' — <span style="color:var(--warm);font-weight:600">non aggiornata alle ultime modifiche del fascicolo</span>':''}</div>`;
     container.innerHTML=_storiaBoxHTML(pazId, testo, titolo, extra);
     const _st=container.querySelector('.storia-testo'); if(_st) _st.dataset.md=testo;
   } catch(e){
@@ -9730,9 +9757,10 @@ async function sintetizzaStoria(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const data=await res.json();
     const testo=data.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Storia clinica sintetizzata</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button><button class="btn btn-sm btn-secondary" style="color:#b3261e" onclick="eliminaSintesi('${pazId}')">Elimina</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
+    container.innerHTML=_storiaBoxHTML(pazId, testo, 'Storia clinica sintetizzata', `<div style="font-size:12px;color:var(--ink3);margin:0 0 10px">Non ancora nel fascicolo: con «Adotta e salva nel fascicolo» la conservi, altrimenti si perde alla chiusura della scheda.</div>`, { adottabile:true });
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
-    _salvaSintesi(p, testo, 'note');
+    container.dataset.fonte='note'; container.dataset.generataIl=new Date().toISOString();
+    try{ container.dataset.fp=await _fpVisite(p); }catch(_){ }
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${escapeHtml(err.message)}</div>`;
   } finally{
@@ -9794,9 +9822,10 @@ async function sintetizzaReferti(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const dataR=await res.json();
     const testo=dataR.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=`<div class="storia-box"><div class="section-title" style="margin:0 0 12px">Sintesi clinica dai referti</div><div class="storia-testo">${mdToSafeHtml(testo)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><button class="btn btn-sm btn-secondary" onclick="copiaStoria('${pazId}')"><svg class="ic"><use href="#ic-copy"/></svg>Copia</button><button class="btn btn-sm btn-secondary" onclick="shareStoria('${pazId}')"><svg class="ic"><use href="#ic-share"/></svg>Condividi</button><button class="btn btn-sm btn-secondary" onclick="emailStoria('${pazId}')"><svg class="ic"><use href="#ic-mail"/></svg>Email</button><button class="btn btn-sm btn-secondary" onclick="downloadStoriaPDF('${pazId}')"><svg class="ic"><use href="#ic-download"/></svg>PDF</button><button class="btn btn-sm btn-secondary" onclick="stampaStoria('${pazId}')">Stampa</button><button class="btn btn-sm btn-secondary" style="color:#b3261e" onclick="eliminaSintesi('${pazId}')">Elimina</button></div><div style="font-size:11px;color:var(--ink3);margin-top:8px">L'AI è un ausilio di stesura: il contenuto resta sotto la responsabilità del medico, che lo rivede prima di salvare o stampare.</div></div>`;
+    container.innerHTML=_storiaBoxHTML(pazId, testo, 'Sintesi clinica dai referti', `<div style="font-size:12px;color:var(--ink3);margin:0 0 10px">Non ancora nel fascicolo: con «Adotta e salva nel fascicolo» la conservi, altrimenti si perde alla chiusura della scheda.</div>`, { adottabile:true });
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
-    _salvaSintesi(p, testo, 'referti');
+    container.dataset.fonte='referti'; container.dataset.generataIl=new Date().toISOString();
+    try{ container.dataset.fp=await _fpVisite(p); }catch(_){ }
   } catch(err){
     container.innerHTML=`<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>${escapeHtml(err.message)}</div>`;
   } finally{
@@ -12791,6 +12820,26 @@ async function generateFullBackupZip(){
     visiteRows
   ));
 
+  // ── 4-bis. CSV sintesi cliniche adottate, decifrate: l'esportazione dev'essere leggibile senza chiavi
+  const sintesiRows = [];
+  let sintesiErrors = 0;
+  for(const p of S.pazienti){
+    if(!p.sintesiEnc) continue;
+    try {
+      const t = await _decryptText(p.sintesiEnc);
+      const m = p.sintesiMeta || {};
+      sintesiRows.push([p.cognome||'', p.nome||'', p.nascita||'', m.fonte === 'referti' ? 'referti' : 'note',
+        p.sintesiGenerataIl||'', m.adottata_il||'', (t||'').replace(/\n/g, ' \\n ')]);
+    } catch(e){
+      console.error('[Delphi~Med] backup sintesi fail:', p.id, e.message);
+      sintesiErrors++;
+    }
+  }
+  root.file('sintesi_cliniche.csv', csvBuild(
+    ['Cognome paziente', 'Nome paziente', 'Data nascita', 'Fonte', 'Generata il', 'Adottata il', 'Sintesi clinica'],
+    sintesiRows
+  ));
+
   // ── 5. Cartella referti
   const refertiFolder = root.folder('referti');
   let refertiErrors = 0;
@@ -12853,6 +12902,7 @@ Conservalo in un luogo sicuro (disco cifrato, cloud privato, NAS). La responsabi
   <li><code>pazienti.csv</code> — anagrafica pazienti</li>
   <li><code>appuntamenti.csv</code> — storico appuntamenti</li>
   <li><code>visite.csv</code> — cronologia clinica per paziente</li>
+  <li><code>sintesi_cliniche.csv</code> — sintesi cliniche adottate nel fascicolo, una per paziente</li>
   <li><code>referti/</code> — foto e PDF dei referti, rinominati come <code>Cognome_Nome_DataVisita_N.ext</code></li>
 </ul>
 <h2>Come leggere i dati</h2>
@@ -12865,6 +12915,7 @@ Conservalo in un luogo sicuro (disco cifrato, cloud privato, NAS). La responsabi
   <li>Visite: <strong>${meta.counts.visite}</strong></li>
   <li>Appuntamenti: <strong>${meta.counts.appuntamenti}</strong></li>
   <li>Centri: <strong>${meta.counts.centri}</strong></li>
+  <li>Sintesi cliniche esportate: <strong>${sintesiRows.length}</strong>${sintesiErrors > 0 ? ` <span style="color:#c00">(${sintesiErrors} ${plur(sintesiErrors,'errore','errori')})</span>` : ''}</li>
   <li>Referti scaricati con successo: <strong>${refertiOk}</strong>${refertiErrors > 0 ? ` <span style="color:#c00">(${refertiErrors} ${plur(refertiErrors,'errore','errori')})</span>` : ''}</li>
 </ul>
 ${refertiErrors > 0 ? `<div class="warn"><strong>Attenzione</strong>: ${refertiErrors} ${plur(refertiErrors,'referto non è stato scaricato','referti non sono stati scaricati')} correttamente. Riprova a generare il backup, o controlla i log dell'app.</div>` : ''}
@@ -15125,23 +15176,24 @@ async function consConferma(){
 
 const AST_REGISTRY = {
   async leggi_messaggi(inp){
+    // Solo conteggi, nomi dei pazienti e date: il testo dei messaggi non entra mai nel prompt (decisione 28/09/2026).
     await msgRefreshNonLetti();
     const f=inp.filtro||'non_letti';
     if(f==='non_letti'){
-      const out=(S.msgNonLetti||[]).map(m=>({ paziente_id:String(m.paziente_id||''), paziente:_promNome({paziente_id:m.paziente_id}), testo:String(m.corpo||'').slice(0,200), ricevuto:m.created_at }));
-      return { non_letti:out.length, messaggi:out };
+      const per={};
+      (S.msgNonLetti||[]).forEach(m=>{ const k=String(m.paziente_id||''); if(!per[k]) per[k]={ paziente_id:k, paziente:_promNome({paziente_id:m.paziente_id}), non_letti:0, ultimo:m.created_at }; per[k].non_letti++; if(String(m.created_at)>String(per[k].ultimo)) per[k].ultimo=m.created_at; });
+      return { non_letti:(S.msgNonLetti||[]).length, da:Object.values(per), nota:'il testo dei messaggi non e\u2019 disponibile: si legge nella sezione Messaggi della scheda del paziente' };
     }
-    const da = f==='oggi' ? fmt(new Date()) : f==='settimana' ? fmt(new Date(Date.now()-7*86400000)) : null;
-    let q=supabaseClient.from('messaggi').select('id,direzione,corpo,created_at,thread_messaggi!inner(paziente_id)').order('created_at',{ascending:false}).limit(200);
-    if(da) q=q.gte('created_at', da+'T00:00:00');
-    if(f==='paziente' && inp.paziente_id) q=q.eq('thread_messaggi.paziente_id', inp.paziente_id);
-    const { data, error } = await q; if(error) return { errore:error.message };
+    if(f!=='oggi' && f!=='settimana') return { errore:'filtro non disponibile: usa non_letti, oggi o settimana' };
+    const da = f==='oggi' ? fmt(new Date()) : fmt(new Date(Date.now()-7*86400000));
+    const { data, error } = await supabaseClient.from('messaggi').select('id,direzione,created_at,thread_messaggi!inner(paziente_id)').gte('created_at', da+'T00:00:00').order('created_at',{ascending:false}).limit(200);
+    if(error) return { errore:error.message };
     const rows=data||[];
     const pazRisposti=new Set(rows.filter(m=>m.direzione==='medico').map(m=>String(m.thread_messaggi.paziente_id)));
     const pazScritto=new Set(rows.filter(m=>m.direzione==='paziente').map(m=>String(m.thread_messaggi.paziente_id)));
-    return { periodo:f, inviati_dal_medico:rows.filter(m=>m.direzione==='medico').length, ricevuti_dai_pazienti:rows.filter(m=>m.direzione==='paziente').length,
+    return { periodo:f, dal:da, inviati_dal_medico:rows.filter(m=>m.direzione==='medico').length, ricevuti_dai_pazienti:rows.filter(m=>m.direzione==='paziente').length,
       pazienti_a_cui_ho_risposto:[...pazRisposti].map(id=>_promNome({paziente_id:id})).filter(Boolean), pazienti_che_hanno_scritto:[...pazScritto].map(id=>_promNome({paziente_id:id})).filter(Boolean),
-      ultimi:rows.slice(0,10).map(m=>({ paziente:_promNome({paziente_id:m.thread_messaggi.paziente_id}), da:m.direzione, testo:String(m.corpo||'').slice(0,160), quando:m.created_at })) };
+      ultimi:rows.slice(0,10).map(m=>({ paziente:_promNome({paziente_id:m.thread_messaggi.paziente_id}), da:m.direzione, quando:m.created_at })) };
   },
   async scrivi_paziente(inp){
     const p=(S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id)); if(!p) return { errore:'paziente non trovato' };
