@@ -9081,7 +9081,17 @@ async function _getRefertiKey(){
   return _refertiKey;
 }
 
+// s59: a prova scaduta la chiave resta disponibile per leggere ed esportare (uscita), i nuovi salvataggi cifrati no.
+function _bloccoProvaScaduta(){
+  if(!_trialExpired) return;
+  document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+  showToast('Il periodo di prova è terminato — scegli un piano per continuare a usare tutte le funzionalità', 4000);
+  showPage('piani');
+  throw new Error('TRIAL_EXPIRED');
+}
+
 async function _encryptReferto(file){
+  _bloccoProvaScaduta();
   const buf = await file.arrayBuffer();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await _getRefertiKey();
@@ -9103,6 +9113,7 @@ async function _decryptReferto(arrayBuffer, path){
 }
 
 async function _encryptText(plaintext){
+  _bloccoProvaScaduta();
   if(plaintext == null || plaintext === '') return null;
   const key = await _getRefertiKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));

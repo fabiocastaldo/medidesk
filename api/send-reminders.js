@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton, esc as escShell } from '../lib/email-shell.js';
 import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
 import { eseguiConservazione } from '../lib/conservazione.js';
+import { eseguiUscita } from '../lib/uscita.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
@@ -221,6 +222,12 @@ export default async function handler(req, res) {
     supabaseUrl, supabaseKey, stripeKey: process.env.STRIPE_SECRET_KEY, resend,
     shell: { emailShell, emailTitle, esc: escShell }, runErrors
   });
+  // 5-bis-bis. Uscita alla cessazione (s59): avviso al giorno 0, promemoria 7 giorni prima della scadenza,
+  // cancellazione definitiva alla scadenza (30 giorni dall'avviso) — lib/uscita.js
+  const uscita = await eseguiUscita({
+    supabaseUrl, supabaseKey, stripeKey: process.env.STRIPE_SECRET_KEY, resend,
+    shell: { emailShell, emailTitle, ctaButton, esc: escShell }, runErrors
+  });
   // 5-ter. Conservazione eseguibile (s55): tempi della Policy di conservazione rev2.3 (lib/conservazione.js)
   // Esecuzione accesa su mandato del gestore (26/09/2026, dopo il giro in simulazione delle 17:00 UTC con conteggi
   // identici agli attesi). Per tornare in simulazione: false.
@@ -256,7 +263,7 @@ export default async function handler(req, res) {
     else console.error('[send-reminders] pulizia promemoria:', pr.status);
   } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, conservazione });
+  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, conservazione });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
@@ -568,7 +575,7 @@ function buildTrialScadenzaHtml() {
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 12px;">Gentile Dottoressa, Gentile Dottore,</p>` +
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">la tua <strong>prova gratuita di 45 giorni</strong> di Delphi~Med sta per terminare. Ci auguriamo che questo periodo ti abbia permesso di apprezzare come Delphi~Med possa semplificare la gestione della tua attivit&agrave;.</p>` +
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Per continuare a usare Delphi~Med <strong>senza interruzioni</strong>, ti invitiamo a passare a un piano a pagamento prima della scadenza.</p>` +
-    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Se non scegli un piano, 7 giorni dopo la scadenza della prova la tua pagina pubblica non sar&agrave; pi&ugrave; visibile e non riceverai pi&ugrave; prenotazioni online. Lo stesso vale se in futuro non rinnovi l&rsquo;abbonamento: 7 giorni dopo la fine dell&rsquo;ultimo periodo pagato. I tuoi dati restano nel gestionale e, quando scegli o rinnovi un piano, la pagina torna subito attiva.</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Se non scegli un piano, 7 giorni dopo la scadenza della prova la tua pagina pubblica non sar&agrave; pi&ugrave; visibile e non riceverai pi&ugrave; prenotazioni online. Lo stesso vale se in futuro non rinnovi l&rsquo;abbonamento: 7 giorni dopo la fine dell&rsquo;ultimo periodo pagato. I dati che hai inserito restano consultabili ed esportabili per almeno 30 giorni; poi account e dati vengono cancellati in modo definitivo. Ti avviseremo via email alla scadenza e una settimana prima della cancellazione. Se scegli o rinnovi un piano prima, non perdi nulla e la pagina torna subito attiva.</p>` +
     ctaButton('https://delphi-med.com', 'Vai a Delphi~Med') +
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 8px;">Accedi al tuo account e apri la pagina <strong>Piani</strong> per scegliere l&rsquo;abbonamento pi&ugrave; adatto alle tue esigenze.</p>` +
     `<p style="font-size:14px;color:#555;margin:0;">A presto,<br><strong>Delphi~Med</strong></p>`;
