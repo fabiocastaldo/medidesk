@@ -110,12 +110,14 @@ export default async function handler(req, res) {
     }
   } catch { return res.status(502).json({ error: 'Verifica fallita' }); }
 
-  // 1-bis) Solo un medico approvato riceve prenotazioni (sospeso o in attesa: no).
+  // 1-bis) Solo un medico in servizio riceve prenotazioni: approvato, non in eliminazione e non
+  // cessato da più di 7 giorni (public.medico_in_servizio, s59: stessa regola della pagina pubblica).
   try {
-    const r = await sb(`medici?id=eq.${encodeURIComponent(medicoId)}&stato=eq.approvato&select=id&limit=1`);
+    const r = await sb('rpc/medico_in_servizio', { method: 'POST', body: JSON.stringify({ p_medico_id: medicoId }) });
     if (!r.ok) return res.status(502).json({ error: 'Verifica fallita' });
-    const rows = await r.json().catch(() => []);
-    if (!Array.isArray(rows) || rows.length === 0) {
+    const inServizio = await r.json().catch(() => null);
+    if (typeof inServizio !== 'boolean') return res.status(502).json({ error: 'Verifica fallita' });
+    if (!inServizio) {
       return res.status(403).json({ error: 'Il medico non accetta prenotazioni online' });
     }
   } catch { return res.status(502).json({ error: 'Verifica fallita' }); }

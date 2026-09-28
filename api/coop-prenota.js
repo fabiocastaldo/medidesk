@@ -94,13 +94,15 @@ export default async function handler(req, res) {
   if (!centro) {
     return res.status(404).json({ error: 'Centro non collegato all\'organizzazione' });
   }
-  // Solo un medico approvato riceve prenotazioni (sospeso o in attesa: no).
-  const medRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?id=eq.${encodeURIComponent(medicoId)}&stato=eq.approvato&select=id`,
-    { headers: srvHeaders }
-  ).catch(() => null);
+  // Solo un medico in servizio riceve prenotazioni: approvato, non in eliminazione e non cessato
+  // da più di 7 giorni (public.medico_in_servizio, s59: stessa regola della pagina pubblica).
+  const medRes = await fetch(`${supabaseUrl}/rest/v1/rpc/medico_in_servizio`, {
+    method: 'POST', headers: { ...srvHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_medico_id: medicoId })
+  }).catch(() => null);
   if (!medRes || !medRes.ok) return res.status(502).json({ error: 'Verifica medico fallita' });
-  const medOk = (await medRes.json().catch(() => []))?.[0];
+  const medOk = await medRes.json().catch(() => null);
+  if (typeof medOk !== 'boolean') return res.status(502).json({ error: 'Verifica medico fallita' });
   if (!medOk) return res.status(403).json({ error: 'Il medico non accetta prenotazioni' });
 
   // Gate di copertura: stesso arbitro del booking pubblico (lib/slot-guard.js):
