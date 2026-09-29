@@ -5,6 +5,7 @@ import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
 import { eseguiConservazione } from '../lib/conservazione.js';
 import { eseguiUscita } from '../lib/uscita.js';
 import { eseguiRegistro } from '../lib/registro-amministratori.js';
+import { eseguiAvvisiSospensione } from '../lib/sospensione.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
@@ -229,6 +230,9 @@ export default async function handler(req, res) {
     supabaseUrl, supabaseKey, stripeKey: process.env.STRIPE_SECRET_KEY, resend,
     shell: { emailShell, emailTitle, ctaButton, esc: escShell }, runErrors
   });
+  // 5-bis-ter. Sospensione (s63): rete di sicurezza per l'avviso automatico accodato dal database con pg_net
+  const sospensione = await eseguiAvvisiSospensione({ supabaseUrl, supabaseKey, resend,
+    shell: { emailShell, emailTitle, esc: escShell }, runErrors });
   // 5-ter. Conservazione eseguibile (s55): tempi della Policy di conservazione rev2.3 (lib/conservazione.js)
   // Esecuzione accesa su mandato del gestore (26/09/2026, dopo il giro in simulazione delle 17:00 UTC con conteggi
   // identici agli attesi). Per tornare in simulazione: false.
@@ -267,7 +271,7 @@ export default async function handler(req, res) {
     else console.error('[send-reminders] pulizia promemoria:', pr.status);
   } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, conservazione, registro });
+  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
