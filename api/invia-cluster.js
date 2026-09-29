@@ -22,7 +22,7 @@ import { Resend } from 'resend';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
 import { CONS_COMM_VERSIONE, readPayload, revocaLink } from '../lib/consenso-token.js';
-import { trialExpired } from '../lib/trial-gate.js';
+import { richiediInServizio } from '../lib/servizio-guard.js';
 
 // Tetto per medico sugli invii massivi (T-03): contatore DB check_rate_limit, chiave 'medico:<id>'.
 const MAX_INVII_ORA = 10;
@@ -59,7 +59,8 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   if (!medicoRes || !medicoRes.ok) return { ok: false, status: 403, error: 'Verifica account fallita' };
   const rows = await medicoRes.json().catch(() => []);
   if (!rows?.[0]) return { ok: false, status: 403, error: 'Account non autorizzato' };
-  if (trialExpired(rows[0].piano, rows[0].created_at)) return { ok: false, status: 403, error: 'Periodo di prova scaduto', code: 'TRIAL_EXPIRED' };
+  const servizio = await richiediInServizio(rows[0].id, { supabaseUrl, serviceKey });   // A2 (s64)
+  if (!servizio.ok) return { ok: false, status: servizio.status, error: servizio.body.error, code: servizio.body.code };
   return { ok: true, medico: rows[0] };
 }
 

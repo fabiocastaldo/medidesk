@@ -22,6 +22,7 @@ import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } fro
 import { revocaLink, consensoLink } from '../lib/consenso-token.js';
 import { buildICS } from '../lib/ics-builder.js';
 import { RUOLI } from '../lib/prenotazione-pr22.js';
+import { richiediInServizio } from '../lib/servizio-guard.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ async function auditLog(base, headers, medicoId, tipo, targetType, targetId, aut
 // Ritorna { ok: true, medicoId, userId, userEmail, medicoNome }
 // oppure   { ok: false, status, error }
 
-async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
+async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey, { ammettiEliminazione = false } = {}) {
   const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: { 'Authorization': `Bearer ${jwt}`, 'apikey': anonKey }
   }).catch(() => null);
@@ -84,7 +85,7 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   }
 
   const medicoRes = await fetch(
-    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&deleted_at=is.null&select=id,titolo,nome,cognome`,
+    `${supabaseUrl}/rest/v1/medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato${ammettiEliminazione ? '' : '&deleted_at=is.null'}&select=id,titolo,nome,cognome`,
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   if (!medicoRes || !medicoRes.ok) {
@@ -484,9 +485,20 @@ export default async function handler(req, res) {
     if (!authHeader?.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Autenticazione richiesta' });
     }
-    const auth = await checkMedicoAuth(authHeader.slice(7), supabaseUrl, anonKey, serviceKey);
+    // A2 (s64), eccezione (a): chi è in sola consultazione può solo annullare i propri appuntamenti futuri,
+    // con la mail di annullamento al paziente; l'annullamento lo esegue questo endpoint (vedi ramo cancellazione_paziente).
+    const annullaInSolaConsultazione = tipo === 'cancellazione_paziente' && body.annulla === true;
+    const auth = await checkMedicoAuth(authHeader.slice(7), supabaseUrl, anonKey, serviceKey, { ammettiEliminazione: annullaInSolaConsultazione });
     if (!auth.ok) return res.status(auth.status).json(auth.code ? { error: auth.error, code: auth.code } : { error: auth.error });
     authCtx = { medicoId: auth.medicoId, userId: auth.userId, userEmail: auth.userEmail, medicoNome: auth.medicoNome, authMode: 'jwt_medico' };
+    // A2 (s64): esenti la conferma della richiesta di eliminazione e gli avvisi di sicurezza al medico stesso
+    if (tipo !== 'account_eliminazione' && tipo !== 'avviso_sicurezza') {
+      const servizio = await richiediInServizio(authCtx.medicoId, { supabaseUrl, serviceKey });
+      if (!servizio.ok) {
+        if (servizio.status === 403 && annullaInSolaConsultazione) authCtx.solaConsultazione = true;
+        else return res.status(servizio.status).json(servizio.body);
+      }
+    }
 
   } else if (tipo === 'conferma_appt_anon') {
     const tok = await consumeEmailToken(body.email_token, supabaseUrl, serviceKey);
@@ -761,6 +773,25 @@ export default async function handler(req, res) {
     if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
     const appt = await lookupAppt(appt_id, authCtx.medicoId, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    if (authCtx.solaConsultazione) {
+      // Solo appuntamenti propri (lookupAppt), futuri o di oggi, non già annullati; si toccano solo i campi dell'annullamento.
+      const oggiRoma = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+      if (!appt.data || String(appt.data) < oggiRoma) return res.status(409).json({ error: 'Si possono annullare solo appuntamenti futuri', code: 'APPUNTAMENTO_PASSATO' });
+      const pr = await fetch(`${base}/appuntamenti?id=eq.${encodeURIComponent(appt_id)}&medico_id=eq.${encodeURIComponent(authCtx.medicoId)}&cancelled=eq.false`, {
+        method: 'PATCH',
+        headers: { ...dbHeaders, 'Prefer': 'return=representation' },
+        body: JSON.stringify({ cancelled: true, cancelled_at: new Date().toISOString() })
+      }).catch(() => null);
+      const annullati = (pr && pr.ok) ? await pr.json().catch(() => []) : null;
+      if (!annullati) return res.status(502).json({ error: 'Annullamento non riuscito, riprova tra poco' });
+      if (!annullati.length) return res.status(409).json({ error: 'Appuntamento già annullato', code: 'GIA_ANNULLATO' });
+      await fetch(`${base}/audit_log`, {
+        method: 'POST', headers: dbHeaders,
+        body: JSON.stringify({ medico_id: authCtx.medicoId, action: 'appuntamento_annullato', target_type: 'appuntamento', target_id: String(appt_id),
+          details: { fonte: 'server', sola_consultazione: true } })
+      }).catch(() => null);
+      if (!appt.emailPaziente) return res.status(200).json({ ok: true, annullato: true, email: false });
+    }
     const dataFmt = formatDateIt(appt.data);
     to            = appt.emailPaziente;
     subject       = `Appuntamento annullato — ${dataFmt} alle ${appt.ora}`;

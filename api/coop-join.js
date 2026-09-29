@@ -6,6 +6,7 @@
 // Nessun gate trial: il join non consuma il motore premium (criterio permanente).
 
 import { richiediAal2 } from '../lib/aal-guard.js';
+import { richiediInServizio } from '../lib/servizio-guard.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -63,6 +64,8 @@ export default async function handler(req, res) {
   if (medico.stato !== 'approvato') {
     return res.status(403).json({ error: 'Il collegamento è disponibile per gli account approvati' });
   }
+  const servizio = await richiediInServizio(medico.id, { supabaseUrl, serviceKey });   // A2 (s64)
+  if (!servizio.ok) return res.status(servizio.status).json(servizio.body);
 
   // codice: esistenza e validità
   const codeRes = await fetch(
