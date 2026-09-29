@@ -4544,27 +4544,33 @@ async function trialGuard(response){
   try {
     if (response.status !== 403) return false;
     const body = await response.clone().json();
-    if (body && body.code === 'TRIAL_EXPIRED'){
+    if (body && (body.code === 'TRIAL_EXPIRED' || body.code === 'SOLA_CONSULTAZIONE')){
       _trialExpired = true;
-      document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
-      showToast('Il periodo di prova è terminato — scegli un piano per continuare a usare tutte le funzionalità', 4000);
-      showPage('piani');
+      _provaScadutaAvviso();
       return true;
     }
   } catch(e){}
   return false;
 }
 
+// A2 (s64): lo stato viene dalla regola del database (mio_stato_servizio → medico_in_servizio), la stessa che
+// blocca le scritture nelle 19 tabelle: fine prova, abbonamento terminato, eliminazione richiesta.
+// _trialExpired resta il nome storico della «sola consultazione» usato dagli ingressi di scrittura.
 async function checkTrialExpiry(){
   if(!isOnline() || !S.medicoId){ return; }
   try{
-    var r = await supabaseClient.from('medici').select('piano,created_at').eq('id', S.medicoId).single();
-    if(!r || !r.data){ return; }
-    if(r.data.piano !== 'free'){ _trialExpired = false; return; }
-    var start = new Date(r.data.created_at).getTime();
-    var days  = (Date.now() - start) / 86400000;
-    if(days > 45){ _trialExpired = true; showPage('piani'); }
-  }catch(e){ /* fail-open: non blocca l'accesso su errore query */ }
+    const r = await supabaseClient.rpc('mio_stato_servizio');
+    const row = (r && !r.error && Array.isArray(r.data)) ? r.data[0] : null;
+    if(!row){ return; }   /* interfaccia fail-open: le scritture le blocca comunque il database */
+    _statoServizio = row;
+    _trialExpired = row.in_servizio === false;
+    if(_trialExpired){
+      _mostraBannerSolaConsultazione();
+      if(row.causa !== 'eliminazione') showPage('piani');
+    } else {
+      document.getElementById('sola-consultazione-banner')?.remove();
+    }
+  }catch(e){ /* interfaccia fail-open: le scritture le blocca comunque il database */ }
 }
 
 let _bootstrapDone = false;
@@ -4694,7 +4700,7 @@ async function loadMedicoFromDB(user){
           const banner = document.createElement('div');
           banner.id = 'deletion-banner';
           banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--warm);color:#fff;padding:12px 20px;text-align:center;z-index:9999;display:flex;align-items:center;justify-content:center;gap:12px;font-size:14px;flex-wrap:wrap';
-          banner.innerHTML = `<svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>Account in fase di eliminazione — ${daysLeft} ${plur(daysLeft,'giorno rimasto','giorni rimasti')}. <button onclick="cancelAccountDeletion()" style="background:#fff;color:var(--warm);border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600">Annulla eliminazione</button>`;
+          banner.innerHTML = `<svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>Account in fase di eliminazione, in sola consultazione — ${daysLeft} ${plur(daysLeft,'giorno rimasto','giorni rimasti')}. <button onclick="cancelAccountDeletion()" style="background:#fff;color:var(--warm);border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:600">Annulla eliminazione</button>`;
           document.body.appendChild(banner);
         }
       }
@@ -5614,6 +5620,7 @@ function erroreLeggibile(cosa, e){
   if(/failed to fetch|networkerror|network request|load failed|timeout|timed out|offline/.test(r)) testo = 'connessione assente o instabile, riprova';
   else if(/jwt|token.*(expired|scadut)|sessione non valida|not authenticated|non autenticato|refresh token/.test(r)) testo = 'sessione scaduta: esci e rientra, poi riprova';
   else if(/duplicate key|23505|already exists|unique/.test(r)) testo = 'esiste gi\u00e0 un dato uguale';
+  else if(/sola_consultazione/.test(r)) testo = 'account in sola consultazione: puoi consultare ed esportare i dati, non modificarli';
   else if(/permission denied|row-level security|42501|not allowed|forbidden|http 403/.test(r)) testo = 'operazione non permessa per questo account';
   else if(!raw || /[a-z]+_[a-z_]+|http \d|\b\d{5}\b|pgrst|column|schema|relation|violates|constraint|\bnull\b|undefined|typeerror|referenceerror|syntaxerror|function|cannot|could not|failed|invalid|unexpected|not found|\brig[ae]\b/.test(r)) testo = 'riprova tra poco; se si ripete, ricarica la pagina';
   else testo = raw;
@@ -7675,6 +7682,23 @@ async function deleteAppuntamento(id){
   const oraLabel = (appt.ora||'').substring(0,5);
   if(!(await confermaModale(`Sei sicuro di voler cancellare l'appuntamento di ${appt.cognome} ${appt.nome} del ${dataLabel} alle ${oraLabel}?\n\nIl paziente e il centro riceveranno una mail di notifica.`, { titolo:'Cancellare appuntamento', ok:'Cancella appuntamento' }))) return;
   const cancelledAt = new Date().toISOString();
+  if(_trialExpired && isOnline() && !String(id).startsWith('local-')){
+    // A2 (s64), eccezione (a): in sola consultazione l'annullamento lo esegue il server e avvisa il paziente
+    try {
+      const _jwt = await getAuthJwt();
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
+        body: JSON.stringify({ tipo: 'cancellazione_paziente', appt_id: appt.id, annulla: true })
+      });
+      const j = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(j.error || 'Annullamento non riuscito');
+      appt.cancelled = true; appt.cancelledAt = cancelledAt; save();
+      renderAgenda(); renderDashboard(); updateStats();
+      showToast(j.email === false ? 'Appuntamento annullato ✓ (il paziente non ha un indirizzo email: avvisalo tu)' : 'Appuntamento annullato ✓ — il paziente riceve un\'email');
+    } catch(err){ showToast(erroreLeggibile('Annullamento non riuscito', err)); }
+    return;
+  }
   try {
     if(isOnline() && !String(id).startsWith('local-')){
       const { error } = await supabaseClient.from('appuntamenti')
@@ -8557,7 +8581,7 @@ async function markSeen(id){
   const a=S.appuntamenti.find(x=>String(x.id)===String(id));
   if(a){
     a.seen=true;
-    if(isOnline()){
+    if(isOnline() && !_trialExpired){   // A2 (s64): in sola consultazione nessuna scrittura automatica
       try { await supabaseClient.from('appuntamenti').update({ seen: true }).eq('id', String(id)); }
       catch(e){ console.error('[Delphi~Med] markSeen:', e.message); }
     }
@@ -8571,7 +8595,7 @@ async function markAllSeen(){
   if(!list.length) return;
   const ids = list.map(a=>String(a.id));
   list.forEach(a=>{ a.seen=true; });
-  if(isOnline()){
+  if(isOnline() && !_trialExpired){   // A2 (s64): in sola consultazione nessuna scrittura automatica
     try { await supabaseClient.from('appuntamenti').update({ seen: true }).in('id', ids); }
     catch(e){ console.error('[Delphi~Med] markAllSeen:', e.message); }
   }
@@ -9085,11 +9109,35 @@ async function _getRefertiKey(){
 // s59: a prova scaduta la chiave resta disponibile per leggere ed esportare (uscita), le nuove visite e i referti no.
 // Il controllo sta all'apertura di ogni punto di scrittura (il medico non scrive una visita per poi perderla);
 // _bloccoProvaScaduta resta come ultima difesa al momento della cifratura.
+function _dataItSC(d){ if(!d) return ''; const p = String(d).slice(0,10).split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : String(d); }
+function _testoSolaConsultazione(){
+  const st = _statoServizio || {};
+  const causa = st.causa || 'prova';
+  const perche = causa === 'eliminazione' ? 'hai chiesto l\'eliminazione dell\'account'
+               : causa === 'abbonamento' ? 'l\'abbonamento è terminato'
+               : 'il periodo di prova è terminato';
+  const fino = st.consultazione_fino_al ? ' fino al ' + _dataItSC(st.consultazione_fino_al) : '';
+  return 'Account in sola consultazione' + fino + ' perché ' + perche + ': puoi consultare ed esportare i tuoi dati, ma non modificarli.';
+}
+function _mostraBannerSolaConsultazione(){
+  const st = _statoServizio || {};
+  if(st.causa === 'eliminazione'){ return; }   /* in eliminazione c'è già il banner con «Annulla» */
+  if(document.getElementById('sola-consultazione-banner')) return;
+  const b = document.createElement('div');
+  b.id = 'sola-consultazione-banner';
+  b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--warm);color:#fff;padding:12px 20px;text-align:center;z-index:9999;display:flex;align-items:center;justify-content:center;gap:12px;font-size:13px;flex-wrap:wrap';
+  const canc = st.cancellazione_dal ? ' Dal ' + _dataItSC(st.cancellazione_dal) + ' account e dati saranno cancellati.' : ' Le date ti arrivano per email.';
+  b.innerHTML = '<span>' + escapeHtml(_testoSolaConsultazione() + canc) + '</span>'
+    + '<button onclick="showPage(\'piani\')" style="background:#fff;color:var(--warm);border:none;border-radius:6px;padding:6px 12px;font-weight:600;cursor:pointer">Scegli un piano</button>'
+    + '<button onclick="showPage(\'impostazioni\')" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:6px;padding:6px 12px;cursor:pointer">Esporta i dati</button>';
+  document.body.appendChild(b);
+}
 function _provaScadutaAvviso(){
   if(!_trialExpired) return false;
   document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
-  showToast('Il periodo di prova è terminato: puoi consultare ed esportare i tuoi dati, ma per registrare nuove visite o referti scegli un piano', 5000);
-  showPage('piani');
+  const inElim = (_statoServizio && _statoServizio.causa) === 'eliminazione';
+  showToast(_testoSolaConsultazione() + (inElim ? ' Puoi annullare la richiesta dal banner in basso.' : ' Per continuare scegli un piano.'), 6000);
+  if(!inElim) showPage('piani');
   return true;
 }
 function _bloccoProvaScaduta(){
@@ -14285,6 +14333,7 @@ function cancelAccountDeletion(){
     .then(({ error }) => {
       if(error){ showToast(erroreLeggibile('Operazione non riuscita', error)); return; }
       document.getElementById('deletion-banner')?.remove();
+      checkTrialExpiry();   // A2 (s64): torna in servizio anche per l'interfaccia (o resta in sola consultazione se la prova è finita)
       auditLog('account_deletion_cancelled', 'account', null, {});
       showToast('Eliminazione annullata ✓');
     });
@@ -14455,6 +14504,7 @@ function goToTurniScadenza(){
 
 var _piInterval = 'month';
 var _trialExpired = false;
+var _statoServizio = null;   // A2 (s64): riga di mio_stato_servizio()
 var _medicoPiano = null;
 var _medicoCreatedAt = null;
 
@@ -14566,7 +14616,7 @@ async function renderPiani(){
   el.innerHTML =
     '<div class="pln-wrap">'
     + '<div class="page-header"><div><div class="page-title">Scegli il tuo piano</div><div class="page-subtitle">Tutte le funzionalità, sempre. Cambia solo il prezzo.</div></div></div>'
-    + (_trialExpired ? '<div class="pln-warn" style="border-color:#c0392b;color:#c0392b">Il tuo periodo di prova di 45 giorni è terminato. Scegli un piano per continuare a usare tutte le funzionalità.</div>' : '')
+    + (_trialExpired ? '<div class="pln-warn" style="border-color:#c0392b;color:#c0392b">' + escapeHtml(_testoSolaConsultazione()) + ' Scegli un piano per continuare a usare tutte le funzionalità.</div>' : '')
     + (approved ? '' : '<div class="pln-warn">Potrai attivare un piano dopo l\'approvazione dell\'account.</div>')
     + (isVip ? '<div class="pln-warn">Il tuo account ha accesso completo a tutte le funzionalità. Nessun abbonamento necessario.</div>' : '')
     + '<div class="pln-grid">'
@@ -15249,7 +15299,7 @@ const AST_REGISTRY = {
   },
 
   async carica_visita(inp){
-    if(_trialExpired) return { errore:'periodo di prova terminato: si possono consultare ed esportare i dati, non registrare nuove visite; il medico deve scegliere un piano in Piani' };
+    if(_trialExpired) return { errore:'account in sola consultazione (' + ((_statoServizio && _statoServizio.causa) || 'prova') + '): si possono consultare ed esportare i dati, non modificarli; ' + (((_statoServizio && _statoServizio.causa) === 'eliminazione') ? 'il medico può annullare la richiesta di eliminazione dal banner' : 'il medico deve scegliere un piano in Piani') };
     if(inp.appuntamento_id){ await caricaVisitaDaAppt(inp.appuntamento_id); return { ok:true, nota:'caricamento visita aperto, agganciato all\u2019appuntamento' }; }
     if(inp.paziente_id){
       const p=(S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id));
