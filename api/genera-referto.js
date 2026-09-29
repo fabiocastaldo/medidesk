@@ -1,6 +1,6 @@
 import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
 import { richiediAal2 } from '../lib/aal-guard.js';
-import { trialExpired } from '../lib/trial-gate.js';
+import { richiediInServizio } from '../lib/servizio-guard.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 10;
@@ -81,9 +81,9 @@ export default async function handler(req, res) {
   if (!medicoData?.[0] || medicoData[0].stato !== 'approvato') {
     return res.status(403).json({ error: 'Account non autorizzato' });
   }
-  if (trialExpired(medicoData[0].piano, medicoData[0].created_at)) {
-    return res.status(403).json({ error: 'Periodo di prova scaduto', code: 'TRIAL_EXPIRED' });
-  }
+  // A2 (s64): regola unica del database al posto del solo calcolo dei 45 giorni (copre anche uscita ed eliminazione)
+  const servizio = await richiediInServizio(medicoData[0].id, { supabaseUrl, serviceKey });
+  if (!servizio.ok) return res.status(servizio.status).json(servizio.body);
   const spec = (medicoData[0].specializzazione || '').trim();
 
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';

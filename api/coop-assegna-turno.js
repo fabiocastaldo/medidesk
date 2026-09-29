@@ -8,6 +8,7 @@
 // solo la mano che l'ha scritto. Tutto service_role, RLS invariata.
 
 import { richiediAal2Secco } from '../lib/aal-guard.js';
+import { richiediInServizio } from '../lib/servizio-guard.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -106,6 +107,14 @@ export default async function handler(req, res) {
     if (String(sala.sede_id) !== String(sede.id)) {
       return res.status(400).json({ error: 'La sala appartiene a un\'altra sede' });
     }
+  }
+
+  // A2 (s64): a un medico in sola consultazione non si assegnano turni nuovi
+  const servizio = await richiediInServizio(medicoId, { supabaseUrl, serviceKey });
+  if (!servizio.ok) {
+    return res.status(servizio.status === 403 ? 409 : servizio.status).json(servizio.status === 403
+      ? { error: 'Il medico non è in servizio: non si possono assegnare turni nuovi', code: 'MEDICO_NON_IN_SERVIZIO' }
+      : servizio.body);
   }
 
   // il medico deve essere collegato all'organizzazione

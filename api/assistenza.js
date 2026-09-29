@@ -312,7 +312,7 @@ export default async function handler(req, res) {
     const aalKo = richiediAal2(jwt, userData);
     if (aalKo) return res.status(aalKo.status).json({ error: aalKo.error, code: aalKo.code });
     if (!userData?.id) return res.status(401).json({ error: 'Utente non riconosciuto' });
-    const mr = await sb(`medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&deleted_at=is.null&select=id,email`);
+    const mr = await sb(`medici?user_id=eq.${encodeURIComponent(userData.id)}&stato=eq.approvato&select=id,email`);   // A2 (s64): aperta anche in eliminazione
     const medico = mr.ok ? (await mr.json().catch(() => []))[0] : null;
     if (!medico) return res.status(403).json({ error: 'Account non autorizzato' });
 

@@ -19,6 +19,7 @@
 import { Resend } from 'resend';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { createHash, randomBytes } from 'crypto';
+import { richiediInServizio } from '../lib/servizio-guard.js';
 
 const MAX_CORPO = 4000;
 
@@ -47,6 +48,9 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
   if (!medicoRes || !medicoRes.ok) return { ok: false, status: 403, error: 'Verifica account fallita' };
   const rows = await medicoRes.json().catch(() => []);
   if (!rows?.[0]) return { ok: false, status: 403, error: 'Account non autorizzato' };
+  // A2 (s64): apri, scrivi e chiudi scrivono sui dati del medico con la chiave di servizio
+  const servizio = await richiediInServizio(rows[0].id, { supabaseUrl, serviceKey });
+  if (!servizio.ok) return { ok: false, status: servizio.status, error: servizio.body.error, code: servizio.body.code };
   return { ok: true, medico: rows[0] };
 }
 
