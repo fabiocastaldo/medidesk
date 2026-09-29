@@ -111,7 +111,7 @@ export default async function handler(req, res) {
   } catch { return res.status(502).json({ error: 'Verifica fallita' }); }
 
   // 1-bis) Solo un medico in servizio riceve prenotazioni: approvato, non in eliminazione e non
-  // cessato da più di 7 giorni (public.medico_in_servizio, s59: stessa regola della pagina pubblica).
+  // cessato (public.medico_in_servizio, s59; s63: spento nell'istante della cessazione).
   try {
     const r = await sb('rpc/medico_in_servizio', { method: 'POST', body: JSON.stringify({ p_medico_id: medicoId }) });
     if (!r.ok) return res.status(502).json({ error: 'Verifica fallita' });

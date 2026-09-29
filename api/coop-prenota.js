@@ -95,7 +95,7 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Centro non collegato all\'organizzazione' });
   }
   // Solo un medico in servizio riceve prenotazioni: approvato, non in eliminazione e non cessato
-  // da più di 7 giorni (public.medico_in_servizio, s59: stessa regola della pagina pubblica).
+  // (public.medico_in_servizio, s59; s63: spento nell'istante della cessazione).
   const medRes = await fetch(`${supabaseUrl}/rest/v1/rpc/medico_in_servizio`, {
     method: 'POST', headers: { ...srvHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_medico_id: medicoId })

@@ -1249,6 +1249,7 @@ function buildHtmlAccountEliminazione({ medico_nome }) {
     emailTitle('Eliminazione account programmata', { tone: 'danger' }) +
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${medico_nome}</strong>,</p>` +
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">abbiamo ricevuto una richiesta di eliminazione del tuo account Delphi~Med. La procedura &egrave; stata avviata.</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Da ora la tua pagina pubblica non &egrave; pi&ugrave; visibile e non ricevi pi&ugrave; prenotazioni online. Per 30 giorni puoi ancora accedere, consultare l&rsquo;agenda con gli appuntamenti gi&agrave; presi (avvisare i pazienti spetta a te, con i tuoi recapiti: in questo periodo messaggi ed email ai pazienti dal gestionale non sono disponibili), esportare i dati e annullare l&rsquo;eliminazione; poi account e dati vengono cancellati in modo definitivo.</p>` +
     noteBox('Se non sei stato tu a richiedere l&rsquo;eliminazione, apri subito una richiesta dalla pagina <a href="https://www.delphi-med.com/assistenza" style="color:#dc2626;">Assistenza di Delphi~Med</a>.', { tone: 'danger' }) +
     `<p style="font-size:13px;color:#888;margin:0;">Grazie per aver utilizzato Delphi~Med.</p>`;
   return emailShell(body);

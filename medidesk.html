@@ -11981,6 +11981,7 @@ async function waitlistSubscribe(){
       if(payload.error==='gia_cancellato') throw new Error('appuntamento già cancellato');
       if(payload.error==='appuntamento_passato') throw new Error('appuntamento già passato');
       if(payload.error==='email_mancante') throw new Error('nessuna email associata alla prenotazione');
+      if(payload.error==='medico_non_disponibile') throw new Error('il medico non riceve più prenotazioni online');
       throw new Error('iscrizione non riuscita');
     }
     document.getElementById('cancel-content').innerHTML=`

@@ -10,10 +10,12 @@
 //
 // POST { action: 'lookup'|'subscribe'|'unsubscribe', token, consenso? }
 // - lookup      → 200 { appt: {...}, iscritto: bool }
-// - subscribe   → 200 { ok: true } | 409 { error: 'gia_cancellato'|'appuntamento_passato'|'email_mancante' }
+// - subscribe   → 200 { ok: true } | 409 { error: 'gia_cancellato'|'appuntamento_passato'|'email_mancante'|'medico_non_disponibile' }
 //                 richiede body.consenso === true (consenso cons-wl-1)
 // - unsubscribe → 200 { ok: true }
 // - token non trovato → 404 UNIFORME { error: 'not_found' } (non-enumerabilità)
+
+import { medicoInServizio } from '../lib/waitlist.js';
 
 const rateMap = new Map(); // ip -> { count, resetAt } — fallback in-memory
 const RATE_LIMIT = 30;
@@ -122,6 +124,10 @@ export default async function handler(req, res) {
       if (b.consenso !== true) {
         return res.status(400).json({ error: 'consenso_richiesto' });
       }
+      // s63: niente iscrizioni per un medico che non riceve piu' prenotazioni online.
+      const inServizio = await medicoInServizio(sb, appt.medico_id);
+      if (inServizio === null) return res.status(502).json({ error: 'Verifica fallita' });
+      if (!inServizio) return res.status(409).json({ error: 'medico_non_disponibile' });
       // UPSERT per idempotenza: una sola riga per appuntamento (UNIQUE appuntamento_id)
       const r1 = await sb(`lista_attesa?on_conflict=appuntamento_id`, {
         method: 'POST',
