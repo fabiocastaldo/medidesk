@@ -110,6 +110,7 @@ export default async function handler(req, res) {
 
   const out = shell.replace('<title>Delphi~Med</title>', head);
   res.setHeader('Content-Type','text/html; charset=utf-8');
-  res.setHeader('Cache-Control','s-maxage=3600, stale-while-revalidate=86400');
+  // Un minuto in CDN, senza copia stantia: alla cessazione del medico la pagina sparisce entro pochi minuti (s66).
+  res.setHeader('Cache-Control','s-maxage=60');
   return res.status(200).send(out);
 }
