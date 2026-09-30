@@ -417,12 +417,16 @@ async function processScadenzaSoglia(base, headers, { giorni, data, campo }, res
 async function checkTrialScadenza(base, headers, resend, runErrors) {
   // Soglia: account creato >= 41 giorni fa (trial di 45gg, avviso ~4gg prima)
   const isoSoglia = new Date(Date.now() - 41 * 24 * 60 * 60 * 1000).toISOString();
+  // Finestra: la prova deve essere ancora davanti (creato < 45 giorni fa): a prova finita il promemoria non ha senso.
+  const isoFineProva = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
 
-  // a) Medici in trial (free) in scadenza, non ancora avvisati
+  // a) Medici in trial (free) in scadenza, non ancora avvisati.
+  //    sub_status=is.null esclude gli ex abbonati: alla chiusura tornano a piano=free senza aver mai ricevuto
+  //    il promemoria, e riceverebbero «la prova sta per scadere» insieme all'avviso di uscita (s66).
   let medici;
   try {
     const r = await fetch(
-      `${base}/medici?piano=eq.free&trial_reminder_sent_at=is.null&created_at=lte.${encodeURIComponent(isoSoglia)}&deleted_at=is.null&select=id,email,created_at`,
+      `${base}/medici?piano=eq.free&sub_status=is.null&trial_reminder_sent_at=is.null&created_at=lte.${encodeURIComponent(isoSoglia)}&created_at=gte.${encodeURIComponent(isoFineProva)}&deleted_at=is.null&select=id,email,created_at`,
       { headers }
     );
     if (!r.ok) throw new Error(`query medici ${r.status}`);
