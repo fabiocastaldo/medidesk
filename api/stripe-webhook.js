@@ -20,8 +20,12 @@ async function applySubscription(sub) {
   const item      = sub.items?.data?.[0];
   const price     = item?.price;
   const periodEnd = tsToIso(sub.current_period_end ?? item?.current_period_end);
-  const isDeleted = sub.status === 'canceled' || sub.status === 'incomplete_expired';
+  // Chiusura = canceled, incomplete_expired o unpaid (difesa se la dashboard smettesse di annullare a fine tentativi).
+  const isDeleted = sub.status === 'canceled' || sub.status === 'incomplete_expired' || sub.status === 'unpaid';
   const pianoEff  = isDeleted ? 'free' : (sub?.metadata?.piano || 'free');
+  // Alla chiusura la cessazione è l'istante in cui Stripe ha chiuso (ended_at, poi canceled_at, poi la fine del periodo):
+  // in medici.current_period_end, così medico_in_servizio, mio_stato_servizio e uscita.js la leggono come «abbonamento» con la data vera.
+  const fineIso   = isDeleted ? (tsToIso(sub.ended_at) ?? tsToIso(sub.canceled_at) ?? periodEnd) : periodEnd;
 
   const base = `${process.env.SUPABASE_URL}/rest/v1`;
   const sHeaders = {
@@ -88,7 +92,7 @@ async function applySubscription(sub) {
       piano:              pianoEff,
       sub_status:         isDeleted ? 'canceled' : (sub.status || null),
       sub_intervallo:     isDeleted ? null : (price?.recurring?.interval || null),
-      current_period_end: isDeleted ? null : periodEnd
+      current_period_end: fineIso
     })
   });
   if (!r2.ok) throw new Error(`patch medici ${r2.status}: ${await r2.text().catch(() => '')}`);
