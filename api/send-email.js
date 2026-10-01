@@ -23,6 +23,7 @@ import { revocaLink, consensoLink } from '../lib/consenso-token.js';
 import { buildICS } from '../lib/ics-builder.js';
 import { RUOLI } from '../lib/prenotazione-pr22.js';
 import { richiediInServizio } from '../lib/servizio-guard.js';
+import { dataIt } from '../lib/uscita.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -906,7 +907,11 @@ export default async function handler(req, res) {
   } else if (tipo === 'account_eliminazione') {
     to            = authCtx.userEmail;
     subject       = 'Account Delphi⁠~Med — eliminazione programmata';
-    html          = buildHtmlAccountEliminazione({ medico_nome: esc(authCtx.medicoNome) });
+    // Date imposte dal trigger proteggi_campi_medico (deleted_at = now(), +30 giorni), calcolate qui
+    // sullo stesso istante perché la mail parte prima dell'update di medici; giorno UTC come
+    // mio_stato_servizio (::date in sessione UTC) e come la mail di cessazione (dataIt).
+    const tElim = Date.now();
+    html          = buildHtmlAccountEliminazione({ medico_nome: esc(authCtx.medicoNome), fino: dataIt(tElim + 29 * 86400000), canc: dataIt(tElim + 30 * 86400000) });
     replyTo       = null;
     medicoIdAudit = authCtx.medicoId;
     targetType    = 'account';
@@ -1275,12 +1280,12 @@ function buildHtmlAvvisoSicurezza({ medico_nome, titolo, testo, quando }) {
   return emailShell(body);
 }
 
-function buildHtmlAccountEliminazione({ medico_nome }) {
+function buildHtmlAccountEliminazione({ medico_nome, fino, canc }) {
   const body =
     emailTitle('Eliminazione account programmata', { tone: 'danger' }) +
     `<p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;">Gentile <strong>${medico_nome}</strong>,</p>` +
     `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">abbiamo ricevuto una richiesta di eliminazione del tuo account Delphi~Med. La procedura &egrave; stata avviata.</p>` +
-    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Da ora la tua pagina pubblica non &egrave; pi&ugrave; visibile e non ricevi pi&ugrave; prenotazioni online. Per 30 giorni il tuo account &egrave; in sola consultazione: puoi accedere, consultare l&rsquo;agenda e i dati, esportarli e annullare l&rsquo;eliminazione, ma non inserire n&eacute; modificare pazienti, visite e referti, agenda e appuntamenti, messaggi e gli altri dati dello studio. Gli appuntamenti gi&agrave; presi puoi annullarli dall&rsquo;agenda, e il paziente riceve un&rsquo;email di annullamento; per ogni altro avviso usa i tuoi recapiti, perch&eacute; messaggi ed email ai pazienti dal gestionale non sono disponibili. Poi account e dati vengono cancellati in modo definitivo.</p>` +
+    `<p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Da ora la tua pagina pubblica non &egrave; pi&ugrave; visibile e non ricevi pi&ugrave; prenotazioni online. Fino al <strong>${fino}</strong> il tuo account &egrave; in sola consultazione: puoi accedere, consultare l&rsquo;agenda e i dati, esportarli e annullare l&rsquo;eliminazione, ma non inserire n&eacute; modificare pazienti, visite e referti, agenda e appuntamenti, messaggi e gli altri dati dello studio. Gli appuntamenti gi&agrave; presi puoi annullarli dall&rsquo;agenda, e il paziente riceve un&rsquo;email di annullamento; per ogni altro avviso usa i tuoi recapiti, perch&eacute; messaggi ed email ai pazienti dal gestionale non sono disponibili. Dal <strong>${canc}</strong> account e dati vengono cancellati in modo definitivo.</p>` +
     noteBox('Se non sei stato tu a richiedere l&rsquo;eliminazione, apri subito una richiesta dalla pagina <a href="https://www.delphi-med.com/assistenza" style="color:#dc2626;">Assistenza di Delphi~Med</a>.', { tone: 'danger' }) +
     `<p style="font-size:13px;color:#888;margin:0;">Grazie per aver utilizzato Delphi~Med.</p>`;
   return emailShell(body);
