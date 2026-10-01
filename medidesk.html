@@ -4564,6 +4564,7 @@ async function checkTrialExpiry(){
     if(!row){ return; }   /* interfaccia fail-open: le scritture le blocca comunque il database */
     _statoServizio = row;
     _trialExpired = row.in_servizio === false;
+    try{ fillGreeting(); }catch(e){}   /* s66: la pillola del piano segue lo stato appena letto */
     if(_trialExpired){
       _mostraBannerSolaConsultazione();
       if(row.causa !== 'eliminazione') showPage('piani');
@@ -7680,7 +7681,7 @@ async function deleteAppuntamento(id){
   if(appt.cancelled){ showToast('Appuntamento già cancellato'); return; }
   const dataLabel = formatDate(appt.data);
   const oraLabel = (appt.ora||'').substring(0,5);
-  if(!(await confermaModale(`Sei sicuro di voler cancellare l'appuntamento di ${appt.cognome} ${appt.nome} del ${dataLabel} alle ${oraLabel}?\n\nIl paziente e il centro riceveranno una mail di notifica.`, { titolo:'Cancellare appuntamento', ok:'Cancella appuntamento' }))) return;
+  if(!(await confermaModale(`Sei sicuro di voler cancellare l'appuntamento di ${appt.cognome} ${appt.nome} del ${dataLabel} alle ${oraLabel}?\n\n${_trialExpired ? 'Il paziente riceverà una mail di annullamento; il centro non viene avvisato: in sola consultazione spetta a te.' : 'Il paziente e il centro riceveranno una mail di notifica.'}`, { titolo:'Cancellare appuntamento', ok:'Cancella appuntamento' }))) return;
   const cancelledAt = new Date().toISOString();
   if(_trialExpired && isOnline() && !String(id).startsWith('local-')){
     // A2 (s64), eccezione (a): in sola consultazione l'annullamento lo esegue il server e avvisa il paziente
@@ -10342,6 +10343,12 @@ function fillGreeting(){
     if(_medicoPiano==='vip'){ txt='VIP'; cls='vip'; }
     else if(_medicoPiano==='founding'){ txt='Founding'; }
     else if(_medicoPiano==='pro'){ txt='Pro'; }
+    else if(_trialExpired){
+      /* s66: fuori servizio la pillola dice lo stato reale (mio_stato_servizio), non il conto della prova */
+      const c = (_statoServizio && _statoServizio.causa) || 'prova';
+      txt = c==='eliminazione' ? 'In eliminazione' : (c==='abbonamento' ? 'Abbonamento terminato' : 'Prova terminata');
+      cls='trial';
+    }
     else if(_medicoPiano==='free' && _medicoCreatedAt){
       const g=Math.ceil(45-(Date.now()-new Date(_medicoCreatedAt).getTime())/86400000);
       txt = g>0 ? ('Prova · '+g+(g===1?' giorno rimasto':' giorni rimasti')) : 'Prova terminata';
@@ -14620,12 +14627,20 @@ async function renderPiani(){
     + (approved ? '' : '<div class="pln-warn">Potrai attivare un piano dopo l\'approvazione dell\'account.</div>')
     + (isVip ? '<div class="pln-warn">Il tuo account ha accesso completo a tutte le funzionalità. Nessun abbonamento necessario.</div>' : '')
     + '<div class="pln-grid">'
-      + '<div class="pln-card">'
-        + '<div class="pln-name">Free Trial ' + cur('free') + '</div>'
-        + '<div class="pln-price">Gratis</div><div class="pln-note">45 giorni, tutto incluso</div>'
-        + '<div class="pln-desc">Prova ogni funzionalità per 45 giorni. Nessuna carta richiesta.</div>'
-        + '<div class="pln-cta"><span class="pln-hint">Attivo alla registrazione</span></div>'
-      + '</div>'
+      + (_trialExpired
+        /* s66: fuori servizio (prova finita, abbonamento terminato, eliminazione) piano=free non è una prova */
+        ? '<div class="pln-card">'
+          + '<div class="pln-name">Nessun piano attivo</div>'
+          + '<div class="pln-price">—</div><div class="pln-note">Sola consultazione</div>'
+          + '<div class="pln-desc">Puoi consultare ed esportare i tuoi dati. Scegli un piano per riattivare tutte le funzionalità.</div>'
+          + '<div class="pln-cta"><span class="pln-hint">Piano attuale</span></div>'
+        + '</div>'
+        : '<div class="pln-card">'
+          + '<div class="pln-name">Free Trial ' + cur('free') + '</div>'
+          + '<div class="pln-price">Gratis</div><div class="pln-note">45 giorni, tutto incluso</div>'
+          + '<div class="pln-desc">Prova ogni funzionalità per 45 giorni. Nessuna carta richiesta.</div>'
+          + '<div class="pln-cta"><span class="pln-hint">Attivo alla registrazione</span></div>'
+        + '</div>')
       + '<div class="pln-card pln-hero">'
         + '<div class="pln-ribbon">Early bird · primi 35</div>'
         + '<div class="pln-name">Founding ' + cur('founding') + '</div>'
