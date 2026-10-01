@@ -29,6 +29,7 @@ export default async function handler(req, res) {
 ${urls.join('\n')}
 </urlset>`;
   res.setHeader('Content-Type','application/xml; charset=utf-8');
-  res.setHeader('Cache-Control','s-maxage=3600, stale-while-revalidate=86400');
+  // Un minuto in CDN, senza copia stantia, come la pagina pubblica: un medico cessato esce dalla sitemap entro un minuto (s66).
+  res.setHeader('Cache-Control','s-maxage=60');
   return res.status(200).send(xml);
 }
