@@ -8687,7 +8687,7 @@ function showPazienteDetail(id){
   const _fb=(!p.email||!p.tel)?_contattiDaPrenotazioni(p):{email:'',tel:''};
   document.getElementById('modal-paziente-body').innerHTML=`
     <div class="extracted-fields" style="margin-bottom:16px">
-      <div class="field-row"><span class="field-key">Nome</span><span class="field-val">${escapeHtml(p.nome)} ${escapeHtml(p.cognome)}</span></div>
+      <div class="field-row"><span class="field-key">Nome</span><span class="field-val" style="display:flex;gap:6px"><input class="form-input paz-edit-input" id="paz-edit-nome" placeholder="Nome" value="${escapeAttr(p.nome||'')}" style="flex:1"><input class="form-input paz-edit-input" id="paz-edit-cognome" placeholder="Cognome" value="${escapeAttr(p.cognome||'')}" style="flex:1"></span></div>
       <div class="field-row"><span class="field-key">Nascita</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-nascita" placeholder="GG/MM/AAAA" value="${escapeAttr(p.nascita||'')}"></span></div>
       <div class="field-row"><span class="field-key">Email</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-email" type="email" placeholder="aggiungi" value="${escapeAttr(p.email||_fb.email||'')}"></span></div>
       <div class="field-row"><span class="field-key">Telefono</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-tel" placeholder="aggiungi" value="${escapeAttr(p.tel||_fb.tel||'')}"></span></div>
@@ -12676,18 +12676,29 @@ async function savePazienteAnagrafica(id){
   if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
   const email=document.getElementById('paz-edit-email').value.trim();
   const tel=document.getElementById('paz-edit-tel').value.trim();
+  // Rettifica del nome (art. 16): stesso fascicolo, visite, referti, messaggi e appuntamenti restano collegati per id.
+  const nome=capitalizeName((document.getElementById('paz-edit-nome')?.value||p.nome).trim());
+  const cognome=capitalizeName((document.getElementById('paz-edit-cognome')?.value||p.cognome).trim());
+  if(!nome||!cognome){ showToast('Nome e cognome non possono essere vuoti'); return; }
+  const nomeCambiato = nome!==p.nome || cognome!==p.cognome;
+  if(nomeCambiato){
+    const altro=S.pazienti.find(x=>String(x.id)!==String(p.id)&&x.nome.toLowerCase()===nome.toLowerCase()&&x.cognome.toLowerCase()===cognome.toLowerCase());
+    const avviso = altro ? ' Attenzione: esiste gi\u00e0 un altro fascicolo con questo nome; i due fascicoli restano distinti.' : '';
+    if(!(await confermaModale('Correggere il nome del fascicolo da \u00ab'+escapeHtml(p.cognome+' '+p.nome)+'\u00bb a \u00ab'+escapeHtml(cognome+' '+nome)+'\u00bb? Visite, referti, messaggi e appuntamenti restano collegati.'+avviso, { titolo:'Rettifica del nome', ok:'Correggi il nome' }))) return;
+  }
   if(isOnline() && typeof p.id==='string'){
     try{
       const { data, error } = await supabaseClient.from('pazienti')
-        .update({ data_nascita: nascitaIso||null, email: email||null, telefono: tel||null })
+        .update({ nome, cognome, data_nascita: nascitaIso||null, email: email||null, telefono: tel||null })
         .eq('id', p.id).select('id');
       if(error) throw error;
       if(!data||!data.length) throw new Error('nessuna riga aggiornata');
     }catch(e){ showToast(erroreLeggibile('Salvataggio non riuscito', e)); return; }
   }
-  p.nascita=nascita; p.email=email; p.tel=tel;
+  p.nome=nome; p.cognome=cognome; p.nascita=nascita; p.email=email; p.tel=tel;
+  const _mt=document.getElementById('modal-paziente-title'); if(_mt) _mt.textContent=p.cognome+' '+p.nome;
   save(); renderPazienti();
-  showToast('Anagrafica aggiornata \u2713');
+  showToast(nomeCambiato ? 'Nome corretto e anagrafica aggiornata \u2713' : 'Anagrafica aggiornata \u2713');
 }
 
 // ── IMPOSTAZIONI ──
