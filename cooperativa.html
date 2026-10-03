@@ -1049,6 +1049,11 @@ footer{padding:12px;text-align:center;font-size:12px;color:#aaa}
               <button type="button" class="pw-eye" aria-label="Mostra password" onclick="togglePwEye(this)"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
             </div>
           </div>
+          <div class="field" id="sic-pwd-nonce-box" style="display:none">
+            <label for="sic-pwd-nonce">Codice ricevuto via email</label>
+            <input id="sic-pwd-nonce" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Codice a 8 cifre" maxlength="12" onkeydown="if(event.key==='Enter')sicCambiaPassword()">
+            <p class="sub" style="margin:6px 0 0">Per sicurezza, quando l'accesso è stato fatto da più di 24 ore il cambio della password richiede un codice che ti abbiamo inviato via email. Vale un'ora.</p>
+          </div>
           <button class="btn" id="sic-pwd-btn" onclick="sicCambiaPassword()">Cambia password</button>
           <div id="sic-pwd-msg" class="hidden" style="margin-top:12px"></div>
         </div>
@@ -3668,8 +3673,27 @@ async function sicCambiaPassword(){
     const { error: eV } = await tmp.auth.signInWithPassword({ email, password: attuale });
     if(eV){ setBoxMsg('sic-pwd-msg', /Invalid login credentials/i.test(eV.message || '') ? 'Password attuale non corretta.' : 'Verifica non riuscita. Riprova.', 'err'); return; }
     try{ await tmp.auth.signOut({ scope: 'local' }); }catch(_){ }
-    const { error } = await sb.auth.updateUser({ password: pwd });
-    if(error){ setBoxMsg('sic-pwd-msg', 'Password non cambiata: ' + _mfaErr(error.message), 'err'); return; }
+    // P7 (s69): password attuale anche al server (require_current_password); con sessione da più di 24 ore
+    // (require_reauthentication) il server pretende il codice inviato via email da reauthenticate().
+    const nonceBox = document.getElementById('sic-pwd-nonce-box');
+    const nonce = (nonceBox && nonceBox.style.display !== 'none') ? document.getElementById('sic-pwd-nonce').value.trim() : '';
+    const attrs = { password: pwd, current_password: attuale };
+    if(nonce) attrs.nonce = nonce;
+    const { error } = await sb.auth.updateUser(attrs);
+    if(error){
+      const code = String(error.code || ''), msg = String(error.message || '');
+      if(code === 'reauthentication_needed' || /reauthentication/i.test(msg)){
+        const { error: eR } = await sb.auth.reauthenticate();
+        if(eR){ setBoxMsg('sic-pwd-msg', 'Invio del codice non riuscito. Riprova.', 'err'); return; }
+        if(nonceBox){ nonceBox.style.display = ''; document.getElementById('sic-pwd-nonce').value = ''; document.getElementById('sic-pwd-nonce').focus(); }
+        setBoxMsg('sic-pwd-msg', 'Per sicurezza ti abbiamo inviato un codice via email: inseriscilo qui sotto e premi di nuovo «Cambia password».', 'info');
+        return;
+      }
+      if(/current_password/i.test(code) || /current password/i.test(msg)){ setBoxMsg('sic-pwd-msg', 'Password attuale non corretta.', 'err'); return; }
+      if(/nonce|invalid.*code|otp/i.test(msg) && nonce){ setBoxMsg('sic-pwd-msg', 'Codice non valido o scaduto: premi di nuovo «Cambia password» per riceverne uno nuovo.', 'err'); if(nonceBox) nonceBox.style.display = 'none'; return; }
+      setBoxMsg('sic-pwd-msg', 'Password non cambiata: ' + _mfaErr(error.message), 'err'); return;
+    }
+    if(nonceBox){ nonceBox.style.display = 'none'; document.getElementById('sic-pwd-nonce').value = ''; }
     ['sic-pwd-attuale','sic-pwd','sic-pwd2'].forEach(id => document.getElementById(id).value = '');
     updateSicStrength();
     setBoxMsg('sic-pwd-msg', 'Password cambiata.', 'info');
