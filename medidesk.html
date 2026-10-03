@@ -146,7 +146,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .hero-big{font-weight:300;font-size:54px;line-height:1}
 .hero-unit{font-size:16px;color:rgba(255,255,255,.92)}
 .paz-suggest{position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:220px;overflow:auto;display:none}.paz-suggest div{padding:8px 12px;cursor:pointer;font-size:13.5px}.paz-suggest div:hover{background:var(--bg)}.prom-collapsed{display:none}
-.hero-row{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap}.hero-kpi{display:flex;align-items:baseline;gap:8px;cursor:pointer;border-radius:10px;padding:2px 6px;margin:-2px -6px;transition:background .15s}.hero-kpi:hover{background:rgba(255,255,255,.14)}.hero-kpi .hero-unit{white-space:nowrap}.hero-kpi.has-alert .hero-big{color:#FFD9A8}.hero-unit-s{display:none}@media (max-width:640px){.hero-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start}.hero-kpi{flex-direction:column;align-items:flex-start;gap:2px;padding:4px 6px}.hero-kpi .hero-big{font-size:30px;line-height:1}.hero-kpi .hero-unit{display:none}.hero-kpi .hero-unit-s{display:block;font-size:11px;white-space:nowrap}}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}
+.hero-row{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap}.hero-kpi{display:flex;align-items:baseline;gap:8px;cursor:pointer;border-radius:10px;padding:2px 6px;margin:-2px -6px;transition:background .15s}.hero-kpi:hover{background:rgba(255,255,255,.14)}.hero-kpi .hero-unit{white-space:nowrap}.hero-kpi.has-alert .hero-big{color:#FFD9A8}.hero-unit-s{display:none}@media (max-width:640px){.hero-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start}.hero-kpi{flex-direction:column;align-items:flex-start;gap:2px;padding:4px 6px}.hero-kpi .hero-big{font-size:30px;line-height:1}.hero-kpi .hero-unit{display:none}.hero-kpi .hero-unit-s{display:block;font-size:11px;white-space:nowrap}}.msg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warm);margin-left:7px;vertical-align:middle}.lim-pill{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.02em;color:#fff;background:var(--warm);border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:middle;white-space:nowrap}
 .hero-next{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-height:18px;flex-shrink:0;text-align:right}
 .hero-next-label{color:var(--brand-soft);font-size:12px}
 .hero-next-val{font-weight:700;font-size:16px}
@@ -4791,7 +4791,7 @@ async function loadPazientiFromDB(user){
     const { data: medico } = await supabaseClient.from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data, error } = await supabaseClient.from('pazienti')
-      .select('id, nome, cognome, data_nascita, telefono, email, created_at, sintesi_clinica, sintesi_generata_il, sintesi_meta, consenso_comunicazioni_at, consenso_comunicazioni_versione, consenso_comunicazioni_richiesto_at, consenso_comunicazioni_revocato_at')
+      .select('id, nome, cognome, data_nascita, telefono, email, created_at, sintesi_clinica, sintesi_generata_il, sintesi_meta, consenso_comunicazioni_at, consenso_comunicazioni_versione, consenso_comunicazioni_richiesto_at, consenso_comunicazioni_revocato_at, limitato_at, limitato_motivo, limitato_nota')
       .eq('medico_id', medico.id).order('cognome').order('nome');
     if(error) throw error;
     S.pazienti = (data || []).map(p => ({
@@ -4799,7 +4799,8 @@ async function loadPazientiFromDB(user){
       nascita: isoToIt(p.data_nascita||''), tel: p.telefono||'', email: p.email||'', creato: (p.created_at||'').slice(0,10), visite: [],
       sintesiEnc: p.sintesi_clinica||null, sintesiGenerataIl: p.sintesi_generata_il||null, sintesiMeta: p.sintesi_meta||null,
       consenso_comunicazioni_at: p.consenso_comunicazioni_at||null, consenso_comunicazioni_versione: p.consenso_comunicazioni_versione||null,
-      consenso_comunicazioni_richiesto_at: p.consenso_comunicazioni_richiesto_at||null, consenso_comunicazioni_revocato_at: p.consenso_comunicazioni_revocato_at||null
+      consenso_comunicazioni_richiesto_at: p.consenso_comunicazioni_richiesto_at||null, consenso_comunicazioni_revocato_at: p.consenso_comunicazioni_revocato_at||null,
+      limitatoAt: p.limitato_at||null, limitatoMotivo: p.limitato_motivo||null, limitatoNota: p.limitato_nota||null   // riga 78 (s68)
     }));
     save();
     console.log('[Delphi~Med] Pazienti caricati da DB:', S.pazienti.length);
@@ -5622,6 +5623,7 @@ function erroreLeggibile(cosa, e){
   else if(/jwt|token.*(expired|scadut)|sessione non valida|not authenticated|non autenticato|refresh token/.test(r)) testo = 'sessione scaduta: esci e rientra, poi riprova';
   else if(/duplicate key|23505|already exists|unique/.test(r)) testo = 'esiste gi\u00e0 un dato uguale';
   else if(/sola_consultazione/.test(r)) testo = 'account in sola consultazione: puoi consultare ed esportare i dati, non modificarli';
+  else if(/limitazione_art18/.test(r)) testo = 'Il trattamento dei dati di questo paziente \u00e8 limitato (art. 18 GDPR): puoi consultare ed esportare, ' + (/comunicazioni/.test(r) ? 'non inviare comunicazioni' : 'non modificare') + '.';
   else if(/permission denied|row-level security|42501|not allowed|forbidden|http 403/.test(r)) testo = 'operazione non permessa per questo account';
   else if(!raw || /[a-z]+_[a-z_]+|http \d|\b\d{5}\b|pgrst|column|schema|relation|violates|constraint|\bnull\b|undefined|typeerror|referenceerror|syntaxerror|function|cannot|could not|failed|invalid|unexpected|not found|\brig[ae]\b/.test(r)) testo = 'riprova tra poco; se si ripete, ricarica la pagina';
   else testo = raw;
@@ -7681,9 +7683,10 @@ async function deleteAppuntamento(id){
   if(appt.cancelled){ showToast('Appuntamento già cancellato'); return; }
   const dataLabel = formatDate(appt.data);
   const oraLabel = (appt.ora||'').substring(0,5);
-  if(!(await confermaModale(`Sei sicuro di voler cancellare l'appuntamento di ${appt.cognome} ${appt.nome} del ${dataLabel} alle ${oraLabel}?\n\n${_trialExpired ? 'Il paziente riceverà una mail di annullamento; il centro non viene avvisato: in sola consultazione spetta a te.' : 'Il paziente e il centro riceveranno una mail di notifica.'}`, { titolo:'Cancellare appuntamento', ok:'Cancella appuntamento' }))) return;
+  const _lim = _pazLimitato(appt.pazienteId);   // riga 78 (s68): per il paziente limitato l'annullamento lo esegue il server, come in sola consultazione
+  if(!(await confermaModale(`Sei sicuro di voler cancellare l'appuntamento di ${appt.cognome} ${appt.nome} del ${dataLabel} alle ${oraLabel}?\n\n${_trialExpired ? 'Il paziente riceverà una mail di annullamento; il centro non viene avvisato: in sola consultazione spetta a te.' : _lim ? 'Trattamento limitato: il paziente riceverà una mail di annullamento; il centro non viene avvisato, spetta a te.' : 'Il paziente e il centro riceveranno una mail di notifica.'}`, { titolo:'Cancellare appuntamento', ok:'Cancella appuntamento' }))) return;
   const cancelledAt = new Date().toISOString();
-  if(_trialExpired && isOnline() && !String(id).startsWith('local-')){
+  if((_trialExpired || _lim) && isOnline() && !String(id).startsWith('local-')){
     // A2 (s64), eccezione (a): in sola consultazione l'annullamento lo esegue il server e avvisa il paziente
     try {
       const _jwt = await getAuthJwt();
@@ -8582,7 +8585,7 @@ async function markSeen(id){
   const a=S.appuntamenti.find(x=>String(x.id)===String(id));
   if(a){
     a.seen=true;
-    if(isOnline() && !_trialExpired){   // A2 (s64): in sola consultazione nessuna scrittura automatica
+    if(isOnline() && !_trialExpired && !_pazLimitato(a.pazienteId)){   // A2 (s64): in sola consultazione nessuna scrittura automatica; riga 78: n\u00e9 sul paziente limitato
       try { await supabaseClient.from('appuntamenti').update({ seen: true }).eq('id', String(id)); }
       catch(e){ console.error('[Delphi~Med] markSeen:', e.message); }
     }
@@ -8594,9 +8597,9 @@ async function markSeen(id){
 async function markAllSeen(){
   const list = S.appuntamenti.filter(a=>a.source==='paziente' && !a.seen);
   if(!list.length) return;
-  const ids = list.map(a=>String(a.id));
+  const ids = list.filter(a=>!_pazLimitato(a.pazienteId)).map(a=>String(a.id));   // riga 78 (s68): niente scritture sul paziente limitato
   list.forEach(a=>{ a.seen=true; });
-  if(isOnline() && !_trialExpired){   // A2 (s64): in sola consultazione nessuna scrittura automatica
+  if(isOnline() && !_trialExpired && ids.length){   // A2 (s64): in sola consultazione nessuna scrittura automatica
     try { await supabaseClient.from('appuntamenti').update({ seen: true }).in('id', ids); }
     catch(e){ console.error('[Delphi~Med] markAllSeen:', e.message); }
   }
@@ -8677,40 +8680,106 @@ function _buildVisitaHTML(paz, v, i){
 
 // ── PAZIENTI ── (renderPazienti definita in sezione nuova più sotto)
 
+
+// ── Limitazione del trattamento (art. 18 GDPR) — riga 78 del piano privacy (s68) ─────────────────────
+// La regola vive nel DB: pazienti.limitato_at (solo via RPC limita_paziente, con traccia in audit_log) e i trigger
+// trg_limitazione, che rifiutano con 42501 ogni scrittura del medico sui dati del paziente limitato. Qui si evita
+// di proporre scritture che il DB rifiuterebbe e si mostra lo stato. Lettura ed esportazione restano libere.
+const _MOTIVI_LIMITAZIONE = {
+  contestazione_esattezza: 'Il paziente contesta l\u2019esattezza dei dati (verifica in corso)',
+  trattamento_illecito:    'Il paziente ritiene il trattamento illecito e chiede la limitazione invece della cancellazione',
+  azione_legale:           'I dati servono al paziente per far valere un diritto in sede giudiziaria',
+  opposizione_in_verifica: 'Il paziente si \u00e8 opposto al trattamento (verifica dei motivi in corso)'
+};
+function _pazLimitato(id){ const p=(S.pazienti||[]).find(x=>String(x.id)===String(id)); return !!(p && p.limitatoAt); }
+function _limitazioneCardHTML(p){
+  const dal = p.limitatoAt ? isoToIt(String(p.limitatoAt).slice(0,10)) : '';
+  return '<div class="lim-card" id="lim-card-'+escapeAttr(String(p.id))+'" style="margin-bottom:16px;padding:12px 14px;border:1px solid var(--warm);border-radius:10px;background:rgba(214,98,74,.06)">'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="lim-pill">Trattamento limitato dal '+escapeHtml(dal)+'</span></div>'
+    +'<div style="font-size:13px;color:var(--ink2);margin-top:8px"><strong>Motivo:</strong> '+escapeHtml(_MOTIVI_LIMITAZIONE[p.limitatoMotivo]||p.limitatoMotivo||'')+(p.limitatoNota?'<br><strong>Nota:</strong> '+escapeHtml(p.limitatoNota):'')+'</div>'
+    +'<div style="font-size:13px;color:var(--ink3);margin-top:8px;line-height:1.5">Finch\u00e9 la limitazione \u00e8 attiva puoi consultare ed esportare il fascicolo, ma non modificarlo n\u00e9 eliminarlo n\u00e9 usarlo: niente nuove visite, referti, appuntamenti, promemoria, messaggi, comunicazioni di gruppo o sintesi AI. Gli appuntamenti gi\u00e0 presi restano in agenda e puoi annullarli: il paziente riceve l\u2019email, non i promemoria.</div>'
+    +'<div id="lim-form-'+escapeAttr(String(p.id))+'" style="display:none;margin-top:10px"><label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink2);cursor:pointer"><input type="checkbox" id="lim-informato-'+escapeAttr(String(p.id))+'" style="margin-top:3px"><span>Ho informato il paziente che la limitazione viene revocata (art. 18, par. 3 GDPR)</span></label>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button type="button" class="btn btn-sm btn-secondary" onclick="limToggleForm(\''+escapeAttr(String(p.id))+'\')">Annulla</button><button type="button" class="btn btn-sm btn-primary" onclick="limRevoca(\''+escapeAttr(String(p.id))+'\',this)">Revoca la limitazione</button></div></div>'
+    +'<div style="text-align:right;margin-top:10px" id="lim-azioni-'+escapeAttr(String(p.id))+'"><button type="button" class="btn btn-sm btn-secondary" onclick="limToggleForm(\''+escapeAttr(String(p.id))+'\')">Revoca la limitazione\u2026</button></div></div>';
+}
+function _limitaFormHTML(id){
+  const opts = Object.keys(_MOTIVI_LIMITAZIONE).map(k=>'<option value="'+k+'">'+escapeHtml(_MOTIVI_LIMITAZIONE[k])+'</option>').join('');
+  return '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">'
+    +'<div style="text-align:right"><button type="button" class="btn btn-sm btn-secondary" onclick="limToggleForm(\''+escapeAttr(String(id))+'\')">Limita il trattamento\u2026</button></div>'
+    +'<div id="lim-form-'+escapeAttr(String(id))+'" style="display:none;margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:10px">'
+    +'<div style="font-size:13px;color:var(--ink2);line-height:1.5;margin-bottom:8px">La limitazione del trattamento (art. 18 GDPR) si applica su richiesta del paziente: i suoi dati restano conservati e consultabili, ma non si usano n\u00e9 si modificano finch\u00e9 non la revochi. Viene registrata con data e motivo.</div>'
+    +'<label style="font-size:12px;color:var(--ink3)">Motivo</label><select class="form-input" id="lim-motivo-'+escapeAttr(String(id))+'" style="width:100%;box-sizing:border-box;margin:4px 0 8px"><option value="">Scegli il motivo\u2026</option>'+opts+'</select>'
+    +'<label style="font-size:12px;color:var(--ink3)">Nota (facoltativa, es. riferimento della richiesta)</label><textarea class="form-input" id="lim-nota-'+escapeAttr(String(id))+'" rows="2" maxlength="500" style="width:100%;box-sizing:border-box;margin-top:4px"></textarea>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button type="button" class="btn btn-sm btn-secondary" onclick="limToggleForm(\''+escapeAttr(String(id))+'\')">Annulla</button><button type="button" class="btn btn-sm btn-primary" onclick="limApplica(\''+escapeAttr(String(id))+'\',this)">Limita il trattamento</button></div></div></div>';
+}
+function limToggleForm(id){ const f=document.getElementById('lim-form-'+id); if(!f) return; f.style.display=f.style.display==='block'?'none':'block'; }
+async function _limRpc(args){
+  if(!isOnline()){ showToast('Serve la connessione per cambiare la limitazione'); return null; }
+  const { data, error } = await supabaseClient.rpc('limita_paziente', args);
+  if(error) throw error;
+  return data;
+}
+async function limApplica(id, btn){ return salvaUnaVolta('lim-applica', btn, async()=>{
+  const p=S.pazienti.find(x=>String(x.id)===String(id)); if(!p) return;
+  const motivo=(document.getElementById('lim-motivo-'+id)||{}).value||'';
+  const nota=((document.getElementById('lim-nota-'+id)||{}).value||'').trim();
+  if(!_MOTIVI_LIMITAZIONE[motivo]){ showToast('Scegli il motivo della limitazione'); return; }
+  if(!(await confermaModale('Limitare il trattamento dei dati di '+p.cognome+' '+p.nome+'? Il fascicolo resta consultabile ed esportabile, ma non potrai modificarlo n\u00e9 usarlo finch\u00e9 non revochi la limitazione. Motivo: '+_MOTIVI_LIMITAZIONE[motivo]+'.', { titolo:'Limitazione del trattamento', ok:'Limita il trattamento' }))) return;
+  try{
+    const r=await _limRpc({ p_id:id, p_motivo:motivo, p_nota:nota||null, p_revoca:false, p_informato:false }); if(!r) return;
+    p.limitatoAt=r.limitato_at||null; p.limitatoMotivo=r.limitato_motivo||null; p.limitatoNota=r.limitato_nota||null;
+    save(); showPazienteDetail(id); renderPazienti(); showToast('Trattamento limitato \u2713');
+  }catch(e){ showToast(erroreLeggibile('Limitazione non riuscita', e)); }
+}); }
+async function limRevoca(id, btn){ return salvaUnaVolta('lim-revoca', btn, async()=>{
+  const p=S.pazienti.find(x=>String(x.id)===String(id)); if(!p) return;
+  const inf=document.getElementById('lim-informato-'+id);
+  if(!inf||!inf.checked){ showToast('Prima della revoca il paziente va informato: spunta la casella'); return; }
+  if(!(await confermaModale('Revocare la limitazione per '+p.cognome+' '+p.nome+'? Il fascicolo torna modificabile e utilizzabile; la revoca viene registrata.', { titolo:'Revoca della limitazione', ok:'Revoca la limitazione' }))) return;
+  try{
+    const r=await _limRpc({ p_id:id, p_revoca:true, p_informato:true }); if(!r) return;
+    p.limitatoAt=null; p.limitatoMotivo=null; p.limitatoNota=null;
+    save(); showPazienteDetail(id); renderPazienti(); showToast('Limitazione revocata \u2713');
+  }catch(e){ showToast(erroreLeggibile('Revoca non riuscita', e)); }
+}); }
 function showPazienteDetail(id){
   const p=S.pazienti.find(x=>String(x.id)===String(id)); if(!p) return;
+  const lim=!!p.limitatoAt;   // riga 78 (s68): a paziente limitato la scheda è in sola consultazione
   document.getElementById('modal-paziente-title').textContent=p.cognome+' '+p.nome;
   const visite=p.visite||[];
   const nReferti = visite.reduce((s,v)=>s+getFotoPaths(v.foto_url).length,0);
   const canSint = nReferti>0 || visite.some(v=>(v.clinica||'').trim());
   const sintLabel = nReferti>0 ? `Sintetizza dai referti (${nReferti})` : 'Sintetizza storia clinica';
   const _fb=(!p.email||!p.tel)?_contattiDaPrenotazioni(p):{email:'',tel:''};
+  const _ro=lim?' readonly':'';
   document.getElementById('modal-paziente-body').innerHTML=`
+    ${lim?_limitazioneCardHTML(p):''}
     <div class="extracted-fields" style="margin-bottom:16px">
-      <div class="field-row"><span class="field-key">Nome</span><span class="field-val" style="display:flex;gap:6px"><input class="form-input paz-edit-input" id="paz-edit-nome" placeholder="Nome" value="${escapeAttr(p.nome||'')}" style="flex:1"><input class="form-input paz-edit-input" id="paz-edit-cognome" placeholder="Cognome" value="${escapeAttr(p.cognome||'')}" style="flex:1"></span></div>
-      <div class="field-row"><span class="field-key">Nascita</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-nascita" placeholder="GG/MM/AAAA" value="${escapeAttr(p.nascita||'')}"></span></div>
-      <div class="field-row"><span class="field-key">Email</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-email" type="email" placeholder="aggiungi" value="${escapeAttr(p.email||_fb.email||'')}"></span></div>
-      <div class="field-row"><span class="field-key">Telefono</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-tel" placeholder="aggiungi" value="${escapeAttr(p.tel||_fb.tel||'')}"></span></div>
-      <div style="text-align:right;margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="savePazienteAnagrafica('${escapeAttr(id)}')">Salva anagrafica</button></div>
+      <div class="field-row"><span class="field-key">Nome</span><span class="field-val" style="display:flex;gap:6px"><input class="form-input paz-edit-input" id="paz-edit-nome" placeholder="Nome" value="${escapeAttr(p.nome||'')}" style="flex:1"${_ro}><input class="form-input paz-edit-input" id="paz-edit-cognome" placeholder="Cognome" value="${escapeAttr(p.cognome||'')}" style="flex:1"${_ro}></span></div>
+      <div class="field-row"><span class="field-key">Nascita</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-nascita" placeholder="GG/MM/AAAA" value="${escapeAttr(p.nascita||'')}"${_ro}></span></div>
+      <div class="field-row"><span class="field-key">Email</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-email" type="email" placeholder="aggiungi" value="${escapeAttr(p.email||_fb.email||'')}"${_ro}></span></div>
+      <div class="field-row"><span class="field-key">Telefono</span><span class="field-val"><input class="form-input paz-edit-input" id="paz-edit-tel" placeholder="aggiungi" value="${escapeAttr(p.tel||_fb.tel||'')}"${_ro}></span></div>
+      ${lim?'':`<div style="text-align:right;margin-top:8px"><button class="btn btn-sm btn-secondary" onclick="savePazienteAnagrafica('${escapeAttr(id)}')">Salva anagrafica</button></div>`}
     </div>
     <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-    <div class="section-title pd-head" style="cursor:default"><span class="pd-lbl">Visite<span class="pd-badge">${visite.length}</span></span><button class="btn btn-sm btn-secondary" onclick="openVisitaForPaziente('${escapeAttr(id)}')">Carica visita</button></div>
+    <div class="section-title pd-head" style="cursor:default"><span class="pd-lbl">Visite<span class="pd-badge">${visite.length}</span></span>${lim?'':`<button class="btn btn-sm btn-secondary" onclick="openVisitaForPaziente('${escapeAttr(id)}')">Carica visita</button>`}</div>
     ${visite.map((v,i)=>_buildVisitaHTML(p,v,i)).join('')}
-    ${canSint?`
+    ${canSint&&!lim?`
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
       <button class="btn btn-secondary" onclick="sintetizzaReferti('${escapeAttr(id)}')" id="btn-storia-${escapeAttr(id)}">✦ ${sintLabel}</button>
     </div>
     <div id="storia-container-${escapeAttr(id)}"></div>`:''}
     <div id="prom-box-${escapeAttr(id)}" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"></div>
     <div id="msg-box-${escapeAttr(id)}" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
-    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+    ${lim?'':_limitaFormHTML(id)}
+    ${lim?'':`<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
       <button type="button" class="btn-del-paz" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:none;color:var(--warm);font-size:14px;cursor:pointer;padding:10px 4px;min-height:44px" data-pazid="${escapeAttr(id)}" data-action="delete-paziente"><svg class="ic"><use href="#ic-trash"/></svg> Elimina paziente</button>
-    </div>`;
+    </div>`}`;
   _initPazienteModal(p);
   const _mp=document.getElementById('modal-paziente');
   if(_mp && !_mp.classList.contains('open')){ const _mb=_mp.querySelector('.modal'); if(_mb) _mb.scrollTop=0; }
   openModal('modal-paziente');
-  if(canSint) _renderSintesiSalvata(id);
+  if(canSint&&!lim) _renderSintesiSalvata(id);
   msgLoadPaziente(id); promRenderPaziente(id);
 }
 // LF-09: correggere data, tipo e centro di una visita salvata
@@ -8767,7 +8836,7 @@ async function msgLoadPaziente(id, apriThreadId){
   const _fb=(!p.email)?_contattiDaPrenotazioni(p):{email:''};
   const hasEmail=!!(p.email||_fb.email);
   const _k='msg-body-'+escapeAttr(id); const _nl=(threads||[]).reduce((a,t)=>a+(t.messaggi||[]).filter(m=>m.direzione==='paziente'&&!m.letto_at).length,0);
-  let h=pdHead(_k,'Messaggi',(threads||[]).length,_nl>0,'<button class="btn btn-sm btn-secondary" '+(hasEmail?'':'disabled title="Serve un\'email del paziente"')+' onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);msgApri(\''+escapeAttr(id)+'\')">Contatta</button>');
+  let h=pdHead(_k,'Messaggi',(threads||[]).length,_nl>0,'<button class="btn btn-sm btn-secondary" '+(_pazLimitato(id)?'disabled title="Trattamento limitato (art. 18): nessun nuovo messaggio"':hasEmail?'':'disabled title="Serve un\'email del paziente"')+' onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);msgApri(\''+escapeAttr(id)+'\')">Contatta</button>');
   h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="msg-new-'+escapeAttr(id)+'" style="display:none;margin:8px 0 12px"><textarea id="msg-new-txt-'+escapeAttr(id)+'" rows="3" maxlength="4000" class="form-input" style="width:100%;box-sizing:border-box" placeholder="Primo messaggio al paziente (facoltativo). Riceverà un link per leggere e rispondere, senza registrarsi."></textarea>';
   h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn btn-sm btn-secondary" onclick="msgApri(\''+escapeAttr(id)+'\')">Annulla</button><button class="btn btn-sm btn-primary" onclick="msgApriConferma(\''+escapeAttr(id)+'\')">Apri canale e invia</button></div></div>';
@@ -9020,7 +9089,7 @@ function promRenderPaziente(pazId){
   const box=document.getElementById('prom-box-'+pazId); if(!box) return;
   const mine=(S.promemoria||[]).filter(pr=>String(pr.paziente_id)===String(pazId));
   const _k='prom-body-'+escapeAttr(String(pazId));
-  let h=pdHead(_k,'Promemoria',mine.length,false,'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button>');
+  let h=pdHead(_k,'Promemoria',mine.length,false,_pazLimitato(pazId)?'':'<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();pdToggle(\''+_k+'\',true);promToggleForm(\''+escapeAttr(String(pazId))+'\')">+ Promemoria</button>');   // riga 78: nessun nuovo promemoria a paziente limitato
   h+='<div id="'+_k+'" style="display:'+(_pdOpen[_k]?'block':'none')+'">';
   h+='<div id="prom-form-'+escapeAttr(String(pazId))+'" style="display:none;margin:8px 0 10px"><input id="prom-txt-'+escapeAttr(String(pazId))+'" class="form-input" maxlength="500" placeholder="Es. aprire il canale tra una settimana" style="width:100%;box-sizing:border-box">';
   h+='<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><input type="date" id="prom-data-'+escapeAttr(String(pazId))+'" class="form-input" value="'+fmt(new Date(Date.now()+7*86400000))+'"><button class="btn btn-sm btn-primary" onclick="promSalvaDaScheda(\''+escapeAttr(String(pazId))+'\',this)">Salva</button></div></div>';
@@ -12536,7 +12605,7 @@ function renderPazienti(more){
   S.pazienti.forEach(p=>{
     const next=futuri.find(a=>(a.nome||'').toLowerCase()===p.nome.toLowerCase()&&(a.cognome||'').toLowerCase()===p.cognome.toLowerCase())||null;
     const fb=(!p.email||!p.tel)?_contattiDaPrenotazioni(p):{email:'',tel:''};
-    rows.push({tipo:'paziente',id:p.id,nome:p.nome,cognome:p.cognome,nascita:p.nascita||'',email:p.email||fb.email||'',tel:p.tel||fb.tel||'',nVisite:(p.visite||[]).length,next,centri:_pazCentriIds(p)});
+    rows.push({tipo:'paziente',id:p.id,nome:p.nome,cognome:p.cognome,nascita:p.nascita||'',email:p.email||fb.email||'',tel:p.tel||fb.tel||'',nVisite:(p.visite||[]).length,next,centri:_pazCentriIds(p),limitato:!!p.limitatoAt});
   });
   const visti=new Set(S.pazienti.map(p=>(p.nome+'|'+p.cognome).toLowerCase()));
   const pren={};
@@ -12572,7 +12641,7 @@ function renderPazienti(more){
 function _pazRowHTML(r){
   const open=r.tipo==='paziente'?`showPazienteDetail('${escapeAttr(String(r.id))}')`:`showApptDetail('${escapeAttr(String(r.apptId))}')`;
   return `<tr class="paz-row" onclick="${open}">
-    <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
+    <td><span class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}</span>${r.limitato?'<span class="lim-pill" title="Trattamento limitato (art. 18 GDPR)">Limitato</span>':''}${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.nascita?escapeHtml(r.nascita):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">${r.email?escapeHtml(r.email):'<span class="paz-dim">&ndash;</span>'}</td>
     <td style="font-size:12.5px;white-space:nowrap">${r.tel?escapeHtml(r.tel):'<span class="paz-dim">&ndash;</span>'}</td>
@@ -12585,7 +12654,7 @@ function _pazCardHTML(r){
   const meta=(r.nascita?`<span class="pm-nascita">${escapeHtml(r.nascita)}</span>`:'')+(_cont?`<span class="pm-contatti">${r.nascita?' \u00b7 ':''}${_cont}</span>`:'');
   return `<div class="paziente-card" onclick="${open}">
     <div class="paziente-info">
-      <div class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</div>
+      <div class="paziente-name">${escapeHtml(r.cognome)} ${escapeHtml(r.nome)}${r.limitato?'<span class="lim-pill" title="Trattamento limitato (art. 18 GDPR)">Limitato</span>':''}${msgHasNonLetti(r.id)?'<span class="msg-dot" title="Nuovi messaggi dal paziente"></span>':''}</div>
       <div class="paziente-meta">${meta||('&nbsp;')}</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">${(r.tipo==='paziente'?`<span style="font-size:12px;color:var(--accent);font-weight:500">${r.nVisite} ${r.nVisite===1?'visita':'visite'}</span>`:'')}</div>
@@ -12671,6 +12740,7 @@ async function salvaNuovoPaziente(btn){ return salvaUnaVolta('nuovo-paziente', b
 
 async function savePazienteAnagrafica(id){
   const p=S.pazienti.find(x=>String(x.id)===String(id)); if(!p) return;
+  if(p.limitatoAt){ showToast('Trattamento limitato (art. 18): il fascicolo non si modifica finch\u00e9 non revochi la limitazione'); return; }
   const nascita=expandCompactDate(document.getElementById('paz-edit-nascita').value.trim());
   const nascitaIso=itToIso(nascita);
   if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
