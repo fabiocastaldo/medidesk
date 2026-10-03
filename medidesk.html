@@ -2418,6 +2418,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
               <label>Conferma password</label>
               <div class="auth-pwd-wrap"><input type="password" id="sec-pwd-confirm" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')cambiaPassword(document.getElementById('sec-pwd-btn'))"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
             </div>
+            <div class="auth-field" id="sec-pwd-nonce-box" style="display:none">
+              <label>Codice ricevuto via email</label>
+              <input type="text" id="sec-pwd-nonce" inputmode="numeric" autocomplete="one-time-code" placeholder="Codice a 8 cifre" maxlength="12" onkeydown="if(event.key==='Enter')cambiaPassword(document.getElementById('sec-pwd-btn'))">
+              <div style="font-size:12.5px;color:var(--ink3);margin-top:6px;line-height:1.5">Per sicurezza, quando l'accesso è stato fatto da più di 24 ore il cambio della password richiede un codice che ti abbiamo inviato via email. Vale un'ora.</div>
+            </div>
             <button class="btn btn-primary" id="sec-pwd-btn" onclick="cambiaPassword(this)">Cambia password</button>
           </div>
         </div></div>
@@ -4124,11 +4129,30 @@ async function cambiaPassword(btn){
       return;
     }
     try{ await tmp.auth.signOut({ scope: 'local' }); }catch(_){ }
-    const { error } = await supabaseClient.auth.updateUser({ password: pwd });
-    if(error){ showToast(erroreLeggibile('Password non cambiata', error)); return; }
+    // P7 (s69): la password attuale viaggia anche al server (require_current_password) e, se la sessione ha più
+    // di 24 ore (require_reauthentication), il server pretende il codice inviato via email da reauthenticate().
+    const nonceBox = document.getElementById('sec-pwd-nonce-box');
+    const nonce = (nonceBox && nonceBox.style.display !== 'none') ? document.getElementById('sec-pwd-nonce').value.trim() : '';
+    const attrs = { password: pwd, current_password: attuale };
+    if(nonce) attrs.nonce = nonce;
+    const { error } = await supabaseClient.auth.updateUser(attrs);
+    if(error){
+      const code = String(error.code || ''), msg = String(error.message || '');
+      if(code === 'reauthentication_needed' || /reauthentication/i.test(msg)){
+        const { error: eR } = await supabaseClient.auth.reauthenticate();
+        if(eR){ showToast(erroreLeggibile('Invio del codice non riuscito', eR)); return; }
+        if(nonceBox){ nonceBox.style.display = ''; document.getElementById('sec-pwd-nonce').value = ''; document.getElementById('sec-pwd-nonce').focus(); }
+        showToast('Per sicurezza ti abbiamo inviato un codice via email: inseriscilo qui sotto e premi di nuovo «Cambia password»');
+        return;
+      }
+      if(/current_password/i.test(code) || /current password/i.test(msg)){ showToast('Password attuale non corretta'); return; }
+      if(/nonce|invalid.*code|otp/i.test(msg) && nonce){ showToast('Codice non valido o scaduto: richiedi un nuovo codice premendo di nuovo «Cambia password»'); if(nonceBox) nonceBox.style.display = 'none'; return; }
+      showToast(erroreLeggibile('Password non cambiata', error)); return;
+    }
     document.getElementById('sec-pwd-attuale').value = '';
     document.getElementById('sec-pwd').value = '';
     document.getElementById('sec-pwd-confirm').value = '';
+    if(nonceBox){ nonceBox.style.display = 'none'; document.getElementById('sec-pwd-nonce').value = ''; }
     updatePasswordStrengthSec();
     showToast('Password cambiata ✓');
     // traccia password_modificata scritta dal DB (trigger su auth.users, riga 29)
