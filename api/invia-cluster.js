@@ -97,9 +97,14 @@ function pulisciCriteri(raw) {
 }
 
 async function resolveDestinatari(sb, medicoId, criteri) {
-  const pr = await sb(`pazienti?medico_id=eq.${medicoId}&email=not.is.null&select=id,nome,cognome,email,data_nascita,consenso_comunicazioni_at&order=cognome.asc`);
+  const pr = await sb(`pazienti?medico_id=eq.${medicoId}&email=not.is.null&select=id,nome,cognome,email,data_nascita,consenso_comunicazioni_at,limitato_at&order=cognome.asc`);
   if (!pr.ok) throw new Error('pazienti_query ' + pr.status);
-  const fascicoli = await pr.json();
+  const tutti = await pr.json();
+  // riga 78 (s68): il paziente con trattamento limitato (art. 18) non riceve comunicazioni di gruppo; la sua
+  // email non rientra nemmeno dai consensi prestati prenotando. Il conteggio degli esclusi torna al gestionale.
+  const limitati = tutti.filter(p => p.limitato_at);
+  const emailLimitate = new Set(limitati.map(p => String(p.email || '').trim().toLowerCase()));
+  const fascicoli = tutti.filter(p => !p.limitato_at);
   // Se esiste un fascicolo con quella email, decide il fascicolo (create-booking e il trigger
   // gli portano il consenso, la revoca lo azzera). Senza fascicolo, vale il consenso dato
   // prenotando: il paziente lo ha prestato a questo medico, il fascicolo e' solo un contenitore.
@@ -111,7 +116,7 @@ async function resolveDestinatari(sb, medicoId, criteri) {
   const perEmailPren = new Map();
   for (const a of await cr.json()) {
     const k = String(a.email_paziente || '').trim().toLowerCase();
-    if (!k || conFascicolo.has(k)) continue;
+    if (!k || conFascicolo.has(k) || emailLimitate.has(k)) continue;
     const prev = perEmailPren.get(k);
     if (!prev || a.consenso_comunicazioni_at > prev.consenso_comunicazioni_at) perEmailPren.set(k, a);
   }
@@ -160,6 +165,7 @@ async function resolveDestinatari(sb, medicoId, criteri) {
       return true;
     });
   }
+  paz.saltatiLimitazione = limitati.length;
   return paz;
 }
 
@@ -299,7 +305,7 @@ export default async function handler(req, res) {
     let dest;
     try { dest = await resolveDestinatari(sb, medico.id, criteri); }
     catch (e) { console.error('[invia-cluster] anteprima:', e.message); return res.status(500).json({ error: 'db' }); }
-    return res.status(200).json({ n: dest.length, criteri, destinatari: dest.map(p => ({ id: p.id, nome: p.nome, cognome: p.cognome })) });
+    return res.status(200).json({ n: dest.length, criteri, saltati_limitazione: dest.saltatiLimitazione || 0, destinatari: dest.map(p => ({ id: p.id, nome: p.nome, cognome: p.cognome })) });
   }
 
   // ── invia ──────────────────────────────────────────────────────────────────
@@ -363,7 +369,7 @@ export default async function handler(req, res) {
       const fr = await sb(`invii?id=eq.${encodeURIComponent(invio.id)}`, { method: 'PATCH', body: JSON.stringify({ falliti }) }).catch(() => null);
       if (!fr || !fr.ok) console.error('[invia-cluster] falliti non registrati', invio.id, fr && fr.status);
     }
-    return res.status(200).json({ invio_id: invio.id, inviati, falliti });
+    return res.status(200).json({ invio_id: invio.id, inviati, falliti, saltati_limitazione: dest.saltatiLimitazione || 0 });
   }
 
   return res.status(400).json({ error: 'action_non_valida' });

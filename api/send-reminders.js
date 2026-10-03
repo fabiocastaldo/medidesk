@@ -7,6 +7,7 @@ import { eseguiUscita } from '../lib/uscita.js';
 import { eseguiRegistro } from '../lib/registro-amministratori.js';
 import { eseguiAvvisiSospensione } from '../lib/sospensione.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
+import { idPazientiLimitati } from '../lib/limitazione-guard.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
 // contatto è presente e non vuoto.
@@ -94,6 +95,7 @@ export default async function handler(req, res) {
 
   // 1. Appuntamenti di domani da ricordare
   let appointments;
+  let saltatiLimitazione = 0;
   try {
     const r = await fetch(
       `${base}/appuntamenti?data=eq.${tomorrow}&cancelled=eq.false&or=(and(email_paziente.not.is.null,reminder_sent.eq.false),and(telefono_paziente.not.is.null,sms_sent_at.is.null))`,
@@ -102,6 +104,23 @@ export default async function handler(req, res) {
     if (!r.ok) throw new Error(`Supabase query failed: ${r.status}`);
     const all = await r.json();
     appointments = all.filter(a => hasEmail(a) || hasTel(a));
+    // riga 78 (s68): nessun promemoria per gli appuntamenti di un paziente con trattamento limitato (art. 18).
+    // Se la lettura dei limitati fallisce non si manda nulla a nessuno (fail-closed), come per gli errori di query.
+    const lim = await idPazientiLimitati({ supabaseUrl, serviceKey: supabaseKey });
+    if (lim) {
+      saltatiLimitazione = appointments.filter(a => a.paziente_id && lim.ids.has(a.paziente_id)).length;
+      appointments = appointments.filter(a => !(a.paziente_id && lim.ids.has(a.paziente_id)));
+    } else {
+      // Fail-closed: senza la lista dei limitati nessun promemoria parte oggi; traccia visibile il giorno stesso,
+      // il resto del cron (uscita, eliminazioni, conservazione, registro) prosegue.
+      saltatiLimitazione = appointments.length;
+      console.error('[send-reminders] lettura pazienti limitati fallita: promemoria saltati', saltatiLimitazione);
+      await fetch(`${base}/audit_log`, {
+        method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ action: 'cron_promemoria_saltato', target_type: 'sistema', details: { fonte: 'server', errore: 'lettura_pazienti_limitati', data: tomorrow, appuntamenti_saltati: saltatiLimitazione } })
+      }).catch(e => console.error('[send-reminders] traccia cron_promemoria_saltato:', e.message));
+      appointments = [];
+    }
   } catch (e) {
     console.error('[send-reminders] query appuntamenti:', e.message);
     return res.status(500).json({ error: 'Internal error' });
@@ -271,7 +290,7 @@ export default async function handler(req, res) {
     else console.error('[send-reminders] pulizia promemoria:', pr.status);
   } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro });
+  return res.status(200).json({ processed: appointments.length, saltatiLimitazione, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────

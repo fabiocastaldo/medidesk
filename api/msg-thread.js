@@ -20,6 +20,7 @@ import { Resend } from 'resend';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { createHash, randomBytes } from 'crypto';
 import { richiediInServizio } from '../lib/servizio-guard.js';
+import { pazienteLimitato } from '../lib/limitazione-guard.js';
 
 const MAX_CORPO = 4000;
 
@@ -157,6 +158,7 @@ export default async function handler(req, res) {
       pazienteId = pazienteId || a.paziente_id || null;
       email = a.email_paziente || null; tel = a.telefono_paziente || null;
     }
+    { const lim = await pazienteLimitato(pazienteId, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
     if (pazienteId) {
       const r = await sb(`pazienti?id=eq.${encodeURIComponent(pazienteId)}&medico_id=eq.${medico.id}&select=id,email,telefono`);
       const p = r.ok ? (await r.json())[0] : null;
@@ -200,9 +202,10 @@ export default async function handler(req, res) {
   // ── scrivi ────────────────────────────────────────────────────────────────
   if (action === 'scrivi') {
     if (!body.thread_id || !corpo) return res.status(400).json({ error: 'parametri_mancanti' });
-    const r = await sb(`thread_messaggi?id=eq.${encodeURIComponent(body.thread_id)}&medico_id=eq.${medico.id}&select=id,recapito_email,scade_il,chiuso_at`);
+    const r = await sb(`thread_messaggi?id=eq.${encodeURIComponent(body.thread_id)}&medico_id=eq.${medico.id}&select=id,paziente_id,recapito_email,scade_il,chiuso_at`);
     const t = r.ok ? (await r.json())[0] : null;
     if (!t) return res.status(404).json({ error: 'not_found' });
+    { const lim = await pazienteLimitato(t.paziente_id, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78: chiudere resta possibile, scrivere no
     if (t.chiuso_at) return res.status(409).json({ error: 'thread_chiuso' });
     if (!t.recapito_email) return res.status(409).json({ error: 'email_mancante' });
 

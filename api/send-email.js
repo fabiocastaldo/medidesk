@@ -23,6 +23,7 @@ import { revocaLink, consensoLink } from '../lib/consenso-token.js';
 import { buildICS } from '../lib/ics-builder.js';
 import { RUOLI } from '../lib/prenotazione-pr22.js';
 import { richiediInServizio } from '../lib/servizio-guard.js';
+import { pazienteLimitato } from '../lib/limitazione-guard.js';
 import { dataIt } from '../lib/uscita.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -297,6 +298,7 @@ async function lookupAppt(apptId, medicoId, supabaseUrl, serviceKey) {
     ok: true,
     apptId:            appt.id,
     apptMedicoId:      appt.medico_id,
+    pazienteId:        appt.paziente_id || null,   // riga 78 (s68): paziente di fascicolo, se agganciato
     emailPaziente:     appt.email_paziente,
     medicoId:          appt.medico_id,
     consensoComunicazioniAt: appt.consenso_comunicazioni_at || null,
@@ -617,6 +619,7 @@ export default async function handler(req, res) {
     const pr = await fetch(`${base}/pazienti?id=eq.${encodeURIComponent(paziente_id)}&medico_id=eq.${encodeURIComponent(authCtx.medicoId)}&select=id,email`, { headers: dbHeaders }).catch(() => null);
     const paz = pr && pr.ok ? (await pr.json())[0] : null;
     if (!paz) return res.status(404).json({ error: 'not_found' });
+    { const lim = await pazienteLimitato(paz.id, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
     if (!paz.email) return res.status(200).json({ ok: true, skipped: 'email_mancante' });
     const esitoCons = await maybeRichiestaConsenso({ base, headers: dbHeaders, resend, host: icsHost, consensoSecret, appt: {
       pazienteId: paz.id, medicoId: authCtx.medicoId, medicoNome: authCtx.medicoNome, emailPaziente: paz.email
@@ -633,6 +636,7 @@ export default async function handler(req, res) {
     if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
     const appt = await lookupAppt(appt_id, authCtx.medicoId, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    { const lim = await pazienteLimitato(appt.pazienteId, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
     consApptCtx = appt; // prenotazione del medico: il paziente non ha mai visto la casella
     const dataFmt = formatDateIt(appt.data);
     to            = appt.emailPaziente;
@@ -670,6 +674,7 @@ export default async function handler(req, res) {
     // attiva -> email dall'admin API), mai dal client.
     const appt = await lookupAppt(body.appt_id, null, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    { const lim = await pazienteLimitato(appt.pazienteId, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
     const srvH = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
     const rowRes = await fetch(`${supabaseUrl}/rest/v1/appuntamenti?id=eq.${encodeURIComponent(body.appt_id)}&select=centro_id,centri(cooperativa_id)`, { headers: srvH }).catch(() => null);
     const row = (rowRes && rowRes.ok) ? (await rowRes.json().catch(() => []))?.[0] : null;
@@ -710,6 +715,7 @@ export default async function handler(req, res) {
     if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
     const appt = await lookupAppt(appt_id, authCtx.medicoId, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    { const lim = await pazienteLimitato(appt.pazienteId, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
     if (!appt.emailPaziente) return res.status(200).json({ ok: true, skipped: 'paziente senza email' });
     const dataFmtSp = formatDateIt(appt.data);
     to            = appt.emailPaziente;
@@ -774,7 +780,15 @@ export default async function handler(req, res) {
     if (!appt_id) return res.status(400).json({ error: 'appt_id obbligatorio' });
     const appt = await lookupAppt(appt_id, authCtx.medicoId, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
-    if (authCtx.solaConsultazione) {
+    // riga 78 (s68): per il paziente limitato il trigger rifiuta l'annullamento dal gestionale; come nella sola
+    // consultazione, lo esegue il server (unica scrittura ammessa), con l'email al paziente e la traccia.
+    let limitazioneArt18 = false;
+    if (!authCtx.solaConsultazione && body.annulla === true && appt.pazienteId) {
+      const lim = await pazienteLimitato(appt.pazienteId, { supabaseUrl, serviceKey });
+      if (!lim.ok && lim.status !== 422) return res.status(lim.status).json(lim.body);
+      limitazioneArt18 = lim.limitato === true;
+    }
+    if (authCtx.solaConsultazione || limitazioneArt18) {
       // Solo appuntamenti propri (lookupAppt), futuri o di oggi, non già annullati; si toccano solo i campi dell'annullamento.
       const oggiRoma = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
       if (!appt.data || String(appt.data) < oggiRoma) return res.status(409).json({ error: 'Si possono annullare solo appuntamenti futuri', code: 'APPUNTAMENTO_PASSATO' });
@@ -789,7 +803,7 @@ export default async function handler(req, res) {
       await fetch(`${base}/audit_log`, {
         method: 'POST', headers: dbHeaders,
         body: JSON.stringify({ medico_id: authCtx.medicoId, action: 'appuntamento_annullato', target_type: 'appuntamento', target_id: String(appt_id),
-          details: { fonte: 'server', sola_consultazione: true } })
+          details: { fonte: 'server', sola_consultazione: authCtx.solaConsultazione === true, limitazione_art18: limitazioneArt18 } })
       }).catch(() => null);
       if (!appt.emailPaziente) return res.status(200).json({ ok: true, annullato: true, email: false });
     }
@@ -829,6 +843,7 @@ export default async function handler(req, res) {
     }
     const appt = await lookupAppt(appt_id, authCtx.medicoId, supabaseUrl, serviceKey);
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
+    { const lim = await pazienteLimitato(appt.pazienteId, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
     if (!appt.centroEmail) return res.status(400).json({ error: 'Il centro non ha un indirizzo email configurato' });
     const dataFmt = formatDateIt(appt.data);
     const soggetti = { nuova_prenotazione: 'Nuova prenotazione', appuntamento_manuale: 'Nuovo appuntamento', cancellazione: 'Cancellazione appuntamento', spostamento: 'Spostamento appuntamento' };
