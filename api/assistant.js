@@ -1,12 +1,13 @@
 import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
 import { richiediAal2 } from '../lib/aal-guard.js';
+import { profiloBedrock, regioneBedrock } from '../lib/bedrock-modelli.js';
 import { richiediInServizio } from '../lib/servizio-guard.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 120;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 
-const bedrock = new AnthropicBedrock({ awsRegion: process.env.AWS_REGION || 'eu-central-1' });
+const bedrock = new AnthropicBedrock({ awsRegion: regioneBedrock() });
 
 function checkInMemoryRateLimit(ip) {
   const now = Date.now();
@@ -410,7 +411,7 @@ export default async function handler(req, res) {
     }), 6000);
 
     const apiData = await bedrock.messages.create({
-      model: process.env.BEDROCK_ASSISTANT_MODEL_ID || 'eu.anthropic.claude-haiku-4-5-20251001-v1:0',
+      model: profiloBedrock('BEDROCK_ASSISTANT_MODEL_ID'),
       max_tokens: 1024,
       system: [
         { type: 'text', text: SYSTEM_STATIC, cache_control: { type: 'ephemeral' } },
