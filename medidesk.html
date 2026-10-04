@@ -15369,6 +15369,10 @@ const AST_REGISTRY = {
   async scrivi_paziente(inp){
     const p=(S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id)); if(!p) return { errore:'paziente non trovato' };
     const testo=String(inp.testo||'').trim(); if(!testo) return { errore:'testo vuoto' };
+    // Riga 49 (s70): a paziente limitato nessuna modale (il server risponderebbe 422), toast fisso e risposta al modello
+    if(_pazLimitato(p.id)){ showToast(erroreLeggibile('assistente', 'LIMITAZIONE_ART18 comunicazioni')); return { errore:'trattamento limitato (art. 18)' }; }
+    // Conferma specifica del medico prima dell'invio: paziente, testo ed effetto (riga 49, A06 §§ 60/77)
+    if(!(await confermaModale(`Messaggio:\n\u201c${testo}\u201d\n\nParte sul canale del paziente; se non c\u2019\u00e8 un canale attivo ne viene aperto uno e il paziente riceve l\u2019email con il link. Il canale non \u00e8 per le urgenze n\u00e9 per i referti.`, { titolo:`L\u2019assistente vuole scrivere a ${p.cognome} ${p.nome}`, ok:'Invia il messaggio' }))) return { errore:'annullato dal medico' };
     const { data: th } = await supabaseClient.from('thread_messaggi').select('id,scade_il,chiuso_at').eq('paziente_id', p.id).is('chiuso_at',null).order('created_at',{ascending:false}).limit(1);
     const attivo=(th||[]).find(t=>!t.scade_il || new Date(t.scade_il)>new Date());
     const j = attivo ? await msgApi({action:'scrivi', thread_id:attivo.id, corpo:testo}) : await msgApi({action:'apri', paziente_id:p.id, corpo:testo});
@@ -15545,11 +15549,22 @@ const AST_REGISTRY = {
     const corpo=String(inp.corpo||'').trim();
     if(action==='invia' && !corpo) return { errore:'corpo mancante' };
     const _jwt=await getAuthJwt();
+    if(action==='invia'){
+      // Riga 49 (s70): prima dell'invio un'anteprima dal server e conferma specifica del medico con testo e destinatari reali
+      const ra=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify({ action:'anteprima', criteri:criteri })});
+      const ja=await ra.json().catch(()=>({}));
+      if(!ra.ok) return { errore:String(ja.error||('http '+ra.status)) };
+      const n=Number(ja.n)||0; if(!n) return { errore:'nessun destinatario con consenso per questi criteri' };
+      const nomi=(ja.destinatari||[]).map(d=>(d.cognome||'')+' '+(d.nome||'')); const mostra=nomi.slice(0,12).join(', ')+(nomi.length>12?` e altri ${nomi.length-12}`:'');
+      const lim=Number(ja.saltati_limitazione)||0;
+      const testoModale=`Messaggio:\n\u201c${corpo}\u201d\n\nDestinatari (${n}): ${mostra}`+(lim?`\nEsclusi ${lim} pazienti con trattamento limitato (art. 18)`:'')+`\n\nRiceve solo chi ha il consenso attivo alle comunicazioni. Il testo arriva in chiaro via email, senza canale di risposta.`;
+      if(!(await confermaModale(testoModale, { titolo:`L\u2019assistente vuole inviare una comunicazione a ${n} pazienti`, ok:`Invia a ${n} pazienti` }))) return { errore:'annullato dal medico' };
+    }
     const payload = action==='invia' ? { action:action, criteri:criteri, corpo:corpo } : { action:action, criteri:criteri };
     const res=await fetch('/api/invia-cluster',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify(payload)});
     const j=await res.json().catch(()=>({}));
     if(!res.ok) return { errore:String(j.error||('http '+res.status)) };
-    if(action==='anteprima') return { anteprima:true, destinatari_n:j.n, destinatari:(j.destinatari||[]).map(d=>(d.cognome||'')+' '+(d.nome||'')) };
+    if(action==='anteprima') return { anteprima:true, destinatari_n:j.n, saltati_limitazione:j.saltati_limitazione||0, destinatari:(j.destinatari||[]).map(d=>(d.cognome||'')+' '+(d.nome||'')) };
     try{ comRegistro(); }catch(_){ }
     return { inviati:j.inviati, falliti:(j.falliti||[]).map(f=>(f.cognome||'')+' '+(f.nome||'')) };
   }
