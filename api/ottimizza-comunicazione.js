@@ -5,13 +5,14 @@
 // il prompt vieta contenuti riferiti al singolo paziente e dati clinici individuali.
 import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk';
 import { richiediAal2 } from '../lib/aal-guard.js';
+import { profiloBedrock, regioneBedrock } from '../lib/bedrock-modelli.js';
 import { richiediInServizio } from '../lib/servizio-guard.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 
-const bedrock = new AnthropicBedrock({ awsRegion: process.env.AWS_REGION || 'eu-central-1' });
+const bedrock = new AnthropicBedrock({ awsRegion: regioneBedrock() });
 
 function checkInMemoryRateLimit(ip) {
   const now = Date.now();
@@ -117,7 +118,7 @@ export default async function handler(req, res) {
     const system = `Sei l'assistente di redazione di un medico specialista${spec ? ' in ' + spec : ''}. Ricevi la bozza di una comunicazione proattiva che il medico inviera' via email, con testo IDENTICO, a un gruppo di suoi pazienti (promemoria di prevenzione, richiami, avvisi organizzativi). Riscrivila in italiano chiaro, cordiale e professionale, dando del tu al lettore, in TESTO SEMPLICE. REGOLE TASSATIVE: usa SOLO le informazioni presenti nella bozza, non inventare date, orari, prezzi, recapiti o indicazioni cliniche non indicati; il testo e' uguale per tutti i destinatari, quindi niente nomi di pazienti, niente dati clinici individuali e niente riferimenti a un caso specifico: se la bozza ne contiene, riformulali in termini generali; se la bozza invita a prenotare, chiamare o contattare lo studio, la segreteria o un numero di telefono, riformula SEMPRE l'invito come prenotazione online (es. 'puoi prenotare online dal pulsante qui sotto'), senza inventare link o recapiti: il pulsante di prenotazione lo aggiunge il sistema in fondo alla mail; nessun oggetto, nessun saluto con nome, nessuna firma (aggiunti dal sistema); NON usare alcun markdown o simbolo di formattazione; mantieni il testo asciutto, idealmente sotto le 150 parole, e se la bozza e' gia' buona limitati a ripulirla. Restituisci SOLO il testo della comunicazione.`;
 
     const apiData = await bedrock.messages.create({
-      model: process.env.BEDROCK_MODEL_ID || 'eu.anthropic.claude-sonnet-4-6',
+      model: profiloBedrock('BEDROCK_MODEL_ID'),
       max_tokens: 1000,
       system,
       messages: [{ role: 'user', content: `Bozza del medico:\n${bozza}` }]
