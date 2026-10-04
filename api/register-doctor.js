@@ -312,6 +312,7 @@ export default async function handler(req, res) {
   // STEP 2-bis: evidenza delle accettazioni legali (bloccante, con rollback).
   // Una riga per documento: id medico, email, versione, hash del testo, timestamp.
   // ───────────────────────────────────────────────────────────────────────────
+  let accRows = [];  // visibile anche allo STEP 2-ter (prima era const nel try: ReferenceError, ricevuta mai partita)
   try {
     const accRes = await fetch(`${base}/accettazioni_legali`, {
       method: 'POST',
@@ -323,7 +324,7 @@ export default async function handler(req, res) {
             versione: CONSENSO_COMMERCIALE.versione, hash_testo: hashTesto(CONSENSO_COMMERCIALE.testo) }] : [])
       ])
     });
-    const accRows = accRes.ok ? await accRes.json().catch(() => []) : [];
+    accRows = accRes.ok ? await accRes.json().catch(() => []) : [];
     const attese = consensoCommerciale ? 3 : 2;
     if (!accRes.ok || !Array.isArray(accRows) || accRows.length !== attese) {
       const errText = !accRes.ok ? await accRes.text().catch(() => '') : `rows=${accRows.length}`;
