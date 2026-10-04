@@ -240,8 +240,30 @@ export default async function handler(req, res) {
     });
     const rows = r.ok ? await r.json() : [];
     if (!rows[0]) return res.status(404).json({ error: 'not_found' });
-    await sb(`token_thread?thread_id=eq.${rows[0].id}&revocato_at=is.null`, { method: 'PATCH', body: JSON.stringify({ revocato_at: new Date().toISOString() }) }).catch(() => {});
-    return res.status(200).json({ ok: true });
+    // Revoca dei token ancora vivi (read-back per contarli) e traccia della chiusura (soft-fail, come auditInvio) — s70
+    let tokenRevocati = 0;
+    try {
+      const rt = await sb(`token_thread?thread_id=eq.${rows[0].id}&revocato_at=is.null`, {
+        method: 'PATCH', headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ revocato_at: new Date().toISOString() })
+      });
+      if (rt.ok) tokenRevocati = (await rt.json().catch(() => [])).length;
+    } catch (e) {
+      console.error('[msg-thread] revoca token:', e.message);
+    }
+    try {
+      const ra = await sb('audit_log', {
+        method: 'POST', headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          medico_id: medico.id, action: 'thread_chiuso', target_type: 'thread', target_id: String(rows[0].id),
+          details: { fonte: 'server', auth_mode: 'jwt_medico', paziente_id: rows[0].paziente_id || null, token_revocati: tokenRevocati }
+        })
+      });
+      if (!ra.ok) console.error('[msg-thread] audit_log thread_chiuso', ra.status);
+    } catch (e) {
+      console.error('[msg-thread] audit_log thread_chiuso:', e.message);
+    }
+    return res.status(200).json({ ok: true, token_revocati: tokenRevocati });
   }
 
   return res.status(400).json({ error: 'action_non_valida' });
