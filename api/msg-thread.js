@@ -21,6 +21,7 @@ import { richiediAal2 } from '../lib/aal-guard.js';
 import { createHash, randomBytes } from 'crypto';
 import { richiediInServizio } from '../lib/servizio-guard.js';
 import { pazienteLimitato } from '../lib/limitazione-guard.js';
+import { emailShell, emailTitle, ctaButton, noteBox } from '../lib/email-shell.js';
 
 const MAX_CORPO = 4000;
 
@@ -56,22 +57,21 @@ async function checkMedicoAuth(jwt, supabaseUrl, anonKey, serviceKey) {
 }
 
 function emailHtml({ medicoNome, link, tipo, tempiRisposta }) {
+  // Veste unica di piattaforma (lib/email-shell.js, invariante s57; riga 40, s70). Testo minimizzato:
+  // nessun contenuto del messaggio, solo chi scrive, il link personale e i tempi di risposta.
   const intro = tipo === 'apertura'
     ? `${esc(medicoNome)} ha aperto un canale di comunicazione con lei.`
     : `${esc(medicoNome)} le ha scritto un nuovo messaggio.`;
-  const tempi = tempiRisposta ? `<div style="font-size:13px;color:#555;margin-top:14px">Tempi di risposta indicati dal medico: ${esc(tempiRisposta)}.</div>` : '';
-  return `
-<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a1a">
-  <div style="font-size:18px;font-weight:700;margin-bottom:12px">Delphi~Med</div>
-  <div style="font-size:15px;line-height:1.5">${intro}</div>
-  <div style="font-size:15px;line-height:1.5;margin-top:10px">Per leggerlo e rispondere apra il link qui sotto. Conservi questa email: è la sua chiave per scrivere al medico in caso di necessità.</div>
-  <div style="margin:22px 0">
-    <a href="${esc(link)}" style="display:inline-block;background:#0D5C8C;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">Apri il messaggio</a>
-  </div>
-  <div style="font-size:13px;color:#555;line-height:1.5">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(link)}</div>
-  ${tempi}
-  <div style="font-size:12px;color:#888;margin-top:22px;line-height:1.5">Questo canale non è adatto alle urgenze: in caso di emergenza contatti il 112 o si rechi al pronto soccorso. Il link è personale: non lo inoltri ad altri.</div>
-</div>`;
+  const p = (t) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#1a1a1a;">${t}</p>`;
+  const body =
+    emailTitle(tipo === 'apertura' ? 'Nuovo canale con il suo medico' : 'Nuovo messaggio dal suo medico') +
+    p(intro) +
+    p('Per leggerlo e rispondere apra il link qui sotto. Conservi questa email: è la sua chiave per scrivere al medico in caso di necessità.') +
+    ctaButton(esc(link), 'Apri il messaggio') +
+    `<p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:#555;">Se il pulsante non funziona, copi questo indirizzo nel browser:<br>${esc(link)}</p>` +
+    (tempiRisposta ? `<p style="margin:0 0 14px;font-size:13px;color:#555;">Tempi di risposta indicati dal medico: ${esc(tempiRisposta)}.</p>` : '') +
+    noteBox('Questo canale non è adatto alle urgenze: in caso di emergenza contatti il 112 o si rechi al pronto soccorso. Il link è personale: non lo inoltri.');
+  return emailShell(body, { footerNote: 'Delphi~Med è la piattaforma usata dal suo medico, titolare del trattamento dei suoi dati &middot; Assistenza tecnica: <a href="https://www.delphi-med.com/assistenza" style="color:#888;">delphi-med.com/assistenza</a> &middot; Non risponda a questa email' });
 }
 
 export default async function handler(req, res) {
