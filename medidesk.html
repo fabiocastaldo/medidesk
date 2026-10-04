@@ -2348,6 +2348,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
             <a href="/dpa" target="_blank" rel="noopener">Accordo sul trattamento dei dati (DPA)</a>
           </div>
         </div></div>
+        <div class="card" style="margin-top:12px"><div class="card-body">
+          <div style="font-weight:600;font-size:14px;margin-bottom:6px">Versioni che hai accettato</div>
+          <p style="font-size:13px;color:var(--ink2);margin-bottom:12px">Per i Termini di servizio e l'Accordo sul trattamento dei dati conserviamo la versione che hai accettato alla registrazione, con data, ora e impronta del testo. Da qui puoi rileggere esattamente quel testo e confrontarlo con quello in vigore.</p>
+          <div id="acc-legali" style="font-size:14px;display:flex;flex-direction:column;gap:10px"><span style="color:var(--ink2)">Caricamento…</span></div>
+        </div></div>
       </div>
 
       <div style="margin-bottom:24px;padding-top:8px;border-top:1px solid var(--border)">
@@ -3500,6 +3505,18 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <button class="modal-close" onclick="closeModal('modal-delete-account')">✕</button>
     </div>
     <div class="modal-body" id="modal-delete-account-body"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-testo-legale">
+  <div class="modal" style="max-width:860px;width:96vw">
+    <div class="modal-header">
+      <span class="modal-title" id="testo-legale-titolo">Testo accettato</span>
+      <button class="modal-close" onclick="closeModal('modal-testo-legale')">&#10005;</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <iframe id="testo-legale-frame" sandbox="" referrerpolicy="no-referrer" style="width:100%;height:70vh;border:0;background:#fff" title="Testo del documento accettato"></iframe>
+    </div>
   </div>
 </div>
 
@@ -5430,7 +5447,7 @@ function showPage(id){
   if(id==='piani') renderPiani();
   if(id==='dashboard'){ renderDashboard(); updateStats(); renderPending(); }
   if(id==='statistiche') renderStatistiche();
-  if(id==='impostazioni') renderImpostazioni();
+  if(id==='impostazioni'){ renderImpostazioni(); accLegaliRender(); }
   if(id==='sicurezza'){ mfaRenderStato(); secRenderAccount(); secRenderCorso(); }
   if(id==='assistenza') assRender();
   if(id==='manutenzione-archivio') renderArchivioPage();
@@ -12796,6 +12813,46 @@ async function savePazienteAnagrafica(id){
 }
 
 // ── IMPOSTAZIONI ──
+// ── Versioni dei testi legali accettate (piano privacy riga 53, s70) ─────────────
+const _ACC_DOC = { tos:{ nome:'Termini di servizio', pagina:'/termini-di-servizio' }, dpa:{ nome:'Accordo sul trattamento dei dati (DPA)', pagina:'/dpa' }, consenso_commerciale:{ nome:'Consenso a novità e comunicazioni commerciali', pagina:null } };
+async function _sha256Hex(testo){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(testo)); return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join(''); }
+async function accLegaliRender(){
+  const box=document.getElementById('acc-legali'); if(!box) return;
+  try{
+    const { data, error } = await supabaseClient.rpc('mie_accettazioni');
+    if(error) throw error;
+    const righe=(data||[]);
+    if(!righe.length){ box.innerHTML='<span style="color:var(--ink2)">Nessuna accettazione registrata per questo account.</span>'; return; }
+    // impronta del testo oggi in vigore, calcolata sul file servito (così il confronto è con ciò che un nuovo medico accetterebbe adesso)
+    const vigore={};
+    for(const d of ['tos','dpa']){ try{ const r=await fetch(_ACC_DOC[d].pagina+'.html',{cache:'no-store'}); if(r.ok) vigore[d]=await _sha256Hex(await r.text()); }catch(_){ } }
+    box.innerHTML=righe.map(a=>{
+      const doc=_ACC_DOC[a.documento]||{nome:a.documento,pagina:null};
+      const quando=new Date(a.accepted_at).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      const diversa=doc.pagina && vigore[a.documento] && vigore[a.documento]!==a.hash_testo;
+      return `<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px">
+        <div style="font-weight:600">${escapeHtml(doc.nome)}</div>
+        <div style="font-size:13px;color:var(--ink2);margin-top:2px">Versione ${escapeHtml(a.versione)} · accettata il ${escapeHtml(quando)} · impronta <span title="${escapeHtml(a.hash_testo)}" style="cursor:help">${escapeHtml(String(a.hash_testo).slice(0,12))}…</span>${a.archiviato?'':' · <span style="color:var(--danger,#b91c1c)">testo integrale non in archivio</span>'}</div>
+        ${diversa?`<div style="font-size:13px;margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--warnBg,#fffbeb)">Il testo oggi in vigore ha un'impronta diversa da quello che hai accettato. Può trattarsi di una modifica di forma o di sostanza: se è di sostanza ti chiederemo una nuova accettazione. Resta valida per te la versione che hai accettato, finché non ne accetti una nuova.</div>`:''}
+        <div style="display:flex;gap:12px;margin-top:8px;font-size:13px;flex-wrap:wrap">
+          ${a.archiviato?`<a href="#" onclick="accLegaliApri('${escapeHtml(a.hash_testo)}','${escapeHtml(doc.nome)}');return false;">Apri il testo accettato</a>`:''}
+          ${doc.pagina?`<a href="${doc.pagina}" target="_blank" rel="noopener">Testo in vigore</a>`:''}
+        </div></div>`;
+    }).join('');
+  }catch(e){ box.innerHTML='<span style="color:var(--ink2)">Impossibile leggere le accettazioni in questo momento.</span>'; try{ console.error('[Delphi~Med] accettazioni:', e); }catch(_){} }
+}
+async function accLegaliApri(hash, titolo){
+  if(!/^[0-9a-f]{64}$/.test(String(hash))) return;
+  try{
+    const jwt=await getAuthJwt();
+    const r=await fetch('/api/testo-legale?hash='+hash,{headers:{'Authorization':'Bearer '+jwt}});
+    if(!r.ok){ showToast('Testo non disponibile.'); return; }
+    const html=await r.text();
+    const f=document.getElementById('testo-legale-frame'); f.srcdoc=html;
+    document.getElementById('testo-legale-titolo').textContent='Testo accettato — '+titolo;
+    openModal('modal-testo-legale');
+  }catch(_){ showToast('Testo non disponibile.'); }
+}
 function renderImpostazioni(){
   const chk = (id, val) => {
     const el = document.getElementById(id);

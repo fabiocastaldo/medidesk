@@ -221,6 +221,25 @@ export default async function handler(req, res) {
   };
 
   // ───────────────────────────────────────────────────────────────────────────
+  // STEP 0-ter (s70, riga 53): i testi che il medico sta accettando devono essere archiviati
+  // integralmente in testi_legali (stesso hash di LEGAL_DOCS); altrimenti nessun account nasce.
+  // Il database lo impone comunque col trigger su accettazioni_legali; qui si evita di creare
+  // l'utente per poi annullarlo.
+  // ───────────────────────────────────────────────────────────────────────────
+  try {
+    const attesi = [LEGAL_DOCS.tos.hash, LEGAL_DOCS.dpa.hash, ...(consensoCommerciale ? [hashTesto(CONSENSO_COMMERCIALE.testo)] : [])];
+    const tRes = await fetch(`${base}/testi_legali?hash_testo=in.(${attesi.join(',')})&select=hash_testo`, { headers });
+    const tRows = tRes.ok ? await tRes.json().catch(() => []) : [];
+    if (!tRes.ok || !Array.isArray(tRows) || tRows.length !== attesi.length) {
+      console.error('[register-doctor] testi_legali incompleti:', tRes.status, Array.isArray(tRows) ? tRows.length : '-', 'attesi', attesi.length);
+      return res.status(503).json({ error: 'Registrazione momentaneamente non disponibile. Riprova tra poco.', code: 'TESTI_LEGALI_NON_ARCHIVIATI' });
+    }
+  } catch (e) {
+    console.error('[register-doctor] testi_legali exception:', e.message);
+    return res.status(503).json({ error: 'Registrazione momentaneamente non disponibile. Riprova tra poco.', code: 'TESTI_LEGALI_NON_ARCHIVIATI' });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   // STEP 1: crea utente in Supabase Auth (email_confirm: true: l'email è già verificata col codice)
   // ───────────────────────────────────────────────────────────────────────────
   let userId;
@@ -323,6 +342,37 @@ export default async function handler(req, res) {
     await fetch(`${authBase}/admin/users/${userId}`, { method: 'DELETE', headers })
       .catch(err => console.error('[register-doctor] rollback delete user failed:', err.message));
     return res.status(500).json({ error: 'Errore di rete' });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // STEP 2-ter (s70, riga 53): ricevuta delle accettazioni al medico (soft-fail: l'evidenza è già
+  // nel database; la ricevuta è una cortesia probatoria, con traccia email_inviata se parte).
+  // ───────────────────────────────────────────────────────────────────────────
+  try {
+    const oraApp = accRows[0]?.accepted_at ? new Date(accRows[0].accepted_at) : new Date();
+    const oraIt = oraApp.toLocaleString('it-IT', { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const righe = accRows.map(a => detailRow(
+      a.documento === 'tos' ? 'Termini di servizio' : a.documento === 'dpa' ? 'Accordo sul trattamento dei dati (DPA)' : 'Consenso a novità e comunicazioni commerciali',
+      `versione ${esc(a.versione)} — impronta SHA-256 ${esc(String(a.hash_testo).slice(0, 16))}…`
+    )).join('');
+    const htmlR = emailShell(
+      emailTitle('Ricevuta delle accettazioni') +
+      `<p>Gentile ${esc(nome)} ${esc(cognome)}, questa è la ricevuta di ciò che hai accettato registrandoti a Delphi~Med il ${esc(oraIt)} (ora italiana).</p>` +
+      detailCard(righe) +
+      `<p>Di ogni documento conserviamo il testo integrale della versione accettata, l'impronta crittografica, la versione e l'ora applicativa dell'accettazione. Dopo l'approvazione dell'account potrai rileggere questi testi da Impostazioni → Documenti, sezione «Versioni che hai accettato».</p>` +
+      noteBox(`L'ora indicata è quella registrata dai nostri sistemi e non costituisce una marca temporale qualificata.`)
+    );
+    const { data: rd, error: rErr } = await new Resend(resendApiKey).emails.send({
+      from: 'noreply@delphi-med.com', to: [email],
+      subject: 'Ricevuta delle accettazioni — Delphi~Med', html: htmlR
+    });
+    if (rErr) console.error('[register-doctor] ricevuta resend:', rErr.message);
+    else await fetch(`${base}/audit_log`, { method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ medico_id: medicoId, action: 'email_inviata', target_type: 'account', target_id: String(medicoId),
+        details: { tipo: 'accettazioni_ricevuta', to: email, resend_id: rd?.id || null, documenti: accRows.map(a => `${a.documento}:${a.versione}:${String(a.hash_testo).slice(0, 8)}`) } })
+    }).catch(err => console.error('[register-doctor] audit ricevuta:', err.message));
+  } catch (e) {
+    console.error('[register-doctor] ricevuta exception:', e.message);
   }
 
   // ───────────────────────────────────────────────────────────────────────────
