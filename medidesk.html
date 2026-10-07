@@ -15653,7 +15653,17 @@ async function astSend(){
       const data=await res.json().catch(()=>({}));
       if(!res.ok){ astBubble('a', (data.error || 'Errore, riprova.') + (data.detail ? '\n[diag] ' + data.detail : '')); break; }
       const content=Array.isArray(data.content)? data.content : [];
-      content.filter(b=>b.type==='text' && b.text && b.text.trim()).forEach(b=>astBubble('a', b.text.trim()));
+      const testi=content.filter(b=>b.type==='text' && b.text && b.text.trim());
+      // s73: risposta troncata per lunghezza, controllata PRIMA del ramo tool_use. Un tool_use troncato non si esegue (input forse incompleto):
+      // testo presente + segnale in coda alla bolla, nessuna nuova chiamata. Nella cronologia solo i blocchi di testo (un tool_use senza tool_result renderebbe invalida la richiesta successiva).
+      if(data.stop_reason==='max_tokens'){
+        const segnale='Risposta interrotta per lunghezza: chiedimi di continuare';
+        if(testi.length){ testi.slice(0,-1).forEach(b=>astBubble('a', b.text.trim())); astBubble('a', testi[testi.length-1].text.trim()+'\n\n'+segnale); }
+        else astBubble('a', segnale);
+        AST.api.push({ role:'assistant', content: testi.length ? testi.map(b=>({ type:'text', text:b.text })) : [{ type:'text', text:segnale }] });
+        break;
+      }
+      testi.forEach(b=>astBubble('a', b.text.trim()));
       const uses=content.filter(b=>b.type==='tool_use');
       AST.api.push({ role:'assistant', content: content });
       if(data.stop_reason!=='tool_use' || !uses.length) break;
