@@ -15028,7 +15028,7 @@ function astBubble(kind, text){
   const w = document.getElementById('ast-msgs');
   const d = document.createElement('div');
   d.className = 'ast-b ' + kind;
-  d.textContent = text;
+  d.textContent = kind==='a' ? mdToPlain(text) : text; // s75: le risposte dell'assistente possono portare simboli markdown nonostante la regola 3: puliti con mdToPlain (nessun innerHTML), solo bolle 'a'
   w.appendChild(d);
   w.scrollTop = w.scrollHeight;
   return d;
