@@ -15444,8 +15444,24 @@ const AST_REGISTRY = {
     const sel = per==='oggi' ? all.filter(pr=>pr.scadenza===today) : per==='scaduti' ? all.filter(pr=>pr.scadenza<today) : per==='settimana' ? all.filter(pr=>pr.scadenza<=fmt(new Date(Date.now()+7*86400000))) : all;
     return { periodo:per, totale:sel.length, promemoria:sel.map(pr=>({ promemoria_id:pr.id, testo:pr.testo, scadenza:pr.scadenza, paziente:_promNome(pr)||undefined, paziente_id:pr.paziente_id||undefined })) };
   },
-  async crea_promemoria(inp){ return await promAdd({ testo:inp.testo, scadenza:inp.scadenza, paziente_id:inp.paziente_id||null }); },
-  async completa_promemoria(inp){ const r=await promFatto(inp.promemoria_id); return r||{ errore:'non completato' }; },
+  async crea_promemoria(inp){
+    // Conferma specifica del medico prima della scrittura: testo, scadenza ed eventuale paziente (s76, registro riga 49; stesso pattern di scrivi_paziente)
+    const testo=String(inp.testo||'').trim(); if(!testo) return { errore:'testo vuoto' };
+    const scad=String(inp.scadenza||''); if(!/^\d{4}-\d{2}-\d{2}$/.test(scad)) return { errore:'data non valida' };
+    const p=inp.paziente_id ? (S.pazienti||[]).find(x=>String(x.id)===String(inp.paziente_id)) : null;
+    if(inp.paziente_id && !p) return { errore:'paziente non trovato' };
+    const quando=scad.split('-').reverse().join('/');
+    if(!(await confermaModale(`Promemoria:\n\u201c${testo}\u201d\n\nScadenza: ${quando}${p ? `\nPaziente: ${p.cognome} ${p.nome}` : ''}\n\nViene salvato tra i tuoi promemoria.`, { titolo:'L\u2019assistente vuole creare un promemoria', ok:'Crea il promemoria' }))) return { errore:'annullato dal medico' };
+    return await promAdd({ testo, scadenza:scad, paziente_id:p ? p.id : null });
+  },
+  async completa_promemoria(inp){
+    // Conferma specifica del medico prima della scrittura: quale promemoria, col suo testo (s76, registro riga 49)
+    const pr=(S.promemoria||[]).find(x=>String(x.id)===String(inp.promemoria_id)); if(!pr) return { errore:'promemoria non trovato' };
+    if(pr.fatto_at) return { errore:'promemoria gi\u00e0 completato' };
+    const nomePaz=_promNome(pr);
+    if(!(await confermaModale(`Promemoria:\n\u201c${pr.testo||''}\u201d\n\nScadenza: ${String(pr.scadenza||'').split('-').reverse().join('/')}${nomePaz ? `\nPaziente: ${nomePaz}` : ''}\n\nViene segnato come fatto.`, { titolo:'L\u2019assistente vuole completare un promemoria', ok:'Segna come fatto' }))) return { errore:'annullato dal medico' };
+    const r=await promFatto(pr.id, pr.paziente_id||null); return r||{ errore:'non completato' };
+  },
 
   vai_a(inp){ showPage(inp.pagina); return { ok:true, pagina:inp.pagina }; },
 
@@ -15494,6 +15510,11 @@ const AST_REGISTRY = {
   async segna_erogata(inp){
     const a=(S.appuntamenti||[]).find(x=>String(x.id)===String(inp.appuntamento_id));
     if(!a) return { errore:'appuntamento non trovato' };
+    if(a.cancelled) return { errore:'appuntamento cancellato: non marcabile' };
+    // Conferma specifica del medico prima della scrittura: toggleErogata \u00e8 un interruttore, la modale dice la direzione (s76, registro riga 49)
+    const giaErogata=(a.erogata===true);
+    const quando=`${String(a.data||'').split('-').reverse().join('/')} alle ${a.ora||''}`;
+    if(!(await confermaModale(`${giaErogata ? 'Togliere la spunta di erogata' : 'Segnare come erogata'} la visita di ${_astApptLabel(a)} del ${quando}.\n\nScrive subito nell\u2019agenda.`, { titolo: giaErogata ? 'L\u2019assistente vuole annullare un\u2019erogazione' : 'L\u2019assistente vuole segnare una visita come erogata', ok: giaErogata ? 'Togli la spunta' : 'Segna come erogata' }))) return { errore:'annullato dal medico' };
     await toggleErogata(a.id);
     return { ok:true, erogata:a.erogata===true, paziente:_astApptLabel(a), ora:a.ora };
   },
