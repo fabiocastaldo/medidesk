@@ -5,6 +5,7 @@ import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
 import { eseguiConservazione } from '../lib/conservazione.js';
 import { eseguiUscita } from '../lib/uscita.js';
 import { eseguiRegistro } from '../lib/registro-amministratori.js';
+import { eseguiBackupStorage } from '../lib/backup-storage.js';
 import { eseguiAvvisiSospensione } from '../lib/sospensione.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
 import { idPazientiLimitati } from '../lib/limitazione-guard.js';
@@ -260,6 +261,9 @@ export default async function handler(req, res) {
   // 5-quater. Registro degli accessi degli amministratori (s60): export giornaliero dei log pgaudit verso il bucket S3
   // con Object Lock (lib/registro-amministratori.js)
   const registro = await eseguiRegistro({ supabaseUrl, supabaseKey, runErrors });
+  // Backup distinto dello Storage dei referti nel bucket S3 BACKUP_STORAGE_BUCKET (piano riga 33, A02 T08;
+  // lib/backup-storage.js): copia i nuovi, cancella gli spariti, traccia backup_storage_eseguito.
+  const backupStorage = await eseguiBackupStorage({ supabaseUrl, supabaseKey, runErrors });
 
   // 6. Alert admin: UNA sola email aggregata se restano errori dopo il retry.
   // Copre tutti i rami (promemoria, turni, trial). Niente retry sull'alert
@@ -290,7 +294,7 @@ export default async function handler(req, res) {
     else console.error('[send-reminders] pulizia promemoria:', pr.status);
   } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, saltatiLimitazione, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro });
+  return res.status(200).json({ processed: appointments.length, saltatiLimitazione, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
