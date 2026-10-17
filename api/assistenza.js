@@ -19,7 +19,7 @@
 // POST { azione:'scrivi_token', token, corpo }               link          → { ok }
 // POST { azione:'chiudi_token', token }                      link gestore  → { ok }
 
-import { nuovoMailer } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { createHash, randomBytes } from 'crypto';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
   const resendApiKey = process.env.RESEND_API_KEY;
   const secret = process.env.CONSENSO_TOKEN_SECRET;
   const gestoreTo = process.env.ASSISTENZA_NOTIFICA_TO;
-  if (!supabaseUrl || !serviceKey || !anonKey || !resendApiKey || !secret || !gestoreTo) {
+  if (!supabaseUrl || !serviceKey || !anonKey || !mailerConfigurato(resendApiKey) || !secret || !gestoreTo) {
     console.error('[assistenza] env vars mancanti');
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }

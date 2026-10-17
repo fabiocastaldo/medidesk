@@ -3,7 +3,7 @@
 // Nessun segreto: riceve solo l'id del medico, rilegge tutto dal database con la chiave di servizio e invia la mail
 // solo se il medico e' davvero sospeso e la sospensione in corso non e' gia' stata avvisata (lib/sospensione.js).
 // Risposta uniforme 200 { ok: true } per non rivelare quali id esistono; limite di richieste per IP (fail-closed).
-import { nuovoMailer } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { emailShell, emailTitle, esc } from '../lib/email-shell.js';
 import { avvisaSospensione } from '../lib/sospensione.js';
 
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SECRET_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !supabaseKey || !resendApiKey) return res.status(500).json({ error: 'Configurazione server mancante' });
+  if (!supabaseUrl || !supabaseKey || !mailerConfigurato(resendApiKey)) return res.status(500).json({ error: 'Configurazione server mancante' });
   const base = `${supabaseUrl}/rest/v1`;
   const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' };
 

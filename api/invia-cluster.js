@@ -18,7 +18,7 @@
 // POST { action:'anteprima', criteri }                    [JWT medico + modulo]
 // POST { action:'invia', criteri, corpo, cluster_id? }    [JWT medico + modulo]
 
-import { nuovoMailer } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
 import { CONS_COMM_VERSIONE, readPayload, revocaLink } from '../lib/consenso-token.js';
@@ -177,7 +177,7 @@ export default async function handler(req, res) {
   const anonKey      = process.env.SUPABASE_PUBLISHABLE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
   const consensoSecret = process.env.CONSENSO_TOKEN_SECRET; // HMAC dei link consenso/revoca (s52): separato dalla chiave del DB
-  if (!supabaseUrl || !serviceKey || !anonKey || !resendApiKey || !consensoSecret) {
+  if (!supabaseUrl || !serviceKey || !anonKey || !mailerConfigurato(resendApiKey) || !consensoSecret) {
     console.error('[invia-cluster] env vars mancanti');
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }
