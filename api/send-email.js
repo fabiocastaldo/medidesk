@@ -16,7 +16,7 @@
  * Ogni invio riuscito produce un INSERT su audit_log (soft-fail).
  */
 
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 import { revocaLink, consensoLink } from '../lib/consenso-token.js';
@@ -477,7 +477,7 @@ export default async function handler(req, res) {
     'Authorization': `Bearer ${serviceKey}`,
     'Content-Type': 'application/json'
   };
-  const resend = new Resend(resendApiKey);
+  const resend = nuovoMailer(resendApiKey);
 
   // ── Auth routing ──────────────────────────────────────────────────────────────
 

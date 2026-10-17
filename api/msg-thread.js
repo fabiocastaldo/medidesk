@@ -16,7 +16,7 @@
 //        → 200 { ok: true }
 // Rollback simmetrico: se l'email di apertura fallisce il thread viene cancellato.
 
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { createHash, randomBytes } from 'crypto';
 import { richiediInServizio } from '../lib/servizio-guard.js';
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
   const dbHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
   const sb = (path, opts = {}) => fetch(`${base}/${path}`, { ...opts, headers: { ...dbHeaders, ...(opts.headers || {}) } });
   const host = (req.headers['x-forwarded-host'] || req.headers.host || 'delphi-med.com').split(',')[0].trim();
-  const resend = new Resend(resendApiKey);
+  const resend = nuovoMailer(resendApiKey);
 
   const body = req.body || {};
   const action = body.action;

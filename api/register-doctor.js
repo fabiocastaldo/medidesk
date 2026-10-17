@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
 
@@ -142,7 +142,7 @@ export default async function handler(req, res) {
       `<p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Il codice vale 10 minuti. Se non hai chiesto tu di registrarti, ignora questa email: nessun account verr&agrave; creato.</p>`
     );
     try {
-      const { error } = await new Resend(resendApiKey).emails.send({
+      const { error } = await nuovoMailer(resendApiKey).emails.send({
         from: 'noreply@delphi-med.com', to: [emailC],
         subject: `${codice} è il tuo codice di registrazione Delphi~Med`, html: htmlC
       });
@@ -363,7 +363,7 @@ export default async function handler(req, res) {
       `<p>Di ogni documento conserviamo il testo integrale della versione accettata, l'impronta crittografica, la versione e l'ora applicativa dell'accettazione. Dopo l'approvazione dell'account potrai rileggere questi testi da Impostazioni → Documenti, sezione «Versioni che hai accettato».</p>` +
       noteBox(`L'ora indicata è quella registrata dai nostri sistemi e non costituisce una marca temporale qualificata.`)
     );
-    const { data: rd, error: rErr } = await new Resend(resendApiKey).emails.send({
+    const { data: rd, error: rErr } = await nuovoMailer(resendApiKey).emails.send({
       from: 'noreply@delphi-med.com', to: [email],
       subject: 'Ricevuta delle accettazioni — Delphi~Med', html: htmlR
     });
@@ -418,7 +418,7 @@ export default async function handler(req, res) {
   const adminEmail = 'fb.castaldo@gmail.com'; // deve coincidere con CASELLA_GESTORE in approve-doctor.js
 
   try {
-    const resend = new Resend(resendApiKey);
+    const resend = nuovoMailer(resendApiKey);
     const { error: emailErr } = await resend.emails.send({
       from: 'noreply@delphi-med.com',
       to: [adminEmail],

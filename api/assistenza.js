@@ -19,7 +19,7 @@
 // POST { azione:'scrivi_token', token, corpo }               link          → { ok }
 // POST { azione:'chiudi_token', token }                      link gestore  → { ok }
 
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { createHash, randomBytes } from 'crypto';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
   const sb = (path, opts = {}) => fetch(`${base}/${path}`, { ...opts, headers: { ...dbHeaders, ...(opts.headers || {}) } });
   const host = (req.headers['x-forwarded-host'] || req.headers.host || 'www.delphi-med.com').split(',')[0].trim();
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  const resend = new Resend(resendApiKey);
+  const resend = nuovoMailer(resendApiKey);
 
   const body = req.body || {};
   const azione = body.azione;

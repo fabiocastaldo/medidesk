@@ -3,7 +3,7 @@
 // Nessun segreto: riceve solo l'id del medico, rilegge tutto dal database con la chiave di servizio e invia la mail
 // solo se il medico e' davvero sospeso e la sospensione in corso non e' gia' stata avvisata (lib/sospensione.js).
 // Risposta uniforme 200 { ok: true } per non rivelare quali id esistono; limite di richieste per IP (fail-closed).
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { emailShell, emailTitle, esc } from '../lib/email-shell.js';
 import { avvisaSospensione } from '../lib/sospensione.js';
 
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   const medicoId = String((req.body || {}).medico_id || '');
   if (UUID.test(medicoId)) {
     try {
-      const esito = await avvisaSospensione({ base, headers, resend: new Resend(resendApiKey),
+      const esito = await avvisaSospensione({ base, headers, resend: nuovoMailer(resendApiKey),
         shell: { emailShell, emailTitle, esc }, medicoId });
       console.log('[avviso-sospensione]', esito);
     } catch (e) { console.error('[avviso-sospensione]', e.message); }
