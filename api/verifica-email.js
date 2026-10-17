@@ -4,7 +4,7 @@
 // insieme al codice. Nessuna riga in DB oltre ai contatori di rate_limits.
 // La mail contiene solo il codice: niente medico, niente tipo di visita (relazione BPM § 5.5).
 import { createHash } from 'crypto';
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { creaSfida, normEmail } from '../lib/verifica-email.js';
 import { emailShell, emailTitle } from '../lib/email-shell.js';
 
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     `<p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Il codice vale 10 minuti. Se non hai richiesto tu questo codice, ignora questa email: nessuna prenotazione verr&agrave; registrata.</p>`
   );
   try {
-    const { error } = await new Resend(resendKey).emails.send({
+    const { error } = await nuovoMailer(resendKey).emails.send({
       from: 'noreply@delphi-med.com', to: [email],
       subject: `${codice} è il tuo codice di verifica Delphi~Med`, html
     });

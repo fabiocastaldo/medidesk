@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { timingSafeEqual } from 'crypto';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton, esc as escShell } from '../lib/email-shell.js';
 import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     console.error('[send-reminders] RESEND_API_KEY non configurato');
     return res.status(500).json({ error: 'Server misconfiguration' });
   }
-  const resend = new Resend(resendApiKey);
+  const resend = nuovoMailer(resendApiKey);
 
   // Errori residui DOPO il retry, per l'alert admin di fine run.
   // Nessun dato personale: solo id di riga (etichettati) ed error message.

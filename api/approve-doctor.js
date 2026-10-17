@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -266,7 +266,7 @@ export default async function handler(req, res) {
     let mailEsito = 'non_inviata';
     if (resendApiKey && m.email) {
       try {
-        const { error } = await new Resend(resendApiKey).emails.send({ from: 'noreply@delphi-med.com', to: [m.email],
+        const { error } = await nuovoMailer(resendApiKey).emails.send({ from: 'noreply@delphi-med.com', to: [m.email],
           subject: 'Registrazione a Delphi~Med non completata', html: buildEsitoNegativo({ nome: m.nome, cognome: m.cognome }) });
         mailEsito = error ? 'errore_invio' : 'inviata';
         if (error) console.error('[approve-doctor] mail esito negativo:', error.message);
@@ -303,7 +303,7 @@ export default async function handler(req, res) {
   // Avvisi (best-effort): PEC dall'indice, poi benvenuto al medico
   let pecEsito = pec ? 'non_inviato' : 'assente';
   if (resendApiKey) {
-    const resend = new Resend(resendApiKey);
+    const resend = nuovoMailer(resendApiKey);
     if (pec) {
       try {
         const { error } = await resend.emails.send({ from: 'noreply@delphi-med.com', to: [pec],

@@ -18,7 +18,7 @@
 // POST { action:'anteprima', criteri }                    [JWT medico + modulo]
 // POST { action:'invia', criteri, corpo, cluster_id? }    [JWT medico + modulo]
 
-import { Resend } from 'resend';
+import { nuovoMailer } from '../lib/mailer.js';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
 import { CONS_COMM_VERSIONE, readPayload, revocaLink } from '../lib/consenso-token.js';
@@ -186,7 +186,7 @@ export default async function handler(req, res) {
   const dbHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
   const sb = (path, opts = {}) => fetch(`${base}/${path}`, { ...opts, headers: { ...dbHeaders, ...(opts.headers || {}) } });
   const host = (req.headers['x-forwarded-host'] || req.headers.host || 'delphi-med.com').split(',')[0].trim();
-  const resend = new Resend(resendApiKey);
+  const resend = nuovoMailer(resendApiKey);
 
   const body = req.body || {};
   const action = body.action;
