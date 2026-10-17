@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { nuovoMailer } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
 
@@ -119,7 +119,7 @@ export default async function handler(req, res) {
   const approveSecret = process.env.APPROVE_TOKEN_SECRET;
   const resendApiKey = process.env.RESEND_API_KEY;
   const codiceSecret = process.env.CONSENSO_TOKEN_SECRET;
-  if (!supabaseUrl || !serviceKey || !approveSecret || !resendApiKey || !codiceSecret) {
+  if (!supabaseUrl || !serviceKey || !approveSecret || !mailerConfigurato(resendApiKey) || !codiceSecret) {
     console.error('[register-doctor] env vars mancanti');
     return res.status(500).json({ error: 'Configurazione server incompleta' });
   }

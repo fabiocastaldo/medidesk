@@ -16,7 +16,7 @@
 //        → 200 { ok: true }
 // Rollback simmetrico: se l'email di apertura fallisce il thread viene cancellato.
 
-import { nuovoMailer } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { createHash, randomBytes } from 'crypto';
 import { richiediInServizio } from '../lib/servizio-guard.js';
@@ -81,7 +81,7 @@ export default async function handler(req, res) {
   const serviceKey   = process.env.SUPABASE_SECRET_KEY;
   const anonKey      = process.env.SUPABASE_PUBLISHABLE_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !serviceKey || !anonKey || !resendApiKey) {
+  if (!supabaseUrl || !serviceKey || !anonKey || !mailerConfigurato(resendApiKey)) {
     console.error('[msg-thread] env vars mancanti');
     return res.status(500).json({ error: 'Configurazione server mancante' });
   }

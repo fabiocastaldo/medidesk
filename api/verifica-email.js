@@ -4,7 +4,7 @@
 // insieme al codice. Nessuna riga in DB oltre ai contatori di rate_limits.
 // La mail contiene solo il codice: niente medico, niente tipo di visita (relazione BPM § 5.5).
 import { createHash } from 'crypto';
-import { nuovoMailer } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { creaSfida, normEmail } from '../lib/verifica-email.js';
 import { emailShell, emailTitle } from '../lib/email-shell.js';
 
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   const serviceKey  = process.env.SUPABASE_SECRET_KEY;
   const secret      = process.env.CONSENSO_TOKEN_SECRET;
   const resendKey   = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !serviceKey || !secret || !resendKey) return res.status(500).json({ error: 'Configurazione server mancante' });
+  if (!supabaseUrl || !serviceKey || !secret || !mailerConfigurato(resendKey)) return res.status(500).json({ error: 'Configurazione server mancante' });
 
   const email = normEmail((req.body || {}).email).slice(0, 160);
   if (!isEmail(email)) return res.status(400).json({ error: 'Email non valida' });

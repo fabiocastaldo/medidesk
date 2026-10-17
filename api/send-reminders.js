@@ -1,4 +1,4 @@
-import { nuovoMailer } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { timingSafeEqual } from 'crypto';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton, esc as escShell } from '../lib/email-shell.js';
 import { eseguiEliminazioniAccount } from '../lib/elimina-account.js';
@@ -76,8 +76,8 @@ export default async function handler(req, res) {
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({ error: 'Supabase env vars missing' });
   }
-  if (!resendApiKey) {
-    console.error('[send-reminders] RESEND_API_KEY non configurato');
+  if (!mailerConfigurato(resendApiKey)) {
+    console.error('[send-reminders] nessun motore di invio configurato (SES o Resend)');
     return res.status(500).json({ error: 'Server misconfiguration' });
   }
   const resend = nuovoMailer(resendApiKey);
