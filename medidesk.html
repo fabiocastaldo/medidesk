@@ -13321,6 +13321,22 @@ async function exportCopiaDatiPazienteArt15(pazienteId){
       .eq('paziente_id', p.id).order('created_at',{ascending:true});
     if(error) throw error; promemoria = data||[];
   } catch(e){ errori.push('promemoria: '+e.message); }
+  // Prenotazioni a nome del paziente non collegate al fascicolo (es. prenotazione online fatta dal paziente stesso):
+  // abbinate per cognome+nome normalizzati e data di nascita, mai per email (recapiti condivisi tra familiari). s83, riga 60.
+  let scollegate = [];
+  const _nascitaIso = itToIso(p.nascita);
+  if(_nascitaIso){
+    try {
+      const { data, error } = await supabaseClient.from('appuntamenti')
+        .select('id,data,ora,tipo_visita,categoria,centro_id,modalita,cancelled,cancelled_at,erogata,source,per_conto,prenotante_nome,prenotante_cognome,prenotante_ruolo,nome_paziente,cognome_paziente,data_nascita_paziente,email_paziente,telefono_paziente,note,created_at')
+        .eq('medico_id', S.medicoId).is('paziente_id', null).eq('data_nascita_paziente', _nascitaIso)
+        .order('data',{ascending:true});
+      if(error) throw error;
+      const _chiavePaz = _normalizePersona(p.nome, p.cognome);
+      scollegate = (data||[]).filter(x => _normalizePersona(x.nome_paziente, x.cognome_paziente) === _chiavePaz)
+        .map(x => { const c = (S.centri||[]).find(k => String(k.id) === String(x.centro_id)); return Object.assign({}, x, { centroNome: c ? c.nome : '' }); });
+    } catch(e){ errori.push('prenotazioni non collegate: '+e.message); }
+  } else errori.push('prenotazioni non collegate: data di nascita assente nel fascicolo, abbinamento non eseguito');
   let sintesi = null;
   if(p.sintesiEnc){ try { sintesi = await _decryptText(p.sintesiEnc); } catch(e){ errori.push('sintesi: '+e.message); } }
   const dt = iso => iso ? new Date(iso).toLocaleString('it-IT') : '';
@@ -13342,7 +13358,7 @@ th{text-align:left;width:34%;color:#555;font-weight:600;vertical-align:top;paddi
 <p><strong>Interessato:</strong> ${h(p.cognome||'')} ${h(p.nome||'')}<br>
 <strong>Titolare del trattamento:</strong> ${h(S.settings.nome||'')}${S.settings.spec?` — ${h(S.settings.spec)}`:''}${S.settings.albo?` (iscrizione all'Ordine n. ${h(S.settings.albo)})`:''}<br>
 <strong>Copia generata il:</strong> ${h(new Date().toLocaleString('it-IT'))} dal gestionale Delphi~Med, che tratta i dati per conto del Titolare.</p>
-<p class="nota">Questa copia contiene tutti i dati che il gestionale conserva su di te per conto del medico. Il riscontro alla richiesta (finalità, destinatari, periodo di conservazione, diritti) lo dà il Titolare; le informazioni generali sul trattamento sono nell'Informativa per i pazienti e nell'elenco dei sub-responsabili pubblicati su www.delphi-med.com. Prima copia gratuita.</p>
+<p class="nota">Questa copia contiene i dati che il gestionale conserva su di te per conto del medico: il fascicolo, le prenotazioni collegate al fascicolo e le prenotazioni fatte a tuo nome (stesso nome, cognome e data di nascita) non ancora collegate. Le prenotazioni in cui compari solo come persona che ha prenotato per un altro paziente non sono abbinabili con certezza e le verifica il Titolare. Il riscontro alla richiesta (finalità, destinatari, periodo di conservazione, diritti) lo dà il Titolare; le informazioni generali sul trattamento sono nell'Informativa per i pazienti e nell'elenco dei sub-responsabili pubblicati su www.delphi-med.com. Prima copia gratuita.</p>
 <h2>1. Anagrafica e recapiti</h2>
 <table>${campo('Cognome',p.cognome)}${campo('Nome',p.nome)}${campo('Data di nascita',p.nascita)}${campo('Email',p.email)}${campo('Telefono',p.tel)}${campo('Fascicolo creato il',p.creato)}</table>
 <h2>2. Scelte sui dati e limitazioni</h2>
@@ -13350,6 +13366,10 @@ th{text-align:left;width:34%;color:#555;font-weight:600;vertical-align:top;paddi
 <h2>3. Prenotazioni e appuntamenti collegati al fascicolo (${appts.length})</h2>
 ${appts.length?appts.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h(a.ora)}</span> — ${h(a.tipo||'')}${a.categoria?` (${h(a.categoria)})`:''}${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
 <span class="nota">Stato: ${a.cancelled?`annullato${a.cancelledAt?` il ${h(dt(a.cancelledAt))}`:''}`:(a.erogata?'erogato':'confermato')} · origine: ${h(a.source||'')}${a.per_conto?` · prenotato per conto da ${h([a.prenotanteNome,a.prenotanteCognome].filter(Boolean).join(' '))}${a.prenotanteRuolo?` (${h(a.prenotanteRuolo)})`:''}`:''}${a.note?`<br>Note: ${h(a.note)}`:''}</span></div>`).join(''):'<p><em>Nessuna prenotazione collegata.</em></p>'}
+<h2>3-bis. Prenotazioni a tuo nome non collegate al fascicolo (${scollegate.length})</h2>
+${scollegate.length?scollegate.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h((a.ora||'').slice(0,5))}</span> — ${h(a.tipo_visita||'')}${a.categoria?` (${h(a.categoria)})`:''}${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
+<span class="nota">Stato: ${a.cancelled?`annullato${a.cancelled_at?` il ${h(dt(a.cancelled_at))}`:''}`:(a.erogata?'erogato':'confermato')} · origine: ${h(a.source||'')} · ricevuta il ${h(dt(a.created_at))}${a.per_conto?` · prenotato per conto da ${h([a.prenotante_nome,a.prenotante_cognome].filter(Boolean).join(' '))}${a.prenotante_ruolo?` (${h(a.prenotante_ruolo)})`:''}`:''}</span>
+<table>${campo('Nome indicato',a.nome_paziente)}${campo('Cognome indicato',a.cognome_paziente)}${campo('Data di nascita indicata',isoToIt(a.data_nascita_paziente||''))}${campo('Email indicata',a.email_paziente)}${campo('Telefono indicato',a.telefono_paziente)}${campo('Note della prenotazione',a.note)}</table></div>`).join(''):'<p><em>Nessuna prenotazione a tuo nome fuori dal fascicolo.</em></p>'}
 <h2>4. Visite e documentazione clinica (${visite.length})</h2>
 ${visite.length?visite.map(v=>`<div class="box"><span class="d">${h(v.data||'')}</span>${_visitaLuogo(v)?` — ${h(_visitaLuogo(v))}`:''}${v.tipo?` · ${h(v.tipo)}`:''}
 ${v.clinica?`<div class="pre">${h(v.clinica)}</div>`:''}${v.referto?`<div class="pre"><strong>Referto (testo):</strong>\n${h(v.referto)}</div>`:''}${getFotoPaths(v.foto_url).length?`<div class="nota">Referti allegati: ${getFotoPaths(v.foto_url).length} (cartella «referti»)</div>`:''}</div>`).join(''):'<p><em>Nessuna visita registrata.</em></p>'}
@@ -13369,6 +13389,7 @@ ${errori.length?`<p class="nota"><strong>Avvertenza:</strong> alcune sezioni non
       consenso_comunicazioni_at:p.consenso_comunicazioni_at, consenso_comunicazioni_versione:p.consenso_comunicazioni_versione, consenso_comunicazioni_richiesto_at:p.consenso_comunicazioni_richiesto_at, consenso_comunicazioni_revocato_at:p.consenso_comunicazioni_revocato_at,
       limitato_at:p.limitatoAt, limitato_motivo:p.limitatoMotivo, limitato_nota:p.limitatoNota },
     appuntamenti: appts.map(a=>({ id:a.id, data:a.data, ora:a.ora, tipo:a.tipo, categoria:a.categoria, centro:a.centroNome, modalita:a.modalita||null, stato:a.cancelled?'annullato':(a.erogata?'erogato':'confermato'), annullato_il:a.cancelledAt, origine:a.source, per_conto:a.per_conto, prenotante:a.per_conto?{nome:a.prenotanteNome,cognome:a.prenotanteCognome,ruolo:a.prenotanteRuolo}:null, note:a.note })),
+    prenotazioni_non_collegate: scollegate.map(a=>({ id:a.id, data:a.data, ora:a.ora, tipo:a.tipo_visita, categoria:a.categoria, centro:a.centroNome, modalita:a.modalita||null, stato:a.cancelled?'annullato':(a.erogata?'erogato':'confermato'), annullato_il:a.cancelled_at, origine:a.source, ricevuta_il:a.created_at, per_conto:a.per_conto, prenotante:a.per_conto?{nome:a.prenotante_nome, cognome:a.prenotante_cognome, ruolo:a.prenotante_ruolo}:null, nome_indicato:a.nome_paziente, cognome_indicato:a.cognome_paziente, data_nascita_indicata:a.data_nascita_paziente, email_indicata:a.email_paziente, telefono_indicato:a.telefono_paziente, note:a.note })),
     visite: visite.map(v=>({ id:v.id, data:v.data, luogo:_visitaLuogo(v), tipo:v.tipo, contenuto_clinico:v.clinica||'', referto_testo:v.referto||'', referti_allegati:getFotoPaths(v.foto_url).length })),
     sintesi_clinica_adottata: sintesi===null?null:{ testo:sintesi, generata_il:p.sintesiGenerataIl, adottata_il:(p.sintesiMeta||{}).adottata_il||null },
     canali_messaggi: threads.map(t=>({ id:t.id, origine:t.origine, aperto_il:t.created_at, chiuso_il:t.chiuso_at, recapito_email:t.recapito_email, recapito_tel:t.recapito_tel, messaggi:(t.messaggi||[]).map(m=>({ direzione:m.direzione, corpo:m.corpo, inviato_il:m.created_at, letto_il:m.letto_at })) })),
@@ -13398,7 +13419,7 @@ ${errori.length?`<p class="nota"><strong>Avvertenza:</strong> alcune sezioni non
   const a = document.createElement('a'); a.href = url; a.download = `${folderName}.zip`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  const tracciata = await auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
+  const tracciata = await auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_prenotazioni_non_collegate: scollegate.length, n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
   if(!tracciata) showToast('Copia scaricata, ma la traccia nel registro delle operazioni non è stata registrata: segnalalo all\'assistenza');
   else showToast(refertiErrors||errori.length ? `Copia scaricata con ${refertiErrors+errori.length} ${plur(refertiErrors+errori.length,'parte non letta','parti non lette')}` : 'Copia dei dati scaricata ✓');
   return { success: true, refertiOk, refertiErrors };
