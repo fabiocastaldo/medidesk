@@ -12662,12 +12662,20 @@ function _pazOggiIso(){
   const d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+// Prenotazione attribuibile con certezza al fascicolo p: collegata a p, oppure non collegata con stessi nome,
+// cognome e data di nascita (mai per solo nome: un omonimo ereditava recapiti e prossimo appuntamento altrui). s83, DPIA S04.
+function _apptDelPaziente(a, p){
+  if(!a||!p) return false;
+  if(a.pazienteId) return String(a.pazienteId)===String(p.id);
+  const dn=itToIso(p.nascita||'');
+  if(!dn||!a.dataNascita||a.dataNascita!==dn) return false;
+  return _normalizePersona(a.nome, a.cognome)===_normalizePersona(p.nome, p.cognome);
+}
 function _contattiDaPrenotazioni(p){
   let email='', tel='';
-  const nl=p.nome.toLowerCase(), cl=p.cognome.toLowerCase();
   (S.appuntamenti||[]).forEach(a=>{
     if(a.cancelled) return;
-    if((a.nome||'').toLowerCase()!==nl||(a.cognome||'').toLowerCase()!==cl) return;
+    if(!_apptDelPaziente(a, p)) return;
     if(!email && a.email) email=a.email;
     if(!tel && a.tel) tel=a.tel;
   });
@@ -12693,7 +12701,7 @@ function renderPazienti(more){
     .slice().sort((x,y)=>((x.data||'')+(x.ora||'')).localeCompare((y.data||'')+(y.ora||'')));
   const rows=[];
   S.pazienti.forEach(p=>{
-    const next=futuri.find(a=>(a.nome||'').toLowerCase()===p.nome.toLowerCase()&&(a.cognome||'').toLowerCase()===p.cognome.toLowerCase())||null;
+    const next=futuri.find(a=>_apptDelPaziente(a, p))||null;
     const fb=(!p.email||!p.tel)?_contattiDaPrenotazioni(p):{email:'',tel:''};
     rows.push({tipo:'paziente',id:p.id,nome:p.nome,cognome:p.cognome,nascita:p.nascita||'',email:p.email||fb.email||'',tel:p.tel||fb.tel||'',nVisite:(p.visite||[]).length,next,centri:_pazCentriIds(p),limitato:!!p.limitatoAt});
   });
