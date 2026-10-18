@@ -8857,6 +8857,10 @@ function showPazienteDetail(id){
     <div id="storia-container-${escapeAttr(id)}"></div>`:''}
     <div id="prom-box-${escapeAttr(id)}" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"></div>
     <div id="msg-box-${escapeAttr(id)}" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"></div>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <button type="button" class="btn btn-sm btn-secondary" onclick="exportCopiaDatiPazienteArt15('${escapeAttr(id)}')" title="Copia completa dei dati del paziente, leggibile senza chiavi, per rispondere a una richiesta di accesso"><svg class="ic"><use href="#ic-download"/></svg>Copia dei dati del paziente (art. 15)</button>
+      <div style="font-size:12px;color:var(--ink3);margin-top:6px">ZIP con anagrafica, scelte sui dati, prenotazioni, visite e referti decifrati, sintesi adottata, messaggi e promemoria. Da consegnare al paziente attraverso un canale sicuro.</div>
+    </div>
     ${lim?'':_limitaFormHTML(id)}
     ${lim?'':`<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
       <button type="button" class="btn-del-paz" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:none;color:var(--warm);font-size:14px;cursor:pointer;padding:10px 4px;min-height:44px" data-pazid="${escapeAttr(id)}" data-action="delete-paziente"><svg class="ic"><use href="#ic-trash"/></svg> Elimina paziente</button>
@@ -13286,6 +13290,116 @@ ${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.sli
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 
+  return { success: true, refertiOk, refertiErrors };
+}
+
+// ── Riga 60 / A02 T14 (s82): copia completa dei dati di un paziente per una richiesta di accesso (art. 15 GDPR).
+// Il Titolare è il medico: la copia riunisce tutto ciò che il gestionale conserva sul paziente (anagrafica, scelte sui dati,
+// limitazione, prenotazioni collegate, visite con contenuto clinico e referti decifrati nel browser, sintesi adottata,
+// messaggi del canale, promemoria) in un ZIP leggibile senza chiavi. Lettura ed esportazione restano libere anche a
+// trattamento limitato. Nessun token né link firmato finisce nella copia. Traccia: copia_dati_paziente_generata (soli conteggi).
+async function exportCopiaDatiPazienteArt15(pazienteId){
+  if(!isOnline()){ showToast('Connessione richiesta per preparare la copia'); return null; }
+  const p = S.pazienti.find(x => String(x.id) === String(pazienteId));
+  if(!p){ showToast('Paziente non trovato'); return null; }
+  showToast('Preparo la copia dei dati…');
+  const today = todayLocalISO();
+  const safe = t => (t||'').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const folderName = `Copia_dati_${safe(p.cognome)||'paziente'}_${safe(p.nome)}_${today}`;
+  const zip = new JSZip(); const root = zip.folder(folderName);
+  const visite = (p.visite||[]).slice().sort((a,b)=>(itToIso(a.data)||'').localeCompare(itToIso(b.data)||''));
+  const appts = (S.appuntamenti||[]).filter(a => String(a.pazienteId) === String(p.id)).slice().sort((a,b)=>(a.data+a.ora).localeCompare(b.data+b.ora));
+  let threads = [], promemoria = [], errori = [];
+  try {
+    const { data, error } = await supabaseClient.from('thread_messaggi')
+      .select('id,origine,scade_il,chiuso_at,created_at,recapito_email,recapito_tel,messaggi(id,direzione,corpo,created_at,letto_at)')
+      .eq('paziente_id', p.id).order('created_at',{ascending:true});
+    if(error) throw error; threads = data||[];
+  } catch(e){ errori.push('messaggi: '+e.message); }
+  try {
+    const { data, error } = await supabaseClient.from('promemoria').select('id,testo,scadenza,fatto_at,created_at')
+      .eq('paziente_id', p.id).order('created_at',{ascending:true});
+    if(error) throw error; promemoria = data||[];
+  } catch(e){ errori.push('promemoria: '+e.message); }
+  let sintesi = null;
+  if(p.sintesiEnc){ try { sintesi = await _decryptText(p.sintesiEnc); } catch(e){ errori.push('sintesi: '+e.message); } }
+  const dt = iso => iso ? new Date(iso).toLocaleString('it-IT') : '';
+  const h = escapeHtml;
+  const campo = (k,v) => `<tr><th>${h(k)}</th><td>${v===''||v===null||v===undefined?'<em>non presente</em>':h(String(v))}</td></tr>`;
+  const scelte = [];
+  if(p.consenso_comunicazioni_at) scelte.push(`Comunicazioni facoltative del medico: consenso dato il ${h(dt(p.consenso_comunicazioni_at))} (testo versione ${h(p.consenso_comunicazioni_versione||'—')})${p.consenso_comunicazioni_revocato_at?`, revocato il ${h(dt(p.consenso_comunicazioni_revocato_at))}`:''}.`);
+  else if(p.consenso_comunicazioni_richiesto_at) scelte.push(`Comunicazioni facoltative del medico: scelta richiesta il ${h(dt(p.consenso_comunicazioni_richiesto_at))}, non espressa.`);
+  else scelte.push('Comunicazioni facoltative del medico: nessuna scelta registrata (nessuna comunicazione facoltativa viene inviata).');
+  scelte.push(p.limitatoAt ? `Limitazione del trattamento (art. 18): attiva dal ${h(dt(p.limitatoAt))}, motivo «${h(p.limitatoMotivo||'')}»${p.limitatoNota?`, nota: ${h(p.limitatoNota)}`:''}.` : 'Limitazione del trattamento (art. 18): non attiva.');
+  const html = `<!DOCTYPE html>
+<html lang="it"><head><meta charset="UTF-8"><title>Copia dei dati — ${h(p.cognome||'')} ${h(p.nome||'')}</title>
+<style>body{font-family:system-ui,Arial,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.55;color:#222}
+h1{color:#0a8074}h2{border-bottom:1px solid #ccc;padding-bottom:4px;margin-top:30px}table{border-collapse:collapse;width:100%;margin:8px 0}
+th{text-align:left;width:34%;color:#555;font-weight:600;vertical-align:top;padding:4px 8px 4px 0}td{padding:4px 0;vertical-align:top}
+.box{background:#fafafa;padding:12px 14px;border-radius:6px;margin:12px 0}.d{font-weight:600;color:#0a8074}.pre{white-space:pre-wrap;margin-top:6px}
+.nota{font-size:13px;color:#555}</style></head><body>
+<h1>Copia dei dati personali (art. 15 GDPR)</h1>
+<p><strong>Interessato:</strong> ${h(p.cognome||'')} ${h(p.nome||'')}<br>
+<strong>Titolare del trattamento:</strong> ${h(S.settings.nome||'')}${S.settings.spec?` — ${h(S.settings.spec)}`:''}${S.settings.albo?` (iscrizione all'Ordine n. ${h(S.settings.albo)})`:''}<br>
+<strong>Copia generata il:</strong> ${h(new Date().toLocaleString('it-IT'))} dal gestionale Delphi~Med, che tratta i dati per conto del Titolare.</p>
+<p class="nota">Questa copia contiene tutti i dati che il gestionale conserva su di te per conto del medico. Il riscontro alla richiesta (finalità, destinatari, periodo di conservazione, diritti) lo dà il Titolare; le informazioni generali sul trattamento sono nell'Informativa per i pazienti e nell'elenco dei sub-responsabili pubblicati su www.delphi-med.com. Prima copia gratuita.</p>
+<h2>1. Anagrafica e recapiti</h2>
+<table>${campo('Cognome',p.cognome)}${campo('Nome',p.nome)}${campo('Data di nascita',p.nascita)}${campo('Email',p.email)}${campo('Telefono',p.tel)}${campo('Fascicolo creato il',p.creato)}</table>
+<h2>2. Scelte sui dati e limitazioni</h2>
+<ul>${scelte.map(x=>`<li>${x}</li>`).join('')}</ul>
+<h2>3. Prenotazioni e appuntamenti collegati al fascicolo (${appts.length})</h2>
+${appts.length?appts.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h(a.ora)}</span> — ${h(a.tipo||'')}${a.categoria?` (${h(a.categoria)})`:''}${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
+<span class="nota">Stato: ${a.cancelled?`annullato${a.cancelledAt?` il ${h(dt(a.cancelledAt))}`:''}`:(a.erogata?'erogato':'confermato')} · origine: ${h(a.source||'')}${a.per_conto?` · prenotato per conto da ${h([a.prenotanteNome,a.prenotanteCognome].filter(Boolean).join(' '))}${a.prenotanteRuolo?` (${h(a.prenotanteRuolo)})`:''}`:''}${a.note?`<br>Note: ${h(a.note)}`:''}</span></div>`).join(''):'<p><em>Nessuna prenotazione collegata.</em></p>'}
+<h2>4. Visite e documentazione clinica (${visite.length})</h2>
+${visite.length?visite.map(v=>`<div class="box"><span class="d">${h(v.data||'')}</span>${_visitaLuogo(v)?` — ${h(_visitaLuogo(v))}`:''}${v.tipo?` · ${h(v.tipo)}`:''}
+${v.clinica?`<div class="pre">${h(v.clinica)}</div>`:''}${v.referto?`<div class="pre"><strong>Referto (testo):</strong>\n${h(v.referto)}</div>`:''}${getFotoPaths(v.foto_url).length?`<div class="nota">Referti allegati: ${getFotoPaths(v.foto_url).length} (cartella «referti»)</div>`:''}</div>`).join(''):'<p><em>Nessuna visita registrata.</em></p>'}
+${sintesi!==null?`<h2>5. Sintesi clinica adottata dal medico</h2><div class="box"><span class="nota">Generata il ${h(dt(p.sintesiGenerataIl))}${p.sintesiMeta&&p.sintesiMeta.adottata_il?`, adottata il ${h(dt(p.sintesiMeta.adottata_il))}`:''} — testo rivisto e adottato dal medico.</span><div class="pre">${h(sintesi)}</div></div>`:''}
+<h2>6. Messaggi del canale digitale (${threads.length} ${plur(threads.length,'canale','canali')})</h2>
+${threads.length?threads.map(t=>`<div class="box"><span class="d">Canale ${h(t.origine||'')}</span> aperto il ${h(dt(t.created_at))}${t.chiuso_at?`, chiuso il ${h(dt(t.chiuso_at))}`:''} · recapito ${h(t.recapito_email||t.recapito_tel||'—')}
+${(t.messaggi||[]).slice().sort((a,b)=>a.created_at.localeCompare(b.created_at)).map(m=>`<div class="pre"><strong>${m.direzione==='paziente'?'Paziente':'Medico'}</strong> · ${h(dt(m.created_at))}${m.letto_at?` · letto il ${h(dt(m.letto_at))}`:''}\n${h(m.corpo||'')}</div>`).join('')}</div>`).join(''):'<p><em>Nessun canale aperto.</em></p>'}
+<h2>7. Promemoria del medico che ti riguardano (${promemoria.length})</h2>
+${promemoria.length?`<ul>${promemoria.map(r=>`<li>${h(r.testo||'')} — scadenza ${h(isoToIt(r.scadenza||''))}${r.fatto_at?`, fatto il ${h(dt(r.fatto_at))}`:''}</li>`).join('')}</ul>`:'<p><em>Nessun promemoria.</em></p>'}
+${errori.length?`<p class="nota"><strong>Avvertenza:</strong> alcune sezioni non sono state lette (${h(errori.join('; '))}); il medico può rigenerare la copia.</p>`:''}
+<p class="nota" style="margin-top:40px">Documento generato da Delphi~Med per conto del Titolare. Non contiene i link né i codici di sicurezza usati dal servizio.</p>
+</body></html>`;
+  root.file('copia-dati.html', html);
+  root.file('copia-dati.json', JSON.stringify({
+    generata_il: new Date().toISOString(), titolare: { nome: S.settings.nome||'', specializzazione: S.settings.spec||'', iscrizione_ordine: S.settings.albo||'' },
+    paziente: { id:p.id, cognome:p.cognome, nome:p.nome, data_nascita:p.nascita, email:p.email, telefono:p.tel, fascicolo_creato_il:p.creato,
+      consenso_comunicazioni_at:p.consenso_comunicazioni_at, consenso_comunicazioni_versione:p.consenso_comunicazioni_versione, consenso_comunicazioni_richiesto_at:p.consenso_comunicazioni_richiesto_at, consenso_comunicazioni_revocato_at:p.consenso_comunicazioni_revocato_at,
+      limitato_at:p.limitatoAt, limitato_motivo:p.limitatoMotivo, limitato_nota:p.limitatoNota },
+    appuntamenti: appts.map(a=>({ id:a.id, data:a.data, ora:a.ora, tipo:a.tipo, categoria:a.categoria, centro:a.centroNome, modalita:a.modalita||null, stato:a.cancelled?'annullato':(a.erogata?'erogato':'confermato'), annullato_il:a.cancelledAt, origine:a.source, per_conto:a.per_conto, prenotante:a.per_conto?{nome:a.prenotanteNome,cognome:a.prenotanteCognome,ruolo:a.prenotanteRuolo}:null, note:a.note })),
+    visite: visite.map(v=>({ id:v.id, data:v.data, luogo:_visitaLuogo(v), tipo:v.tipo, contenuto_clinico:v.clinica||'', referto_testo:v.referto||'', referti_allegati:getFotoPaths(v.foto_url).length })),
+    sintesi_clinica_adottata: sintesi===null?null:{ testo:sintesi, generata_il:p.sintesiGenerataIl, adottata_il:(p.sintesiMeta||{}).adottata_il||null },
+    canali_messaggi: threads.map(t=>({ id:t.id, origine:t.origine, aperto_il:t.created_at, chiuso_il:t.chiuso_at, recapito_email:t.recapito_email, recapito_tel:t.recapito_tel, messaggi:(t.messaggi||[]).map(m=>({ direzione:m.direzione, corpo:m.corpo, inviato_il:m.created_at, letto_il:m.letto_at })) })),
+    promemoria: promemoria.map(r=>({ testo:r.testo, scadenza:r.scadenza, fatto_il:r.fatto_at, creato_il:r.created_at })),
+    sezioni_non_lette: errori
+  }, null, 2));
+  const refertiFolder = root.folder('referti');
+  let refertiOk = 0, refertiErrors = 0;
+  for(const v of visite){
+    if(!v.foto_url) continue;
+    const paths = getFotoPaths(v.foto_url);
+    for(let i = 0; i < paths.length; i++){
+      try {
+        const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(paths[i], 600);
+        if(error) throw error;
+        const resp = await fetch(data.signedUrl);
+        if(!resp.ok) throw new Error('HTTP ' + resp.status);
+        const blob = await _decryptReferto(await resp.arrayBuffer(), paths[i]);
+        const ext = paths[i].split('.').pop() || 'bin';
+        refertiFolder.file(`${(v.data||'undated').replace(/[^a-zA-Z0-9-]/g, '_')}_${i+1}.${ext}`, blob);
+        refertiOk++;
+      } catch(e){ console.error('[Delphi~Med] copia art.15 referto fail:', e.message); refertiErrors++; }
+    }
+  }
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `${folderName}.zip`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
+  showToast(refertiErrors||errori.length ? `Copia scaricata con ${refertiErrors+errori.length} ${plur(refertiErrors+errori.length,'parte non letta','parti non lette')}` : 'Copia dei dati scaricata ✓');
   return { success: true, refertiOk, refertiErrors };
 }
 
