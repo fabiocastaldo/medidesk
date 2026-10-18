@@ -1498,6 +1498,11 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <label>Conferma password</label>
         <div class="auth-pwd-wrap"><input type="password" id="recovery-pwd-confirm" placeholder="••••••••" autocomplete="new-password"><button type="button" class="auth-pwd-toggle" onclick="togglePwd(this)" aria-label="Mostra password" aria-pressed="false"><svg class="ic"><use href="#ic-eye"/></svg></button></div>
       </div>
+      <div class="auth-field" id="recovery-mfa-wrap" hidden>
+        <label>Codice dell'app di autenticazione</label>
+        <input type="text" id="recovery-mfa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+        <p style="font-size:12px;color:var(--ink2);line-height:1.5;margin:6px 0 0">Il tuo account ha la verifica in due passaggi: per cambiare la password serve anche il codice a 6 cifre dell'app (come al login).</p>
+      </div>
       <button class="auth-btn" id="recovery-save-btn" onclick="saveNewPassword()">Salva nuova password</button>
     </div>
   </div>
@@ -4271,7 +4276,13 @@ function togglePwd(btn){
   btn.setAttribute('aria-label', reveal ? 'Nascondi password' : 'Mostra password');
   btn.querySelector('use').setAttribute('href', reveal ? '#ic-eye-off' : '#ic-eye');
 }
-function showPasswordRecoveryView(){
+let _recoveryMfa = false;
+function showPasswordRecoveryView(session){
+  // Con un dispositivo di verifica registrato GoTrue accetta il cambio password solo da una sessione aal2:
+  // il campo del codice compare subito, letto dai fattori della sessione (niente chiamate auth dentro onAuthStateChange)
+  _recoveryMfa = !!(session && session.user && (session.user.factors || []).some(f => f.status === 'verified'));
+  const mfaWrap = document.getElementById('recovery-mfa-wrap');
+  if(mfaWrap){ mfaWrap.hidden = !_recoveryMfa; const c = document.getElementById('recovery-mfa-code'); if(c) c.value = ''; }
   document.getElementById('view-home').style.display    = 'none';
   document.getElementById('view-auth').style.display    = 'flex';
   document.getElementById('view-app').style.display     = 'none';
@@ -4326,10 +4337,24 @@ async function saveNewPassword(){
   const pwdOk = /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd) && /[!@#$%^&*()\-_=+[\]{};:'"\\|,.<>/?`~]/.test(pwd);
   if(!pwdOk){ showAuthMsg('La password non soddisfa tutti i criteri richiesti', 'error'); return; }
   const btn = document.getElementById('recovery-save-btn');
+  const mfaWrap = document.getElementById('recovery-mfa-wrap');
+  if(_recoveryMfa){
+    const code = (document.getElementById('recovery-mfa-code').value || '').replace(/\D/g,'');
+    if(code.length !== 6){ showAuthMsg('Inserisci le 6 cifre del codice dell\'app di autenticazione', 'error'); return; }
+    if(btn) btn.disabled = true;
+    try{
+      const { data: lf, error: e1 } = await supabaseClient.auth.mfa.listFactors();
+      const fattore = lf && lf.totp && lf.totp[0];
+      if(e1 || !fattore){ showAuthMsg('Nessun dispositivo di verifica trovato: richiedi un nuovo link e riprova.', 'error'); if(btn) btn.disabled = false; return; }
+      const { error: e2 } = await supabaseClient.auth.mfa.challengeAndVerify({ factorId: fattore.id, code });
+      if(e2){ showAuthMsg(translateAuthError(e2.message), 'error'); if(btn) btn.disabled = false; return; }
+    }catch(e){ showAuthMsg('Errore di rete: ' + e.message, 'error'); if(btn) btn.disabled = false; return; }
+  }
   if(btn) btn.disabled = true;
   try {
     const { error } = await supabaseClient.auth.updateUser({ password: pwd });
     if(error){
+      if(/AAL2/i.test(error.message) && mfaWrap){ _recoveryMfa = true; mfaWrap.hidden = false; }
       showAuthMsg(translateAuthError(error.message), 'error');
       if(btn) btn.disabled = false;
       return;
@@ -4362,7 +4387,7 @@ function checkSession(){
     console.log('[Delphi~Med] onAuthStateChange:', event, '_inPasswordRecovery:', _inPasswordRecovery);
     if(event === 'PASSWORD_RECOVERY'){
       _inPasswordRecovery = true;
-      showPasswordRecoveryView();
+      showPasswordRecoveryView(session);
       return;
     }
     if(event === 'INITIAL_SESSION'){
@@ -5133,6 +5158,7 @@ function translateAuthError(msg){
   if(msg.includes('Unable to validate'))        return 'Email non valida';
   if(msg.includes('Invalid TOTP code'))         return 'Codice non valido o scaduto: controlla l\'ora del telefono e riprova';
   if(msg.includes('AAL2 required'))             return 'Per questa operazione serve un accesso fatto col codice di verifica: esci, rientra col codice e riprova';
+  if(msg.includes('AAL2 session is required'))  return 'Il tuo account ha la verifica in due passaggi: inserisci anche il codice a 6 cifre dell\'app di autenticazione per cambiare la password';
   if(msg.includes('you can only request this after')) return 'Hai appena chiesto un invio: per sicurezza puoi richiederne un altro tra circa un minuto';
   if(msg.includes('rate limit') || msg.includes('Rate limit')) return 'Troppe richieste in poco tempo: attendi qualche minuto e riprova';
   return msg;
