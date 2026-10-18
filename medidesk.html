@@ -13398,8 +13398,9 @@ ${errori.length?`<p class="nota"><strong>Avvertenza:</strong> alcune sezioni non
   const a = document.createElement('a'); a.href = url; a.download = `${folderName}.zip`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
-  showToast(refertiErrors||errori.length ? `Copia scaricata con ${refertiErrors+errori.length} ${plur(refertiErrors+errori.length,'parte non letta','parti non lette')}` : 'Copia dei dati scaricata ✓');
+  const tracciata = await auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
+  if(!tracciata) showToast('Copia scaricata, ma la traccia nel registro delle operazioni non è stata registrata: segnalalo all\'assistenza');
+  else showToast(refertiErrors||errori.length ? `Copia scaricata con ${refertiErrors+errori.length} ${plur(refertiErrors+errori.length,'parte non letta','parti non lette')}` : 'Copia dei dati scaricata ✓');
   return { success: true, refertiOk, refertiErrors };
 }
 
@@ -14555,16 +14556,21 @@ function _openPazienteFromStats(pid){
 
 // ── AUDIT LOG ──
 async function auditLog(action, targetType, targetId, details){
-  if(!isOnline() || !S.medicoId) return;
+  if(!isOnline() || !S.medicoId) return false;
   try {
-    await supabaseClient.rpc('log_audit', {
+    // s82: supabase-js non lancia sugli errori della RPC, li restituisce — senza leggerli una traccia respinta (42501 per
+    // azione fuori dall'elenco di log_audit) passava in silenzio. Ritorna true solo a traccia scritta; i chiamanti storici ignorano il valore.
+    const { error } = await supabaseClient.rpc('log_audit', {
       p_action: action,
       p_target_type: targetType,
       p_target_id: targetId ? String(targetId) : null,
       p_details: details || {}
     });
+    if(error){ console.error('[Delphi~Med] auditLog respinto:', action, error.message); return false; }
+    return true;
   } catch(e){
     console.error('[Delphi~Med] auditLog failed:', e.message);
+    return false;
   }
 }
 
