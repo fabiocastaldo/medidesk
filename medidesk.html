@@ -1474,7 +1474,7 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
         <label>Email</label>
         <input type="email" id="auth-reset-email" placeholder="mario@esempio.it" onkeydown="if(event.key==='Enter')resetPassword()">
       </div>
-      <button class="auth-btn" onclick="resetPassword()">Invia link reset</button>
+      <button class="auth-btn" onclick="resetPassword(this)">Invia link reset</button>
       <button class="auth-link" onclick="switchAuthTab('login')">← Torna al login</button>
     </div>
 
@@ -4237,12 +4237,29 @@ function secApriModulo(n, btn){
   const card = btn.closest('.sec-mod'); if(card) card.classList.toggle('sec-mod-aperto', apri);
 }
 
-async function resetPassword(){
+async function resetPassword(btn){
   const email = document.getElementById('auth-reset-email').value.trim();
   if(!email){ showAuthMsg('Inserisci la tua email', 'error'); return; }
+  if(btn && btn.disabled) return;
+  const label = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Invio in corso…'; }
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
-  if(error){ showAuthMsg(translateAuthError(error.message), 'error'); return; }
-  showAuthMsg('Link di reset inviato! Controlla la tua email.', 'success');
+  if(error){
+    if(btn){ btn.disabled = false; btn.textContent = label; }
+    showAuthMsg(translateAuthError(error.message), 'error'); return;
+  }
+  showAuthMsg('Link di reset inviato! Controlla la tua email (anche nello spam).', 'success');
+  // Il server accetta una nuova richiesta per la stessa email solo dopo 60 secondi (smtp_max_frequency):
+  // il pulsante resta spento per lo stesso tempo, con il conto alla rovescia, invece di mostrare un errore inglese.
+  if(btn){
+    let resta = 60;
+    btn.textContent = 'Reinvia tra ' + resta + ' s';
+    const t = setInterval(()=>{
+      resta--;
+      if(resta <= 0){ clearInterval(t); btn.disabled = false; btn.textContent = 'Reinvia link reset'; }
+      else btn.textContent = 'Reinvia tra ' + resta + ' s';
+    }, 1000);
+  }
 }
 
 function togglePwd(btn){
@@ -5116,6 +5133,8 @@ function translateAuthError(msg){
   if(msg.includes('Unable to validate'))        return 'Email non valida';
   if(msg.includes('Invalid TOTP code'))         return 'Codice non valido o scaduto: controlla l\'ora del telefono e riprova';
   if(msg.includes('AAL2 required'))             return 'Per questa operazione serve un accesso fatto col codice di verifica: esci, rientra col codice e riprova';
+  if(msg.includes('you can only request this after')) return 'Hai appena chiesto un invio: per sicurezza puoi richiederne un altro tra circa un minuto';
+  if(msg.includes('rate limit') || msg.includes('Rate limit')) return 'Troppe richieste in poco tempo: attendi qualche minuto e riprova';
   return msg;
 }
 
