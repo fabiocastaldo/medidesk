@@ -16,7 +16,7 @@
  * Ogni invio riuscito produce un INSERT su audit_log (soft-fail).
  */
 
-import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato, pseudonimoRecapito } from '../lib/mailer.js';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 import { revocaLink, consensoLink } from '../lib/consenso-token.js';
@@ -58,7 +58,7 @@ async function auditLog(base, headers, medicoId, tipo, targetType, targetId, aut
         action:      'email_inviata',
         target_type: targetType,
         target_id:   targetId ? String(targetId) : null,
-        details:     { tipo, auth_mode: authMode, to, resend_id: resendId }
+        details:     { tipo, auth_mode: authMode, to: pseudonimoRecapito(to), resend_id: resendId }   // destinatario pseudonimo (riga 16)
       })
     });
     if (!r.ok) console.error('[send-email] auditLog rifiutato:', r.status, tipo);
@@ -357,7 +357,9 @@ async function lookupAnnullamentoChiusura(chiusuraId, centroId, medicoId, base, 
     const ra = await fetch(`${base}/audit_log?medico_id=eq.${encodeURIComponent(medicoId)}&action=eq.email_inviata&target_id=eq.${encodeURIComponent(chiusuraId)}&select=details`, { headers });
     if (!ra.ok) throw new Error(`audit status ${ra.status}`);
     const righe = await ra.json();
-    const verso = (tp) => righe.some(r => r.details && r.details.tipo === tp && String(r.details.to || '').trim().toLowerCase() === email);
+    const pseudo = pseudonimoRecapito(email);
+    // Righe scritte prima del 18/10/2026 portano l'indirizzo in chiaro: le storiche sono state pseudonimizzate con UPDATE nella stessa data.
+    const verso = (tp) => righe.some(r => r.details && r.details.tipo === tp && String(r.details.to || '') === pseudo);
     if (!verso('chiusura_studio_centro')) return { ok: true, skipped: 'non_avvisato' };
     if (verso('chiusura_annullata_centro')) return { ok: true, skipped: 'gia_annullata' };
     return { ok: true, centroNome: centro.nome, centroEmail: centro.email_segreteria };

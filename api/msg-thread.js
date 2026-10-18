@@ -16,7 +16,7 @@
 //        → 200 { ok: true }
 // Rollback simmetrico: se l'email di apertura fallisce il thread viene cancellato.
 
-import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato, pseudonimoRecapito } from '../lib/mailer.js';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { createHash, randomBytes } from 'crypto';
 import { richiediInServizio } from '../lib/servizio-guard.js';
@@ -136,7 +136,7 @@ export default async function handler(req, res) {
         method: 'POST', headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify({
           medico_id: medico.id, action: 'email_inviata', target_type: 'thread', target_id: String(threadId),
-          details: { tipo: tipoAudit, auth_mode: 'jwt_medico', to, resend_id: resendId }
+          details: { tipo: tipoAudit, auth_mode: 'jwt_medico', to: pseudonimoRecapito(to), resend_id: resendId }   // destinatario pseudonimo (riga 16)
         })
       });
       if (!r.ok) console.error('[msg-thread] audit_log', r.status);
