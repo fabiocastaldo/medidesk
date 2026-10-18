@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato, pseudonimoRecapito } from '../lib/mailer.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
 
@@ -370,7 +370,7 @@ export default async function handler(req, res) {
     if (rErr) console.error('[register-doctor] ricevuta resend:', rErr.message);
     else await fetch(`${base}/audit_log`, { method: 'POST', headers: { ...headers, 'Prefer': 'return=minimal' },
       body: JSON.stringify({ medico_id: medicoId, action: 'email_inviata', target_type: 'account', target_id: String(medicoId),
-        details: { tipo: 'accettazioni_ricevuta', to: email, resend_id: rd?.id || null, documenti: accRows.map(a => `${a.documento}:${a.versione}:${String(a.hash_testo).slice(0, 8)}`) } })
+        details: { tipo: 'accettazioni_ricevuta', to: pseudonimoRecapito(email), resend_id: rd?.id || null, documenti: accRows.map(a => `${a.documento}:${a.versione}:${String(a.hash_testo).slice(0, 8)}`) } })
     }).catch(err => console.error('[register-doctor] audit ricevuta:', err.message));
   } catch (e) {
     console.error('[register-doctor] ricevuta exception:', e.message);

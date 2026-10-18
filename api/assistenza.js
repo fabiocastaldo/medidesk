@@ -19,7 +19,7 @@
 // POST { azione:'scrivi_token', token, corpo }               link          → { ok }
 // POST { azione:'chiudi_token', token }                      link gestore  → { ok }
 
-import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato, pseudonimoRecapito } from '../lib/mailer.js';
 import { createHash, randomBytes } from 'crypto';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
@@ -111,7 +111,7 @@ export default async function handler(req, res) {
   async function invia(to, subject, html, conversazioneId, tipo, medicoId = null) {
     const { data, error } = await resend.emails.send({ from: 'noreply@delphi-med.com', to: [to], subject, html });
     if (error) throw new Error('resend ' + (error.message || 'errore'));
-    await audit('email_inviata', conversazioneId, { tipo, to, resend_id: data?.id || null }, medicoId);
+    await audit('email_inviata', conversazioneId, { tipo, to: pseudonimoRecapito(to), resend_id: data?.id || null }, medicoId);   // destinatario pseudonimo (riga 16)
   }
 
   // Avviso al gestore: link con token nuovo (i precedenti restano validi fino alla chiusura).
