@@ -171,7 +171,9 @@ Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
 
 I dati anagrafici del paziente (nome, cognome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza.
 
-Ogni documento è preceduto da un'etichetta «DOCUMENTO n». Inizia la risposta con una sezione «Documenti considerati» che elenca, una riga ciascuno, ogni DOCUMENTO e ogni REFERTO TESTO con la sua etichetta e l'esito: «usato» oppure «escluso — motivo». Escludi un documento se è illeggibile, privo di contenuto clinico, duplicato di un altro, oppure incompatibile con il paziente (età, sesso o contenuto chiaramente riferiti a un'altra persona): in quest'ultimo caso non usarne alcun dato e scrivi solo che appare riferito a un'altra persona, senza riportarne nomi o contenuti. Ogni documento fornito deve comparire nell'elenco. Dopo questa sezione, prosegui con il contenuto clinico.
+Ogni documento è preceduto da un'etichetta «DOCUMENTO n — visita del …». Inizia la risposta con una sezione «Documenti considerati» che elenca, una riga ciascuno, ogni DOCUMENTO e ogni REFERTO TESTO, riportando l'etichetta così come fornita, e l'esito: «usato», oppure «non usato — motivo» soltanto se il documento è illeggibile, privo di contenuto clinico o duplicato di un altro. Ogni documento fornito deve comparire nell'elenco.
+
+Non conosci l'identità del paziente: non escludere MAI un documento perché ti sembra riferito a un'altra persona. Se un documento contiene elementi incongruenti con gli altri documenti o con l'età indicata (età, sesso, nominativo, contenuto), usalo comunque, segnalo nell'elenco con «⚠ da verificare: possibile documento di un'altra persona» e il motivo, e riporta i suoi dati in un paragrafo separato che ripete la stessa avvertenza, senza fonderli con il resto della storia. La decisione spetta al medico. Dopo la sezione «Documenti considerati», prosegui con il contenuto clinico.
 
 REGOLA TASSATIVA: riporta esclusivamente informazioni presenti nei dati forniti; non inventare ne aggiungere diagnosi, esami, valori, misure o terapie non menzionati.
 
