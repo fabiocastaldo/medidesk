@@ -9981,7 +9981,9 @@ async function sintetizzaReferti(pazId){
   const container=document.getElementById('storia-container-'+pazId); if(!container) return;
   const btn=document.getElementById('btn-storia-'+pazId); if(btn) btn.disabled=true;
 
-  const paths=(p.visite||[]).flatMap(v=>getFotoPaths(v.foto_url));
+  // Ogni file porta un'etichetta (data della visita) perché la sintesi possa dire quali documenti ha usato o escluso (s83, A06/riga 73)
+  const voci=(p.visite||[]).flatMap(v=>{ const ps=getFotoPaths(v.foto_url); return ps.map((path,i)=>({ path, etichetta:'visita del '+(v.data||'data non indicata')+(ps.length>1?' — file '+(i+1):'') })); });
+  const paths=voci.map(x=>x.path);
 
   // Nessun referto immagine → fallback alla sintesi testuale dalle note (clinica)
   if(!paths.length){ if(btn) btn.disabled=false; return sintetizzaStoria(pazId); }
@@ -9989,10 +9991,10 @@ async function sintetizzaReferti(pazId){
   if(!isOnline()){ container.innerHTML='<div style="color:var(--warm);font-size:13px;padding:12px;background:var(--warm-light);border-radius:8px;margin-top:12px"><svg class="ic" style="vertical-align:-.15em;margin-right:6px"><use href="#ic-alert"/></svg>Connessione richiesta</div>'; if(btn) btn.disabled=false; return; }
 
   const MAX_FILES=20;
-  let usePaths=paths;
+  let useVoci=voci;
   if(paths.length>MAX_FILES){
     if(!(await confermaModale(`Questo paziente ha ${paths.length} referti: ne verranno inviati ${MAX_FILES} per non superare i limiti dell'AI. Continuare?`, { titolo:'Troppi referti', ok:'Continua' }))){ if(btn) btn.disabled=false; return; }
-    usePaths=paths.slice(0,MAX_FILES);
+    useVoci=voci.slice(0,MAX_FILES);
   }
 
   container.innerHTML='<div class="ai-processing" style="margin-top:12px"><div class="spinner"></div><span>Sintesi dai referti in corso…</span></div>';
@@ -10001,8 +10003,8 @@ async function sintetizzaReferti(pazId){
   const ALLOWED=new Set(Object.values(TYPE_BY_EXT));
 
   try{
-    const files=[];
-    for(const path of usePaths){
+    const files=[]; const saltati=[];
+    for(const { path, etichetta } of useVoci){
       try {
         const { data, error } = await supabaseClient.storage.from('fotoreferti').createSignedUrl(path, 600);
         if(error) throw error;
@@ -10011,10 +10013,10 @@ async function sintetizzaReferti(pazId){
         const blob=await _decryptReferto(buf, path);
         let type=blob.type;
         if(!ALLOWED.has(type)){ const ext=(path.split('.').pop()||'').toLowerCase(); type=TYPE_BY_EXT[ext]||''; }
-        if(!ALLOWED.has(type)) continue;
+        if(!ALLOWED.has(type)){ saltati.push(etichetta); continue; }
         const base64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
-        files.push({ base64, type });
-      } catch(e){ console.log('[Delphi~Med] sintesi referto saltato:', path, e.message); }
+        files.push({ base64, type, etichetta });
+      } catch(e){ saltati.push(etichetta); console.log('[Delphi~Med] sintesi referto saltato:', path, e.message); }
     }
     if(!files.length) throw new Error('Nessun referto leggibile');
 
@@ -10030,7 +10032,8 @@ async function sintetizzaReferti(pazId){
     if(!res.ok){const e=await res.json().catch(()=>({})); throw new Error('HTTP '+res.status+(e.error?' — '+e.error:''));}
     const dataR=await res.json();
     const testo=dataR.content.map(i=>i.text||'').join('').trim();
-    container.innerHTML=_storiaBoxHTML(pazId, testo, 'Sintesi clinica dai referti', `<div style="font-size:12px;color:var(--ink3);margin:0 0 10px">Non ancora nel fascicolo: con «Adotta e salva nel fascicolo» la conservi, altrimenti si perde alla chiusura della scheda.</div>`, { adottabile:true });
+    const _avvSaltati = saltati.length ? `<div style="font-size:12px;color:var(--warm);margin:0 0 8px">${saltati.length===1?'Un referto non è stato inviato all\'AI perché non leggibile':saltati.length+' referti non sono stati inviati all\'AI perché non leggibili'}: ${escapeHtml(saltati.join('; '))}.</div>` : '';
+    container.innerHTML=_storiaBoxHTML(pazId, testo, 'Sintesi clinica dai referti', _avvSaltati + `<div style="font-size:12px;color:var(--ink3);margin:0 0 10px">Non ancora nel fascicolo: con «Adotta e salva nel fascicolo» la conservi, altrimenti si perde alla chiusura della scheda.</div>`, { adottabile:true });
     const _st = container.querySelector('.storia-testo'); if(_st) _st.dataset.md = testo;
     container.dataset.fonte='referti'; container.dataset.generataIl=new Date().toISOString();
     try{ container.dataset.fp=await _fpVisite(p); }catch(_){ }

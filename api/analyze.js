@@ -162,12 +162,16 @@ Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
         }
       }
       const n = files.length;
+      // Etichetta del documento (data della visita) dal client: dato, ripulito e accorciato, mai istruzione
+      const etichettaPulita = e => typeof e === 'string' ? e.replace(/[^0-9A-Za-zÀ-ÿ /\-—().,:]/g, '').slice(0, 60).trim() : '';
       const refertiValidi = Array.isArray(refertiTesto)
         ? refertiTesto.filter(r => r && typeof r.testo === 'string' && r.testo.trim())
         : [];
       const prompt = `Sei un medico specialista${spec ? ' in '+spec : ''}. Di seguito trovi ${n>1 ? n+' referti' : 'un referto'} di un paziente${eta ? ' di '+eta+' anni' : ''}, forniti come immagini/documenti${refertiValidi.length ? ', oltre ad alcuni referti redatti in formato testo' : ''}.
 
-I dati anagrafici del paziente (nome, cognome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza. Inizia direttamente dal contenuto clinico.
+I dati anagrafici del paziente (nome, cognome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza.
+
+Ogni documento è preceduto da un'etichetta «DOCUMENTO n». Inizia la risposta con una sezione «Documenti considerati» che elenca, una riga ciascuno, ogni DOCUMENTO e ogni REFERTO TESTO con la sua etichetta e l'esito: «usato» oppure «escluso — motivo». Escludi un documento se è illeggibile, privo di contenuto clinico, duplicato di un altro, oppure incompatibile con il paziente (età, sesso o contenuto chiaramente riferiti a un'altra persona): in quest'ultimo caso non usarne alcun dato e scrivi solo che appare riferito a un'altra persona, senza riportarne nomi o contenuti. Ogni documento fornito deve comparire nell'elenco. Dopo questa sezione, prosegui con il contenuto clinico.
 
 REGOLA TASSATIVA: riporta esclusivamente informazioni presenti nei dati forniti; non inventare ne aggiungere diagnosi, esami, valori, misure o terapie non menzionati.
 
@@ -180,11 +184,11 @@ Produci una STORIA CLINICA UNIFICATA che:
 - OMETTE informazioni ripetitive, amministrative o di scarso valore clinico
 - Usa linguaggio medico appropriato, con sezioni chiare ed elenchi puntati dove utile
 
-Rispondi SOLO con la storia clinica in testo. NESSUN JSON, nessuna introduzione, nessun commento finale.`;
-      const contentBlocks = files.map(f => ({
-        type: f.type === 'application/pdf' ? 'document' : 'image',
-        source: { type: 'base64', media_type: f.type, data: f.base64 }
-      }));
+Rispondi SOLO con la sezione «Documenti considerati» seguita dalla storia clinica, in testo. NESSUN JSON, nessuna introduzione, nessun commento finale.`;
+      const contentBlocks = files.flatMap((f, i) => [
+        { type: 'text', text: `DOCUMENTO ${i + 1}${etichettaPulita(f.etichetta) ? ' — ' + etichettaPulita(f.etichetta) : ''}` },
+        { type: f.type === 'application/pdf' ? 'document' : 'image', source: { type: 'base64', media_type: f.type, data: f.base64 } }
+      ]);
       if (refertiValidi.length) {
         const bloccoTesti = refertiValidi
           .map((r, i) => `REFERTO TESTO ${i+1}${r.data ? ' — '+r.data : ''}\n${r.testo.trim()}`)
