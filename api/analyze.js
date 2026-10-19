@@ -134,7 +134,7 @@ export default async function handler(req, res) {
 
 I dati anagrafici del paziente (nome, data di nascita) sono volutamente omessi e gestiti separatamente: NON inserirli, non creare intestazioni anagrafiche e non segnalare la loro assenza. Inizia direttamente dal contenuto clinico.
 
-REGOLA TASSATIVA: riporta esclusivamente informazioni presenti nei dati forniti; non inventare ne aggiungere diagnosi, esami, valori, misure o terapie non menzionati.
+REGOLA TASSATIVA: riporta esclusivamente informazioni scritte nei dati forniti, mantenendo la stessa forza delle indicazioni (per esempio «si consiglia» resta «si consiglia»). Non aggiungere diagnosi, classificazioni o stadiazioni, interpretazioni, stime di probabilità, cause, date calcolate, esami, valori, misure o terapie che non siano scritti. Se due documenti o visite sono in contrasto tra loro, riportali entrambi con la loro data e scrivi «Dati discordanti tra i documenti», senza spiegare né risolvere la discordanza. Se ritieni utile una considerazione clinica che non è scritta nei dati, mettila SOLO in una sezione finale intitolata «Considerazioni non presenti nei documenti», con frasi brevi; fuori da quella sezione non deve comparire nulla che non sia scritto nei dati.
 
 Produci una STORIA CLINICA UNIFICATA che:
 - Descrive l'evoluzione clinica in ordine cronologico
@@ -147,7 +147,7 @@ Produci una STORIA CLINICA UNIFICATA che:
 VISITE:
 ${visiteTesto}
 
-Rispondi SOLO con la storia clinica, senza introduzioni o commenti finali.`;
+Rispondi SOLO con la storia clinica, senza introduzioni; l'unica parte aggiuntiva ammessa è la sezione finale «Considerazioni non presenti nei documenti».`;
       messages = [{ role: 'user', content: prompt }];
 
     } else if (mode === 'sintesi-referti') {
@@ -175,7 +175,7 @@ Ogni documento è preceduto da un'etichetta «DOCUMENTO n — visita del …». 
 
 Non conosci l'identità del paziente e non devi valutarla: non escludere né segnalare MAI un documento perché ti sembra riferito a un'altra persona, e non commentare nominativi, sesso o date di nascita. L'attribuzione dei documenti al paziente spetta al medico, che li ha inseriti nel fascicolo. Nella storia clinica indica alla fine di ogni sezione il documento di provenienza tra parentesi, per esempio «(DOCUMENTO 2)», così che il medico possa verificarlo sulla fonte. Dopo la sezione «Documenti considerati», prosegui con il contenuto clinico.
 
-REGOLA TASSATIVA: riporta esclusivamente informazioni presenti nei dati forniti; non inventare ne aggiungere diagnosi, esami, valori, misure o terapie non menzionati.
+REGOLA TASSATIVA: riporta esclusivamente informazioni scritte nei dati forniti, mantenendo la stessa forza delle indicazioni (per esempio «si consiglia» resta «si consiglia»). Non aggiungere diagnosi, classificazioni o stadiazioni, interpretazioni, stime di probabilità, cause, date calcolate, esami, valori, misure o terapie che non siano scritti. Se due documenti o visite sono in contrasto tra loro, riportali entrambi con la loro data e scrivi «Dati discordanti tra i documenti», senza spiegare né risolvere la discordanza. Se ritieni utile una considerazione clinica che non è scritta nei dati, mettila SOLO in una sezione finale intitolata «Considerazioni non presenti nei documenti», con frasi brevi; fuori da quella sezione non deve comparire nulla che non sia scritto nei dati.
 
 Produci una STORIA CLINICA UNIFICATA che:
 - Ordina i referti in modo cronologico quando le date sono leggibili nei documenti
@@ -186,7 +186,7 @@ Produci una STORIA CLINICA UNIFICATA che:
 - OMETTE informazioni ripetitive, amministrative o di scarso valore clinico
 - Usa linguaggio medico appropriato, con sezioni chiare ed elenchi puntati dove utile
 
-Rispondi SOLO con la sezione «Documenti considerati» seguita dalla storia clinica, in testo. NESSUN JSON, nessuna introduzione, nessun commento finale.`;
+Rispondi SOLO con la sezione «Documenti considerati» seguita dalla storia clinica, in testo. NESSUN JSON, nessuna introduzione; l'unica parte aggiuntiva ammessa è la sezione finale «Considerazioni non presenti nei documenti».`;
       const contentBlocks = files.flatMap((f, i) => [
         { type: 'text', text: `DOCUMENTO ${i + 1}${etichettaPulita(f.etichetta) ? ' — ' + etichettaPulita(f.etichetta) : ''}` },
         { type: f.type === 'application/pdf' ? 'document' : 'image', source: { type: 'base64', media_type: f.type, data: f.base64 } }
