@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { TESTI_VIGENTI } from '../lib/testi-vigenti.js';
 import { nuovoMailer, mailerConfigurato, pseudonimoRecapito } from '../lib/mailer.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
@@ -34,10 +35,9 @@ function normTelefono(t) {
 // <link> dei caratteri (Google Fonts -> /vendor/) senza aggiornare gli hash: testo legale identico,
 // quindi versione invariata. Hash precedenti (file fino al 26/09 06:41 UTC): tos 3a26b732..., dpa 036b2632...
 // Gate di ciclo: sha256sum termini-di-servizio.html dpa.html deve coincidere con questi valori.
-const LEGAL_DOCS = {
-  tos: { versione: 'tos-0.2', hash: '08ecfbc8b6e9b170451d48d7733ba16291138a41ad1e854763a7bc66a4423786' },
-  dpa: { versione: 'dpa-0.2', hash: '104d7931cc8c93eedfb5c0c24c59c0dcd7facf4808ffcbe68609933ca8fc3dd4' }
-};
+// s84 (20/10/2026): versione e impronta vivono in lib/testi-vigenti.js, unica fonte anche per la riaccettazione
+// (api/accettazioni.js) e per gli avvisi del cron; qui resta il solo alias.
+const LEGAL_DOCS = TESTI_VIGENTI;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Rate limit: 5 registrazioni/ora per IP (anti-spam abuse), contatore DB condiviso
