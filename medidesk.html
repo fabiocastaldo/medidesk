@@ -113,6 +113,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 .dash-greet{display:flex;align-items:center;gap:14px;margin-bottom:24px}
 .sec-promemoria{display:none;align-items:flex-start;gap:14px;background:var(--surface);border:1px solid var(--brand);border-left:4px solid var(--brand);border-radius:10px;padding:14px 16px;margin-bottom:20px}
 .sec-promemoria.on{display:flex}
+.sec-promemoria.legali{border-color:#f59e0b}.sec-promemoria.legali .sec-pm-ico{background:#f59e0b}
 .sec-promemoria .sec-pm-ico{flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center}
 .sec-promemoria .sec-pm-ico .ic{width:18px;height:18px;fill:currentColor}
 .sec-promemoria .sec-pm-body{flex:1;min-width:0}
@@ -1607,6 +1608,22 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
           </div>
         </div>
       </div>
+      <!-- Nuove versioni sostanziali dei testi legali (s84, righe 22/76): avviso prima della decorrenza -->
+      <div class="sec-promemoria legali" id="legali-avviso">
+        <div class="sec-pm-ico"><svg class="ic"><use href="#ic-file"/></svg></div>
+        <div class="sec-pm-body">
+          <div class="sec-pm-title" id="legali-avviso-title">Nuove condizioni del servizio da accettare</div>
+          <div class="sec-pm-text" id="legali-avviso-text"></div>
+          <div class="sec-pm-actions">
+            <button class="btn btn-primary" onclick="legaliApriModale(false)">Leggi e accetta</button>
+          </div>
+        </div>
+      </div>
+      <!-- Avvisi di servizio (Termini art. 6: manutenzione programmata) -->
+      <div class="sec-promemoria legali" id="servizio-avviso">
+        <div class="sec-pm-ico"><svg class="ic"><use href="#ic-file"/></svg></div>
+        <div class="sec-pm-body" id="servizio-avviso-body"></div>
+      </div>
       <div class="dash-greet">
         <div class="dash-avatar" id="dash-avatar">—</div>
         <div>
@@ -2850,6 +2867,23 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
 <!-- ══════════════ MODALS ══════════════ -->
 
 <!-- MODAL APPUNTAMENTO (medico) — wizard -->
+<!-- Accettazione delle nuove versioni dei testi legali (s84): dall'ingresso se bloccante, dal banner altrimenti -->
+<div class="modal-overlay" id="modal-accettazioni" style="z-index:1200">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Nuove condizioni del servizio</span><button class="modal-close" id="legali-chiudi" onclick="closeModal('modal-accettazioni')">✕</button></div>
+    <div class="modal-body">
+      <p id="legali-intro" style="font-size:14px;line-height:1.55;margin:0 0 12px"></p>
+      <div id="legali-elenco" style="display:flex;flex-direction:column;gap:10px"></div>
+      <p style="font-size:13px;color:var(--ink2);line-height:1.5;margin:12px 0 0">Di ogni versione conserviamo il testo integrale, l'impronta, la versione e l'ora dell'accettazione; riceverai una ricevuta per email e potrai rileggere i testi da Impostazioni → Documenti.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+        <button class="btn btn-primary" id="legali-accetta-btn" onclick="legaliAccetta()">Accetto le versioni indicate</button>
+        <button class="btn btn-secondary" id="legali-rimanda-btn" onclick="closeModal('modal-accettazioni')">Più tardi</button>
+        <button class="btn btn-secondary" id="legali-esci-btn" onclick="signOut()">Esci senza accettare</button>
+      </div>
+      <p id="legali-blocco-nota" style="display:none;font-size:13px;color:var(--ink2);line-height:1.5;margin:12px 0 0">Le nuove condizioni sono in vigore. Finché non le accetti i tuoi dati restano consultabili ed esportabili su richiesta a privacy@delphi-med.com, ma il gestionale non si apre.</p>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-appuntamento">
   <div class="modal">
     <div class="modal-header"><span class="modal-title" id="appt-modal-title">Nuovo appuntamento</span><button class="modal-close" onclick="closeModal('modal-appuntamento')">✕</button></div>
@@ -3862,6 +3896,11 @@ function entraSeApprovato(session){
           : 'Il tuo account è sospeso. Per informazioni apri una richiesta da www.delphi-med.com/assistenza.', 'error');
         return;
       }
+      // Cancello dei testi legali (s84, Termini art. 11): una versione sostanziale già in vigore e non
+      // accettata ferma qui l'ingresso; prima della decorrenza si entra e si vede l'avviso in Dashboard.
+      // Se la lettura fallisce si entra come prima: il blocco lato database (ciclo B) non dipende dal client.
+      const legali = await legaliVerifica();
+      if(legali && legali.bloccante){ legaliApriModale(true); return; }
       showAppView();
     } finally {
       _verificaApprovazioneInCorso = false;
@@ -3890,6 +3929,73 @@ function secRimandaPromemoria(){
 function secVaiAttivazione(){
   showPage('sicurezza');
   setTimeout(() => { const b = document.getElementById('mfa-attiva-btn'); if(b && b.style.display !== 'none'){ b.click(); } }, 400);
+}
+// ── Testi legali in vigore e avvisi di servizio (s84; piano righe 22 e 76) ──────────────────
+// Lo stato arriva da /api/accettazioni (versione e impronta decise dal server); il client mostra e invia.
+let _legaliStato = null;
+async function legaliVerifica(){
+  try{
+    const jwt = await getAuthJwt(); if(!jwt) return null;
+    const r = await fetch('/api/accettazioni', { headers: { 'Authorization': 'Bearer ' + jwt }, cache: 'no-store' });
+    if(!r.ok){ console.warn('[Delphi~Med] accettazioni: stato non disponibile', r.status); return null; }
+    _legaliStato = await r.json();
+    return _legaliStato;
+  }catch(e){ console.warn('[Delphi~Med] accettazioni:', e.message); return null; }
+}
+function legaliDataIt(iso){ const d = new Date(iso); return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`; }
+function legaliMostraAvvisi(){
+  const st = _legaliStato; const b = document.getElementById('legali-avviso'); const sv = document.getElementById('servizio-avviso');
+  if(!st){ if(b) b.classList.remove('on'); if(sv) sv.classList.remove('on'); return; }
+  const docs = (st.da_accettare || []);
+  if(b){
+    if(docs.length){
+      const t = document.getElementById('legali-avviso-text');
+      if(t) t.textContent = `Abbiamo pubblicato una nuova versione di: ${docs.map(d=>d.nome).join(', ')}. ${st.prossima_decorrenza ? `Dal ${legaliDataIt(st.prossima_decorrenza)} servirà la tua accettazione per continuare a usare il gestionale; fino ad allora restano valide le condizioni che hai già accettato.` : ''} Puoi leggere e accettare adesso.`;
+      b.classList.add('on');
+    } else b.classList.remove('on');
+  }
+  if(sv){
+    const av = (st.avvisi || []);
+    if(av.length){
+      const body = document.getElementById('servizio-avviso-body');
+      if(body) body.innerHTML = av.map(a => `<div class="sec-pm-title">${escapeHtml(a.titolo)}</div><div class="sec-pm-text">${escapeHtml(a.testo)}</div>`).join('');
+      sv.classList.add('on');
+    } else sv.classList.remove('on');
+  }
+}
+function legaliApriModale(bloccante){
+  const st = _legaliStato; if(!st || !(st.da_accettare||[]).length) return;
+  const el = document.getElementById('legali-elenco');
+  if(el) el.innerHTML = st.da_accettare.map(d => `<label style="display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer">
+      <input type="checkbox" class="legali-check" data-doc="${escapeHtml(d.documento)}" style="margin-top:3px">
+      <span style="font-size:14px;line-height:1.5">Ho letto e accetto <strong>${escapeHtml(d.nome)}</strong>, versione ${escapeHtml(d.versione)}${d.decorrenza?`, in vigore dal ${legaliDataIt(d.decorrenza)}`:''} — <a href="${escapeHtml(d.pagina)}" target="_blank" rel="noopener">apri il testo</a></span>
+    </label>`).join('');
+  const intro = document.getElementById('legali-intro');
+  if(intro) intro.textContent = bloccante
+    ? 'Per continuare a usare il gestionale devi leggere e accettare la nuova versione di questi documenti. In mancanza restano valide per te le condizioni precedenti e i tuoi dati restano consultabili ed esportabili su richiesta.'
+    : 'Abbiamo pubblicato una nuova versione di questi documenti. Puoi accettarla adesso o più tardi: fino alla data indicata restano valide le condizioni che hai già accettato.';
+  const show = (id, on) => { const x = document.getElementById(id); if(x) x.style.display = on ? '' : 'none'; };
+  show('legali-rimanda-btn', !bloccante); show('legali-chiudi', !bloccante); show('legali-esci-btn', bloccante); show('legali-blocco-nota', bloccante);
+  const m = document.getElementById('modal-accettazioni'); if(m){ m.classList.add('open'); m.dataset.bloccante = bloccante ? '1' : ''; }
+}
+async function legaliAccetta(){
+  const m = document.getElementById('modal-accettazioni'); const bloccante = !!(m && m.dataset.bloccante);
+  const scelti = Array.from(document.querySelectorAll('.legali-check')).filter(c => c.checked).map(c => c.dataset.doc);
+  const tutti = (_legaliStato?.da_accettare || []).map(d => d.documento);
+  if(scelti.length !== tutti.length){ showToast('Spunta ogni documento per accettarlo.'); return; }
+  const btn = document.getElementById('legali-accetta-btn'); if(btn) btn.disabled = true;
+  try{
+    const jwt = await getAuthJwt();
+    const r = await fetch('/api/accettazioni', { method: 'POST', headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' }, body: JSON.stringify({ documenti: scelti }) });
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok){ showToast(j.error || 'Accettazione non registrata, riprova.'); return; }
+    _legaliStato = { ..._legaliStato, ...j };
+    if(m) m.classList.remove('open');
+    showToast('Accettazione registrata ✓ Ti abbiamo inviato la ricevuta.');
+    console.log('[Delphi~Med] accettazioni registrate:', (j.accettati||[]).join(','));
+    if(bloccante) showAppView(); else { legaliMostraAvvisi(); try{ accLegaliRender(); }catch(_){ } }
+  }catch(e){ showToast('Accettazione non registrata: ' + e.message); }
+  finally{ if(btn) btn.disabled = false; }
 }
 let _mfaSetupId = null;
 function _apriMfaSetup(){
@@ -4701,6 +4807,7 @@ async function showAppView(){
   await checkTrialExpiry();
   secPromemoriaMfa();
   assPromemoria();
+  if(_legaliStato) legaliMostraAvvisi(); else legaliVerifica().then(legaliMostraAvvisi);
 }
 
 async function ensureMedicoRecord(user){
