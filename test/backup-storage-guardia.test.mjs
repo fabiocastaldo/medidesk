@@ -90,4 +90,31 @@ assert.equal(guardiaCancellazioni({ oggetti: 1, inS3: 9, daCancellare: 8 }), nul
   assert.equal(r.tolte.length, 10); assert.equal(r.esito.sospeso, undefined); assert.equal(r.tracce[0].action, 'backup_storage_eseguito');
   console.log('ok 5: 20/10 passa');
 }
-console.log('guardia: 5/5 scenari + funzione pura');
+// 6) Giro interrotto (s84): l'elenco S3 fallisce come il 18/10 (SignatureDoesNotMatch) → nessuna copia, runErrors 1,
+//    traccia backup_storage_fallito con errore e conteggi, esito.errore valorizzato, nessun lancio verso il cron.
+{
+  const tracce = [], runErrors = [];
+  const fetchVera = globalThis.fetch; globalThis.fetch = async (u, init) => { tracce.push(JSON.parse(init.body)); return { ok: true, status: 201 }; };
+  try {
+    const esito = await eseguiBackupStorage({ supabaseUrl: 'https://doppio.supabase.co', supabaseKey: 'k', runErrors, now: Date.parse('2026-10-18T17:00:00Z'),
+      elencaStorage: async () => new Map(), elencaS3: async () => { throw new Error('S3 list 403 <Code>SignatureDoesNotMatch</Code>'); },
+      scarica: async () => { throw new Error('non atteso'); }, metti: async () => { throw new Error('non atteso'); }, togli: async () => { throw new Error('non atteso'); } });
+    assert.equal(esito.copiati, 0); assert.match(esito.errore, /SignatureDoesNotMatch/); assert.equal(esito.traccia_fallimento, true);
+    assert.equal(runErrors.length, 1); assert.equal(runErrors[0].ramo, 'backup_storage');
+    assert.equal(tracce.length, 1); assert.equal(tracce[0].action, 'backup_storage_fallito'); assert.equal(tracce[0].target_type, 'sistema');
+    assert.match(tracce[0].details.errore, /SignatureDoesNotMatch/); assert.equal(tracce[0].details.generato_at, '2026-10-18T17:00:00.000Z'); assert.equal(tracce[0].details.chiavi, 0);
+  } finally { globalThis.fetch = fetchVera; }
+  console.log('ok 6: giro interrotto → traccia backup_storage_fallito');
+}
+// 7) Anche la traccia di fallimento fallisce (PostgREST 500): esito.traccia_fallimento false, nessun lancio.
+{
+  const runErrors = [];
+  const fetchVera = globalThis.fetch; globalThis.fetch = async () => ({ ok: false, status: 500 });
+  try {
+    const esito = await eseguiBackupStorage({ supabaseUrl: 'https://doppio.supabase.co', supabaseKey: 'k', runErrors,
+      elencaStorage: async () => { throw new Error('Storage list 500'); }, elencaS3: async () => new Map() });
+    assert.equal(esito.traccia_fallimento, false); assert.equal(runErrors.length, 1);
+  } finally { globalThis.fetch = fetchVera; }
+  console.log('ok 7: traccia di fallimento respinta → false senza lancio');
+}
+console.log('guardia: 7/7 scenari + funzione pura');
