@@ -13429,6 +13429,7 @@ async function exportCopiaDatiPazienteArt15(pazienteId){
   showToast('Preparo la copia dei dati…');
   const today = todayLocalISO();
   const safe = t => (t||'').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const catLbl = c => c==='controllo' ? 'Controllo' : (c==='prima_visita' ? 'Prima visita' : 'Non indicata');
   const folderName = `Copia_dati_${safe(p.cognome)||'paziente'}_${safe(p.nome)}_${today}`;
   const zip = new JSZip(); const root = zip.folder(folderName);
   const visite = (p.visite||[]).slice().sort((a,b)=>(itToIso(a.data)||'').localeCompare(itToIso(b.data)||''));
@@ -13488,10 +13489,10 @@ th{text-align:left;width:34%;color:#555;font-weight:600;vertical-align:top;paddi
 <h2>2. Scelte sui dati e limitazioni</h2>
 <ul>${scelte.map(x=>`<li>${x}</li>`).join('')}</ul>
 <h2>3. Prenotazioni e appuntamenti collegati al fascicolo (${appts.length})</h2>
-${appts.length?appts.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h(a.ora)}</span> — ${h(a.tipo||'')}${a.categoria?` (${h(a.categoria)})`:''}${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
+${appts.length?appts.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h(a.ora)}</span> — ${h(a.tipo||'')} (${h(catLbl(a.categoria))})${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
 <span class="nota">Stato: ${a.cancelled?`annullato${a.cancelledAt?` il ${h(dt(a.cancelledAt))}`:''}`:(a.erogata?'erogato':'confermato')} · origine: ${h(a.source||'')}${a.per_conto?` · prenotato per conto da ${h([a.prenotanteNome,a.prenotanteCognome].filter(Boolean).join(' '))}${a.prenotanteRuolo?` (${h(a.prenotanteRuolo)})`:''}`:''}${a.note?`<br>Note: ${h(a.note)}`:''}</span></div>`).join(''):'<p><em>Nessuna prenotazione collegata.</em></p>'}
 <h2>3-bis. Prenotazioni a tuo nome non collegate al fascicolo (${scollegate.length})</h2>
-${scollegate.length?scollegate.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h((a.ora||'').slice(0,5))}</span> — ${h(a.tipo_visita||'')}${a.categoria?` (${h(a.categoria)})`:''}${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
+${scollegate.length?scollegate.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h((a.ora||'').slice(0,5))}</span> — ${h(a.tipo_visita||'')} (${h(catLbl(a.categoria))})${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
 <span class="nota">Stato: ${a.cancelled?`annullato${a.cancelled_at?` il ${h(dt(a.cancelled_at))}`:''}`:(a.erogata?'erogato':'confermato')} · origine: ${h(a.source||'')} · ricevuta il ${h(dt(a.created_at))}${a.per_conto?` · prenotato per conto da ${h([a.prenotante_nome,a.prenotante_cognome].filter(Boolean).join(' '))}${a.prenotante_ruolo?` (${h(a.prenotante_ruolo)})`:''}`:''}</span>
 <table>${campo('Nome indicato',a.nome_paziente)}${campo('Cognome indicato',a.cognome_paziente)}${campo('Data di nascita indicata',isoToIt(a.data_nascita_paziente||''))}${campo('Email indicata',a.email_paziente)}${campo('Telefono indicato',a.telefono_paziente)}${campo('Note della prenotazione',a.note)}</table></div>`).join(''):'<p><em>Nessuna prenotazione a tuo nome fuori dal fascicolo.</em></p>'}
 <h2>4. Visite e documentazione clinica (${visite.length})</h2>
