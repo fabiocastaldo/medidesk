@@ -48,7 +48,7 @@ const prima = Date.parse('2026-11-01T10:00:00Z'), dopo = Date.parse('2026-12-01T
   console.log('ok 4: avvisi di servizio per finestra');
 }
 // Doppio del cron: 3 medici (uno senza email), tracce e accettazioni in memoria.
-async function giro({ now, tracce = [], accettazioni = {}, avvisi = [], testiCfg = testi, mailOk = true, medici }) {
+async function giro({ now, tracce = [], accettazioni = {}, avvisi = [], testiCfg = testi, mailOk = true, medici, decorrenzeDb }) {
   const inviate = [], scritte = [], runErrors = [];
   const lista = medici || [
     { id: 'm1', email: 'a@x.it', titolo: 'Dott.', nome: 'A', cognome: 'A' },
@@ -58,6 +58,11 @@ async function giro({ now, tracce = [], accettazioni = {}, avvisi = [], testiCfg
   const fetchVera = globalThis.fetch;
   globalThis.fetch = async (url, init) => {
     const u = String(url);
+    if (u.includes('/rest/v1/testi_decorrenze')) {
+      if (decorrenzeDb === 'giu') return { ok: false, status: 500 };
+      const rows = decorrenzeDb || Object.entries(testiCfg).map(([documento, t]) => ({ documento, hash_testo: t.hash, sostanziale: t.sostanziale, decorrenza: t.decorrenza, created_at: '2026-10-20T00:00:00Z' }));
+      return { ok: true, json: async () => rows };
+    }
     if (u.includes('/rest/v1/medici')) return { ok: true, json: async () => lista };
     if (u.includes('/rest/v1/accettazioni_legali')) { const id = u.match(/medico_id=eq\.(\w+)/)[1]; return { ok: true, json: async () => accettazioni[id] || [] }; }
     if (u.includes('/rest/v1/audit_log') && (!init || !init.method)) { const id = u.match(/medico_id=eq\.(\w+)/)[1]; return { ok: true, json: async () => [...tracce.filter(t => t.medico_id === id), ...scritte.filter(t => t.medico_id === id)] }; }
@@ -73,8 +78,8 @@ async function giro({ now, tracce = [], accettazioni = {}, avvisi = [], testiCfg
 // 5) Configurazione di oggi: il cron non legge nemmeno i medici.
 {
   const r = await giro({ now: prima, testiCfg: TESTI_VIGENTI });
-  assert.equal(r.esito.medici, 0); assert.equal(r.inviate.length, 0);
-  console.log('ok 5: senza sostanziali il ramo non fa nulla');
+  assert.equal(r.esito.medici, 0); assert.equal(r.inviate.length, 0); assert.equal(r.esito.coerenza_db, 'ok'); assert.equal(r.runErrors.length, 0);
+  console.log('ok 5: senza sostanziali il ramo non legge i medici; specchio DB coerente');
 }
 // 6) Prima decorrenza: un avviso per medico con email (2), due tracce ciascuno (tos+dpa), destinatario pseudonimo; secondo giro: zero.
 {
@@ -116,4 +121,18 @@ async function giro({ now, tracce = [], accettazioni = {}, avvisi = [], testiCfg
   assert.equal(r.inviate.length, MAX_EMAIL_PER_GIRO); assert.equal(r.esito.rimasti, 10); assert.ok(r.runErrors.some(e => e.ref === 'rimasti'));
   console.log('ok 9: tetto per giro e ripresa');
 }
-console.log('testi vigenti + avvisi: 9/9');
+// 10) Specchio DB divergente (hash diverso per dpa, decorrenza diversa per tos) → alert; DB giù → non_verificata con alert, il ramo prosegue.
+{
+  const rows = [
+    { documento: 'tos', hash_testo: h('a'), sostanziale: true, decorrenza: '2026-12-15T00:00:00Z', created_at: '2026-10-20T00:00:00Z' },
+    { documento: 'dpa', hash_testo: h('c'), sostanziale: true, decorrenza: '2026-12-01T00:00:00Z', created_at: '2026-10-20T00:00:00Z' },
+    { documento: 'dpa', hash_testo: h('b'), sostanziale: true, decorrenza: '2026-12-01T00:00:00Z', created_at: '2026-10-01T00:00:00Z' }
+  ];
+  const r = await giro({ now: prima, decorrenzeDb: rows });
+  assert.equal(r.esito.coerenza_db, 'divergente'); assert.ok(r.runErrors.some(e => e.ref === 'testi_decorrenze' && /tos, dpa/.test(e.msg)));
+  assert.equal(r.inviate.length, 2, 'gli avvisi partono comunque');
+  const g = await giro({ now: prima, decorrenzeDb: 'giu' });
+  assert.equal(g.esito.coerenza_db, 'non_verificata'); assert.ok(g.runErrors.some(e => e.ref === 'testi_decorrenze')); assert.equal(g.inviate.length, 2);
+  console.log('ok 10: coerenza lib ↔ testi_decorrenze: divergente e non verificata danno alert');
+}
+console.log('testi vigenti + avvisi: 10/10');
