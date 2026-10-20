@@ -10360,6 +10360,13 @@ function removeRefertoFile(idx){
 
 async function saveVisita(){
   const btnSalva = document.getElementById('btn-salva-visita');
+  // Stato del modale catturato prima di qualsiasi await: V.* può cambiare (altro paziente, altri file)
+  // mentre si attende rete o scelta dell'omonimo, e la visita finirebbe sul fascicolo sbagliato.
+  const _nuovoPaziente = V.isNewPaziente === true;
+  const _pazienteSelId = V.selectedPazienteId;
+  const _files = Array.isArray(V.refertoFiles) ? V.refertoFiles.slice() : [];
+  const _apptSelId = V.selectedApptId;
+  const _ritornoFascicolo = V.ritornoFascicolo;
   try {
     if(btnSalva){ btnSalva.disabled = true; btnSalva.textContent = 'Salvataggio...'; }
 
@@ -10385,7 +10392,7 @@ async function saveVisita(){
 
     let paz = null;
 
-    if(V.isNewPaziente){
+    if(_nuovoPaziente){
       const nome = capitalizeName(document.getElementById('ex-nome').value.trim());
       const cognome = capitalizeName(document.getElementById('ex-cognome').value.trim());
       if(!nome && !cognome){ showToast('Inserisci almeno nome e cognome'); return null; }
@@ -10417,7 +10424,7 @@ async function saveVisita(){
         showToast('Visita aggiunta ✓');
       }
     } else {
-      paz = S.pazienti.find(p=>String(p.id)===String(V.selectedPazienteId));
+      paz = S.pazienti.find(p=>String(p.id)===String(_pazienteSelId));
       if(!paz){ showToast('Errore: paziente non trovato'); return null; }
       showToast('Visita aggiunta ✓');
     }
@@ -10425,10 +10432,10 @@ async function saveVisita(){
     // INSERT visita su DB + upload foto (solo se paziente ha UUID)
     if(isOnline() && S.medicoId && authUser && paz?.id && String(paz.id).includes('-')){
       try {
-        if(V.refertoFiles && V.refertoFiles.length > 0){
+        if(_files.length > 0){
           if(btnSalva) btnSalva.textContent = 'Upload foto...';
           const uploadedPaths = [];
-          for(const file of V.refertoFiles){
+          for(const file of _files){
             const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
             const path = `${authUser.id}/${paz.id}/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
             const enc = await _encryptReferto(file);
@@ -10474,11 +10481,10 @@ async function saveVisita(){
     paz.visite = paz.visite||[];
     paz.visite.unshift(visita);
     save();
-    const _ritornoFascicolo = V.ritornoFascicolo;
     closeModal('modal-nuova-visita');
     let _apptDaErogare=null;
-    if(V.selectedApptId){
-      _apptDaErogare=S.appuntamenti.find(x=>String(x.id)===String(V.selectedApptId));
+    if(_apptSelId){
+      _apptDaErogare=S.appuntamenti.find(x=>String(x.id)===String(_apptSelId));
       V.selectedApptId=null;
     } else if(paz){
       _apptDaErogare=S.appuntamenti.find(x=>!x.cancelled && x.erogata!==true && x.data===dataVisitaIso &&
