@@ -17,6 +17,8 @@ if not labels:
     sys.exit(1)
 ui = (io.open('medidesk.html', encoding='utf-8').read()
       + io.open('cooperativa.html', encoding='utf-8').read())
+# Le etichette scritte nel markup con escape JS (\u2026 per l'ellissi) contano come presenti
+ui = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), ui)
 missing = sorted(set(l for l in labels if l not in ui and l != '+'))
 if missing:
     print('GATE MANUALE: FALLITO - %d etichette citate assenti dalla UI:' % len(missing))
