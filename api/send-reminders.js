@@ -297,6 +297,12 @@ export default async function handler(req, res) {
     else console.error('[send-reminders] pulizia promemoria:', pr.status);
   } catch (e) { console.error('[send-reminders] pulizia promemoria:', e.message); }
 
+  // Esito compatto nel log (s86): solo conteggi e stati, senza chiavi Storage — leggibile dal log Vercel, dove il JSON di risposta non compare
+  try {
+    const { chiavi: _chiavi, ...backupSenzaChiavi } = backupStorage || {};
+    console.log('[send-reminders] esito ' + JSON.stringify({ sent, errors, alerted: runErrors.length, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage: backupSenzaChiavi, avvisiTesti }));
+  } catch (e) { console.error('[send-reminders] esito non serializzabile:', e.message); }
+
   return res.status(200).json({ processed: appointments.length, saltatiLimitazione, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage, avvisiTesti });
 }
 
