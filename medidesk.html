@@ -8941,7 +8941,7 @@ function showPazienteDetail(id){
   document.getElementById('modal-paziente-title').textContent=p.cognome+' '+p.nome;
   const visite=p.visite||[];
   const nReferti = visite.reduce((s,v)=>s+getFotoPaths(v.foto_url).length,0);
-  const canSint = nReferti>0 || visite.some(v=>(v.clinica||'').trim());
+  const canSint = nReferti>0 || visite.some(v=>(v.clinica||'').trim() || (v.referto||'').trim());   // AI-02: anche i referti scritti in testo (s88)
   const sintLabel = nReferti>0 ? `Sintetizza dai referti (${nReferti})` : 'Sintetizza storia clinica';
   const _fb=(!p.email||!p.tel)?_contattiDaPrenotazioni(p):{email:'',tel:''};
   const _ro=lim?' readonly':'';
