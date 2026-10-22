@@ -106,7 +106,7 @@ const ALBO_URL = 'https://albounico.fnomceo.it/';
 const INIPEC_URL = 'https://www.inipec.gov.it/';
 // Il link di verifica arriva solo a questa casella (register-doctor): chi lo usa è il suo titolare.
 // Nessun nome digitato a mano: la traccia registra la casella a cui il link è stato consegnato.
-const CASELLA_GESTORE = 'fb.castaldo@gmail.com';
+const CASELLA_GESTORE = String(process.env.CASELLA_GESTORE || '').trim(); // S-01 (riesame 22/10): in env, mai nel codice
 const isEmail = (x) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x) && x.length <= 254;
 
 function paginaVerifica(token, m, msg) {
@@ -206,7 +206,7 @@ export default async function handler(req, res) {
   const serviceKey = process.env.SUPABASE_SECRET_KEY;
   const approveSecret = process.env.APPROVE_TOKEN_SECRET;
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !serviceKey || !approveSecret) {
+  if (!supabaseUrl || !serviceKey || !approveSecret || !CASELLA_GESTORE) {
     console.error('[approve-doctor] env vars mancanti');
     return res.status(500).send(htmlPage('Errore di configurazione', 'Configurazione server incompleta.', false));
   }

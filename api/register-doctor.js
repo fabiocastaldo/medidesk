@@ -119,7 +119,8 @@ export default async function handler(req, res) {
   const approveSecret = process.env.APPROVE_TOKEN_SECRET;
   const resendApiKey = process.env.RESEND_API_KEY;
   const codiceSecret = process.env.CONSENSO_TOKEN_SECRET;
-  if (!supabaseUrl || !serviceKey || !approveSecret || !mailerConfigurato(resendApiKey) || !codiceSecret) {
+  const casellaGestore = String(process.env.CASELLA_GESTORE || '').trim(); // S-01 (riesame 22/10): casella del gestore in env, mai nel codice
+  if (!supabaseUrl || !serviceKey || !approveSecret || !mailerConfigurato(resendApiKey) || !codiceSecret || !casellaGestore) {
     console.error('[register-doctor] env vars mancanti');
     return res.status(500).json({ error: 'Configurazione server incompleta' });
   }
@@ -415,7 +416,7 @@ export default async function handler(req, res) {
   const hostReq = String(req.headers['x-forwarded-host'] || req.headers.host || '').toLowerCase();
   const origine = /^medidesk-[a-z0-9-]+-fabio-castaldo-s-projects\.vercel\.app$/.test(hostReq) ? `https://${hostReq}` : 'https://delphi-med.com';
   const approveLink = `${origine}/api/approve-doctor?token=${encodeURIComponent(jwtToken)}`;
-  const adminEmail = 'fb.castaldo@gmail.com'; // deve coincidere con CASELLA_GESTORE in approve-doctor.js
+  const adminEmail = casellaGestore; // stessa env CASELLA_GESTORE letta da approve-doctor.js
 
   try {
     const resend = nuovoMailer(resendApiKey);

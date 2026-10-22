@@ -74,6 +74,7 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SECRET_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
+  const casellaGestore = String(process.env.CASELLA_GESTORE || '').trim(); // S-01 (riesame 22/10)
   if (!supabaseUrl || !supabaseKey) {
     return res.status(500).json({ error: 'Supabase env vars missing' });
   }
@@ -271,11 +272,13 @@ export default async function handler(req, res) {
   // 6. Alert admin: UNA sola email aggregata se restano errori dopo il retry.
   // Copre tutti i rami (promemoria, turni, trial). Niente retry sull'alert
   // stesso: se fallisce resta il console.error nei Runtime Log.
-  if (runErrors.length) {
+  if (runErrors.length && !casellaGestore) {
+    console.error(`[send-reminders] alert admin NON inviato: CASELLA_GESTORE non configurata (${runErrors.length} errori residui)`);
+  } else if (runErrors.length) {
     try {
       const { error: alertErr } = await resend.emails.send({
         from:    'noreply@delphi-med.com',
-        to:      ['fb.castaldo@gmail.com'],
+        to:      [casellaGestore],
         subject: `[Delphi~Med] send-reminders: ${runErrors.length} error${runErrors.length === 1 ? 'e residuo' : 'i residui'} dopo retry`,
         html:    buildAlertHtml(runErrors)
       });
