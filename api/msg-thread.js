@@ -155,7 +155,7 @@ export default async function handler(req, res) {
       const r = await sb(`appuntamenti?id=eq.${encodeURIComponent(apptId)}&medico_id=eq.${medico.id}&select=id,paziente_id,email_paziente,telefono_paziente`);
       const a = r.ok ? (await r.json())[0] : null;
       if (!a) return res.status(404).json({ error: 'not_found' });
-      pazienteId = pazienteId || a.paziente_id || null;
+      pazienteId = a.paziente_id || null; // C-03a (riesame 22/10): con appuntamento_id il paziente lo decide il server, non il body
       email = a.email_paziente || null; tel = a.telefono_paziente || null;
     }
     { const lim = await pazienteLimitato(pazienteId, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
@@ -168,9 +168,11 @@ export default async function handler(req, res) {
     if (!pazienteId && !apptId) return res.status(400).json({ error: 'destinatario_mancante' });
     if (!email) return res.status(409).json({ error: 'email_mancante' });
 
-    const durata = Number.isInteger(body.durata_giorni) ? body.durata_giorni : (medico.msg_durata_giorni ?? 30);
-    const scadeIl = durata > 0 ? new Date(Date.now() + durata * 86400000).toISOString() : null;
-    const tokenExp = scadeIl || new Date(Date.now() + 365 * 86400000).toISOString();
+    // D-02 (riesame 22/10): durata sempre tra 1 e 90 giorni, qualunque sia la fonte (body o impostazione del medico)
+    const durataRichiesta = Number.isInteger(body.durata_giorni) ? body.durata_giorni : Number(medico.msg_durata_giorni ?? 30);
+    const durata = Math.min(90, Math.max(1, Number.isFinite(durataRichiesta) ? durataRichiesta : 30));
+    const scadeIl = new Date(Date.now() + durata * 86400000).toISOString();
+    const tokenExp = scadeIl;
 
     const tr = await sb('thread_messaggi', {
       method: 'POST', headers: { 'Prefer': 'return=representation' },
