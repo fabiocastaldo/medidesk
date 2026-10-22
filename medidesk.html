@@ -15824,11 +15824,11 @@ async function consInit(){
   if(!body||!act) return;
   body.textContent='Caricamento\u2026'; act.innerHTML='';
   const r=await consApi('leggi_consenso', window._consToken);
-  if(!r.ok){ body.textContent='Questo link non \u00e8 valido o \u00e8 scaduto. Se pensi sia un errore, contatta il tuo medico.'; return; }
+  if(!r.ok){ body.textContent='Questo link non \u00e8 valido, \u00e8 scaduto o \u00e8 precedente a una revoca del consenso. Se pensi sia un errore, contatta il tuo medico.'; return; }
   if(med) med.textContent=r.j.medico||'';
   if(window._consMode==='revoca'){
     if(r.j.stato!=='attivo'){ body.textContent='Nessun consenso attivo: non riceverai comunicazioni proattive.'; return; }
-    body.textContent='Confermando, non riceverai pi\u00f9 comunicazioni proattive dal tuo medico. Potrai sempre ridare il consenso riaprendo questa email di richiesta o a una prossima prenotazione.';
+    body.textContent='Confermando, non riceverai pi\u00f9 comunicazioni proattive dal tuo medico. Potrai sempre ridare il consenso con l\u2019apposita spunta a una prossima prenotazione.';
     act.innerHTML='<button class="btn btn-primary" onclick="consConferma()">Confermo la revoca</button>';
     return;
   }

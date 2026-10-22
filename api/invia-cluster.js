@@ -21,7 +21,7 @@
 import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
-import { CONS_COMM_VERSIONE, readPayload, revocaLink } from '../lib/consenso-token.js';
+import { CONS_COMM_VERSIONE, readPayload, revocaLink, emessoIl } from '../lib/consenso-token.js';
 import { richiediInServizio } from '../lib/servizio-guard.js';
 
 // Tetto per medico sugli invii massivi (T-03): contatore DB check_rate_limit, chiave 'medico:<id>'.
@@ -219,7 +219,16 @@ export default async function handler(req, res) {
       }
       const medNome = medRow ? [medRow.titolo, medRow.nome, medRow.cognome].filter(Boolean).join(' ') : 'Il suo medico';
       const pz = await sb(`pazienti?medico_id=eq.${encodeURIComponent(medicoIdC)}&email=ilike.${encodeURIComponent(emailC)}&select=id,consenso_comunicazioni_at,consenso_comunicazioni_revocato_at`);
-      const rowsPz = pz.ok ? await pz.json() : [];
+      if (!pz.ok) return res.status(500).json({ error: 'db' });
+      const rowsPz = await pz.json();
+      // C-04 (s92): un link di consenso emesso prima dell'ultima revoca di questa casella presso questo medico non vale
+      // più — la revoca resta prevalente finché non arriva un consenso nuovo (spunta a una prossima prenotazione).
+      // La data dell'ultima revoca vive sui fascicoli e sulle prenotazioni (anche per chi non ha fascicolo).
+      const rv = await sb(`appuntamenti?medico_id=eq.${encodeURIComponent(medicoIdC)}&email_paziente=ilike.${encodeURIComponent(emailC)}&consenso_comunicazioni_revocato_at=not.is.null&select=consenso_comunicazioni_revocato_at&order=consenso_comunicazioni_revocato_at.desc&limit=1`);
+      if (!rv.ok) return res.status(500).json({ error: 'db' });
+      const revoche = [...rowsPz.map(x => x.consenso_comunicazioni_revocato_at), ...(await rv.json()).map(x => x.consenso_comunicazioni_revocato_at)]
+        .filter(Boolean).map(t => Date.parse(t)).filter(Number.isFinite);
+      if (revoche.length && Math.max(...revoche) > emessoIl(payload)) return res.status(401).json({ error: 'link_non_valido' });
       const cAttivo = !!(appt && appt.consenso_comunicazioni_at) || rowsPz.some(x => x.consenso_comunicazioni_at);
       if (action === 'leggi_consenso') {
         const stato = cAttivo ? 'attivo' : (rowsPz.some(x => x.consenso_comunicazioni_revocato_at) ? 'revocato' : 'nessuno');
@@ -238,7 +247,8 @@ export default async function handler(req, res) {
       }
       const up = await sb(`pazienti?medico_id=eq.${encodeURIComponent(medicoIdC)}&email=ilike.${encodeURIComponent(emailC)}`, {
         method: 'PATCH', headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({ consenso_comunicazioni_at: nowC, consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE, consenso_comunicazioni_revocato_at: null })
+        // la data dell'ultima revoca resta: è il riferimento per respingere i link emessi prima (C-04)
+        body: JSON.stringify({ consenso_comunicazioni_at: nowC, consenso_comunicazioni_versione: payload.v || CONS_COMM_VERSIONE })
       });
       const upRows = up.ok ? await up.json() : [];
       if (!appt && !upRows[0]) return res.status(500).json({ error: 'db' });
@@ -279,11 +289,14 @@ export default async function handler(req, res) {
       });
       if (!ur.ok) return res.status(500).json({ error: 'db' });
     }
+    // C-04 (s92): la revoca scrive la propria data su tutte le prenotazioni della casella, così resta traccia anche
+    // senza fascicolo; se la scrittura non riesce la revoca non è registrata per intero e si risponde errore.
     if (emailPaz && medicoId) {
-      await sb(`appuntamenti?medico_id=eq.${encodeURIComponent(medicoId)}&email_paziente=ilike.${encodeURIComponent(emailPaz)}&consenso_comunicazioni_at=not.is.null`, {
+      const ra = await sb(`appuntamenti?medico_id=eq.${encodeURIComponent(medicoId)}&email_paziente=ilike.${encodeURIComponent(emailPaz)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ consenso_comunicazioni_at: null, consenso_comunicazioni_versione: null })
-      }).catch(() => {});
+        body: JSON.stringify({ consenso_comunicazioni_at: null, consenso_comunicazioni_versione: null, consenso_comunicazioni_revocato_at: now })
+      }).catch(() => null);
+      if (!ra || !ra.ok) return res.status(500).json({ error: 'db' });
     }
     return res.status(200).json({ ok: true, medico: medicoNome, quando: now });
   }

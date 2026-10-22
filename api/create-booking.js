@@ -177,7 +177,8 @@ export default async function handler(req, res) {
     try {
       await sb(`pazienti?medico_id=eq.${encodeURIComponent(medicoId)}&email=ilike.${encodeURIComponent(email)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ consenso_comunicazioni_at: consentTs, consenso_comunicazioni_versione: CONS_COMM_VERSIONE, consenso_comunicazioni_revocato_at: null })
+        // la data dell'ultima revoca resta come riferimento per i link di consenso emessi prima (C-04, s92)
+        body: JSON.stringify({ consenso_comunicazioni_at: consentTs, consenso_comunicazioni_versione: CONS_COMM_VERSIONE })
       });
     } catch { /* soft-fail */ }
   }
