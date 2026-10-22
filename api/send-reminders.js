@@ -11,6 +11,7 @@ import { eseguiAvvisiTesti } from '../lib/avvisi-testi.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
 import { idPazientiLimitati } from '../lib/limitazione-guard.js';
 import { mediciInBlocco } from '../lib/blocco-guard.js';
+import { eseguiRiconciliazione } from '../lib/riconciliazione-registro.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
 // contatto è presente e non vuoto.
@@ -269,6 +270,8 @@ export default async function handler(req, res) {
   const backupStorage = await eseguiBackupStorage({ supabaseUrl, supabaseKey, runErrors });
   // 5-quater (s84, righe 22 e 76): avvisi sulle nuove versioni sostanziali dei testi legali e avvisi di servizio.
   const avvisiTesti = await eseguiAvvisiTesti({ supabaseUrl, supabaseKey, resend, shell: { emailShell, emailTitle, ctaButton, esc: escShell }, runErrors });
+  // 5-quinquies (s93, B-09): riconciliazione del registro delle operazioni sulle 24 ore precedenti (lib/riconciliazione-registro.js)
+  const riconciliazione = await eseguiRiconciliazione({ supabaseUrl, supabaseKey, runErrors });
 
   // 6. Alert admin: UNA sola email aggregata se restano errori dopo il retry.
   // Copre tutti i rami (promemoria, turni, trial). Niente retry sull'alert
@@ -307,10 +310,10 @@ export default async function handler(req, res) {
   // Esito compatto nel log (s86): solo conteggi e stati, senza chiavi Storage — leggibile dal log Vercel, dove il JSON di risposta non compare
   try {
     const { chiavi: _chiavi, ...backupSenzaChiavi } = backupStorage || {};
-    console.log('[send-reminders] esito ' + JSON.stringify({ sent, errors, alerted: runErrors.length, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage: backupSenzaChiavi, avvisiTesti }));
+    console.log('[send-reminders] esito ' + JSON.stringify({ sent, errors, alerted: runErrors.length, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage: backupSenzaChiavi, avvisiTesti, riconciliazione }));
   } catch (e) { console.error('[send-reminders] esito non serializzabile:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, saltatiLimitazione, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage, avvisiTesti });
+  return res.status(200).json({ processed: appointments.length, saltatiLimitazione, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage, avvisiTesti, riconciliazione });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
