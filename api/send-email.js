@@ -678,7 +678,7 @@ export default async function handler(req, res) {
     if (!appt.ok) return res.status(appt.status).json({ error: appt.error });
     { const lim = await pazienteLimitato(appt.pazienteId, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
     const srvH = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` };
-    const rowRes = await fetch(`${supabaseUrl}/rest/v1/appuntamenti?id=eq.${encodeURIComponent(body.appt_id)}&select=centro_id,centri(cooperativa_id)`, { headers: srvH }).catch(() => null);
+    const rowRes = await fetch(`${supabaseUrl}/rest/v1/appuntamenti?id=eq.${encodeURIComponent(body.appt_id)}&select=centro_id,centri!appuntamenti_centro_id_fkey(cooperativa_id)`, { headers: srvH }).catch(() => null);
     const row = (rowRes && rowRes.ok) ? (await rowRes.json().catch(() => []))?.[0] : null;
     const coopId = row?.centri?.cooperativa_id;
     if (!coopId) return res.status(200).json({ ok: true, skipped: 'appuntamento non di cooperativa' });

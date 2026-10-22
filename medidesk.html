@@ -5015,7 +5015,7 @@ async function loadCentriFromDB(user){
       .from('medici').select('id').eq('user_id', user.id).single();
     if(!medico) return;
     const { data: centri, error } = await supabaseClient
-      .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', medico.id);
+      .from('centri').select('*, turni(*), disponibilita_singole!disponibilita_singole_centro_id_fkey(*)').eq('medico_id', medico.id);
     if(error) throw error;
     S.centri = (centri || []).map(c => ({
       id:        c.id,
@@ -11730,7 +11730,7 @@ async function bkInit(){
       bk.medicoEmail = m.email_pubblica || '';
       bkRenderHero(m);
       const { data: centriDB } = await supabaseClient
-        .from('centri').select('id,medico_id,nome,via,cap,citta,provincia,colore,attivo,gestione,coop_booking_pubblico, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true); // solo le colonne concesse ad anon (S-89 B-05): niente email_segreteria, booking_token, cooperativa_id
+        .from('centri').select('id,medico_id,nome,via,cap,citta,provincia,colore,attivo,gestione,coop_booking_pubblico, turni(*), disponibilita_singole!disponibilita_singole_centro_id_fkey(*)').eq('medico_id', m.id).eq('attivo', true); // solo le colonne concesse ad anon (S-89 B-05): niente email_segreteria, booking_token, cooperativa_id
       S.centri = (centriDB||[]).map(c=>({
         id: c.id, nome: c.nome, indirizzo: [c.via, [c.cap, c.citta].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', '), colore: c.colore||'#0D9488',
         attivo: true, gestione: c.gestione || 'delphi', email: '',

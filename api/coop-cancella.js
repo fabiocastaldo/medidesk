@@ -90,7 +90,7 @@ export default async function handler(req, res) {
       const oggi = new Date().toISOString().slice(0, 10);
       const pat = encodeURIComponent('*' + q + '*');
       const rRes = await sb(
-        `appuntamenti?select=id,nome_paziente,cognome_paziente,data,ora,tipo_visita,per_conto,medico_id,centro_id,centri!inner(nome,cooperativa_id)` +
+        `appuntamenti?select=id,nome_paziente,cognome_paziente,data,ora,tipo_visita,per_conto,medico_id,centro_id,centri!appuntamenti_centro_id_fkey!inner(nome,cooperativa_id)` +
         `&centri.cooperativa_id=eq.${encodeURIComponent(seg.cooperativa_id)}` +
         `&data=gte.${oggi}` +
         `&and=(or(nome_paziente.ilike.${pat},cognome_paziente.ilike.${pat}),or(cancelled.is.null,cancelled.eq.false))` +
@@ -146,7 +146,7 @@ export default async function handler(req, res) {
       // Perimetro via join: l'appuntamento deve stare su un centro della cooperativa del chiamante
       const r0 = await sb(
         `appuntamenti?id=eq.${encodeURIComponent(apptId)}` +
-        `&select=id,data,ora,cancelled,medico_id,centro_id,nome_paziente,cognome_paziente,telefono_paziente,email_paziente,cancellation_token,centri!inner(cooperativa_id)` +
+        `&select=id,data,ora,cancelled,medico_id,centro_id,nome_paziente,cognome_paziente,telefono_paziente,email_paziente,cancellation_token,centri!appuntamenti_centro_id_fkey!inner(cooperativa_id)` +
         `&centri.cooperativa_id=eq.${encodeURIComponent(seg.cooperativa_id)}&limit=1`
       );
       if (!r0.ok) return res.status(500).json({ error: 'Errore server' });
