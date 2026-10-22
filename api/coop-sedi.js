@@ -30,6 +30,9 @@ export default async function handler(req, res) {
   if (!nome) {
     return res.status(400).json({ error: 'Il nome della sede è obbligatorio' });
   }
+  if (/[<>"\\\u0000-\u001f\u007f]/.test(nome + via + citta + provincia + cap)) {
+    return res.status(400).json({ error: 'I dati della sede non possono contenere i caratteri < > " e \\' });
+  }
 
   const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: { 'Authorization': `Bearer ${jwt}`, 'apikey': anonKey }

@@ -7833,8 +7833,8 @@ function apptShowSlots(){
         if(s.libero){
           return `<button class="slot-btn ${s.ora===A.ora?'selected':''}" onclick="apptSelectSlot('${s.ora}')">${s.ora}</button>`;
         } else {
-          const label = `${s.appt.cognome} ${s.appt.nome[0]||''}.`;
-          return `<button class="slot-btn slot-occupied" onclick="showApptDetail('${s.appt.id}')" title="Occupato: ${s.appt.cognome} ${s.appt.nome}"><span class="slot-time">${s.ora}</span><span class="slot-name">${label}</span></button>`;
+          const label = escapeHtml(`${s.appt.cognome} ${(s.appt.nome||'')[0]||''}.`);
+          return `<button class="slot-btn slot-occupied" onclick="showApptDetail('${s.appt.id}')" title="Occupato: ${escapeAttr(s.appt.cognome)} ${escapeAttr(s.appt.nome)}"><span class="slot-time">${s.ora}</span><span class="slot-name">${label}</span></button>`;
         }
       }).join('')
     : '<p style="color:var(--ink3);font-size:13px;grid-column:1/-1;text-align:center">Nessuno slot configurato per questo giorno.</p>';
@@ -8475,7 +8475,7 @@ function renderMonthView(){
     const byCentroM = {}; dayApptsLive.forEach(a=>{ const k=String(a.centroId); byCentroM[k]=(byCentroM[k]||0)+1; });
     const cidsM = Object.keys(byCentroM).sort((x,y)=>byCentroM[y]-byCentroM[x]);
     const shownM = cidsM.length<=2 ? cidsM.length : 1;
-    const apptDots = cidsM.slice(0,shownM).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; const op=(c&&c.attivo===false)?'0.5':'1'; return `<span class="cc-chip" style="opacity:${op}" title="${c?c.nome:''} (${byCentroM[cid]})"><span class="cc-dot" style="background:${col}"></span>${byCentroM[cid]}</span>`; }).join('');
+    const apptDots = cidsM.slice(0,shownM).map(cid=>{ const c=S.centri.find(x=>String(x.id)===String(cid)); const col=c?c.colore:'#999'; const op=(c&&c.attivo===false)?'0.5':'1'; return `<span class="cc-chip" style="opacity:${op}" title="${escapeAttr(c?c.nome:'')} (${byCentroM[cid]})"><span class="cc-dot" style="background:${col}"></span>${byCentroM[cid]}</span>`; }).join('');
     const extra = cidsM.length>shownM ? `<span class="cc-more">+${cidsM.length-shownM}</span>` : '';
     // Pallini turni: centri con turno O giornata singola in questa data, SENZA appuntamenti
     const centriConTurno = S.centri.filter(c =>
@@ -11654,10 +11654,10 @@ async function bkInit(){
       bk.medicoEmail = m.email_pubblica || '';
       bkRenderHero(m);
       const { data: centriDB } = await supabaseClient
-        .from('centri').select('*, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true);
+        .from('centri').select('id,medico_id,nome,via,cap,citta,provincia,colore,attivo,gestione,coop_booking_pubblico, turni(*), disponibilita_singole(*)').eq('medico_id', m.id).eq('attivo', true); // solo le colonne concesse ad anon (S-89 B-05): niente email_segreteria, booking_token, cooperativa_id
       S.centri = (centriDB||[]).map(c=>({
         id: c.id, nome: c.nome, indirizzo: [c.via, [c.cap, c.citta].filter(Boolean).join(' '), c.provincia].filter(Boolean).join(', '), colore: c.colore||'#0D9488',
-        attivo: true, gestione: c.gestione || 'delphi', email: c.email_segreteria||'',
+        attivo: true, gestione: c.gestione || 'delphi', email: '',
         turni: (c.turni||[]).map(t=>({ id:t.id, giorno:t.giorno, inizio:(t.inizio||'').substring(0,5), fine:(t.fine||'').substring(0,5), slot:t.durata_slot, frequenza:t.frequenza_settimane||1, dataInizioValidita:t.data_inizio_validita||null, dataFineValidita:t.data_fine_validita||null })),
         giornateSingole: (c.disponibilita_singole || []).map(g => ({ id: g.id, data: g.data, inizio: (g.inizio||'').substring(0,5), fine: (g.fine||'').substring(0,5), slot: g.durata_slot, centroId: String(c.id) }))
       }));
