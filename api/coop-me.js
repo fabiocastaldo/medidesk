@@ -184,7 +184,8 @@ export default async function handler(req, res) {
     ruolo: seg.ruolo || 'admin',
     ruolo_marcato: ruoloMarcato,
     medici: Array.from(perMedico.values()),
-    codici_attivi: codiciData || [],
+    // C-05 (s93): i codici di adesione per i medici sono un potere dell'amministratore: agli operatori non arrivano
+    codici_attivi: (seg.ruolo || 'admin') === 'admin' ? (codiciData || []) : [],
     sedi: sediData || [],
     sale: saleData || [],
     servizi: (serviziData || []).map(s => ({

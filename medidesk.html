@@ -13734,14 +13734,21 @@ ${errori.length?`<p class="nota"><strong>Avvertenza:</strong> alcune sezioni non
       } catch(e){ console.error('[Delphi~Med] copia art.15 referto fail:', e.message); refertiErrors++; }
     }
   }
+  // E-07 (s93): la copia si consegna solo dopo che la traccia nel registro e' scritta (fail-closed); se qualche parte non
+  // e' stata letta la copia lo dichiara nel nome del file e in un avviso dentro lo ZIP, e il medico la vede prima di consegnarla.
+  const nonLette = refertiErrors + errori.length;
+  if(nonLette){
+    root.file('LEGGIMI_COPIA_INCOMPLETA.txt', 'Questa copia e\' INCOMPLETA: ' + (errori.length ? ('sezioni non lette: ' + errori.join('; ') + '. ') : '') + (refertiErrors ? (refertiErrors + ' ' + plur(refertiErrors,'referto allegato non letto','referti allegati non letti') + '. ') : '') + 'Il medico puo\' rigenerarla prima di consegnarla al paziente.\n');
+    if(!(await confermaModale(`La copia \u00e8 incompleta: ${nonLette} ${plur(nonLette,'parte non letta','parti non lette')}. Puoi annullare e riprovare, oppure scaricarla segnata come incompleta.`, { titolo:'Copia incompleta', ok:'Scarica come incompleta', annulla:'Annulla' }))){ showToast('Copia annullata'); return null; }
+  }
+  const tracciata = await auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_prenotazioni_non_collegate: scollegate.length, ids_prenotazioni_non_collegate: scollegate.map(x => String(x.id)), n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
+  if(!tracciata){ showToast('Copia non consegnata: la traccia nel registro delle operazioni non \u00e8 stata scritta. Riprova tra poco; se si ripete, scrivi all\u2019assistenza', 7000); return null; }
   const blob = await zip.generateAsync({ type: 'blob' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `${folderName}.zip`;
+  const a = document.createElement('a'); a.href = url; a.download = `${folderName}${nonLette ? '_INCOMPLETA' : ''}.zip`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  const tracciata = await auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_prenotazioni_non_collegate: scollegate.length, ids_prenotazioni_non_collegate: scollegate.map(x => String(x.id)), n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
-  if(!tracciata) showToast('Copia scaricata, ma la traccia nel registro delle operazioni non è stata registrata: segnalalo all\'assistenza');
-  else showToast(refertiErrors||errori.length ? `Copia scaricata con ${refertiErrors+errori.length} ${plur(refertiErrors+errori.length,'parte non letta','parti non lette')}` : 'Copia dei dati scaricata ✓');
+  showToast(nonLette ? `Copia scaricata come incompleta (${nonLette} ${plur(nonLette,'parte non letta','parti non lette')})` : 'Copia dei dati scaricata \u2713');
   return { success: true, refertiOk, refertiErrors };
 }
 

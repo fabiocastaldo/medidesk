@@ -22,6 +22,7 @@ import { createHash, randomBytes } from 'crypto';
 import { richiediInServizio } from '../lib/servizio-guard.js';
 import { pazienteLimitato } from '../lib/limitazione-guard.js';
 import { emailShell, emailTitle, ctaButton, noteBox } from '../lib/email-shell.js';
+import { hostFidato } from '../lib/origine.js';
 
 const MAX_CORPO = 4000;
 
@@ -96,7 +97,7 @@ export default async function handler(req, res) {
   const base = `${supabaseUrl}/rest/v1`;
   const dbHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
   const sb = (path, opts = {}) => fetch(`${base}/${path}`, { ...opts, headers: { ...dbHeaders, ...(opts.headers || {}) } });
-  const host = (req.headers['x-forwarded-host'] || req.headers.host || 'delphi-med.com').split(',')[0].trim();
+  const host = hostFidato();
   const resend = nuovoMailer(resendApiKey);
 
   const body = req.body || {};

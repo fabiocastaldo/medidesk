@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto';
 import { richiediAal2Secco } from '../lib/aal-guard.js';
 import { verificaSlot } from '../lib/slot-guard.js';
 import { verificaTipo } from '../lib/tipo-guard.js';
+import { hostFidato } from '../lib/origine.js';
 
 const clean = (v, max) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 
@@ -163,7 +164,7 @@ export default async function handler(req, res) {
     // interna), notifica al medico via token di cancellazione. I toggle di
     // cooperativa arriveranno con le colonne dedicate (DDL su mandato);
     // fino ad allora il canale e' attivo di default.
-    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const host = hostFidato();
     const mailPaz = seg.cooperative.mail_conferma_paziente !== false;
     const mailMed = seg.cooperative.mail_notifica_medico !== false;
     if (host && email && mailPaz) {

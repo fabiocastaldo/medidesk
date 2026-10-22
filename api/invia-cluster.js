@@ -23,6 +23,7 @@ import { richiediAal2 } from '../lib/aal-guard.js';
 import { emailShell, emailTitle, noteBox, ctaButton, esc } from '../lib/email-shell.js';
 import { CONS_COMM_VERSIONE, readPayload, revocaLink, emessoIl } from '../lib/consenso-token.js';
 import { richiediInServizio } from '../lib/servizio-guard.js';
+import { hostFidato } from '../lib/origine.js';
 
 // Tetto per medico sugli invii massivi (T-03): contatore DB check_rate_limit, chiave 'medico:<id>'.
 const MAX_INVII_ORA = 10;
@@ -185,7 +186,7 @@ export default async function handler(req, res) {
   const base = `${supabaseUrl}/rest/v1`;
   const dbHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
   const sb = (path, opts = {}) => fetch(`${base}/${path}`, { ...opts, headers: { ...dbHeaders, ...(opts.headers || {}) } });
-  const host = (req.headers['x-forwarded-host'] || req.headers.host || 'delphi-med.com').split(',')[0].trim();
+  const host = hostFidato();
   const resend = nuovoMailer(resendApiKey);
 
   const body = req.body || {};

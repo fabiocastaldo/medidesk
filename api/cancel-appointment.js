@@ -1,5 +1,6 @@
 // api/cancel-appointment.js
 import { avvisaListaAttesa } from '../lib/waitlist.js';
+import { hostFidato } from '../lib/origine.js';
 // Fix P0 RLS `appuntamenti` (strada 1 — difesa in profondità).
 // Sostituisce l'accesso anon diretto al DB dalla pagina pubblica ?cancel=<token>:
 // lookup e cancellazione passano da qui con service_role, match SEMPRE sul token
@@ -125,7 +126,7 @@ export default async function handler(req, res) {
       }
       // notifica personale al medico (gate server-side su medici.mail_medico_cancellazione)
       try {
-        const hostN = req.headers['x-forwarded-host'] || req.headers.host;
+        const hostN = hostFidato();
         if (hostN) {
           await fetch(`https://${hostN}/api/send-email`, {
             method: 'POST',
@@ -136,7 +137,7 @@ export default async function handler(req, res) {
       } catch { /* soft-fail */ }
       // Lista d'attesa (v1): hook condiviso in lib/waitlist.js (solo slot futuri,
       // best-effort, cap 10 destinatari).
-      const hostW = req.headers['x-forwarded-host'] || req.headers.host;
+      const hostW = hostFidato();
       await avvisaListaAttesa({ sb, host: hostW, appt: appt0 });
       return res.status(200).json({ ok: true });
     }
