@@ -1,8 +1,11 @@
 // api/avviso-sospensione.js
 // Chiamato dal database (pg_net, trigger trg_medici_sospensione_avviso) nell'istante della sospensione di un medico.
-// Nessun segreto: riceve solo l'id del medico, rilegge tutto dal database con la chiave di servizio e invia la mail
-// solo se il medico e' davvero sospeso e la sospensione in corso non e' gia' stata avvisata (lib/sospensione.js).
+// Non e' pubblico (D-08, s92): il trigger manda `Authorization: Bearer <segreto>` letto da Vault, l'endpoint lo confronta
+// in tempo costante con AVVISO_SOSPENSIONE_SECRET e risponde 401 prima del limite di richieste e di ogni lettura.
+// Riceve solo l'id del medico, rilegge tutto dal database con la chiave di servizio e invia la mail solo se il medico
+// e' davvero sospeso e la sospensione in corso non e' gia' stata avvisata (lib/sospensione.js).
 // Risposta uniforme 200 { ok: true } per non rivelare quali id esistono; limite di richieste per IP (fail-closed).
+import { timingSafeEqual } from 'node:crypto';
 import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { emailShell, emailTitle, esc } from '../lib/email-shell.js';
 import { avvisaSospensione } from '../lib/sospensione.js';
@@ -14,7 +17,12 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SECRET_KEY;
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !supabaseKey || !mailerConfigurato(resendApiKey)) return res.status(500).json({ error: 'Configurazione server mancante' });
+  const segreto = process.env.AVVISO_SOSPENSIONE_SECRET || '';
+  if (!supabaseUrl || !supabaseKey || !segreto || !mailerConfigurato(resendApiKey)) return res.status(500).json({ error: 'Configurazione server mancante' });
+  const auth = String(req.headers['authorization'] || '');
+  const atteso = Buffer.from(`Bearer ${segreto}`);
+  const ricevuto = Buffer.from(auth);
+  if (ricevuto.length !== atteso.length || !timingSafeEqual(ricevuto, atteso)) return res.status(401).json({ error: 'Non autorizzato' });
   const base = `${supabaseUrl}/rest/v1`;
   const headers = { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' };
 
