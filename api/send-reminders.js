@@ -10,6 +10,7 @@ import { eseguiAvvisiSospensione } from '../lib/sospensione.js';
 import { eseguiAvvisiTesti } from '../lib/avvisi-testi.js';
 import { smsEnabled, sendSms } from '../lib/sms.js';
 import { idPazientiLimitati } from '../lib/limitazione-guard.js';
+import { mediciInBlocco } from '../lib/blocco-guard.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
 // contatto è presente e non vuoto.
@@ -289,11 +290,14 @@ export default async function handler(req, res) {
     }
   }
 
-  // Pulizia promemoria completati da oltre 90 giorni (s12; gli aperti non si toccano)
+  // Pulizia promemoria completati da oltre 90 giorni (s12; gli aperti non si toccano).
+  // B-04 (s92): esclusi i medici con un blocco di cancellazione; se l'elenco non si legge la pulizia salta il giro.
   let promemoriaPuliti = 0;
   try {
     const soglia = new Date(Date.now() - 90 * 86400000).toISOString();
-    const pr = await fetch(`${supabaseUrl}/rest/v1/promemoria?fatto_at=lt.${encodeURIComponent(soglia)}&select=id`, {
+    const bloccati = await mediciInBlocco(`${supabaseUrl}/rest/v1`, { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` });
+    const escludi = bloccati.length ? `&medico_id=not.in.(${bloccati.map(encodeURIComponent).join(',')})` : '';
+    const pr = await fetch(`${supabaseUrl}/rest/v1/promemoria?fatto_at=lt.${encodeURIComponent(soglia)}${escludi}&select=id`, {
       method: 'DELETE', headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Prefer': 'return=representation' }
     });
     if (pr.ok) promemoriaPuliti = (await pr.json().catch(() => [])).length;
