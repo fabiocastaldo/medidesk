@@ -11542,7 +11542,11 @@ function bkRenderHero(m){
   const socialEl = document.getElementById('bk-social-row');
   if(socialEl){
     if(bk.centroMode){
-      socialEl.innerHTML = buildSocialRow({ email: m.email_pubblica, telefono: m.telefono });
+      // D-04 (riesame 22/10): anche in modo centro valgono le scelte del medico; l'RPC già restituisce NULL a flag spento
+      socialEl.innerHTML = buildSocialRow({
+        email:    m.mostra_email_pazienti    !== false ? m.email_pubblica : '',
+        telefono: m.mostra_telefono_pazienti !== false ? m.telefono       : ''
+      });
     } else {
       socialEl.innerHTML = buildSocialRow({
         email:    m.mostra_email_pazienti    !== false ? m.email_pubblica : '',
