@@ -5920,6 +5920,7 @@ function erroreLeggibile(cosa, e){
   else if(/jwt|token.*(expired|scadut)|sessione non valida|not authenticated|non autenticato|refresh token/.test(r)) testo = 'sessione scaduta: esci e rientra, poi riprova';
   else if(/duplicate key|23505|already exists|unique/.test(r)) testo = 'esiste gi\u00e0 un dato uguale';
   else if(/sola_consultazione/.test(r)) testo = 'account in sola consultazione: puoi consultare ed esportare i dati, non modificarli';
+  else if(/blocco_cancellazione/.test(r)) testo = 'i dati di questo account sono sotto un blocco di conservazione e non si possono cancellare finch\u00e9 il blocco \u00e8 attivo; per informazioni scrivi a privacy@delphi-med.com';
   else if(/limitazione_art18/.test(r)) testo = 'Il trattamento dei dati di questo paziente \u00e8 limitato (art. 18 GDPR): puoi consultare ed esportare, ' + (/comunicazioni/.test(r) ? 'non inviare comunicazioni' : 'non modificare') + '.';
   else if(/permission denied|row-level security|42501|not allowed|forbidden|http 403/.test(r)) testo = 'operazione non permessa per questo account';
   else if(!raw || /[a-z]+_[a-z_]+|http \d|\b\d{5}\b|pgrst|column|schema|relation|violates|constraint|\bnull\b|undefined|typeerror|referenceerror|syntaxerror|function|cannot|could not|failed|invalid|unexpected|not found|\brig[ae]\b/.test(r)) testo = 'riprova tra poco; se si ripete, ricarica la pagina';
@@ -9383,7 +9384,7 @@ async function promRenderPagina(){
 async function promElimina(id){
   if(!(await confermaModale('Il promemoria verrà eliminato definitivamente.', { titolo:'Eliminare il promemoria?', ok:'Elimina' }))) return;
   const { error } = await supabaseClient.from('promemoria').delete().eq('id', id);
-  if(error){ showToast('Eliminazione non riuscita.'); return; }
+  if(error){ showToast(erroreLeggibile('Eliminazione non riuscita', error)); return; }
   await promLoad(); promRenderPagina();
 }
 function promRenderPaziente(pazId){
