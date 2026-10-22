@@ -12,6 +12,7 @@ import { CONS_COMM_VERSIONE } from '../lib/consenso-token.js';
 import { validaPrenotazione, controllaCodice } from '../lib/prenotazione-pr22.js';
 import { verificaSlot } from '../lib/slot-guard.js';
 import { verificaTipo } from '../lib/tipo-guard.js';
+import { hostFidato } from '../lib/origine.js';
 
 const rateMap = new Map();
 const RATE_LIMIT = 60;
@@ -191,7 +192,7 @@ export default async function handler(req, res) {
         const tok = await r.json().catch(() => null);
         const jti = Array.isArray(tok) ? tok[0]?.jti : tok?.jti;
         if (jti) {
-          const host = req.headers['x-forwarded-host'] || req.headers.host;
+          const host = hostFidato();
           await fetch(`https://${host}/api/send-email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -204,7 +205,7 @@ export default async function handler(req, res) {
 
   // notifica personale al medico (gate server-side su medici.mail_medico_prenotazione)
   try {
-    const hostN = req.headers['x-forwarded-host'] || req.headers.host;
+    const hostN = hostFidato();
     if (hostN) {
       await fetch(`https://${hostN}/api/send-email`, {
         method: 'POST',

@@ -25,6 +25,7 @@ import { RUOLI } from '../lib/prenotazione-pr22.js';
 import { richiediInServizio } from '../lib/servizio-guard.js';
 import { pazienteLimitato } from '../lib/limitazione-guard.js';
 import { dataIt } from '../lib/uscita.js';
+import { hostFidato } from '../lib/origine.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -473,7 +474,7 @@ export default async function handler(req, res) {
   }
 
   const base = `${supabaseUrl}/rest/v1`;
-  const icsHost = (req.headers['x-forwarded-host'] || req.headers.host || 'delphi-med.com').split(',')[0].trim();
+  const icsHost = hostFidato();
   const dbHeaders = {
     'apikey': serviceKey,
     'Authorization': `Bearer ${serviceKey}`,

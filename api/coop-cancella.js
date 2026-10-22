@@ -1,6 +1,7 @@
 // api/coop-cancella.js
 import { avvisaListaAttesa } from '../lib/waitlist.js';
 import { richiediAal2Secco } from '../lib/aal-guard.js';
+import { hostFidato } from '../lib/origine.js';
 // Roadmap plancia voce 1 — ciclo di vita appuntamento dalla plancia (tappa 1: cancellazione).
 // La segreteria della cooperativa identifica l'occupante di uno slot (lookup) e
 // cancella l'appuntamento (cancel) sui sede-centri coop. Perimetro SEMPRE
@@ -169,7 +170,7 @@ export default async function handler(req, res) {
         return res.status(409).json({ error: 'gia_cancellato' });
       }
 
-      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const host = hostFidato();
 
       // 1) notifica al medico (gate server-side su medici.mail_medico_cancellazione)
       try {

@@ -24,6 +24,7 @@ import { createHash, randomBytes } from 'crypto';
 import { richiediAal2 } from '../lib/aal-guard.js';
 import { creaSfida, verificaCodice, nonceSfida, normEmail } from '../lib/verifica-email.js';
 import { emailShell, emailTitle, ctaButton } from '../lib/email-shell.js';
+import { hostFidato } from '../lib/origine.js';
 
 const SCOPO = 'assistenza-v1';
 const MAX_CORPO = 4000;
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
   const base = `${supabaseUrl}/rest/v1`;
   const dbHeaders = { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
   const sb = (path, opts = {}) => fetch(`${base}/${path}`, { ...opts, headers: { ...dbHeaders, ...(opts.headers || {}) } });
-  const host = (req.headers['x-forwarded-host'] || req.headers.host || 'www.delphi-med.com').split(',')[0].trim();
+  const host = hostFidato();
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
   const resend = nuovoMailer(resendApiKey);
 

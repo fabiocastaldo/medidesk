@@ -44,9 +44,8 @@ export default async function handler(req, res) {
   const b = req.body || {};
   const centroToken    = clean(b.centro_token, 64);
   const portfolioToken = clean(b.portfolio_token, 64);
-  const email          = clean(b.email, 160);
   if (!centroToken) return res.status(400).json({ error: 'Token centro mancante' });
-  if (email && !isEmail(email)) return res.status(400).json({ error: 'Email non valida' });
+  // D-06b (s93): il portafoglio non raccoglie email (nessun client la manda, nessuna finalita'): il campo viene ignorato
 
   const sb = (path, init = {}) => fetch(`${supabaseUrl}/rest/v1/${path}`, {
     ...init,
@@ -95,7 +94,7 @@ export default async function handler(req, res) {
       const r = await sb('portfolios?select=id', {
         method: 'POST',
         headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify({ token: finalToken, email: email || null })
+        body: JSON.stringify({ token: finalToken })
       });
       if (!r.ok) return res.status(500).json({ error: 'Creazione portafoglio fallita' });
       const arr = await r.json().catch(() => []);
