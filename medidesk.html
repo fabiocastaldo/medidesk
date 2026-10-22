@@ -3616,12 +3616,12 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
       <button class="modal-close" onclick="_chiudiRevisioneArt15(null)">&#10005;</button>
     </div>
     <div class="modal-body">
-      <p style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.5">Queste prenotazioni hanno lo stesso nome, cognome e data di nascita del paziente ma non sono collegate al fascicolo: potrebbero essere di un omonimo. Spunta solo quelle che riconosci come sue; le altre restano fuori dalla copia. Nessuna &egrave; preselezionata.</p>
+      <p id="revisione-art15-testo" style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.5">Queste prenotazioni hanno lo stesso nome, cognome e data di nascita del paziente ma non sono collegate al fascicolo: potrebbero essere di un omonimo. Spunta solo quelle che riconosci come sue; le altre restano fuori dalla copia. Nessuna &egrave; preselezionata.</p>
       <div id="revisione-art15-lista" style="max-height:50vh;overflow:auto"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="_chiudiRevisioneArt15(null)">Annulla la copia</button>
-      <button class="btn btn-primary" onclick="_chiudiRevisioneArt15(true)">Includi le spuntate e continua</button>
+      <button class="btn btn-secondary" id="revisione-art15-annulla" onclick="_chiudiRevisioneArt15(null)">Annulla la copia</button>
+      <button class="btn btn-primary" id="revisione-art15-ok" onclick="_chiudiRevisioneArt15(true)">Includi le spuntate e continua</button>
     </div>
   </div>
 </div>
@@ -3717,6 +3717,9 @@ function updatePasswordStrength(){
 function capitalizeWords(str){
   return String(str || '').toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase());
 }
+// B-07 (s93): una prenotazione senza nome ne' cognome e' stata resa anonima con l'eliminazione del fascicolo.
+function _cognomeAppt(r){ return r.cognome_paziente || (r.nome_paziente ? '' : 'Paziente eliminato'); }
+function _apptAnonimo(){ return { nome:'', cognome:'Paziente eliminato', tel:'', email:'', note:'', dataNascita:'', prenotanteNome:'', prenotanteCognome:'', prenotanteRuolo:'', emailInteressato:'', pazienteId:null }; }
 function todayLocalISO(){
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -5169,7 +5172,7 @@ async function loadAppuntamentiFromDB(user){
       return {
         id:         a.id,
         nome:       a.nome_paziente     || '',
-        cognome:    a.cognome_paziente  || '',
+        cognome:    _cognomeAppt(a),
         tel:        a.telefono_paziente || '',
         email:      a.email_paziente    || '',
         tipo:       a.tipo_visita       || '',
@@ -5246,7 +5249,7 @@ function startRealtimeChannel(){
       S.appuntamenti.push({
         id:         r.id,
         nome:       r.nome_paziente     || '',
-        cognome:    r.cognome_paziente  || '',
+        cognome:    _cognomeAppt(r),
         tel:        r.telefono_paziente || '',
         email:      r.email_paziente    || '',
         tipo:       r.tipo_visita       || '',
@@ -5288,7 +5291,7 @@ function startRealtimeChannel(){
       const wasCancelled = local.cancelled === true;
       const _centro = S.centri.find(c => String(c.id) === String(r.centro_id));
       local.nome       = r.nome_paziente     || '';
-      local.cognome    = r.cognome_paziente  || '';
+      local.cognome    = _cognomeAppt(r);
       local.tel        = r.telefono_paziente || '';
       local.email      = r.email_paziente    || '';
       local.tipo       = r.tipo_visita       || '';
@@ -5920,6 +5923,7 @@ function erroreLeggibile(cosa, e){
   else if(/jwt|token.*(expired|scadut)|sessione non valida|not authenticated|non autenticato|refresh token/.test(r)) testo = 'sessione scaduta: esci e rientra, poi riprova';
   else if(/duplicate key|23505|already exists|unique/.test(r)) testo = 'esiste gi\u00e0 un dato uguale';
   else if(/sola_consultazione/.test(r)) testo = 'account in sola consultazione: puoi consultare ed esportare i dati, non modificarli';
+  else if(/fascicolo_prenotazioni_future/.test(r)) testo = 'il paziente ha prenotazioni future attive: annullale dall\u2019agenda prima di eliminare il fascicolo';
   else if(/blocco_cancellazione/.test(r)) testo = 'i dati di questo account sono sotto un blocco di conservazione e non si possono cancellare finch\u00e9 il blocco \u00e8 attivo; per informazioni scrivi a privacy@delphi-med.com';
   else if(/limitazione_art18/.test(r)) testo = 'Il trattamento dei dati di questo paziente \u00e8 limitato (art. 18 GDPR): puoi consultare ed esportare, ' + (/comunicazioni/.test(r) ? 'non inviare comunicazioni' : 'non modificare') + '.';
   else if(/permission denied|row-level security|42501|not allowed|forbidden|http 403/.test(r)) testo = 'operazione non permessa per questo account';
@@ -9896,7 +9900,7 @@ function openDeletePazienteModal(pazienteId){
     ${nVisite > 0 ? `<p>Questo paziente ha <strong>${nVisite} visit${nVisite===1?'a':'e'} registrat${nVisite===1?'a':'e'}</strong> ${periodoStr}.</p>` : ''}
     <div style="background:var(--surface2);padding:12px;border-radius:8px;margin:14px 0;font-size:13px">
       <p style="margin:0 0 8px 0">&#9888;&#65039; <strong>Verifica la normativa vigente sulla conservazione della documentazione sanitaria</strong> prima di procedere. Generalmente &egrave; previsto un periodo minimo (indicativamente 10 anni dall&rsquo;ultima prestazione).</p>
-      <p style="margin:0"><strong>Delphi~Med non conserva i dati eliminati.</strong> Puoi esportare la documentazione del paziente prima di procedere.</p>
+      <p style="margin:0">L&rsquo;eliminazione cancella il fascicolo, le visite con i referti, i promemoria e i messaggi del paziente; le sue prenotazioni passate restano in agenda come &laquo;Paziente eliminato&raquo;, senza nome n&eacute; recapiti. Se ha prenotazioni future attive, annullale prima. Puoi esportare la documentazione del paziente prima di procedere.</p>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">
       <button class="btn btn-secondary" onclick="closeModal('modal-delete-paziente')">Annulla</button>
@@ -9913,12 +9917,52 @@ async function exportPazienteAndDelete(pazienteId){
   if(result) await confirmDeletePaziente(pazienteId, true);
 }
 
+// B-07 (s93): prenotazioni allo stesso nome e data di nascita non collegate al fascicolo, come per la copia art. 15 (E-05).
+async function _prenotazioniOmonimeScollegate(p){
+  const nascita = itToIso(p.nascita);
+  if(!nascita) return [];
+  const { data, error } = await supabaseClient.from('appuntamenti')
+    .select('id,data,ora,tipo_visita,centro_id,cancelled,per_conto,prenotante_nome,prenotante_cognome,prenotante_ruolo,nome_paziente,cognome_paziente,email_paziente,telefono_paziente,created_at')
+    .eq('medico_id', S.medicoId).is('paziente_id', null).eq('data_nascita_paziente', nascita).order('data',{ascending:true});
+  if(error) throw error;
+  const chiave = _normalizePersona(p.nome, p.cognome);
+  return (data||[]).filter(x => _normalizePersona(x.nome_paziente, x.cognome_paziente) === chiave)
+    .map(x => { const c = (S.centri||[]).find(k => String(k.id) === String(x.centro_id)); return Object.assign({}, x, { centroNome: c ? c.nome : '' }); });
+}
+
+// B-07 (s93): il DB (trigger trg_vuota_copie_fascicolo) cancella promemoria e messaggi del paziente e rende anonime le sue
+// prenotazioni; respinge l'eliminazione se ci sono prenotazioni future attive. Il client cancella i file dei referti solo
+// DOPO che il DB ha accettato, cosi' un rifiuto (prenotazioni future, limitazione, blocco, sola consultazione) non li perde.
 async function confirmDeletePaziente(id, exported){
   const paz = S.pazienti.find(p => String(p.id) === String(id));
   if(!paz) return;
   const nVisite = (paz.visite || []).length;
+  let scelte = [];
+  if(isOnline()){
+    let omonime;
+    try { omonime = await _prenotazioniOmonimeScollegate(paz); }
+    catch(e){ showToast(erroreLeggibile('Controllo delle prenotazioni non riuscito', e)); return; }
+    if(omonime.length){
+      closeModal('modal-delete-paziente');
+      const ids = await _revisionaScollegateArt15(omonime, {
+        testo: 'Queste prenotazioni hanno lo stesso nome, cognome e data di nascita del paziente ma non sono collegate al fascicolo: potrebbero essere di un omonimo. Spunta solo quelle che riconosci come sue: con il fascicolo perderanno nome e recapiti. Le altre restano come sono. Nessuna \u00e8 preselezionata.',
+        annulla: 'Annulla l\u2019eliminazione',
+        ok: 'Continua con l\u2019eliminazione'
+      });
+      if(ids === null){ showToast('Eliminazione annullata'); return; }
+      scelte = ids;
+    }
+    const oggi = todayLocalISO();
+    const future = (S.appuntamenti||[]).filter(a => String(a.pazienteId) === String(id) && !a.cancelled && a.data >= oggi).length
+      + omonime.filter(a => scelte.includes(String(a.id)) && !a.cancelled && a.data >= oggi).length;
+    if(future){
+      closeModal('modal-delete-paziente');
+      showToast('Il paziente ha ' + future + ' ' + plur(future, 'prenotazione futura attiva', 'prenotazioni future attive') + ': annullale dall\u2019agenda prima di eliminare il fascicolo.', 6000);
+      return;
+    }
+  }
   // paziente_eliminato lo scrive il DB (trigger su pazienti, senza dati personali); qui solo la scelta di esportazione
-  await auditLog('paziente_eliminazione_confermata', 'paziente', id, { n_visite: nVisite, esportato: !!exported });
+  await auditLog('paziente_eliminazione_confermata', 'paziente', id, { n_visite: nVisite, esportato: !!exported, n_prenotazioni_omonime_incluse: scelte.length });
   if(!isOnline()){
     S.pazienti = S.pazienti.filter(p => String(p.id) !== String(id));
     save(); renderPazienti(); updateStats();
@@ -9926,20 +9970,30 @@ async function confirmDeletePaziente(id, exported){
     showToast('Paziente eliminato'); return;
   }
   try {
-    const fotoPaths = (paz.visite||[]).flatMap(v => getFotoPaths(v.foto_url));
-    if(fotoPaths.length){
-      await supabaseClient.storage.from('fotoreferti').remove(fotoPaths)
-        .catch(e => console.error('[Delphi~Med] confirmDeletePaziente storage:', e.message));
+    if(scelte.length){
+      const { error: lErr } = await supabaseClient.from('appuntamenti').update({ paziente_id: id })
+        .in('id', scelte).eq('medico_id', S.medicoId).is('paziente_id', null);
+      if(lErr) throw lErr;
     }
+    const fotoPaths = (paz.visite||[]).flatMap(v => getFotoPaths(v.foto_url));
     const { error } = await supabaseClient.from('pazienti').delete().eq('id', id);
     if(error) throw error;
+    let fileResidui = false;
+    if(fotoPaths.length){
+      const { error: stErr } = await supabaseClient.storage.from('fotoreferti').remove(fotoPaths);
+      if(stErr){ console.error('[Delphi~Med] confirmDeletePaziente storage:', stErr.message); fileResidui = true; }
+    }
+    (S.appuntamenti||[]).forEach(a => {
+      if(String(a.pazienteId) === String(id) || scelte.includes(String(a.id))){
+        Object.assign(a, _apptAnonimo());
+      }
+    });
     S.pazienti = S.pazienti.filter(p => String(p.id) !== String(id));
     save(); renderPazienti(); updateStats();
     closeModal('modal-paziente'); closeModal('modal-delete-paziente');
-    showToast('Paziente eliminato');
+    showToast(fileResidui ? 'Paziente eliminato, ma alcuni file dei referti non sono stati rimossi: riprova pi\u00f9 tardi o scrivi all\u2019assistenza' : 'Paziente eliminato', fileResidui ? 6000 : undefined);
   } catch(e){
-    console.error('[Delphi~Med] confirmDeletePaziente:', e.message);
-    showToast(erroreLeggibile('Operazione non riuscita', e));
+    showToast(erroreLeggibile('Eliminazione non riuscita', e), 6000);
   }
 }
 
@@ -13532,7 +13586,14 @@ ${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.sli
 // messaggi del canale, promemoria) in un ZIP leggibile senza chiavi. Lettura ed esportazione restano libere anche a
 // trattamento limitato. Nessun token né link firmato finisce nella copia. Traccia: copia_dati_paziente_generata (soli conteggi).
 let _revisioneArt15Resolve = null;
-function _revisionaScollegateArt15(cands){
+function _revisionaScollegateArt15(cands, opts){
+  // B-07 (s93): la stessa revisione serve anche all'eliminazione del fascicolo; senza opts tornano i testi della copia art. 15
+  opts = opts || {};
+  [['revisione-art15-testo','testo'],['revisione-art15-annulla','annulla'],['revisione-art15-ok','ok']].forEach(([eid,k]) => {
+    const e = document.getElementById(eid); if(!e) return;
+    if(e.dataset.orig === undefined) e.dataset.orig = e.textContent;
+    e.textContent = opts[k] || e.dataset.orig;
+  });
   const h = escapeHtml, dt = iso => iso ? new Date(iso).toLocaleString('it-IT') : '';
   const el = document.getElementById('revisione-art15-lista');
   el.innerHTML = cands.map(a => `<label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px">
@@ -15319,19 +15380,22 @@ async function confirmDeleteArchivioScaduto(){
   if(!(await confermaModale(`Eliminare ${checked.length} pazient${checked.length===1?'e':'i'} selezionat${checked.length===1?'o':'i'} e tutte le visite? L'operazione è irreversibile.`, { titolo:'Eliminare pazienti', ok:'Elimina' }))) return;
   const pazIds = checked.map(String);
   const pazList = S.pazienti.filter(p => pazIds.includes(String(p.id)));
-  let errors = 0;
+  const oggi = todayLocalISO();
+  let errors = 0, conFuture = 0, fileResidui = 0, primoErrore = null;
   const deleted = [];
   for(const p of pazList){
+    // B-07 (s93): prenotazioni future attive -> il DB respingerebbe; si salta prima di toccare qualunque cosa
+    if((S.appuntamenti||[]).some(a => String(a.pazienteId) === String(p.id) && !a.cancelled && a.data >= oggi)){ conFuture++; continue; }
+    // Prima la riga del paziente (le visite vanno a cascata), poi i file: un rifiuto del DB non perde visite ne' referti
     const fotoPaths = (p.visite||[]).flatMap(v => getFotoPaths(v.foto_url));
+    const { error: pErr } = await supabaseClient.from('pazienti').delete().eq('id', p.id);
+    if(pErr){ console.error('[Delphi~Med] delete paziente fail:', pErr); errors++; if(!primoErrore) primoErrore = pErr; continue; }
+    deleted.push(p);
+    (S.appuntamenti||[]).forEach(a => { if(String(a.pazienteId) === String(p.id)) Object.assign(a, _apptAnonimo()); });
     if(fotoPaths.length){
       const { error: stErr } = await supabaseClient.storage.from('fotoreferti').remove(fotoPaths);
-      if(stErr){ console.error('[Delphi~Med] storage remove fail:', stErr); errors++; }
+      if(stErr){ console.error('[Delphi~Med] storage remove fail:', stErr); fileResidui++; }
     }
-    const { error: vErr } = await supabaseClient.from('visite').delete().eq('paziente_id', p.id);
-    if(vErr){ console.error('[Delphi~Med] delete visite fail:', vErr); errors++; continue; }
-    const { error: pErr } = await supabaseClient.from('pazienti').delete().eq('id', p.id);
-    if(pErr){ console.error('[Delphi~Med] delete paziente fail:', pErr); errors++; }
-    else { deleted.push(p); }
   }
   if(deleted.length){
     await auditLog('visite_archivio_eliminate', 'archivio', null, {
@@ -15339,15 +15403,17 @@ async function confirmDeleteArchivioScaduto(){
       pazienti_ids: deleted.map(p => String(p.id))
     });
   }
-  S.pazienti = S.pazienti.filter(p => !pazIds.includes(String(p.id)));
+  const delIds = deleted.map(p => String(p.id));
+  S.pazienti = S.pazienti.filter(p => !delIds.includes(String(p.id)));
   save(); renderPazienti(); updateStats();
   checkArchivioScaduto();
   renderArchivioPage();
-  if(errors){
-    showToast(`Eliminazione completata con ${errors} error${errors===1?'e':'i'}. Vedi console.`);
-  } else {
-    showToast(`${checked.length} pazient${checked.length===1?'e':'i'} eliminat${checked.length===1?'o':'i'} ✓`);
-  }
+  const parti = [];
+  if(deleted.length) parti.push(`${deleted.length} pazient${deleted.length===1?'e':'i'} eliminat${deleted.length===1?'o':'i'}`);
+  if(conFuture) parti.push(`${conFuture} non eliminat${conFuture===1?'o':'i'}: prenotazioni future attive da annullare prima`);
+  if(errors) parti.push(erroreLeggibile(`${errors} non eliminat${errors===1?'o':'i'}`, primoErrore));
+  if(fileResidui) parti.push(`file dei referti non rimossi per ${fileResidui} pazient${fileResidui===1?'e':'i'}: riprova pi\u00f9 tardi`);
+  showToast(parti.join(' \u00b7 ') || 'Nessun paziente eliminato', (conFuture||errors||fileResidui) ? 7000 : undefined);
 }
 
 // ── TOAST ──
