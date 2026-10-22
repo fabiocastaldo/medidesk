@@ -11,16 +11,24 @@ export default async function handler(req, res) {
   const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY;
   const slug = String((req.query && req.query.slug) || '').trim().toLowerCase();
 
-  // shell statica, deployment-agnostica (niente fs): la rotta /medidesk.html serve il file reale
-  let shell;
-  try {
-    const sr = await fetch(`https://${req.headers.host}/medidesk.html`);
-    shell = await sr.text();
-  } catch (e) {
+  // D-07 (riesame 22/10): prima si risolve lo slug con la sola RPC, poi si scarica la shell da 1 MB.
+  // Uno slug inesistente riceve una 404 piccola e cacheabile in CDN, non la SPA intera.
+  const serve404 = () => {
     res.setHeader('Content-Type','text/html; charset=utf-8');
-    return res.status(200).send('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Delphi~Med</title></head><body></body></html>');
-  }
-  const serveShell = (status) => { res.setHeader('Content-Type','text/html; charset=utf-8'); return res.status(status).send(shell); };
+    res.setHeader('Cache-Control','public, s-maxage=300, stale-while-revalidate=60');
+    res.setHeader('X-Robots-Tag','noindex');
+    return res.status(404).send('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Medico non trovato | Delphi~Med</title><style>body{font-family:system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f6f7f9;color:#1f2937}main{text-align:center;padding:32px}h1{font-size:1.4rem;margin:0 0 8px}p{margin:0 0 16px;color:#4b5563}a{color:#1d4ed8}</style></head><body><main><h1>Medico non trovato</h1><p>Il profilo richiesto non esiste o non &egrave; pi&ugrave; attivo.</p><a href="/">Torna a Delphi~Med</a></main></body></html>');
+  };
+  const fetchShell = async () => {
+    // shell statica, deployment-agnostica (niente fs): la rotta /medidesk.html serve il file reale
+    try {
+      const sr = await fetch(`https://${req.headers.host}/medidesk.html`);
+      return await sr.text();
+    } catch (e) {
+      return '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Delphi~Med</title></head><body></body></html>';
+    }
+  };
+  const serveShell = async (status) => { res.setHeader('Content-Type','text/html; charset=utf-8'); return res.status(status).send(await fetchShell()); };
   if (!url || !anonKey || !slug) return serveShell(200);
 
   // 1) medico (anon + RPC)
@@ -34,7 +42,8 @@ export default async function handler(req, res) {
     const arr = await r.json();
     m = Array.isArray(arr) && arr.length ? arr[0] : null;
   } catch (e) { m = null; }
-  if (!m) return serveShell(404); // slug inesistente: 404 reale, body = SPA che mostra "non trovato"
+  if (!m) return serve404(); // slug inesistente: 404 reale e piccola (D-07)
+  const shell = await fetchShell();
 
   // 2) centri attivi (anon, RLS pubblica)
   let centri = [];
