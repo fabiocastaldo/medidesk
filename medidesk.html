@@ -3608,6 +3608,23 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
     </div>
   </div>
 </div>
+
+<div class="modal-overlay" id="modal-revisione-art15" style="z-index:99999">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <span class="modal-title">Prenotazioni a questo nome non collegate al fascicolo</span>
+      <button class="modal-close" onclick="_chiudiRevisioneArt15(null)">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0 0 12px;font-size:13.5px;color:var(--ink2);line-height:1.5">Queste prenotazioni hanno lo stesso nome, cognome e data di nascita del paziente ma non sono collegate al fascicolo: potrebbero essere di un omonimo. Spunta solo quelle che riconosci come sue; le altre restano fuori dalla copia. Nessuna &egrave; preselezionata.</p>
+      <div id="revisione-art15-lista" style="max-height:50vh;overflow:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="_chiudiRevisioneArt15(null)">Annulla la copia</button>
+      <button class="btn btn-primary" onclick="_chiudiRevisioneArt15(true)">Includi le spuntate e continua</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════ SCRIPT ══════════════ -->
@@ -13513,6 +13530,23 @@ ${visite.length === 0 ? '<p><em>Nessuna visita registrata</em></p>' : visite.sli
 // limitazione, prenotazioni collegate, visite con contenuto clinico e referti decifrati nel browser, sintesi adottata,
 // messaggi del canale, promemoria) in un ZIP leggibile senza chiavi. Lettura ed esportazione restano libere anche a
 // trattamento limitato. Nessun token né link firmato finisce nella copia. Traccia: copia_dati_paziente_generata (soli conteggi).
+let _revisioneArt15Resolve = null;
+function _revisionaScollegateArt15(cands){
+  const h = escapeHtml, dt = iso => iso ? new Date(iso).toLocaleString('it-IT') : '';
+  const el = document.getElementById('revisione-art15-lista');
+  el.innerHTML = cands.map(a => `<label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px">
+    <input type="checkbox" data-art15-id="${h(String(a.id))}" style="margin-top:3px">
+    <span><strong>${h(isoToIt(a.data))} ${h((a.ora||'').slice(0,5))}</strong> — ${h(a.tipo_visita||'')}${a.centroNome?` · ${h(a.centroNome)}`:''}${a.cancelled?' · annullata':''}<br>
+    <span style="color:var(--ink2)">Email indicata: ${h(a.email_paziente||'—')} · Telefono: ${h(a.telefono_paziente||'—')} · Ricevuta il ${h(dt(a.created_at))}${a.per_conto?` · prenotata da ${h([a.prenotante_nome,a.prenotante_cognome].filter(Boolean).join(' '))}${a.prenotante_ruolo?` (${h(a.prenotante_ruolo)})`:''}`:''}</span></span>
+  </label>`).join('');
+  return new Promise(resolve => { _revisioneArt15Resolve = resolve; openModal('modal-revisione-art15'); });
+}
+function _chiudiRevisioneArt15(ok){
+  const r = _revisioneArt15Resolve; _revisioneArt15Resolve = null;
+  const ids = ok ? Array.from(document.querySelectorAll('#revisione-art15-lista input[data-art15-id]:checked')).map(i => i.getAttribute('data-art15-id')) : null;
+  closeModal('modal-revisione-art15');
+  if(r) r(ids);
+}
 async function exportCopiaDatiPazienteArt15(pazienteId){
   if(!isOnline()){ showToast('Connessione richiesta per preparare la copia'); return null; }
   const p = S.pazienti.find(x => String(x.id) === String(pazienteId));
@@ -13553,6 +13587,13 @@ async function exportCopiaDatiPazienteArt15(pazienteId){
         .map(x => { const c = (S.centri||[]).find(k => String(k.id) === String(x.centro_id)); return Object.assign({}, x, { centroNome: c ? c.nome : '' }); });
     } catch(e){ errori.push('prenotazioni non collegate: '+e.message); }
   } else errori.push('prenotazioni non collegate: data di nascita assente nel fascicolo, abbinamento non eseguito');
+  // E-05 (riesame 22/10): l'abbinamento per nome e data di nascita non basta contro gli omonimi. Nessuna riga non collegata
+  // entra nella copia senza che il medico la riconosca una per una; annullare la revisione annulla l'intera copia.
+  if(scollegate.length){
+    const scelte_ids = await _revisionaScollegateArt15(scollegate);
+    if(scelte_ids === null){ showToast('Copia annullata'); return null; }
+    scollegate = scollegate.filter(x => scelte_ids.includes(String(x.id)));
+  }
   let sintesi = null;
   if(p.sintesiEnc){ try { sintesi = await _decryptText(p.sintesiEnc); } catch(e){ errori.push('sintesi: '+e.message); } }
   const dt = iso => iso ? new Date(iso).toLocaleString('it-IT') : '';
@@ -13583,6 +13624,7 @@ th{text-align:left;width:34%;color:#555;font-weight:600;vertical-align:top;paddi
 ${appts.length?appts.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h(a.ora)}</span> — ${h(a.tipo||'')} (${h(catLbl(a.categoria))})${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
 <span class="nota">Stato: ${a.cancelled?`annullato${a.cancelledAt?` il ${h(dt(a.cancelledAt))}`:''}`:(a.erogata?'erogato':'confermato')} · origine: ${h(a.source||'')}${a.per_conto?` · prenotato per conto da ${h([a.prenotanteNome,a.prenotanteCognome].filter(Boolean).join(' '))}${a.prenotanteRuolo?` (${h(a.prenotanteRuolo)})`:''}`:''}${a.note?`<br>Note: ${h(a.note)}`:''}</span></div>`).join(''):'<p><em>Nessuna prenotazione collegata.</em></p>'}
 <h2>3-bis. Prenotazioni a tuo nome non collegate al fascicolo (${scollegate.length})</h2>
+${scollegate.length?`<p class="nota">Prenotazioni fatte a tuo nome senza collegamento al fascicolo, riconosciute come tue dal medico prima di questa copia.</p>`:''}
 ${scollegate.length?scollegate.map(a=>`<div class="box"><span class="d">${h(isoToIt(a.data))} ${h((a.ora||'').slice(0,5))}</span> — ${h(a.tipo_visita||'')} (${h(catLbl(a.categoria))})${a.centroNome?` · ${h(a.centroNome)}`:''}${a.modalita?` · ${h(a.modalita)}`:''}<br>
 <span class="nota">Stato: ${a.cancelled?`annullato${a.cancelled_at?` il ${h(dt(a.cancelled_at))}`:''}`:(a.erogata?'erogato':'confermato')} · origine: ${h(a.source||'')} · ricevuta il ${h(dt(a.created_at))}${a.per_conto?` · prenotato per conto da ${h([a.prenotante_nome,a.prenotante_cognome].filter(Boolean).join(' '))}${a.prenotante_ruolo?` (${h(a.prenotante_ruolo)})`:''}`:''}</span>
 <table>${campo('Nome indicato',a.nome_paziente)}${campo('Cognome indicato',a.cognome_paziente)}${campo('Data di nascita indicata',isoToIt(a.data_nascita_paziente||''))}${campo('Email indicata',a.email_paziente)}${campo('Telefono indicato',a.telefono_paziente)}${campo('Note della prenotazione',a.note)}</table></div>`).join(''):'<p><em>Nessuna prenotazione a tuo nome fuori dal fascicolo.</em></p>'}
@@ -13635,7 +13677,7 @@ ${errori.length?`<p class="nota"><strong>Avvertenza:</strong> alcune sezioni non
   const a = document.createElement('a'); a.href = url; a.download = `${folderName}.zip`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  const tracciata = await auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_prenotazioni_non_collegate: scollegate.length, n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
+  const tracciata = await auditLog('copia_dati_paziente_generata', 'paziente', p.id, { n_appuntamenti: appts.length, n_prenotazioni_non_collegate: scollegate.length, ids_prenotazioni_non_collegate: scollegate.map(x => String(x.id)), n_visite: visite.length, n_referti: refertiOk, referti_errori: refertiErrors, n_canali: threads.length, n_messaggi: threads.reduce((s,t)=>s+(t.messaggi||[]).length,0), n_promemoria: promemoria.length, sintesi: sintesi!==null, sezioni_non_lette: errori.length });
   if(!tracciata) showToast('Copia scaricata, ma la traccia nel registro delle operazioni non è stata registrata: segnalalo all\'assistenza');
   else showToast(refertiErrors||errori.length ? `Copia scaricata con ${refertiErrors+errori.length} ${plur(refertiErrors+errori.length,'parte non letta','parti non lette')}` : 'Copia dei dati scaricata ✓');
   return { success: true, refertiOk, refertiErrors };
