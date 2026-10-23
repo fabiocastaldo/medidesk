@@ -29,6 +29,8 @@ async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
 }
 
 
+const RISPOSTA_UNICA = 'Se l\'indirizzo è autorizzato da un\'organizzazione attiva, ti abbiamo inviato un codice: controlla la posta, vale un\'ora. Se non arriva, chiedi all\'amministratore di aggiungerti nella tab Segreteria.';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -58,10 +60,10 @@ export default async function handler(req, res) {
     { headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` } }
   ).catch(() => null);
   const seg = (segRes && segRes.ok) ? (await segRes.json().catch(() => []))?.[0] : null;
-  // Un solo messaggio per sconosciuta / sospesa / organizzazione non attiva (decisione 01/09):
-  // l'oracolo resta binario (autorizzata-attiva vs no), il rate limit e' la mitigazione.
+  // C-08 (riesame 22/10/2026, s94): stessa risposta per indirizzo autorizzato e non, così la
+  // pagina non rivela chi lavora in una segreteria (prima 403 vs 200).
   if (!seg || seg.stato !== 'attiva' || seg.cooperative?.stato !== 'attiva') {
-    return res.status(403).json({ error: 'Questa email non è autorizzata da nessuna organizzazione. Chiedi all\'amministratore di aggiungerti nella tab Segreteria.' });
+    return res.status(200).json({ ok: true, message: RISPOSTA_UNICA });
   }
 
   {
@@ -96,5 +98,5 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(200).json({ ok: true, message: 'Codice inviato a ' + email + '. Controlla la posta: vale un\'ora.' });
+  return res.status(200).json({ ok: true, message: RISPOSTA_UNICA });
 }

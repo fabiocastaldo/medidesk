@@ -146,6 +146,10 @@ export default async function handler(req, res) {
       .replace(/\{\{TIPI_VISITA\}\}/g, tipiList)
       .replace(/\{\{OGGI\}\}/g, new Date().toISOString().slice(0, 10));
 
+    // C-11 (riesame 22/10/2026, s94): limiti per richiesta anche lato server
+    if ((file && typeof file.base64 === 'string' && file.base64.length > 6000000) || (typeof text === 'string' && text.length > 100000)) {
+      return res.status(413).json({ error: 'File o testo troppo grande da estrarre', code: 'TROPPO_GRANDE' });
+    }
     let contentBlocks;
     if (file && typeof file.base64 === 'string' && ALLOWED.has(file.type)) {
       contentBlocks = [
@@ -169,7 +173,7 @@ export default async function handler(req, res) {
 
     res.json(data);
   } catch (err) {
-    console.error('import-agenda error:', err);
+    console.error('import-agenda error:', err?.status, err?.name, String(err?.message || '').slice(0, 200)); // C-12: mai l'oggetto intero
     const status = Number.isInteger(err?.status) ? err.status : 500;
     res.status(status).json({ error: 'Si \u00e8 verificato un errore. Riprova.' });
   }

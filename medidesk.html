@@ -11951,7 +11951,7 @@ async function bkReinviaCodice(){
   if(!email) return;
   try{ await bkInviaCodice(email); showToast('Nuovo codice inviato'); }catch(e){ showToast(e.message); }
 }
-const BK_ERR={ codice_errato:'Il codice non è corretto: controlla e riprova', codice_scaduto:'Il codice è scaduto: chiedine uno nuovo', email_diversa:'L\'email è cambiata: chiedi un nuovo codice', troppi_tentativi:'Troppi tentativi con questo codice: chiedine uno nuovo', verifica_mancante:'Serve il codice di verifica', minore_senza_tutore:'Il paziente è minorenne: la prenotazione va fatta da un genitore o dal tutore («Per un\'altra persona»)', minore_ruolo:'Il paziente è minorenne: può prenotare un genitore o il tutore' };
+const BK_ERR={ codice_gia_usato:'Questo codice è già stato usato per una prenotazione: chiedine uno nuovo', codice_errato:'Il codice non è corretto: controlla e riprova', codice_scaduto:'Il codice è scaduto: chiedine uno nuovo', email_diversa:'L\'email è cambiata: chiedi un nuovo codice', troppi_tentativi:'Troppi tentativi con questo codice: chiedine uno nuovo', verifica_mancante:'Serve il codice di verifica', minore_senza_tutore:'Il paziente è minorenne: la prenotazione va fatta da un genitore o dal tutore («Per un\'altra persona»)', minore_ruolo:'Il paziente è minorenne: può prenotare un genitore o il tutore' };
 
 async function confirmBooking(){
   const _v=(id)=>(document.getElementById(id)?.value||'').trim();
@@ -12067,7 +12067,7 @@ async function confirmBooking(){
       }
     } catch(e){
       console.error('[Delphi~Med] confirmBooking INSERT:', e.message);
-      if(['codice_scaduto','email_diversa','troppi_tentativi','verifica_mancante'].includes(e.codiceErr)){ _bkSfida=null; const _bx=document.getElementById('bk-box-codice'); if(_bx) _bx.style.display='none'; }
+      if(['codice_scaduto','email_diversa','troppi_tentativi','verifica_mancante','codice_gia_usato'].includes(e.codiceErr)){ _bkSfida=null; const _bx=document.getElementById('bk-box-codice'); if(_bx) _bx.style.display='none'; }
       if(btn){ btn.disabled = false; btn.textContent = _bkSfida ? 'Verifica il codice e conferma' : 'Conferma prenotazione'; }
       if(e.isSlotTaken){
         bk.slotOccupati = bk.slotOccupati || [];

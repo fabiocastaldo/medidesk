@@ -1,6 +1,7 @@
 // api/cancel-appointment.js
 import { avvisaListaAttesa } from '../lib/waitlist.js';
 import { hostFidato } from '../lib/origine.js';
+import { istanteRoma } from '../lib/ora-roma.js';
 // Fix P0 RLS `appuntamenti` (strada 1 — difesa in profondità).
 // Sostituisce l'accesso anon diretto al DB dalla pagina pubblica ?cancel=<token>:
 // lookup e cancellazione passano da qui con service_role, match SEMPRE sul token
@@ -103,7 +104,7 @@ export default async function handler(req, res) {
       if (appt0.cancelled) return res.status(409).json({ error: 'gia_cancellato' });
 
       const ora = (appt0.ora || '00:00').substring(0, 5);
-      const apptDate = new Date(`${appt0.data}T${ora}:00`);
+      const apptDate = istanteRoma(appt0.data, ora); // C-10: ora di Roma, non del runtime
       if (!Number.isNaN(apptDate.getTime())) {
         const diffH = (apptDate - new Date()) / 3600000;
         if (diffH < CANCEL_CUTOFF_H) return res.status(409).json({ error: 'termine_scaduto' });
