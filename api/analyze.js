@@ -38,6 +38,9 @@ async function checkSupabaseRateLimit(ip, endpoint, max, windowSeconds) {
   } catch { return null; }
 }
 
+// C-11 (riesame 22/10/2026, s94): limiti per richiesta anche lato server (prima solo il client)
+const LIMITE_FILE = 20, LIMITE_VOCI = 300, LIMITE_TESTO = 400000, LIMITE_BASE64 = 6000000;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -120,6 +123,9 @@ export default async function handler(req, res) {
       if (!Array.isArray(visite) || !visite.length) {
         return res.status(400).json({ error: 'Campo visite mancante o non valido' });
       }
+      if (visite.length > LIMITE_VOCI || visite.reduce((t, v) => t + String(v?.clinica || '').length + String(v?.referto || '').length, 0) > LIMITE_TESTO) {
+        return res.status(413).json({ error: 'Contenuto troppo lungo per una sintesi: riduci le visite incluse', code: 'TROPPO_GRANDE' });
+      }
       const visiteTesto = visite.map((v, i) => {
         const header = `VISITA ${i+1}${v.data ? ' — '+v.data : ''}`;
         const parti = [];
@@ -160,6 +166,11 @@ Rispondi SOLO con la storia clinica, senza introduzioni; l'unica parte aggiuntiv
         if (!f || typeof f.base64 !== 'string' || !ALLOWED.has(f.type)) {
           return res.status(400).json({ error: 'File non valido' });
         }
+      }
+      const testiRichiesta = Array.isArray(req.body.refertiTesto) ? req.body.refertiTesto : [];
+      if (files.length > LIMITE_FILE || files.reduce((t, f) => t + f.base64.length, 0) > LIMITE_BASE64
+          || testiRichiesta.length > LIMITE_VOCI || testiRichiesta.reduce((t, r) => t + String(r?.testo || '').length, 0) > LIMITE_TESTO) {
+        return res.status(413).json({ error: 'Troppi referti o file troppo grandi per una sintesi', code: 'TROPPO_GRANDE' });
       }
       const n = files.length;
       // Etichetta del documento (data della visita) dal client: dato, ripulito e accorciato, mai istruzione
@@ -212,7 +223,7 @@ Rispondi SOLO con la sezione «Documenti considerati» seguita dalla storia clin
 
     res.json(data);
   } catch (err) {
-    console.error('analyze error:', err);
+    console.error('analyze error:', err?.status, err?.name, String(err?.message || '').slice(0, 200)); // C-12: mai l'oggetto intero
     const status = Number.isInteger(err?.status) ? err.status : 500;
     res.status(status).json({ error: 'Si è verificato un errore. Riprova.' });
   }

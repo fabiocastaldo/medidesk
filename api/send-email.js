@@ -239,6 +239,15 @@ async function guardiaReplayToken(base, headers, tipo, apptId) {
     } catch (e) { console.error('[send-email] guardiaReplayToken rate:', e.message); }
     return { ok: true };
   }
+  // C-09 (riesame 22/10/2026, s94): due richieste simultanee non vedono ancora la traccia l'una
+  // dell'altra; la prima prende il turno (check_rate_limit è atomico per chiave), la seconda salta.
+  try {
+    const r = await fetch(`${base}/rpc/check_rate_limit`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ p_endpoint: 'send-email-evento', p_ip: `appt:${appt.id}:${tipo}`, p_max_count: 1, p_window_seconds: 300 })
+    });
+    if (r.ok && (await r.json()) === false) return { ok: true, skipped: 'gia_in_invio' };
+  } catch (e) { console.error('[send-email] guardiaReplayToken turno:', e.message); }
   try {
     const r = await fetch(`${base}/audit_log?action=eq.email_inviata&target_id=eq.${encodeURIComponent(appt.id)}&details->>tipo=eq.${encodeURIComponent(tipo)}&select=id&limit=1`, { headers });
     if (r.ok && (await r.json())?.length) return { ok: true, skipped: 'gia_inviata' };

@@ -16,6 +16,7 @@
 // - token non trovato → 404 UNIFORME { error: 'not_found' } (non-enumerabilità)
 
 import { medicoInServizio } from '../lib/waitlist.js';
+import { istanteRoma } from '../lib/ora-roma.js';
 
 const rateMap = new Map(); // ip -> { count, resetAt } — fallback in-memory
 const RATE_LIMIT = 30;
@@ -114,7 +115,7 @@ export default async function handler(req, res) {
     if (action === 'subscribe') {
       if (appt.cancelled) return res.status(409).json({ error: 'gia_cancellato' });
       const ora = (appt.ora || '00:00').substring(0, 5);
-      const apptDate = new Date(`${appt.data}T${ora}:00`);
+      const apptDate = istanteRoma(appt.data, ora); // C-10: ora di Roma, non del runtime
       if (!Number.isNaN(apptDate.getTime()) && apptDate <= new Date()) {
         return res.status(409).json({ error: 'appuntamento_passato' });
       }

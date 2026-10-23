@@ -9,7 +9,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { CONS_COMM_VERSIONE } from '../lib/consenso-token.js';
-import { validaPrenotazione, controllaCodice } from '../lib/prenotazione-pr22.js';
+import { validaPrenotazione, controllaCodice, prenotaSfida, liberaSfida } from '../lib/prenotazione-pr22.js';
 import { verificaSlot } from '../lib/slot-guard.js';
 import { verificaTipo } from '../lib/tipo-guard.js';
 import { hostFidato } from '../lib/origine.js';
@@ -138,7 +138,13 @@ export default async function handler(req, res) {
   // 2) INSERT appuntamento (service-role); token generato server-side
   const consentTs = new Date().toISOString();
   const cancellationToken = randomUUID().replace(/-/g, '');
+  // D-03: il codice si consuma con la prenotazione (liberato se l'INSERT non va a buon fine)
+  {
+    const ps = await prenotaSfida({ supabaseUrl, serviceKey, sfida: b.sfida });
+    if (!ps.ok) return res.status(ps.status).json({ error: ps.error });
+  }
   let apptId;
+  let creata = false;
   try {
     const r = await sb('appuntamenti?select=id', {
       method: 'POST',
@@ -170,7 +176,9 @@ export default async function handler(req, res) {
     const arr = await r.json().catch(() => []);
     apptId = arr?.[0]?.id;
     if (!apptId) return res.status(500).json({ error: 'Creazione prenotazione fallita' });
+    creata = true;
   } catch { return res.status(500).json({ error: 'Creazione prenotazione fallita' }); }
+  finally { if (!creata) await liberaSfida({ supabaseUrl, serviceKey, sfida: b.sfida }); }
 
   // consenso comunicazioni: se esiste gia' un fascicolo con questa email, si accende subito
   // (per i fascicoli futuri provvede il trigger di ereditarieta' sulle prenotazioni). Soft-fail.

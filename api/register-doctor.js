@@ -108,6 +108,13 @@ function esc(s) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Handler principale
 // ─────────────────────────────────────────────────────────────────────────────
+// C-12 (riesame 22/10/2026, s94): nei log solo il codice dell'errore PostgREST, mai il dettaglio
+// (in una violazione di unicità contiene i valori della riga, per esempio l'email del medico)
+function codiceErrore(t) {
+  try { const j = JSON.parse(t); return (j && j.code) || 'errore'; }
+  catch { return /^rows=\d+$/.test(String(t)) ? String(t) : 'errore'; }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -296,7 +303,7 @@ export default async function handler(req, res) {
     });
     if (!insertRes.ok) {
       const errText = await insertRes.text().catch(() => '');
-      console.error('[register-doctor] insert medici failed:', insertRes.status, errText);
+      console.error('[register-doctor] insert medici failed:', insertRes.status, codiceErrore(errText));
       // Rollback: cancella l'utente Auth appena creato
       await fetch(`${authBase}/admin/users/${userId}`, { method: 'DELETE', headers })
         .catch(e => console.error('[register-doctor] rollback delete user failed:', e.message));
@@ -329,7 +336,7 @@ export default async function handler(req, res) {
     const attese = consensoCommerciale ? 3 : 2;
     if (!accRes.ok || !Array.isArray(accRows) || accRows.length !== attese) {
       const errText = !accRes.ok ? await accRes.text().catch(() => '') : `rows=${accRows.length}`;
-      console.error('[register-doctor] insert accettazioni_legali failed:', accRes.status, errText);
+      console.error('[register-doctor] insert accettazioni_legali failed:', accRes.status, codiceErrore(errText));
       // Rollback: senza evidenza dell'accettazione l'account non nasce
       await fetch(`${base}/medici?id=eq.${medicoId}`, { method: 'DELETE', headers })
         .catch(e => console.error('[register-doctor] rollback delete medico failed:', e.message));
@@ -398,7 +405,7 @@ export default async function handler(req, res) {
     });
     if (!insertTokenRes.ok) {
       const errText = await insertTokenRes.text().catch(() => '');
-      console.error('[register-doctor] insert approve_tokens failed:', insertTokenRes.status, errText);
+      console.error('[register-doctor] insert approve_tokens failed:', insertTokenRes.status, codiceErrore(errText));
       // Non rollback dell'utente: il medico esiste, può essere approvato manualmente da SQL
       // Però segnala l'errore.
       return res.status(500).json({ error: 'Account creato ma errore interno. Contatta il supporto.' });
