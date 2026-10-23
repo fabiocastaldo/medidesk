@@ -1863,14 +1863,15 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
               </select>
             </div>
             <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Nome</label>
-              <input class="form-input" id="setting-nome-prof" placeholder="Mario" oninput="onNomeCognomeChange()">
+              <label class="form-label">Nome <span style="font-size:12px;font-weight:400;color:var(--ink3)">(verificato)</span></label>
+              <input class="form-input" id="setting-nome-prof" placeholder="Mario" readonly style="background:var(--surface2);color:var(--ink2);cursor:not-allowed" title="Verificato all&#39;approvazione: per una correzione scrivi all&#39;assistenza">
             </div>
             <div class="form-group" style="margin-bottom:0">
-              <label class="form-label">Cognome</label>
-              <input class="form-input" id="setting-cognome-prof" placeholder="Rossi" oninput="onNomeCognomeChange()">
+              <label class="form-label">Cognome <span style="font-size:12px;font-weight:400;color:var(--ink3)">(verificato)</span></label>
+              <input class="form-input" id="setting-cognome-prof" placeholder="Rossi" readonly style="background:var(--surface2);color:var(--ink2);cursor:not-allowed" title="Verificato all&#39;approvazione: per una correzione scrivi all&#39;assistenza">
             </div>
           </div>
+          <p style="font-size:12px;color:var(--ink3);margin:6px 0 14px;line-height:1.5">Nome, cognome e iscrizione all&#39;Ordine sono stati verificati all&#39;approvazione e non si cambiano dal profilo: per una correzione scrivi all&#39;assistenza.</p>
           <div class="form-group">
             <label class="form-label">Specializzazione</label>
             <select class="form-input" id="setting-spec" onchange="onSpecPrincChange()">
@@ -10995,7 +10996,7 @@ async function saveSettings(){
                              S.settings.cognomeProf !== _prevCogn ||
                              S.settings.spec !== _prevSpec;
   if(_slugImpactChanged && !(await confermaModale(
-    'Attenzione: modificare nome, cognome, specializzazione o provincia dell\'Ordine potrebbe cambiare il tuo URL pubblico di prenotazione. ' +
+    'Attenzione: modificare la specializzazione principale potrebbe cambiare il tuo URL pubblico di prenotazione. ' +
     'Tutti i link già condivisi (biglietti da visita, WhatsApp, social) potrebbero smettere di funzionare.\n\nVuoi procedere comunque?'
   , { titolo:'Modifica URL pubblico', ok:'Procedi comunque' }))) return;
   save(); updateDoctorName(); updateShareLink();
@@ -11010,8 +11011,7 @@ async function saveSettings(){
       }
       const { error } = await supabaseClient.from('medici').update({
         titolo:           S.settings.titolo      || null,
-        nome:             S.settings.nomeProf    || null,
-        cognome:          S.settings.cognomeProf || null,
+        // nome e cognome: verificati all'approvazione, non si scrivono dal profilo (B-08, trigger proteggi_campi_medico)
         specializzazione: S.settings.spec        || null,
         specializzazioni: (()=>{ const a=[...new Set([S.settings.spec,...(S.settings.specAltre||[])].filter(Boolean))]; return a.length?a:null; })(),
         slug:             S.settings.slug        || null,
