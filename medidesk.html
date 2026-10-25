@@ -4340,18 +4340,22 @@ const SEC_CORSO_MODULI = [
   {"parte": "B", "n": 10, "titolo": "Ingegneria sociale in studio", "sotto": "Il finto tecnico, il finto paziente, il familiare al telefono", "scena": "«Buongiorno, sono il tecnico, devo controllare il computer per un aggiornamento del gestionale, due minuti». Pettorina, badge, fretta, sorriso. Nessuno lo ha avvisato.", "vero": "L'ingegneria sociale usa le regole della cortesia contro di te: non si fa aspettare chi ha fretta, non si contraddice chi ha un badge, non si nega un'informazione a chi sembra averne diritto. Il finto tecnico vuole due minuti davanti a un computer sbloccato; il finto paziente vuole nomi e orari di altri; il familiare al telefono vuole l'esito «perché la mamma non sente»; «l'avvocato», «l'assicurazione», «la ASL» vogliono una copia. Nessuno ha diritto a nulla senza una verifica che parta da te, con un contatto che conosci già, non con il numero che ti dà lui. Confermare che una persona è tuo paziente è già un dato di salute.", "gesti": ["Chi arriva non annunciato aspetta, e verifichi con un contatto tuo.", "Al telefono non confermi né neghi: richiami la persona al numero in fascicolo.", "Le copie: solo all'interessato o al delegato, con la procedura."], "quiz": [{"d": "Il tecnico non annunciato chiede due minuti al computer.", "o": ["Lo fai lavorare", "Lo fai aspettare e verifichi con un contatto tuo", "Chiedi un documento e procedi"], "r": 1, "s": "Il badge e il documento si falsificano; la verifica parte da te."}, {"d": "Il figlio chiama per l'esito dell'esame della madre.", "o": ["Glielo dici", "Lo mandi in segreteria", "Non confermi nulla e richiami la paziente al numero in fascicolo"], "r": 2, "s": "Un dato di salute si dà all'interessato o a chi ha delega."}, {"d": "Arriva un tecnico «mandato dal fornitore del gestionale», non annunciato. Cosa fai?", "o": ["Verifichi tu, chiamando il fornitore al numero del contratto, prima di farlo avvicinare al computer", "Lo fai lavorare: conosce il nome del programma", "Gli chiedi un biglietto da visita e procedi"], "r": 0, "s": "Conoscere il nome del tuo fornitore non è una prova: verifichi tu, con un contatto che hai già."}]},
   {"parte": "B", "n": 11, "titolo": "Quando qualcosa è andato storto", "sotto": "I segni, i primi tre gesti, chi chiamare, cosa non cancellare", "scena": "Entri nel gestionale e qualcosa non torna: una sessione che non riconosci, un'email di reimpostazione che non hai chiesto, o il ricordo del link cliccato ieri sera. Il primo istinto è far finta di niente.", "vero": "I segni sono piccoli: dispositivi sconosciuti tra le sessioni, modifiche che non hai fatto, email di «nuovo accesso» a ore in cui dormivi. Un incidente che coinvolge dati dei pazienti può essere una violazione di dati personali: il titolare — tu, con il tuo DPO se lo hai — deve valutarlo. Se è una violazione, deve documentarla in ogni caso; se comporta un rischio per le persone, deve inoltre notificarla al Garante entro 72 ore dalla ragionevole certezza che i dati siano stati compromessi, non dal primo sospetto, e ai pazienti se il rischio è elevato. Il fornitore del programma, come responsabile del trattamento, deve avvisarti senza ritardo di ciò che vede dalla sua parte e aiutarti a ricostruire, ma la decisione e la notifica restano tue. Le ore contano, ma contano anche le prove: cancellare l'email sospetta, chiudere le sessioni senza guardarle, reinstallare il computer distrugge ciò che serve a capire cosa è successo e a chi. Avvisare presto non è ammettere una colpa: è la cosa che riduce il danno.", "gesti": ["Chiudi la porta: annota, esci ovunque, cambia password.", "Segnala nell'ora stessa al fornitore, dal suo canale ufficiale, e a chi ti assiste per la privacy.", "Non cancellare niente — email, messaggi, file — e non reinstallare prima che qualcuno abbia guardato."], "quiz": [{"d": "Vedi una sessione che non riconosci. Primo gesto?", "o": ["La ignori", "Reinstalli il computer", "Annoti, esci da tutti i dispositivi, cambi la password"], "r": 2, "s": "Prima la porta, con le prove annotate."}, {"d": "Chi decide se un incidente va notificato al Garante?", "o": ["L'assistenza del fornitore", "Il titolare: tu, con il DPO se lo hai", "Il paziente"], "r": 1, "s": "Il fornitore avvisa e aiuta a ricostruire; valutare, documentare la violazione e, se c'è rischio, notificare entro 72 ore dalla ragionevole certezza resta del titolare."}, {"d": "L'email trappola che hai aperto va…", "o": ["conservata e segnalata", "cancellata", "inoltrata ai colleghi"], "r": 0, "s": "È una prova; inoltrarla diffonde il link."}]}
 ];
+// Versione del testo del corso: un esito vale solo per la versione letta (s96). Alzarla quando cambia il testo di un modulo.
+const CORSO_VERSIONE = 2;
 let _secLetture = {};
+function secCompletato(n){ const l = _secLetture[n]; return !!(l && l.versione === CORSO_VERSIONE); }
 const _secScelte = {};
 function secData(iso){ try{ const d = new Date(iso); return d.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' }); }catch(_){ return ''; } }
 async function secCaricaLetture(){
   _secLetture = {};
   try{
-    const { data, error } = await supabaseClient.from('formazione_letture').select('modulo,letto_il,risposte_giuste').eq('ramo', 'medico');
+    const { data, error } = await supabaseClient.from('formazione_letture').select('modulo,versione,letto_il,risposte_giuste').eq('ramo', 'medico');
     if(!error && Array.isArray(data)) data.forEach(r => { _secLetture[r.modulo] = r; });
   }catch(_){ }
 }
 function secStatoHtml(n){
   const l = _secLetture[n];
+  if(l && !secCompletato(n)) return '<span class="sec-mod-stato sec-mod-stato-ok">Da leggere · completato su una versione precedente</span>';
   if(l) return '<span class="sec-mod-stato sec-mod-stato-fatto">Completato il ' + escapeHtml(secData(l.letto_il)) + ' · ' + escapeHtml(String(l.risposte_giuste)) + '/3</span>';
   return '<span class="sec-mod-stato sec-mod-stato-ok">Da leggere</span>';
 }
@@ -4387,7 +4391,7 @@ async function secRenderCorso(){
   g.innerHTML = html;
 }
 function secRiepilogoTesto(){
-  const fatti = SEC_CORSO_MODULI.filter(m => _secLetture[m.n]).length;
+  const fatti = SEC_CORSO_MODULI.filter(m => secCompletato(m.n)).length;
   return fatti === SEC_CORSO_MODULI.length ? 'Percorso completato: tutti gli 11 moduli risultano nel tuo account.' : fatti + ' moduli completati su ' + SEC_CORSO_MODULI.length + '.';
 }
 function secApriModulo(n, btn){
@@ -4420,8 +4424,8 @@ async function secVerifica(n, btn){
   let salvato = false;
   try{
     const { data, error } = await supabaseClient.from('formazione_letture')
-      .upsert({ ramo:'medico', modulo:n, risposte_giuste:giuste, letto_il:new Date().toISOString() }, { onConflict:'user_id,ramo,modulo' })
-      .select('modulo,letto_il,risposte_giuste');
+      .upsert({ ramo:'medico', modulo:n, versione:CORSO_VERSIONE, risposte_giuste:giuste, letto_il:new Date().toISOString() }, { onConflict:'user_id,ramo,modulo' })
+      .select('modulo,versione,letto_il,risposte_giuste');
     if(!error && data && data.length){ salvato = true; _secLetture[n] = data[0]; }
     else if(error) console.warn('[corso] salvataggio:', error.message || error);
   }catch(e){ console.warn('[corso] salvataggio:', e && e.message); }
