@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { nuovoMailer } from '../lib/mailer.js';
+import { nuovoMailer, mailerConfigurato } from '../lib/mailer.js';
 import { emailShell, emailTitle, detailCard, detailRow, noteBox, ctaButton } from '../lib/email-shell.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -205,8 +205,8 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SECRET_KEY;
   const approveSecret = process.env.APPROVE_TOKEN_SECRET;
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (!supabaseUrl || !serviceKey || !approveSecret || !CASELLA_GESTORE) {
+  // F-06a-bis (s96): senza mailer SES si fallisce chiusi prima di ogni scrittura — nessuna approvazione senza avviso PEC
+  if (!supabaseUrl || !serviceKey || !approveSecret || !CASELLA_GESTORE || !mailerConfigurato()) {
     console.error('[approve-doctor] env vars mancanti');
     return res.status(500).send(htmlPage('Errore di configurazione', 'Configurazione server incompleta.', false));
   }
@@ -264,9 +264,9 @@ export default async function handler(req, res) {
     try { await audit(env, m.id, 'verifica_qualifica_negativa', verifica); }
     catch (e) { console.error('[approve-doctor] audit negativo:', e.message); return res.status(500).send(htmlPage('Errore database', 'Verifica non registrata: riprova.', false)); }
     let mailEsito = 'non_inviata';
-    if (resendApiKey && m.email) {
+    if (m.email) {
       try {
-        const { error } = await nuovoMailer(resendApiKey).emails.send({ from: 'noreply@delphi-med.com', to: [m.email],
+        const { error } = await nuovoMailer().emails.send({ from: 'noreply@delphi-med.com', to: [m.email],
           subject: 'Registrazione a Delphi~Med non completata', html: buildEsitoNegativo({ nome: m.nome, cognome: m.cognome }) });
         mailEsito = error ? 'errore_invio' : 'inviata';
         if (error) console.error('[approve-doctor] mail esito negativo:', error.message);
@@ -302,8 +302,8 @@ export default async function handler(req, res) {
 
   // Avvisi (best-effort): PEC dall'indice, poi benvenuto al medico
   let pecEsito = pec ? 'non_inviato' : 'assente';
-  if (resendApiKey) {
-    const resend = nuovoMailer(resendApiKey);
+  {
+    const resend = nuovoMailer();
     if (pec) {
       try {
         const { error } = await resend.emails.send({ from: 'noreply@delphi-med.com', to: [pec],
@@ -317,14 +317,14 @@ export default async function handler(req, res) {
       try {
         const { error } = await resend.emails.send({ from: 'noreply@delphi-med.com', to: [m.email],
           subject: 'Account approvato — Delphi~Med', html: buildApprovalEmail({ nome: m.nome, cognome: m.cognome }) });
-        if (error) console.error('[approve-doctor] resend send error:', error.message);
-      } catch (e) { console.error('[approve-doctor] resend exception:', e.message); }
+        if (error) console.error('[approve-doctor] mail di benvenuto:', error.message);
+      } catch (e) { console.error('[approve-doctor] mail di benvenuto:', e.message); }
     }
   }
   try { await audit(env, m.id, 'medico_approvato', { verifica: 'verifica_qualifica', avviso_pec: pecEsito, link_consegnato_a: CASELLA_GESTORE }); }
   catch (e) { console.error('[approve-doctor] audit approvazione:', e.message); }
 
-  const pecTxt = { inviato: 'Avviso inviato alla PEC indicata.', errore_invio: 'L\'avviso alla PEC non è partito: vedi i log.', assente: 'Nessuna PEC indicata.' }[pecEsito] || '';
+  const pecTxt = { inviato: 'Avviso inviato alla PEC indicata.', errore_invio: 'L\'avviso alla PEC non è partito: vedi i log.', non_inviato: 'L\'avviso alla PEC non è partito: contatta il medico.', assente: 'Nessuna PEC indicata.' }[pecEsito] || 'Esito dell\'avviso PEC non riconosciuto: controlla la traccia di audit.';
   return res.status(200).send(htmlPage('Medico approvato',
     `Verifica registrata e medico approvato: può ora accedere a Delphi~Med. ${esc(pecTxt)}`, true));
 }
