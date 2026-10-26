@@ -32,7 +32,8 @@ async function giro({ ultimo, letturaOk = true, rpcOut = { pazienti: [], visite:
   assert.deepEqual(r.rpc, [{ p_da: '2026-10-23T16:50:50.069Z', p_a: A }]);
   assert.equal(r.tracce.length, 1); assert.equal(r.tracce[0].action, 'riconciliazione_registro_eseguita');
   assert.equal(r.tracce[0].details.ripresa, 'ultimo_giro'); assert.equal(r.tracce[0].details.da, '2026-10-23T16:50:50.069Z');
-  assert.equal(r.runErrors.length, 0);
+  // il buco si vede: avviso di giro saltato e ore recuperate nella traccia
+  assert.equal(r.tracce[0].details.ore_recuperate, 72); assert.equal(r.runErrors.length, 1); assert.match(r.runErrors[0].msg, /recupera 72 ore/);
 }
 
 // 2) Nessun giro precedente: le 24 ore.
@@ -64,6 +65,7 @@ async function giro({ ultimo, letturaOk = true, rpcOut = { pazienti: [], visite:
   assert.deepEqual(r.rpc, [{ p_da: '2026-10-25T16:50:13.516Z', p_a: A }]);
   assert.equal(r.tracce[0].action, 'registro_discrepanza'); assert.equal(r.tracce[0].details.ripresa, 'ultimo_giro');
   assert.deepEqual(r.tracce[0].details.ids, { pazienti: ['p1'] }); assert.equal(r.runErrors.length, 1);
+  assert.equal(r.tracce[0].details.ore_recuperate, undefined, 'giro regolare: nessun avviso di giro saltato');
 }
 
 // 6) Due giri ravvicinati (fine dell'ultimo giro >= a): nessuna RPC, traccia eseguita con finestra vuota.
