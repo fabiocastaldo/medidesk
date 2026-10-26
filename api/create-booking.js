@@ -121,8 +121,9 @@ export default async function handler(req, res) {
 
   // 1-bis) Solo un medico in servizio riceve prenotazioni: approvato, non in eliminazione e non
   // cessato (public.medico_in_servizio, s59; s63: spento nell'istante della cessazione).
+  // B-03 (s97): e in regola con i testi legali — regola unica public.medico_puo_scrivere (servizio + riaccettazione).
   try {
-    const r = await sb('rpc/medico_in_servizio', { method: 'POST', body: JSON.stringify({ p_medico_id: medicoId }) });
+    const r = await sb('rpc/medico_puo_scrivere', { method: 'POST', body: JSON.stringify({ p_medico_id: medicoId }) });
     if (!r.ok) return res.status(502).json({ error: 'Verifica fallita' });
     const inServizio = await r.json().catch(() => null);
     if (typeof inServizio !== 'boolean') return res.status(502).json({ error: 'Verifica fallita' });

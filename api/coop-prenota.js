@@ -97,7 +97,8 @@ export default async function handler(req, res) {
   }
   // Solo un medico in servizio riceve prenotazioni: approvato, non in eliminazione e non cessato
   // (public.medico_in_servizio, s59; s63: spento nell'istante della cessazione).
-  const medRes = await fetch(`${supabaseUrl}/rest/v1/rpc/medico_in_servizio`, {
+  // B-03 (s97): e in regola con i testi legali — regola unica public.medico_puo_scrivere.
+  const medRes = await fetch(`${supabaseUrl}/rest/v1/rpc/medico_puo_scrivere`, {
     method: 'POST', headers: { ...srvHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_medico_id: medicoId })
   }).catch(() => null);
