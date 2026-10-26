@@ -2,6 +2,12 @@
 // Usa SOLO la anon key + la RPC get_medico_pubblico (campi pubblici) e SELECT centri sotto RLS. Mai service_role.
 
 const CANONICAL_BASE = 'https://www.delphi-med.com';
+// C-07 (s96): la shell si scarica da un'origine fidata, mai dall'Host della richiesta. In anteprima il deploy
+// stesso (VERCEL_URL, fissato da Vercel); in ogni altro caso, anche senza variabili di sistema, il dominio canonico.
+function origineShell() {
+  if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return CANONICAL_BASE;
+}
 const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -19,16 +25,27 @@ export default async function handler(req, res) {
     res.setHeader('X-Robots-Tag','noindex');
     return res.status(404).send('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Medico non trovato | Delphi~Med</title><style>body{font-family:system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f6f7f9;color:#1f2937}main{text-align:center;padding:32px}h1{font-size:1.4rem;margin:0 0 8px}p{margin:0 0 16px;color:#4b5563}a{color:#1d4ed8}</style></head><body><main><h1>Medico non trovato</h1><p>Il profilo richiesto non esiste o non &egrave; pi&ugrave; attivo.</p><a href="/">Torna a Delphi~Med</a></main></body></html>');
   };
-  const fetchShell = async () => {
-    // shell statica, deployment-agnostica (niente fs): la rotta /medidesk.html serve il file reale
-    try {
-      const sr = await fetch(`https://${req.headers.host}/medidesk.html`);
-      return await sr.text();
-    } catch (e) {
-      return '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Delphi~Med</title></head><body></body></html>';
-    }
+  // D-07/C-07 (s96): un errore (database o shell) non si mette in cache: 503 senza copia, si riprova
+  const serve503 = () => {
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.setHeader('Cache-Control','no-store');
+    res.setHeader('Retry-After','30');
+    res.setHeader('X-Robots-Tag','noindex');
+    return res.status(503).send('<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Servizio temporaneamente non disponibile | Delphi~Med</title><style>body{font-family:system-ui,sans-serif;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f6f7f9;color:#1f2937}main{text-align:center;padding:32px}h1{font-size:1.4rem;margin:0 0 8px}p{margin:0 0 16px;color:#4b5563}a{color:#1d4ed8}</style></head><body><main><h1>Servizio temporaneamente non disponibile</h1><p>La pagina non &egrave; raggiungibile in questo momento. Riprova tra qualche istante.</p><a href="/">Torna a Delphi~Med</a></main></body></html>');
   };
-  const serveShell = async (status) => { res.setHeader('Content-Type','text/html; charset=utf-8'); return res.status(status).send(await fetchShell()); };
+  // shell statica, deployment-agnostica (niente fs): la rotta /medidesk.html serve il file reale; null se non arriva
+  const fetchShell = async () => {
+    try {
+      const sr = await fetch(`${origineShell()}/medidesk.html`);
+      if (!sr.ok) { console.error('[medico] shell', sr.status); return null; }
+      return await sr.text();
+    } catch (e) { console.error('[medico] shell', e.message); return null; }
+  };
+  const serveShell = async (status) => {
+    const shell = await fetchShell();
+    if (shell == null) return serve503();
+    res.setHeader('Content-Type','text/html; charset=utf-8'); return res.status(status).send(shell);
+  };
   if (!url || !anonKey || !slug) return serveShell(200);
 
   // 1) medico (anon + RPC)
@@ -39,11 +56,13 @@ export default async function handler(req, res) {
       headers:{ 'Content-Type':'application/json','apikey':anonKey,'Authorization':`Bearer ${anonKey}` },
       body: JSON.stringify({ p_slug: slug })
     });
+    if (!r.ok) { console.error('[medico] get_medico_pubblico', r.status); return serve503(); }
     const arr = await r.json();
     m = Array.isArray(arr) && arr.length ? arr[0] : null;
-  } catch (e) { m = null; }
+  } catch (e) { console.error('[medico] get_medico_pubblico', e.message); return serve503(); }
   if (!m) return serve404(); // slug inesistente: 404 reale e piccola (D-07)
   const shell = await fetchShell();
+  if (shell == null) return serve503();
 
   // 2) centri attivi (anon, RLS pubblica)
   let centri = [];
