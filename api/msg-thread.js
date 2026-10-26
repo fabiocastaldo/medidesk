@@ -148,25 +148,25 @@ export default async function handler(req, res) {
 
   // ── apri ──────────────────────────────────────────────────────────────────
   if (action === 'apri') {
+    // C-03a/D-02 (s96): il canale si apre solo su un fascicolo con data di nascita, e il recapito e' sempre quello
+    // del fascicolo, mai quello dell'appuntamento (per una prenotazione per conto sarebbe di chi ha prenotato).
+    // appuntamento_id serve solo a risalire al fascicolo collegato.
     let pazienteId = body.paziente_id || null;
-    let apptId = body.appuntamento_id || null;
-    let email = null, tel = null;
-
+    const apptId = body.appuntamento_id || null;
     if (apptId) {
-      const r = await sb(`appuntamenti?id=eq.${encodeURIComponent(apptId)}&medico_id=eq.${medico.id}&select=id,paziente_id,email_paziente,telefono_paziente`);
+      const r = await sb(`appuntamenti?id=eq.${encodeURIComponent(apptId)}&medico_id=eq.${medico.id}&select=id,paziente_id`);
       const a = r.ok ? (await r.json())[0] : null;
       if (!a) return res.status(404).json({ error: 'not_found' });
-      pazienteId = a.paziente_id || null; // C-03a (riesame 22/10): con appuntamento_id il paziente lo decide il server, non il body
-      email = a.email_paziente || null; tel = a.telefono_paziente || null;
+      if (!a.paziente_id) return res.status(409).json({ error: 'fascicolo_richiesto' });
+      pazienteId = a.paziente_id; // C-03a (riesame 22/10): con appuntamento_id il paziente lo decide il server, non il body
     }
+    if (!pazienteId) return res.status(400).json({ error: 'destinatario_mancante' });
     { const lim = await pazienteLimitato(pazienteId, { supabaseUrl, serviceKey }); if (!lim.ok) return res.status(lim.status).json(lim.body); } // riga 78
-    if (pazienteId) {
-      const r = await sb(`pazienti?id=eq.${encodeURIComponent(pazienteId)}&medico_id=eq.${medico.id}&select=id,email,telefono`);
-      const p = r.ok ? (await r.json())[0] : null;
-      if (!p) return res.status(404).json({ error: 'not_found' });
-      email = email || p.email || null; tel = tel || p.telefono || null;
-    }
-    if (!pazienteId && !apptId) return res.status(400).json({ error: 'destinatario_mancante' });
+    const pr = await sb(`pazienti?id=eq.${encodeURIComponent(pazienteId)}&medico_id=eq.${medico.id}&select=id,email,telefono,data_nascita`);
+    const p = pr.ok ? (await pr.json())[0] : null;
+    if (!p) return res.status(404).json({ error: 'not_found' });
+    if (!p.data_nascita) return res.status(409).json({ error: 'nascita_mancante' });
+    const email = p.email || null, tel = p.telefono || null;
     if (!email) return res.status(409).json({ error: 'email_mancante' });
 
     // D-02 (riesame 22/10): durata sempre tra 1 e 90 giorni, qualunque sia la fonte (body o impostazione del medico)
