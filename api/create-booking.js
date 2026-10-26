@@ -111,6 +111,14 @@ export default async function handler(req, res) {
     }
   } catch { return res.status(502).json({ error: 'Verifica fallita' }); }
 
+  // 1-ter-a) D-01 (s96): il centro deve essere prenotabile dal pubblico secondo la regola unica del DB
+  //    (attivo, non gestito dal centro, e per i centri di un'organizzazione la sua scelta); il filtro del browser non basta.
+  try {
+    const r = await sb('rpc/centro_prenotabile_pubblico', { method: 'POST', body: JSON.stringify({ p_centro_id: centroId }) });
+    if (!r.ok) return res.status(502).json({ error: 'Verifica fallita' });
+    if ((await r.json().catch(() => null)) !== true) return res.status(403).json({ error: 'Questo centro non accetta prenotazioni online' });
+  } catch { return res.status(502).json({ error: 'Verifica fallita' }); }
+
   // 1-bis) Solo un medico in servizio riceve prenotazioni: approvato, non in eliminazione e non
   // cessato (public.medico_in_servizio, s59; s63: spento nell'istante della cessazione).
   try {
