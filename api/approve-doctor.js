@@ -109,7 +109,23 @@ const INIPEC_URL = 'https://www.inipec.gov.it/';
 const CASELLA_GESTORE = String(process.env.CASELLA_GESTORE || '').trim(); // S-01 (riesame 22/10): in env, mai nel codice
 const isEmail = (x) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x) && x.length <= 254;
 
-function paginaVerifica(token, m, msg) {
+// B-08 (s96): impronta dei dati che il gestore vede nella pagina di verifica, legata al link (jti).
+// Il POST la ricalcola sui dati riletti: se diverge non si scrive nulla e la pagina si ripresenta coi dati nuovi.
+const CAMPI_VERIFICATI = ['nome', 'cognome', 'numero_iscrizione_ordine', 'provincia_ordine'];
+function improntaDati(secret, jti, m) {
+  const dati = JSON.stringify([jti, ...CAMPI_VERIFICATI.map(k => m[k] ?? null), m.email ?? null]);
+  return base64urlEncode(crypto.createHmac('sha256', secret).update('b08|' + dati).digest());
+}
+function improntaUguale(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+// Filtro PostgREST: la PATCH di approvazione passa solo se i campi verificati sono ancora quelli visti
+function filtroCampiVerificati(m) {
+  return CAMPI_VERIFICATI.map(k => m[k] == null ? `&${k}=is.null` : `&${k}=eq.${encodeURIComponent(m[k])}`).join('');
+}
+
+function paginaVerifica(token, m, msg, impronta) {
   const r = (k, v) => `<tr><th>${k}</th><td>${esc(v || '—')}</td></tr>`;
   return `<!DOCTYPE html>
 <html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -134,6 +150,7 @@ ${msg ? `<div class="msg">${esc(msg)}</div>` : ''}
 <p>Apri <a href="${ALBO_URL}" target="_blank" rel="noopener noreferrer">albounico.fnomceo.it</a>, cerca <strong>${esc([m.nome, m.cognome].filter(Boolean).join(' '))}</strong> e confronta con i dati sopra.</p>
 <form method="POST" action="/api/approve-doctor">
 <input type="hidden" name="token" value="${esc(token)}">
+<input type="hidden" name="impronta" value="${esc(impronta || '')}">
 <div class="radio"><input type="radio" id="e1" name="esito" value="trovato" required><label for="e1" style="margin:0">Coincide: nome, cognome e Ordine (${esc(m.provincia_ordine || '—')}) risultano all'albo</label></div>
 <div class="radio"><input type="radio" id="e2" name="esito" value="non_trovato"><label for="e2" style="margin:0">Non coincide o non trovato</label></div>
 <h2>2. Indice INI-PEC</h2>
@@ -231,25 +248,32 @@ export default async function handler(req, res) {
   }
   if (ctx.err) return res.status(ctx.err[0]).send(htmlPage(ctx.err[1], esc(ctx.err[2]), false));
   const { jti, m } = ctx;
+  const impronta = improntaDati(approveSecret, jti, m);
+  const pagina = (msg) => paginaVerifica(token, m, msg, impronta);
 
   // GET: solo la pagina di verifica, nessuna modifica
-  if (req.method === 'GET') return res.status(200).send(paginaVerifica(token, m));
+  if (req.method === 'GET') return res.status(200).send(pagina());
+
+  // B-08: i dati devono essere quelli mostrati al gestore quando ha aperto la pagina
+  if (!improntaUguale(String(body.impronta || ''), impronta)) {
+    return res.status(409).send(pagina('I dati del medico sono cambiati dopo l\'apertura di questa pagina: ricontrolla Albo e INI-PEC con i dati qui sotto.'));
+  }
 
   // POST: esito della verifica
   const esito = body.esito === 'trovato' ? 'trovato' : body.esito === 'non_trovato' ? 'non_trovato' : null;
   const numeroEsito = body.numero_esito === 'coincide' ? 'coincide' : body.numero_esito === 'non_coincide' ? 'non_coincide' : null;
   const numeroCoincide = numeroEsito === 'coincide';
   const pec = String(body.pec || '').trim().toLowerCase().slice(0, 254);
-  if (!esito || !numeroEsito) return res.status(400).send(paginaVerifica(token, m, 'Indica l\'esito di entrambi i controlli: Albo unico e INI-PEC.'));
-  if (pec && !isEmail(pec)) return res.status(400).send(paginaVerifica(token, m, 'La PEC indicata non è un indirizzo valido.'));
+  if (!esito || !numeroEsito) return res.status(400).send(pagina('Indica l\'esito di entrambi i controlli: Albo unico e INI-PEC.'));
+  if (pec && !isEmail(pec)) return res.status(400).send(pagina('La PEC indicata non è un indirizzo valido.'));
   // Si approva solo se entrambi i controlli coincidono e la PEC è indicata, oppure dichiarata non disponibile
   const pecNonDisponibile = body.pec_non_disponibile === 'si';
   const positivoTot = esito === 'trovato' && numeroCoincide;
   if (positivoTot && !pec && !pecNonDisponibile) {
-    return res.status(400).send(paginaVerifica(token, m, 'Inserisci la PEC trovata su INI-PEC oppure spunta «PEC non disponibile».'));
+    return res.status(400).send(pagina('Inserisci la PEC trovata su INI-PEC oppure spunta «PEC non disponibile».'));
   }
   if (positivoTot && pec && pecNonDisponibile) {
-    return res.status(400).send(paginaVerifica(token, m, 'Hai indicato una PEC e spuntato «PEC non disponibile»: scegli una delle due.'));
+    return res.status(400).send(pagina('Hai indicato una PEC e spuntato «PEC non disponibile»: scegli una delle due.'));
   }
   const positivo = positivoTot;
   const verifica = { fonte: 'Albo unico FNOMCeO', url: ALBO_URL, esito: positivo ? 'trovato' : 'non_trovato', albo: esito, numero_inipec: numeroEsito,
@@ -258,7 +282,7 @@ export default async function handler(req, res) {
     fonte_numero_pec: positivo ? 'INI-PEC' : null,
     pec_inipec: positivo ? (pec || null) : null,
     pec_non_disponibile: positivo ? pecNonDisponibile : null,
-    link_consegnato_a: CASELLA_GESTORE, verificato_at: new Date().toISOString() };
+    impronta_dati: impronta, link_consegnato_a: CASELLA_GESTORE, verificato_at: new Date().toISOString() };
 
   if (!positivo) {
     try { await audit(env, m.id, 'verifica_qualifica_negativa', verifica); }
@@ -283,18 +307,23 @@ export default async function handler(req, res) {
   try { await audit(env, m.id, 'verifica_qualifica', verifica); }
   catch (e) { console.error('[approve-doctor] audit:', e.message); return res.status(500).send(htmlPage('Errore database', 'Verifica non registrata: il medico non è stato approvato. Riprova.', false)); }
   try {
+    // B-08: prima lo stato, condizionato ai dati verificati; il link si consuma solo ad approvazione avvenuta
+    const pr = await fetch(`${env.base}/medici?id=eq.${m.id}&stato=eq.in_attesa${filtroCampiVerificati(m)}&select=id`, {
+      method: 'PATCH', headers: { ...env.headers, 'Prefer': 'return=representation' }, body: JSON.stringify({ stato: 'approvato' })
+    });
+    if (!pr.ok) {
+      console.error('[approve-doctor] patch medici failed:', pr.status);
+      return res.status(500).send(htmlPage('Errore database', 'Impossibile approvare il medico. Il link resta valido: riprova.', false));
+    }
+    if (!(await pr.json().catch(() => [])).length) {
+      return res.status(409).send(htmlPage('Medico non approvato',
+        'I dati del medico o il suo stato sono cambiati durante l\'approvazione: nessuna modifica. Il link resta valido: riaprilo e ricontrolla.', false));
+    }
     const mk = await fetch(`${env.base}/approve_tokens?jti=eq.${encodeURIComponent(jti)}&used_at=is.null&select=jti`, {
       method: 'PATCH', headers: { ...env.headers, 'Prefer': 'return=representation' }, body: JSON.stringify({ used_at: new Date().toISOString() })
     });
-    if (!mk.ok) return res.status(500).send(htmlPage('Errore database', 'Impossibile validare il token. Riprova più tardi.', false));
-    if (!(await mk.json().catch(() => [])).length) return res.status(409).send(htmlPage('Token già usato', 'Questo link di approvazione è già stato utilizzato in precedenza.', false));
-    const pr = await fetch(`${env.base}/medici?id=eq.${m.id}&stato=eq.in_attesa&select=id`, {
-      method: 'PATCH', headers: { ...env.headers, 'Prefer': 'return=representation' }, body: JSON.stringify({ stato: 'approvato' })
-    });
-    if (!pr.ok || !(await pr.json().catch(() => [])).length) {
-      console.error('[approve-doctor] patch medici failed:', pr.status);
-      return res.status(500).send(htmlPage('Errore database', 'Impossibile approvare il medico.', false));
-    }
+    // Medico già approvato: un link non consumato resta innocuo (leggiContesto risponde «Già gestito»)
+    if (!mk.ok) console.error('[approve-doctor] consumo del link:', mk.status);
   } catch (e) {
     console.error('[approve-doctor] approvazione:', e.message);
     return res.status(500).send(htmlPage('Errore di rete', 'Impossibile contattare il database.', false));
