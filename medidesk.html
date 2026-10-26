@@ -9167,7 +9167,7 @@ async function msgApi(payload){
   const res=await fetch('/api/msg-thread',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_jwt},body:JSON.stringify(payload)});
   if(await trialGuard(res)) return null;
   const j=await res.json().catch(()=>({}));
-  if(!res.ok){ showToast(j.error==='email_mancante'?'Il paziente non ha un\'email.':j.error==='email_fallita'?'Invio email non riuscito.':j.error==='thread_chiuso'?'Canale già chiuso.':'Operazione non riuscita.'); return null; }
+  if(!res.ok){ showToast(j.error==='nascita_mancante'?'Per aprire il canale serve la data di nascita nel fascicolo: aggiungila nell\'anagrafica.':j.error==='fascicolo_richiesto'?'Collega prima la prenotazione a un fascicolo.':j.error==='email_mancante'?'Il paziente non ha un\'email.':j.error==='email_fallita'?'Invio email non riuscito.':j.error==='thread_chiuso'?'Canale già chiuso.':'Operazione non riuscita.'); return null; }
   return j;
 }
 function msgApri(id){
@@ -11437,7 +11437,7 @@ async function thInit(){
   const nBox=document.getElementById('th-nascita'), nErr=document.getElementById('th-nascita-err');
   if(data && data.errore){
     if(data.errore==='NASCITA_RICHIESTA'){ nBox.style.display='block'; nErr.style.display='none'; return; }
-    if(data.errore==='NASCITA_ERRATA'){ nBox.style.display='block'; nErr.textContent='Data di nascita non corrispondente.'; nErr.style.display='block'; return; }
+    if(data.errore==='NASCITA_ERRATA'){ nBox.style.display='block'; const _r=Number.isInteger(data.tentativi_residui)?data.tentativi_residui:null; nErr.textContent='Data di nascita non corrispondente.'+(_r!==null?(_r>0?' Tentativi rimasti: '+_r+'.':' Il link \u00e8 stato disattivato: chieda al medico un nuovo invio.'):''); nErr.style.display='block'; return; }
     if(data.errore==='RATE_LIMIT'){ thErr('Troppi tentativi. Riprovi tra qualche minuto.'); return; }
     thErr('Questo link non è più valido. Se ha bisogno di contattare il medico, usi il link dell\'ultima email ricevuta.'); return;
   }
@@ -13007,7 +13007,9 @@ async function savePazienteAnagrafica(id){
   if(p.limitatoAt){ showToast('Trattamento limitato (art. 18): il fascicolo non si modifica finch\u00e9 non revochi la limitazione'); return; }
   const nascita=expandCompactDate(document.getElementById('paz-edit-nascita').value.trim());
   const nascitaIso=itToIso(nascita);
-  if(nascita && !nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
+  // D-02 (s96): la data di nascita resta obbligatoria anche in modifica (protegge il canale messaggi del paziente)
+  if(!nascita){ showToast('La data di nascita \u00e8 obbligatoria: distingue gli omonimi e protegge il canale messaggi del paziente'); return; }
+  if(!nascitaIso){ showToast('Data di nascita non valida: usa GG/MM/AAAA'); return; }
   const email=document.getElementById('paz-edit-email').value.trim();
   const tel=document.getElementById('paz-edit-tel').value.trim();
   // Rettifica del nome (art. 16): stesso fascicolo, visite, referti, messaggi e appuntamenti restano collegati per id.
