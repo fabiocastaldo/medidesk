@@ -12,6 +12,7 @@ import { smsEnabled, sendSms } from '../lib/sms.js';
 import { idPazientiLimitati } from '../lib/limitazione-guard.js';
 import { mediciInBlocco } from '../lib/blocco-guard.js';
 import { eseguiRiconciliazione } from '../lib/riconciliazione-registro.js';
+import { eseguiVerificaCopiaDb } from '../lib/verifica-copia-db.js';
 
 // Helper a livello di modulo: un canale è utilizzabile solo se il relativo
 // contatto è presente e non vuoto.
@@ -268,6 +269,9 @@ export default async function handler(req, res) {
   // Backup distinto dello Storage dei referti nel bucket S3 BACKUP_STORAGE_BUCKET (piano riga 33, A02 T08;
   // lib/backup-storage.js): copia i nuovi, cancella gli spariti, traccia backup_storage_eseguito.
   const backupStorage = await eseguiBackupStorage({ supabaseUrl, supabaseKey, runErrors });
+  // Verifica della copia logica del DB fatta dalla Lambda AWS alle 14:00 e 22:00 UTC (s98; lib/verifica-copia-db.js):
+  // elenca il bucket delphi-med-db-backup e traccia copia_db_verificata / copia_db_mancante (+ alert admin).
+  const copiaDb = await eseguiVerificaCopiaDb({ supabaseUrl, supabaseKey, runErrors });
   // 5-quater (s84, righe 22 e 76): avvisi sulle nuove versioni sostanziali dei testi legali e avvisi di servizio.
   const avvisiTesti = await eseguiAvvisiTesti({ supabaseUrl, supabaseKey, resend, shell: { emailShell, emailTitle, ctaButton, esc: escShell }, runErrors });
   // 5-quinquies (s93, B-09): riconciliazione del registro delle operazioni sulle 24 ore precedenti (lib/riconciliazione-registro.js)
@@ -310,10 +314,10 @@ export default async function handler(req, res) {
   // Esito compatto nel log (s86): solo conteggi e stati, senza chiavi Storage — leggibile dal log Vercel, dove il JSON di risposta non compare
   try {
     const { chiavi: _chiavi, ...backupSenzaChiavi } = backupStorage || {};
-    console.log('[send-reminders] esito ' + JSON.stringify({ sent, errors, alerted: runErrors.length, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage: backupSenzaChiavi, avvisiTesti, riconciliazione }));
+    console.log('[send-reminders] esito ' + JSON.stringify({ sent, errors, alerted: runErrors.length, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage: backupSenzaChiavi, copiaDb, avvisiTesti, riconciliazione }));
   } catch (e) { console.error('[send-reminders] esito non serializzabile:', e.message); }
 
-  return res.status(200).json({ processed: appointments.length, saltatiLimitazione, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage, avvisiTesti, riconciliazione });
+  return res.status(200).json({ processed: appointments.length, saltatiLimitazione, sent, errors, smsSent, smsErrors, alerted: runErrors.length, date: tomorrow, promemoriaPuliti, eliminazioni, uscita, sospensione, conservazione, registro, backupStorage, copiaDb, avvisiTesti, riconciliazione });
 }
 
 // ── NOTIFICHE TURNI IN SCADENZA ──────────────────────────────────────────────
